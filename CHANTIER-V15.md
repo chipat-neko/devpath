@@ -789,7 +789,37 @@ tutoriels toute sa vie.
 Le revers de tout le reste. Un site de 1 400 leçons qui cite des versions vieillit sans prévenir :
 **51 pages citent un numéro de version, 4 portent une date.**
 
-- [ ] **E1 · Mesurer le périssable.** Relever toutes les affirmations datables : numéros de version, « aujourd'hui », « récemment », « la dernière version », parts de marché, chiffres de performance. Produire le tableau par cours. C'est lui qui décide de la suite.
+- [x] **E1 · Mesurer le périssable.** ✅ **2026-09-03. Le tableau existe — 537 pages sur 1 540 (35 %) portent une affirmation datable — mais le vrai résultat est ailleurs, et il décide de la suite de la phase : LE PÉRISSABLE N'EST PAS DÉTECTABLE PAR MOTIF. Trois passes successives, chacune après échantillonnage : 1 540 → 748 → 677 → 537, et le résidu contient encore des faux positifs structurels.**
+
+  **L'OUTIL** : `tools/releve-perissable.js` (neuf), et le tableau par cours dans `tools/releve-perissable.csv` (90 lignes, une par cours).
+
+  **LA MESURE, catégorie par catégorie** (occurrences « nues », c'est-à-dire ce qui reste après écartement contextuel) :
+
+| Catégorie | Brut | Écarté par le contexte | Dette | Pages |
+|---|---:|---|---:|---:|
+| numéro de version d'une techno qui bouge | 439 | compat 152, provenance 18 | **269** | 112 |
+| affirmation de récence | 401 | locution 32, pédago 11 | **358** | 249 |
+| domination / part de marché | 289 | — | **289** | 145 |
+| chiffre de performance | 877 | provenance 142 | **735** | 105 |
+| date récente (2020+) | 56 | — | **56** | 47 |
+
+  **3 cours sur 90 n'en portent aucune** (`iac`, `kubernetes`, `regex`). Les plus exposés : `js` 29 pages, `css` 20, `php` 15, `python` 15, `react` 13. **49 pages citent une version dans un BLOC DE CODE**, comptées à part : un `python:3.12` dans un Dockerfile est un exemple, pas une affirmation sur le monde.
+
+  **LES TROIS PASSES, ET CE QUE CHACUNE A APPRIS** — la règle née de D4 (« un motif qu'on n'a pas échantillonné n'est pas une mesure ») a été appliquée dès la première ligne, et elle a servi trois fois :
+  1. **Motif naïf « `<Mot en majuscule> <nombre>` » → 1 540 pages sur 1 540.** Il attrapait « Exercice 2 » **1 538 fois**, plus « Top 10 », « Les 10 », « Sac 40 », « Taux 0 » et « CONST 3 ».
+  2. **Liste blanche de technologies → 748 pages.** Échantillonné, le motif recouvrait **trois choses qui n'appellent pas le même traitement** : « Ada 2012 » et « Fortran 90 » sont des **millésimes de norme** (ils ne vieilliront pas) ; « depuis Bash 4 » est un **fait de compatibilité** (il restera vrai quand Bash 6 sortira) ; et « Node 24.16.0, médiane de 5 essais » est une **provenance de mesure** — c'est-à-dire exactement ce que la phase E veut généraliser, donc un **modèle et non une dette**.
+  3. **Sous-classement par contexte → 677, puis 537** après retrait de deux motifs que l'échantillon a condamnés : **« désormais »** est presque toujours un connecteur de raisonnement (« le pivot est désormais figé à l'indice 1 », « chaque élément traîne désormais un objet ») et **« la majorité des »** une généralité (« la majorité des cas réels »). À eux deux ils gonflaient le relevé de plusieurs centaines d'occurrences sans en désigner une seule vraie.
+
+  **ET LE RÉSIDU N'EST TOUJOURS PAS PROPRE**, ce qui est le point : « ~8 % des hommes ont une forme de daltonisme » est un fait **stable**, « Chrome 512 » un **effectif de visiteurs** dans une leçon de statistiques, « COBOL 1000-INITIALISER » un **numéro de paragraphe**. La cause est structurelle : les mêmes mots servent à décrire le déroulement d'un algorithme, un fait permanent et une affirmation sur l'état du monde. **Seule la troisième périme, et les distinguer suppose de lire la phrase.**
+
+  **CE QUE CELA IMPOSE À LA SUITE.**
+  - **E3 ne peut pas être un détecteur.** Un vérificateur fondé sur des motifs produirait, sur ce corpus, une majorité de faux positifs — il serait ignoré en une semaine. Il faut **inverser la charge** : E2 pose une convention de **marquage explicite**, et E3 contrôle que les marques sont là où on les a mises, et qu'aucune n'a dépassé son seuil d'âge. C'est ce que l'énoncé de E3 pressentait (« il vérifie qu'on **sait** quand on l'a écrite ») ; ce relevé le **démontre**.
+  - **E4 doit viser étroit.** La seule cible franche et sans ambiguïté du site est le **tableau de support navigateur** : `css/lecon-40`, `41` et `42` — **les trois seules pages du site qui en portent un** — plus les versions citées dans les exemples de CI et de Docker (`cicd`, `docker`).
+  - **Le modèle existe déjà dans le site** : les leçons d'`algo` écrivent « 162 à 165 ms en récursif contre 85 à 87 ms en bottom-up (Node 24.16.0, médiane de 5 essais, un seul algorithme par processus) ». La mesure y est **datée, sourcée et rejouable**. C'est cette forme que E2 doit généraliser, plutôt qu'inventer.
+
+  **⚠ LE CHIFFRE DE CE PLAN NE SE REPRODUIT PAS.** Le constat en tête de la phase E annonce « **51 pages citent un numéro de version, 4 portent une date** ». Le relevé donne **112** et **47**. L'écart vient de la méthode (liste blanche de technologies, prose séparée du code, dates récentes seules retenues), pas d'une évolution du site. Il est écrit ici plutôt que tu.
+
+  **CONTRÔLES** : `node --check` sur l'outil · `verif-html` **0/0** · `verif-donnees` **25 contrôles, 0 erreur** · aucune page modifiée (ce point est un relevé, pas une correction).
 - [ ] **E2 · La convention de datation.** Marquer une affirmation périssable de façon uniforme et discrète, sans alourdir la lecture. Décider la forme, l'appliquer d'abord sur un cours, juger le rendu, puis généraliser.
 - [ ] **E3 · Le vérificateur.** `tools/verif-fraicheur.js` : signale les affirmations périssables non datées et celles dont la date dépasse un seuil. Hors réseau — il ne vérifie pas si la version est à jour, il vérifie qu'on **sait** quand on l'a écrite.
 - [ ] **E4 · Passer les cours les plus exposés.** Ceux qui bougent vite en premier — frameworks, outils, cloud, conteneurs.
