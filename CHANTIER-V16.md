@@ -967,6 +967,56 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       `verif-normatif` **60/60** ; `verif.js --rapide` **26 étapes tout vert (78,8 s)** ; `verif-html`
       **0** ; `verif-donnees` **0 erreur** ; cliquet refigé (**4 cours traités**), épreuve **6/6**.
 - [ ] **B4 · Les cours suivants, par lots.** Jusqu'à la cible fixée en B1.
+
+      **CADRAGE MESURÉ le 2026-09-04, après la clôture de B3** — le classement est fait par
+      **nocivité réelle** (questions devinables = questions × taux), pas par taux seul : traiter un
+      petit cours à 99 % rapporte moins qu'un gros à 92 %.
+
+      | | |
+      |---|---:|
+      | Cours encore au-dessus de 60 % | **79 sur 90** |
+      | Questions devinables restantes | **5 081 sur 6 167** |
+      | Global « la plus longue » | **84,8 %** |
+
+      **Les dix cours les plus nocifs**, dans l'ordre où B4 doit les prendre :
+
+      | rang | cours | questions | « la plus longue » | devinables | cumul |
+      |---:|---|---:|---:|---:|---:|
+      | 1 | `js` | 218 | 95,4 % | 208 | 208 |
+      | 2 | `python` | 173 | 91,6 % | 159 | 367 |
+      | 3 | `css` | 171 | 91,9 % | 157 | 524 |
+      | 4 | `html` | 160 | 92,1 % | 147 | 671 |
+      | 5 | `maths` | 117 | 82,8 % | 97 | 768 |
+      | 6 | `algo` | 92 | 96,2 % | 89 | 856 |
+      | 7 | `nodejs` | 89 | 95,5 % | 85 | 941 |
+      | 8 | `bdd` | 86 | 97,7 % | 84 | 1 025 |
+      | 9 | `projets-js` | 84 | 98,8 % | 83 | 1 108 |
+      | 10 | `react` | 86 | 92,2 % | 79 | 1 188 |
+
+      **Ce que ça implique — calculé, pas arrondi** : les 10 premiers cours totalisent **1 276
+      questions dont 1 188 devinables (19,3 % du site)**. En les ramenant au taux moyen atteint sur
+      les six cours de B3 (**19,4 %**), il resterait 281 questions devinables sur ce lot, soit un
+      **gain de 907 questions = 14,7 points** : le site passerait de **84,8 % à 70,1 %**. Toujours
+      au-dessus de la cible de 60 % fixée en B1, qui demandait 40 cours. ⚠️ **B4 ne doit donc pas
+      promettre la cible : elle doit livrer des lots mesurés.** (Premier jet de ce cadrage : « environ
+      65 % », écrit de tête et faux de 5 points — le calcul est dans le commit.)
+
+      ⚠️ **Un cours de B4 pèse jusqu'à 3 fois un cours de B3** : `js` seul fait **218 questions et
+      654 distracteurs**, contre 73 et 219 pour `mobile`, le plus gros de B3. Le protocole à 5
+      écrivains + 5 relecteurs ne s'y transpose pas tel quel — il faudra soit découper `js` en deux
+      passes déclarées, soit accepter 8 à 10 lots d'écriture. **À décider avant de commencer, pas
+      en cours de route.**
+
+      ⚠️⚠️ **CONTRAINTE CRÉÉE PAR B3, à ne pas oublier : `stats` (99,3 %) est désormais le
+      cours-témoin de `verif-qcm-biais-mutations.js`**, qui a besoin d'un cours réellement biaisé
+      pour son cas « cours neuf non conforme ». **Si B4 traite `stats`, l'épreuve repassera verte en
+      silence** — exactement la faute que B3 a corrigée sur `zig`. Changer le témoin AVANT de
+      traiter le cours, jamais après.
+
+      **LE PROTOCOLE DE B3 s'applique tel quel** (il est écrit au-dessus, avec ses six comptes
+      rendus). Les cinq leçons à remettre en consigne dès le premier lot : les quatre pièges de
+      forme (longueur dans les deux sens, ponctuation, énumération, absolus), et le fait que
+      **corriger un indice en crée un autre**.
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
