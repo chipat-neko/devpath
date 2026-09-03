@@ -310,10 +310,10 @@ const NORM_NB = (function () {
   const shouldNot = compteMot('SHOULD NOT');
   /* les mentions du site : combien de lecons renvoient a un document normatif */
   const libx = require('./mesures/corpus-lib.js');
-  const M = { rfc: /RFC\s?\d{3,5}/g, spec: /la sp[ée]cification/gi,
+  const M = { rfc: /\bRFC\s?\d{3,5}\b/g, spec: /la sp[ée]cification/gi,
     changelog: /changelog|journal des modifications/gi,
     semver: /semver|versionnage s[ée]mantique|version s[ée]mantique/gi,
-    motsCles: /MUST|SHOULD/g };
+    motsCles: /\bMUST\b|\bSHOULD\b/g };
   const cpt = {};
   for (const k in M) cpt[k] = 0;
   for (const f of libx.fichiersLecons()) {

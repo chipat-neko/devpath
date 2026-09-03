@@ -128,6 +128,37 @@ const fauxPos = temoinsVrais.filter((a) => !M6.test({ q: 'x', a, correct: 0 })).
 verdict(vues === temoinsFaux.length, 'la clause M6 voit les ' + temoinsFaux.length + ' violations témoins', vues + ' vue(s)');
 verdict(fauxPos === 0, 'la clause M6 ne crie pas au loup sur ' + temoinsVrais.length + ' phrases légitimes', fauxPos + ' faux positif(s)');
 
+/* ---- 3 bis. les compteurs de mentions, recalculés ------------------------- */
+/* Ce contrôle vient d'un accident : un script d'édition avait laissé de vrais
+   caractères BACKSPACE (U+0008) à la place des « \\b » dans deux motifs de
+   gen.js. Les compteurs affichaient « 0 leçon cite une RFC » au lieu de 18, et
+   « 0 leçon emploie MUST » au lieu de 1. Aucun outil ne l'a vu : le caractère
+   est invisible, le fichier reste du JavaScript valide, et un compteur à zéro
+   ressemble à une mesure. Seule une capture d'écran l'a révélé.
+   On recalcule donc ici, avec des motifs écrits indépendamment. */
+console.log('3 bis. Les compteurs de mentions, recalculés');
+{
+  const lib = require('./mesures/corpus-lib.js');
+  const MOTIFS = {
+    'leçons citant une RFC': /RFC[ ]?[0-9]{3,5}/,
+    'leçons parlant de la spécification': /la sp[ée]cification/i,
+    'leçons employant MUST ou SHOULD': /MUST|SHOULD/,
+  };
+  const compte = {};
+  for (const k in MOTIFS) compte[k] = 0;
+  for (const f of lib.fichiersLecons()) {
+    const html = fs.readFileSync(f, 'utf8');
+    const art = html.match(/<article class="prose"[\s\S]*?<\/article>/);
+    if (!art) continue;
+    for (const k in MOTIFS) if (MOTIFS[k].test(art[0])) compte[k]++;
+  }
+  for (const k in MOTIFS) {
+    verdict(compte[k] > 0, k + ' : la mesure rend un compte non nul', String(compte[k]));
+    verdict(visible.indexOf(String(compte[k])) !== -1,
+      'la page cite ce compte (' + compte[k] + ') — ' + k);
+  }
+}
+
 /* ---- 4. les blocs de sortie ⇄ l exécution --------------------------------- */
 console.log('4. Les blocs de sortie ⇄ l exécution des programmes');
 const PROGRAMMES = ['normatif-mots.js', 'normatif-conformite.js', 'normatif-versions.js'];
