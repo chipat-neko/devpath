@@ -526,9 +526,9 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       distracteurs. **Chaque distracteur réécrit doit rester FAUX** — c'est le piège de cette phase :
       en allongeant un mauvais choix, on le rend facilement vrai. Rejouer le QCM après correction.
 
-      **EN COURS — 4 cours sur 6 faits le 2026-09-03 : `iac` 100,0 % → 13,3 %, `archi` 100,0 % →
-      7,3 %, `ux` 100,0 % → 19,6 %, `equipe` 100,0 % → 30,1 %.** La case reste décochée parce qu'elle
-      en porte six ; le protocole ci-dessous est établi et rejouable tel quel.
+      **EN COURS — 5 cours sur 6 faits le 2026-09-03 : `iac` 100,0 % → 13,3 %, `archi` 100,0 % →
+      7,3 %, `ux` 100,0 % → 19,6 %, `equipe` 100,0 % → 30,1 %, `mobile` 100,0 % → 21,9 %.** La case
+      reste décochée parce qu'elle en porte six ; le protocole ci-dessous est établi et rejouable.
 
       **Ce qui a été fait sur `iac`** (11 leçons, **45 questions**, 33 en QCM de leçon et 12 en QCM
       bilan) : **135 distracteurs sur 135 réécrits**, chacun tenu entre **70 % et 130 %** de la
@@ -585,8 +585,7 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       vert**, `verif-rendu` sur les pages touchées **0 erreur / 0 avertissement**, cliquet **vert**
       avec `iac` marqué `traite` et son épreuve **6/6**.
 
-      **LE PROTOCOLE, pour les deux cours restants** (`mobile` 73 questions, `zig` 71 —
-      **144 questions, 432 distracteurs**) : (1) un agent par lot de leçons, fichiers
+      **LE PROTOCOLE, pour le dernier cours restant** (`zig` 71 questions, 213 distracteurs) : (1) un agent par lot de leçons, fichiers
       disjoints ; (2) interdiction absolue de toucher `q`, `correct`, `explain` et la bonne réponse —
       **contrôlé après coup contre `git show HEAD:`**, pas sur parole, par
       `tools/mesure-qcm-intouchable.js` ; (3) fourchette 70–130 % **et les DEUX sens du biais**
@@ -800,6 +799,82 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       d'injecter le jargon dans des distracteurs faux — au risque de les rendre plausibles pour de
       mauvaises raisons. **À trancher en B4 : est-ce un biais à corriger, ou la définition même d'une
       question qui vérifie qu'on a lu le cours ?**
+      ---
+
+      **`mobile` — FAIT le 2026-09-03 : 100,0 % → 21,9 %.** 15 leçons, **73 questions** (61 en QCM de
+      leçon, 12 en bilan), **219 distracteurs sur 219 réécrits**, tous entre **0,70 et 1,26**.
+
+      | mesure | avant | après 1ʳᵉ passe | après contradiction |
+      |---|---:|---:|---:|
+      | « la plus longue » | **100,0 %** | **24,7 %** | **21,9 %** |
+      | « la plus COURTE » | 0,0 % | **24,7 %** | 20,5 % |
+      | « la plus détaillée » | 85,4 % | 52,5 % | **51,9 %** |
+      | « le mot technique exclusif » | 64,2 % | 21,5 % | **20,9 %** |
+      | rangs de longueur | **73/0/0/0** | **18/20/17/18** | 17/22/20/14 |
+      | ponctuation (désignation unique) | — | **0,0 %** | **0,0 %** |
+      | énumération (désignation unique) | — | **0,0 %** | **0,0 %** |
+      | absolus (désignation unique) | — | **0,0 %** | **0,0 %** |
+      | global du site, « la plus longue » | 86,6 % | — | **85,7 %** |
+
+      ✅ **LES QUATRE LEÇONS DES COURS PRÉCÉDENTS, MISES EN CONSIGNE, ONT TOUTES TENU DU PREMIER
+      COUP — c'est le meilleur résultat de la série.** Dès la première passe, sans aucun rattrapage :
+      « la plus longue » à **24,7 %**, soit le hasard exact ; rangs **18/20/17/18** ; et les trois
+      indices de forme (ponctuation, énumération, absolus) **tous à 0,0 % en désignation unique**.
+      Les quatre pièges, découverts un par un sur `archi`, `ux` et `equipe`, s'écrivent désormais en
+      quatre lignes de consigne. **C'est la démonstration que ce plan sert à quelque chose : une
+      leçon écrite ici et remise en consigne au tour suivant ne se repaie pas.**
+
+      ⚠️ **TROIS INDICES ANNONCÉS PAR LES RELECTEURS, TROIS RÉFUTÉS PAR LA MESURE.** C'est le point
+      de méthode du tour, et il vaut pour B4 : **un relecteur qui mesure sur SON lot de 16 questions
+      extrapole à tort au cours entier.**
+
+      | indice annoncé | annoncé | mesuré sur les 73 questions | `doc` (référence) |
+      |---|---:|---:|---:|
+      | « écarter les options qui citent un chiffre » | 36,5 % | **25,1 %** | 26,3 % |
+      | « écarter les options à conjonction de but » | 39,6 % | **26,5 %** | 25,2 % |
+      | « écarter celles qui font agir le magasin / le système » | 43,2 % | **29,2 %** | 25,0 % |
+
+      Le troisième reste légèrement au-dessus du hasard et **2 questions sur 73 étaient résolues à
+      coup sûr** : corrigées quand même. L'écart de mesure n'annule pas la prise, il la redimensionne.
+
+      ⚠️ **UN QUATRIÈME INDICE, RÉEL MAIS GÉNÉRAL AU SITE, LAISSÉ EN DETTE ÉCRITE** : la **densité**
+      de ponctuation (« choisis l'option la plus ponctuée ») rend **65,4 % sur `mobile`** — mais
+      **45,0 % sur `doc`**, qui a pourtant été écrit après le constat de B1, et 60,8 % sur
+      `distribue`. C'est un biais de tout le corpus, pas de ma réécriture : la bonne réponse est plus
+      détaillée **par nature**. Le corriger sur un cours laisserait les 89 autres. **À trancher en B4
+      avec la même question que le biais lexical : indice à neutraliser, ou propriété inhérente d'une
+      bonne réponse ?**
+
+      ⚠️ **Le piège s'est refermé pendant la correction pour la deuxième fois** : mes corrections de
+      fond ont fait remonter la ponctuation de 0,0 % à **5,5 %** et l'énumération à 1,4 %. Rattrapés
+      (0,0 % et 0,0 %). **La règle établie sur `equipe` tient : remesurer TOUS les indices après
+      chaque correction, pas seulement celui qu'on visait.**
+
+      **Défauts de FOND corrigés** — Zig excepté, aucun cours n'avait autant de faits réels à frôler :
+      la marge tactile invisible existe vraiment (`minimumInteractiveComponentSize`, `TouchDelegate`) ;
+      un `ForEach` SwiftUI sur un type non `Identifiable` **ne compile pas** ; `@FocusState` se déclare
+      bien sur l'écran ; les sous-pixels RVB sont un fait matériel ; **Play App Signing régénère
+      réellement une clé de téléversement perdue** ; les magasins exigent bel et bien une icône
+      matricielle ; `NetworkOnMainThreadException` existe ; l'accès **limité** à la photothèque iOS et
+      la localisation **approximative** Android sont deux vrais degrés de permission ; et la
+      pagination par clé est enseignée par la leçon 07 elle-même.
+
+      🔵 **Corrigé hors périmètre** : `mobile/lecon-13.html` disait « mais **tapez** dessus vous
+      dépose » (impératif au lieu de l'infinitif sujet), présent dans `HEAD`. ⚠️ **Sa correction a
+      périmé `js/pieges-data.js`** — et c'est `verif-donnees` (I18) qui l'a vu tout seul, pas moi :
+      **toute retouche de PROSE dans un encadré d'erreur périme un index dérivé.** Régénéré avec
+      `--fresh`.
+
+      🔵 **Leçon d'organisation du fan-out** : deux agents ont écrit leurs scripts jetables dans le
+      **même dossier temporaire** et se sont écrasés mutuellement (sans dommage pour le site, les
+      fichiers de `pages/` étant disjoints). **Imposer un dossier scratch par agent** est désormais
+      dans la consigne.
+
+      **Contrôles** : `mesure-qcm-intouchable` **0 atteinte** sur 73 questions ; `quiz-index` régénéré
+      deux fois (`doc/lecon-03` s'est repérimé une **4ᵉ** fois : 5 301 → **5 243**, 86,9 % →
+      **85,9 %**) ; `verif-normatif` **60/60** ; `verif.js --rapide` **26 étapes tout vert (78,3 s)** ;
+      `verif-html` **0** ; `verif-donnees` **0 erreur** ; cliquet refigé (**5 cours traités**),
+      épreuve **6/6**.
 
       **Contrôles** : `mesure-qcm-intouchable` **0 atteinte** sur 68 questions ; `quiz-index` régénéré
       deux fois (`doc/lecon-03` s'est repérimé : **5 349 → 5 301**, 87,6 % → **86,9 %**) ;
