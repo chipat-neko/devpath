@@ -123,8 +123,11 @@ var MUTATIONS = [
     },
     1, /cible perdue/],
 
-  ['zig (100 % de biais) retiré de la référence : il redevient un « cours neuf »',
-    function () { fs.writeFileSync(REF, refAvec(function (j) { delete j.cours.zig; })); },
+  /* Le cours-temoin doit etre un cours ENCORE biaise : quand ce cas employait 'zig',
+     le point B3 l'a ramene a 23,9 % et l'epreuve a cesse de prouver quoi que ce soit --
+     elle est passee VERTE en silence. Verifier ce choix a chaque cours traite. */
+  ['stats (99,3 % de biais) retiré de la référence : il redevient un « cours neuf »',
+    function () { fs.writeFileSync(REF, refAvec(function (j) { delete j.cours.stats; })); },
     1, /cours neuf non conforme/],
 
   ['un cours qui n’existe pas ajouté à la référence',
