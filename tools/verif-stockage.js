@@ -56,6 +56,56 @@ function attendre(ms) {
   return new Promise(function (r) { setTimeout(r, ms); });
 }
 
+/* Combien de temps on accepte d'attendre qu'une page soit prête. Généreux à
+   dessein : ce n'est pas une mesure de performance, c'est une garantie que le
+   geste porte sur une page montée, quelle que soit la charge de la machine. */
+var PATIENCE_MS = 15000;
+var SONDE_MS = 100;
+
+/* Attend que la page soit chargée ET, si le scénario le précise, que l'élément
+   dont son geste dépend existe. Rend { ok, raison } : jamais un simple booléen,
+   pour que l'appelant puisse DIRE ce qui manquait. */
+async function attendrePret(nav, sess, pretSc) {
+  var debut = Date.now();
+  var dernier = "état jamais évalué";
+  while (Date.now() - debut < PATIENCE_MS) {
+    var r = null;
+    try {
+      /* ⚠️ La condition du scénario contient des apostrophes (`querySelector('…')`).
+         La recopier dans un littéral de chaîne à la main produit une expression
+         qui NE COMPILE PAS — et une expression qui ne compile pas ne rend aucune
+         valeur, donc la boucle attendrait 15 s puis déclarerait la page « jamais
+         prête » alors qu'elle l'était depuis le début. JSON.stringify, toujours. */
+      r = await nav.envoyer("Runtime.evaluate", {
+        expression: "(function(){try{" +
+          "if(document.readyState!=='complete')return 'chargement : '+document.readyState;" +
+          (pretSc ? "if(!(" + pretSc + "))return " +
+            JSON.stringify("condition du scénario non remplie : " + pretSc) + ";" : "") +
+          "return true;}catch(e){return 'erreur : '+e.message}})()",
+        returnByValue: true,
+      }, sess);
+    } catch (e) {
+      dernier = "évaluation impossible : " + e.message;
+    }
+    /* Une expression qui lève (ou qui ne compile pas) rend `exceptionDetails` :
+       sans ce relevé, l'échec serait muet et se lirait « jamais prête ». */
+    if (r && r.exceptionDetails) {
+      dernier = "expression refusée par la page : " +
+        ((r.exceptionDetails.exception || {}).description || r.exceptionDetails.text || "?");
+    }
+    var v = r && r.result ? r.result.value : undefined;
+    if (v === true) {
+      /* La page est montée ; on laisse un souffle aux écouteurs posés dans le
+         même tour de boucle d'événements avant de cliquer. */
+      await attendre(150);
+      return { ok: true, raison: "" };
+    }
+    if (typeof v === "string") dernier = v;
+    await attendre(SONDE_MS);
+  }
+  return { ok: false, raison: dernier };
+}
+
 function trouverChrome() {
   var candidats = [
     process.env.CHROME_PATH,
@@ -229,30 +279,35 @@ var SCENARIOS = [
   {
     nom: "leçon : clic « Marquer comme terminée », écriture REFUSÉE",
     page: "pages/js/lecon-01.html", panne: "refus",
+    pret: "!!document.querySelector('[data-complete-toggle]')",
     geste: "var b=document.querySelector('[data-complete-toggle]');b&&b.click();",
     bandeau: REFUS,
   },
   {
     nom: "leçon : clic « Marquer comme terminée », QUOTA plein",
     page: "pages/js/lecon-01.html", panne: "quota",
+    pret: "!!document.querySelector('[data-complete-toggle]')",
     geste: "var b=document.querySelector('[data-complete-toggle]');b&&b.click();",
     bandeau: PLEIN,
   },
   {
     nom: "leçon : clic « Marquer comme terminée », localStorage INACCESSIBLE",
     page: "pages/js/lecon-01.html", panne: "bloque",
+    pret: "!!document.querySelector('[data-complete-toggle]')",
     geste: "var b=document.querySelector('[data-complete-toggle]');b&&b.click();",
     bandeau: REFUS,
   },
   {
     nom: "leçon : stockage SAIN — aucun bandeau, progression écrite (non-régression)",
     page: "pages/js/lecon-01.html", panne: null,
+    pret: "!!document.querySelector('[data-complete-toggle]')",
     geste: "var b=document.querySelector('[data-complete-toggle]');b&&b.click();",
     bandeau: null, ecrit: /lecon-01/,
   },
   {
     nom: "bac à sable : frappe dans l'éditeur, écriture REFUSÉE",
     page: "pages/playground.html", panne: "refus",
+    pret: "!!document.querySelector('textarea')",
     geste: "var e=document.querySelector('textarea');" +
       "if(e){e.value+='<p>x</p>';e.dispatchEvent(new Event('input',{bubbles:true}))}",
     bandeau: REFUS,
@@ -260,18 +315,21 @@ var SCENARIOS = [
   {
     nom: "mes QCM : enregistrement d'une question, écriture REFUSÉE",
     page: "pages/mes-qcm.html", panne: "refus",
+    pret: "!!window.SyntaxeStore",
     geste: "if(window.SyntaxeStore)window.SyntaxeStore.setJSON('syntaxe-mes-qcm',[{q:'x'}]);",
     bandeau: REFUS,
   },
   {
     nom: "thème : bascule sombre/clair, écriture REFUSÉE",
     page: "index.html", panne: "refus",
+    pret: "!!window.SyntaxeTheme",
     geste: "window.SyntaxeTheme.set('dark');",
     bandeau: REFUS,
   },
   {
     nom: "progression : objectif quotidien, écriture REFUSÉE",
     page: "pages/progression.html", panne: "refus",
+    pret: "!!window.SyntaxeStore",
     geste: "if(window.SyntaxeStore)window.SyntaxeStore.setJSON('syntaxe-goal',{daily:3});",
     bandeau: REFUS,
   },
@@ -279,6 +337,7 @@ var SCENARIOS = [
     nom: "leçon : progression ABÎMÉE — prévenue, mise de côté, puis réécrite",
     page: "pages/js/lecon-01.html", panne: null,
     semer: "try{localStorage.clear();localStorage.setItem('syntaxe-progress','{\"javascript\":{')}catch(e){}",
+    pret: "!!document.querySelector('[data-complete-toggle]')",
     geste: "var b=document.querySelector('[data-complete-toggle]');b&&b.click();",
     bandeau: ABIME, ecrit: /lecon-01/, cleAbimee: "syntaxe-progress",
     secours: { "syntaxe-secours-progress": "{\"javascript\":{" },
@@ -348,6 +407,7 @@ var SCENARIOS = [
     nom: "examen : passages empilés, score fidèle, correction qui renvoie à la leçon",
     page: "pages/examen.html", panne: null,
     semer: "try{localStorage.clear()}catch(e){}",
+    pret: "!!document.getElementById('exam-start')",
     geste: "function passer(n){var s=document.getElementById('exam-n');if(s)s.value=String(n);var b=document.getElementById('exam-start');if(b)b.click();for(var i=0;i<n;i++){var o=document.querySelectorAll('.exam-opt');if(o.length)o[i%o.length].click();var v=document.getElementById('exam-next');if(v)v.click()}var f=document.getElementById('exam-finish');if(f)f.click()}passer(10);var a=document.getElementById('exam-again');if(a)a.click();passer(10);",
     bandeau: null,
     examen: { passages: 2, total: 10, liens: true },
@@ -380,6 +440,7 @@ var SCENARIOS = [
     nom: "leçon : un QCM raté note QUELLES questions (rates), pas seulement combien",
     page: "pages/js/lecon-01.html", panne: null,
     semer: "try{localStorage.clear()}catch(e){}",
+    pret: "document.querySelectorAll('.quiz .quiz__q').length===3",
     geste: "var qs=document.querySelectorAll('.quiz .quiz__q');for(var i=0;i<qs.length;i++){var rater=(i===0||i===2);var b=qs[i].querySelector(rater?'.quiz__opt[data-correct=\"0\"]':'.quiz__opt[data-correct=\"1\"]');if(b)b.click()}",
     bandeau: null,
     rates: { cours: "javascript", fichier: "lecon-01.html", attendus: [0, 2] },
@@ -388,6 +449,7 @@ var SCENARIOS = [
     nom: "examen : « seulement les leçons terminées » ne tire que dans ce qui a été lu",
     page: "pages/examen.html", panne: null,
     semer: "try{localStorage.clear();localStorage.setItem('syntaxe-progress',\"{\\\"javascript\\\": {\\\"lecon-01.html\\\": true, \\\"lecon-02.html\\\": true, \\\"lecon-03.html\\\": true}}\")}catch(e){}",
+    pret: "!!document.getElementById('exam-start')",
     geste: "var s=document.getElementById('exam-n');if(s)s.value='10';var c=document.getElementById('exam-c');if(c){c.value='js';c.dispatchEvent(new Event('change'))}var f=document.getElementById('exam-faites');if(f)f.checked=true;document.getElementById('exam-start').click();for(var i=0;i<10;i++){var o=document.querySelectorAll('.exam-opt');if(o.length)o[0].click();var n=document.getElementById('exam-next');if(n)n.click()}var fin=document.getElementById('exam-finish');if(fin)fin.click();",
     bandeau: null,
     tirage: { fichiers: ["lecon-01.html", "lecon-02.html", "lecon-03.html"], cours: "js" },
@@ -396,6 +458,7 @@ var SCENARIOS = [
     nom: "examen : aucune leçon terminée — la case est désactivée et le dit",
     page: "pages/examen.html", panne: null,
     semer: "try{localStorage.clear()}catch(e){}",
+    pret: "!!document.getElementById('exam-c')",
     geste: "var c=document.getElementById('exam-c');if(c){c.value='js';c.dispatchEvent(new Event('change'))}",
     bandeau: null,
     caseVide: /aucune leçon terminée/,
@@ -404,6 +467,7 @@ var SCENARIOS = [
     nom: "examen : « refaire ce que j'ai raté » ne propose que les erreurs NON corrigées",
     page: "pages/examen.html", panne: null,
     semer: "try{localStorage.clear();localStorage.setItem('syntaxe-examen',\"[{\\\"date\\\":\\\"2026-08-01\\\",\\\"cours\\\":\\\"js\\\",\\\"score\\\":1,\\\"total\\\":3,\\\"rates\\\":[\\\"1nocbmq\\\",\\\"66iswt\\\"],\\\"bons\\\":[\\\"1rwbri5\\\"]},{\\\"date\\\":\\\"2026-08-10\\\",\\\"cours\\\":\\\"js\\\",\\\"score\\\":2,\\\"total\\\":3,\\\"rates\\\":[\\\"1nocbmq\\\"],\\\"bons\\\":[\\\"66iswt\\\",\\\"1rwbri5\\\"]}]\")}catch(e){}",
+    pret: "!!document.getElementById('exam-c')",
     geste: "var c=document.getElementById('exam-c');if(c){c.value='js';c.dispatchEvent(new Event('change'))}var e=document.getElementById('exam-erreurs');if(e){e.checked=true;e.dispatchEvent(new Event('change'))}document.getElementById('exam-start').click();",
     bandeau: null,
     erreurs: { dispo: /^\(1 question\)$/, enonce: "Quel est le rôle respectif de HTML, CSS " },
@@ -412,6 +476,7 @@ var SCENARIOS = [
     nom: "mes données : clic « Effacer », suppression REFUSÉE — pas de faux succès",
     page: "pages/donnees-perso.html", panne: "refus",
     semer: "try{localStorage.setItem('syntaxe-progress','{\"html\":{\"lecon-01.html\":true}}')}catch(e){}",
+    pret: "!!document.querySelector('.dp-del')",
     geste: "var b=document.querySelector('.dp-del');b&&b.click();",
     bandeau: null, message: /[Ee]ffacement impossible/, messageOk: false,
   },
@@ -419,6 +484,7 @@ var SCENARIOS = [
     nom: "cours : « Réinitialiser ma progression » refusée — bandeau lu, pas de rechargement",
     page: "pages/html/cours.html", panne: "refus",
     semer: "try{localStorage.setItem('syntaxe-progress','{\"html\":{\"lecon-01.html\":true}}')}catch(e){}",
+    pret: "!!document.querySelector('.course-reset')",
     geste: "var b=document.querySelector('.course-reset');b&&b.click();",
     bandeau: REFUS, resteLa: true,
   },
@@ -620,7 +686,22 @@ var SONDE = function () {
     await nav.envoyer("Page.addScriptToEvaluateOnNewDocument",
       { source: source(sc.panne, sc.cleAbimee) }, sess);
     await nav.envoyer("Page.navigate", { url: url }, sess);
-    await attendre(1100);
+    /* ⚠️ NE PAS REMETTRE UN DELAI FIXE ICI. Il y en avait un — 1100 ms — et il a
+       tenu jusqu'au jour ou cet outil a tourne en 20e position d'une chaine de 28
+       verificateurs : la machine etait chargee, une page de lecon n'avait pas fini
+       de monter son QCM, le geste a clique dans le vide, et le scenario a rougi
+       pour une raison qui n'existait pas dans le site. Un verificateur qui depend
+       de la charge de la machine ne dit plus rien : il tire a pile ou face.
+       On attend donc un ETAT, pas une duree — et si l'etat n'arrive jamais, on le
+       DIT au lieu de continuer a l'aveugle. */
+    var pret = await attendrePret(nav, sess, sc.pret);
+    if (!pret.ok) {
+      console.log("  KO   " + sc.nom + "\n         page jamais prête (" +
+        pret.raison + ") après " + PATIENCE_MS + " ms — geste non joué");
+      ko++;
+      await nav.envoyer("Target.closeTarget", { targetId: cid });
+      continue;
+    }
     if (sc.geste) {
       await nav.envoyer("Runtime.evaluate", { expression: "(function(){" + sc.geste + "})()" }, sess);
     }
