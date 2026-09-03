@@ -102,7 +102,7 @@ ou quatre marques, c'est presque toujours que la même affirmation a été marqu
 - Jamais dans un attribut (`title`, `alt`, `content` d'un `<meta>`), jamais dans un bloc JSON
   (`data-quiz`, `data-exos`, `data-quiz-bilan`).
 
-## Ce que le vérificateur contrôlera (E3)
+## Ce que le vérificateur contrôle (E3, écrit le 2026-09-03)
 
 1. `data-arrete` présent, au format `AAAA-MM-JJ`, et **pas dans le futur** ;
 2. `data-duree` entier positif s'il est là ;
@@ -112,3 +112,27 @@ ou quatre marques, c'est presque toujours que la même affirmation a été marqu
 
 Il ne dit **jamais** si la version citée est à jour — il n'a pas de réseau. Il dit qu'on **sait**
 quand on l'a écrite.
+
+`node tools/verif-fraicheur.js` — 16ᵉ étape de `tools/verif.js`. L'option `--date=AAAA-MM-JJ` permet
+de **se projeter dans le temps** et de voir ce qui arrivera à échéance ; `--strict` fait rougir dès
+le premier avertissement.
+
+## Pourquoi il n'existe pas de détecteur automatique — la mesure
+
+La question « ne pourrait-on pas *trouver* les affirmations non datées ? » a été tranchée par la
+mesure, pas par une opinion. `tools/fraicheur/calibrer.js` confronte 20 formulations candidates à la
+seule **vérité terrain** du site — les 26 leçons de `react`, lues intégralement, dont les 52
+affirmations périssables sont marquées — et compte, pour chaque motif, ses occurrences *dans* une
+marque et *hors* marque :
+
+| motif | dans | hors | précision |
+|---|---:|---:|---:|
+| des bibliothèques comme | 3 | 1 | **75 %** (le seul retenu) |
+| le plus courant / la plus courante | 2 | 5 | 29 % |
+| la référence / les références | 1 | 7 | 13 % |
+| **un numéro de version d'un outil** | **4** | **99** | **4 %** |
+
+Et les vingt candidats **réunis** ne touchent que **20 des 52** affirmations marquées (38 %). Un
+détecteur bâti là-dessus signalerait deux pages sur trois à tort tout en manquant six affirmations
+sur dix. On n'en écrit donc pas. La mesure se rejoue d'une commande :
+`node tools/fraicheur/calibrer.js --cours=react --exemples`.
