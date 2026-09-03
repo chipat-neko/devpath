@@ -68,11 +68,119 @@ distinguent, et elles ne se traitent pas pareil :
 - les **générateurs et outils de mesure** (`wf-*.js`, `build-*.js`, `mesure-*.js`, `usage-anthropic.js`,
   `conso-hebdo.js`…) : ils n'ont **rien à faire** dans une chaîne de vérification. Ne pas les y mettre.
 
-- [ ] **A1 · Trier les 24, avant de toucher à quoi que ce soit.** Lancer chacun, relever son code de
+- [x] **A1 · Trier les 24, avant de toucher à quoi que ce soit.** Lancer chacun, relever son code de
       sortie, sa durée, ce qu'il mesure, et s'il modifie des fichiers. Produire le tableau et
       classer : *chaîne obligatoire*, *mode dédié*, *hors chaîne assumé*. **Écrire le classement dans
       ce plan** — c'est lui qui décide de A2 à A5, pas l'intuition. Un outil qui échoue aujourd'hui
       est un renseignement, pas un obstacle : le noter.
+
+      **FAIT le 2026-09-03.** `tools/recense-chaine.js` (nouveau) demande à `verif.js` sa liste
+      d'étapes mode par mode — via le drapeau `--lister` ajouté à `verif.js` — au lieu d'en recopier
+      une copie qui se périmerait. Il compte **293 fichiers `.js` sous `tools/`**, dont **44
+      vérificateurs** et **12 épreuves par injection**.
+
+      ⚠️ **Le chiffre de 24 du cadrage est faux : il y en a 35.** Le relevé du jour donne **25
+      vérificateurs et 10 épreuves hors chaîne**. Les onze de plus sont les vérificateurs
+      `tools/maths/module-3|4|5/*`, que l'inventaire d'origine n'avait pas parcourus. `verif.js`
+      lance 16 étapes en `--rapide`, 32 sans option, 34 en `--complet`, 32 en `--strict`.
+
+      **Les 35 ont été lancés un par un, chronométrés, avec `git status` relevé avant et après.**
+      Temps machine total du relevé : **≈ 76 minutes**.
+
+      **Les 25 vérificateurs**
+
+      | outil | code | durée | ce qu'il rend |
+      |---|---:|---:|---|
+      | `verif-liste-alternatives.js` | 0 | 0,1 s | vert |
+      | `verif-controles.js` | 0 | 0,5 s | vert |
+      | `doc/verif-doc.js` | 0 | 0,7 s | vert |
+      | `doc/verif-normatif.js` | 0 | 0,7 s | vert |
+      | `fraicheur/verif-contraste.js` | 0 | 0,7 s | vert |
+      | `doc/verif-recherche.js` | 0 | 1,9 s | vert |
+      | `verif-sql.js` | 0 | 2,8 s | vert |
+      | `doc/verif-lexique-clic.js` | 0 | 4,5 s | vert (Chrome) |
+      | `verif-interpreteur.js` | 0 | 15,4 s | vert |
+      | `doc/verif-vocab.js` | 0 | 15,6 s | vert |
+      | `maths/module-5/verif-accept.js` | 0 | 0,3 s | vert |
+      | `maths/module-{3,4,5}/verif-expect.js` | 0 | 0,8 s à eux trois | vert |
+      | `maths/module-5/verif-renvois.js` | 0 | 2,2 s | vert |
+      | `maths/module-5/verif-bilan.js` | 0 | 14,1 s | vert (Chrome) |
+      | `maths/module-5/verif-cours-progression.js` | **1 puis 0** | 15,0 s | **rouge à cause de son profil Chrome, vert après effacement** |
+      | `fraicheur/verif-affichage.js` | 0 | **201,1 s** | vert (Chrome) |
+      | `verif-sorties.js` | **1** | 63,7 s | **2 divergences réelles sur 449 blocs** |
+      | `verif-clic.js` | **124** | **> 915 s, tué** | **ne termine pas** |
+      | `maths/module-{3,4,5}/verif-chiffres.js` | 1 | 0,1 s | *usage* : exigent des pages en argument |
+      | `maths/module-{3,4}/verif-cours-progression.js` | 1 | 8,9 s / 10,6 s | **attentes figées sur un état révolu** |
+
+      **Les 10 épreuves par injection**
+
+      | épreuve | code | durée | dépôt propre | fautes vues |
+      |---|---:|---:|:---:|---|
+      | `maths/module-5/verif-chiffres-mutations.js` | 0 | 1,8 s | oui | toutes |
+      | `fraicheur/verif-fraicheur-mutations.js` | 0 | 2,6 s | oui | 13 / 13 |
+      | `fraicheur/verif-affichage-mutations.js` | 0 | 42,1 s | oui | 14 / 14 |
+      | `verif-execution-liens-mutations.js` | 0 | 117,2 s | oui | 8 / 8 |
+      | `verif-git-modele-mutations.js` | 0 | 287,6 s | oui | 29 / 29 |
+      | `verif-git-graphe-mutations.js` | 0 | 414,5 s | oui | 29 / 29 |
+      | `verif-git-scenarios-mutations.js` | 0 | 538,1 s | oui | 30 / 30 |
+      | `verif-execution-mutations.js` | 124 | > 613 s | oui | **11 / 12 — un angle mort** |
+      | `verif-git-commandes-mutations.js` | 124 | > 602 s | oui | 14 vues, non terminée |
+      | `preuves/execution-ancres-mutations.js` | 124 | > 614 s | **NON** | 3 / 5 au moment du kill |
+
+      **TROIS DÉFAUTS TRANSVERSAUX, et c'est le vrai résultat de A1** — les ignorer ferait entrer
+      dans la chaîne des outils qui rendent des verdicts faux :
+
+      1. **Un profil Chrome réutilisé fausse ou bloque le verdict.** `scratchpad/` porte **3,2 Go**,
+         dont **2,0 Go de profils Chrome** répartis en **41 dossiers `.chrome-*`**, tous persistants
+         et tous réutilisés d'une exécution à l'autre. Deux mesures le prouvent :
+         `maths/module-5/verif-cours-progression.js` annonçait « la barre affiche 0 / 13 au lieu de
+         5 / 13 » — un bug du site, en apparence ; **le seul effacement de son profil le fait passer
+         au vert** (5 / 13 lu, 13 liens, 0 lien mort). Et le profil de `verif-clic.js` pesait
+         **362 Mo** : effacé, l'outil rejoue 2 pages en 28 s au lieu de rester bloqué. Sur les mêmes
+         6 pages, profil neuf **123 s** contre **151 s** avec un profil de 88 Mo — **+ 23 %**, et
+         l'écart croît avec la taille du profil. **Aucun vérificateur Chrome n'entrera dans la chaîne
+         sans partir d'un profil neuf.**
+      2. **Une épreuve tuée laisse le site cassé.** `preuves/execution-ancres-mutations.js`, tuée à
+         614 s, a laissé sa faute injectée dans `js/execution.js` (le retour sur une ancre invalide
+         rechargeait le premier exemple). Restaurée à la main, `node --check` vert. C'est exactement
+         l'exigence que A4 pose, et elle vient de se matérialiser dans le relevé lui-même.
+      3. **Un outil tué laisse ses Chrome.** Après le kill de `verif-clic.js`, **50 processus
+         `chrome.exe`** tournaient encore. Le mode dédié devra les ramasser.
+
+      **LE CLASSEMENT — c'est lui qui commande A2 à A5**
+
+      *Chaîne obligatoire, mode `--rapide`* (12 outils, **11,4 s** ajoutées au total) :
+      `verif-controles.js`, `verif-liste-alternatives.js`, `doc/verif-doc.js`,
+      `doc/verif-normatif.js`, `doc/verif-recherche.js`, `fraicheur/verif-contraste.js`,
+      `verif-sql.js`, `maths/module-5/verif-accept.js`, `maths/module-5/verif-renvois.js`,
+      `maths/module-{3,4,5}/verif-expect.js`.
+
+      *Chaîne obligatoire, mode par défaut* (5 outils, **≈ 128 s**) : `doc/verif-lexique-clic.js`,
+      `doc/verif-vocab.js`, `verif-interpreteur.js`, `maths/module-5/verif-bilan.js`,
+      `maths/module-5/verif-cours-progression.js` — les deux derniers **après le correctif de profil
+      neuf**. Plus `verif-sorties.js` (63,7 s) **une fois A2 soldé**.
+
+      *Chaîne, mode `--complet` seulement* : `fraicheur/verif-affichage.js` — 201 s, trop lourd
+      partout ailleurs.
+
+      *Mode dédié `--mutations` (point A4)* : les **10 épreuves**. Total mesuré **> 2 600 s, soit
+      44 min**, deux non terminées en 10 minutes. Leur place n'est dans aucun mode courant, la mesure
+      le confirme sans discussion.
+
+      *Hors chaîne assumé, avec sa raison* :
+      - `verif-clic.js` — **ne termine pas** : 89 pages à ≈ 20,5 s la page avec un profil neuf, soit
+        30 min au mieux. Il relance Chrome page par page sur un profil qui grossit. Il reste le seul
+        outil qui voie certaines fautes : à réparer, puis à verser au mode dédié, pas à la chaîne.
+      - `maths/module-3/verif-cours-progression.js` et celui du module 4 — **périmés par
+        construction** : ils exigent `liensLecons.length === 9` et `4` mentions « Bientôt », l'état du
+        cours `maths` à mi-chantier. Le cours en publie **13 sur 13** aujourd'hui. Leur successeur à
+        jour est celui du module 5, paramétrable (`--cours=`, `--attendues=`, `--terminees=`).
+      - `maths/module-{3,4,5}/verif-chiffres.js` — **utilitaires paramétrés**, pas des étapes : sans
+        argument ils impriment leur usage et sortent en 1. Ils sont appelés par
+        `verif-chiffres-mutations.js`, qui, lui, entre au mode dédié.
+
+      **Un angle mort trouvé au passage, et noté ici plutôt que perdu** : `verif-execution.js` ne voit
+      pas la douzième faute injectée — « le compteur de pas ment d'une unité ». 11 sur 12.
 
 - [ ] **A2 · `verif-sorties.js` : trancher la question que le V15 a laissée ouverte.** Il trouve de
       vraies fautes (une leçon dont les 4 lignes publiées rendent `undefined`, un dépassement de

@@ -343,6 +343,16 @@ if (COMPLET) {
   });
 }
 
+/* --lister : rendre la liste des etapes du mode demande, une par ligne, sans rien
+   lancer. C'est ce que lit `tools/recense-chaine.js` pour croiser la chaine avec
+   l'inventaire des outils. Il la LIT ici plutot que d'en recopier une copie : une
+   liste recopiee se perime en silence, ce qui est exactement le defaut que le
+   chantier V16 est venu fermer. */
+if (flag("lister")) {
+  ETAPES.forEach(function (e) { console.log(e.fichier); });
+  process.exit(0);
+}
+
 console.log("verif.js — " + ETAPES.length + " verificateur(s)" + (RAPIDE ? " (mode rapide : le rendu est saute)" : "") + "\n");
 
 var resultats = [];
