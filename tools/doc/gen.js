@@ -386,6 +386,187 @@ const NORM_NB = (function () {
   };
 })();
 
+/* ------------------------------------------------------- RECHERCHE (D4) */
+/* La leçon 04 confronte des réponses de forum DATÉES au moteur d'aujourd'hui,
+   et des affirmations sans source à leur propre exécution. Comme partout dans
+   ce cours, aucun de ces chiffres n'est écrit dans la prose : @@RECHNB:clé@@
+   les injecte à l'assemblage, et verif-recherche échoue s'ils divergent.
+   Trois tableaux sont montés de la même façon :
+     @@CONSEILS@@      les réponses datées et leur verdict, calculé ;
+     @@AFFIRMATIONS@@  les affirmations sans source et ce qu'elles obtiennent ;
+     @@SQUELETTES@@    le message d'erreur, sa part stable et sa part à toi.  */
+const CONSEILS_M = require('./reponses/conseils.js').mesurer();
+const AFFIRM_M = require('./reponses/affirmations.js').mesurer();
+const REQ_M = require('./mesures/requetes.js').mesurer();
+const RECOURS_M = require('./mesures/recours.js').mesurer();
+
+/* Un décimal à la française. Les chiffres de ce site s'écrivent avec une
+   virgule, jamais avec un point. */
+function decimal(n, chiffres) {
+  return n.toFixed(chiffres === undefined ? 1 : chiffres).replace('.', ',');
+}
+
+const LIB_COURT = {
+  casse: 'ne s’exécute plus',
+  jamais: 'faux dès l’origine',
+  piege: 'marche, mais troué',
+  raison: 'la raison a disparu',
+  depasse: 'il existe plus court',
+  bon: 'toujours bon',
+};
+
+function tableauConseils() {
+  const lignes = CONSEILS_M.conseils.map(function (c) {
+    const detail = [];
+    if (c.jamais) detail.push(c.jamais.quoi);
+    if (c.contre) detail.push(c.contre.quoi);
+    if (c.raisonMorte) detail.push(c.raisonMorte.texte);
+    if (c.autreRaison) detail.push(c.autreRaison.texte);
+    if (c.remplacant) detail.push('aujourd’hui : <code>' + ech(c.remplacant.nom) + '</code>');
+    const classe = (c.verdict === 'bon') ? 'vocab-pres' : 'vocab-abs';
+    return '                <tr>\n' +
+      '                  <td>' + c.annee + '</td>\n' +
+      '                  <td><em>' + ech(c.question) + '</em><br /><code>' + c.code + '</code></td>\n' +
+      '                  <td><span class="' + classe + '">' + LIB_COURT[c.verdict] + '</span></td>\n' +
+      '                  <td>' + (detail.length ? detail.join('&nbsp;; ') : '—') + '</td>\n' +
+      '                </tr>';
+  });
+  return '              <div class="table-wrap">\n' +
+    '                <table class="vocab-table">\n' +
+    '                  <caption>Les ' + CONSEILS_M.total + ' réponses du corpus, de ' + CONSEILS_M.anneeMin +
+    ' à ' + CONSEILS_M.anneeMax + ', et le verdict rendu par l’exécution — pas par l’opinion. ' +
+    'Aucune n’est recopiée&nbsp;: elles sont rédigées ici dans la forme de l’époque, et c’est le ' +
+    '<strong>code conseillé</strong> qui est réel.</caption>\n' +
+    '                  <thead><tr><th scope="col">Année</th><th scope="col">La question, et le code conseillé</th>' +
+    '<th scope="col">Verdict</th><th scope="col">Ce que l’exécution montre</th></tr></thead>\n' +
+    '                  <tbody>\n' + lignes.join('\n') + '\n                  </tbody>\n' +
+    '                </table>\n' +
+    '              </div>';
+}
+
+function tableauAffirmations() {
+  const lignes = AFFIRM_M.affirmations.map(function (a) {
+    const classe = a.vraie ? 'vocab-pres' : 'vocab-abs';
+    return '                <tr>\n' +
+      '                  <td>' + a.texte + '</td>\n' +
+      '                  <td><span class="' + classe + '">' + (a.vraie ? 'vraie' : 'fausse') + '</span></td>\n' +
+      '                  <td>' + (a.vraie ? '—' : '<code>' + ech(a.annonce) + '</code> annoncé, <code>' +
+        ech(a.obtenu) + '</code> obtenu' + (a.leve ? ' <em>(elle lève)</em>' : '')) + '</td>\n' +
+      '                </tr>';
+  });
+  return '              <div class="table-wrap">\n' +
+    '                <table class="vocab-table">\n' +
+    '                  <caption>Les ' + AFFIRM_M.total + ' affirmations du corpus, et ce que le moteur en fait. ' +
+    'Elles sont écrites ici, dans le registre assuré de ce qui ne cite pas sa source&nbsp;: la ' +
+    '<strong>proportion</strong> de fausses ne mesure donc rien — c’est celle qu’on a choisie. Ce qui est mesuré ' +
+    'est en dessous du tableau.</caption>\n' +
+    '                  <thead><tr><th scope="col">L’affirmation</th><th scope="col">Verdict</th>' +
+    '<th scope="col">L’écart</th></tr></thead>\n' +
+    '                  <tbody>\n' + lignes.join('\n') + '\n                  </tbody>\n' +
+    '                </table>\n' +
+    '              </div>';
+}
+
+function tableauSquelettes() {
+  const lignes = REQ_M.v1.paires.map(function (p) {
+    return '                <tr>\n' +
+      '                  <td>' + ech(p.nom) + '</td>\n' +
+      '                  <td><code>' + ech(p.messageA) + '</code></td>\n' +
+      '                  <td><code>' + ech(p.squelette) + '</code></td>\n' +
+      '                  <td>' + p.pctStable + '&nbsp;%</td>\n' +
+      '                </tr>';
+  });
+  return '              <div class="table-wrap">\n' +
+    '                <table class="vocab-table">\n' +
+    '                  <caption>' + REQ_M.v1.total + ' défauts provoqués <strong>deux fois</strong>, avec des ' +
+    'noms de variables sans rapport. La troisième colonne est ce qui survit à la comparaison des deux ' +
+    'messages&nbsp;: c’est la requête à taper, et elle est calculée, pas rédigée. ' +
+    '<strong>Le nom de la famille</strong> (<code>TypeError</code>, <code>ReferenceError</code>) ' +
+    '<strong>n’y figure pas</strong>&nbsp;: la console l’affiche devant chaque message, et l’ajouter ' +
+    'à la requête restreint utilement la recherche.</caption>\n' +
+    '                  <thead><tr><th scope="col">Le défaut</th><th scope="col">Le message, sans son type</th>' +
+    '<th scope="col">Ce qu’il faut chercher</th><th scope="col">Part du moteur</th></tr></thead>\n' +
+    '                  <tbody>\n' + lignes.join('\n') + '\n                  </tbody>\n' +
+    '                </table>\n' +
+    '              </div>';
+}
+
+const RECH_NB = (function () {
+  const c = CONSEILS_M, a = AFFIRM_M, r = REQ_M, s = RECOURS_M;
+  return {
+    /* les réponses datées */
+    conseils: String(c.total),
+    anneeMin: String(c.anneeMin),
+    anneeMax: String(c.anneeMax),
+    /* ⚠ Pas de clé « ageMax » ici, et c'est délibéré. Elle a existé, calculée
+       avec new Date().getFullYear() : dans une page GÉNÉRÉE PUIS COMMITÉE, un
+       tel nombre est faux dès le 1er janvier suivant, sans que rien ne casse
+       ni qu'aucun vérificateur le voie. La leçon parle des bornes du corpus
+       (anneeMin, anneeMax), qui sont des faits, pas des durées depuis
+       aujourd'hui. C'est très exactement le sujet de la phase E du chantier. */
+    conseilsCasse: String(c.parVerdict.casse),
+    conseilsJamais: String(c.parVerdict.jamais),
+    conseilsPiege: String(c.parVerdict.piege),
+    conseilsRaison: String(c.parVerdict.raison),
+    conseilsDepasse: String(c.parVerdict.depasse),
+    conseilsBon: String(c.parVerdict.bon),
+    conseilsARevoir: String(c.aRevoir),
+    conseilsRemplacant: String(c.avecRemplacant),
+    /* les affirmations sans source */
+    aff: String(a.total),
+    affVraies: String(a.vraies),
+    affFausses: String(a.fausses),
+    affLevent: String(a.fausesQuiLevent),
+    affMotsVraies: decimal(a.motsVraies),
+    affMotsFausses: decimal(a.motsFausses),
+    affEcartMots: decimal(a.ecartMots),
+    affEcartCar: String(Math.round(a.ecartCar)),
+    affEcartPct: decimal(a.ecartPct),
+    affCarVraies: String(Math.round(a.carVraies)),
+    affCarFausses: String(Math.round(a.carFausses)),
+    affPrudence: String(a.avecPrudence),
+    affSource: String(a.avecSource),
+    /* la formulation d'une requête */
+    reqPaires: String(r.v1.total),
+    reqUnites: String(r.v1.unites),
+    reqStables: String(r.v1.stables),
+    reqVariables: String(r.v1.variables),
+    reqPctStable: String(r.v1.pctStable),
+    reqPctVariable: String(100 - r.v1.pctStable),
+    reqIdentiques: String(r.v1.identiques),
+    causes: String(r.v2.nbCauses),
+    causesDistincts: String(r.v2.messagesDistincts),
+    voisins: String(r.v2.voisins.length),
+    voisinsDistincts: String(r.v2.voisinsDistincts),
+    /* Ce que le site fait déjà. ⚠ Ces clés ont été REFAITES DEUX FOIS : les
+       premières comptaient « 80 leçons qui renvoient l'apprenant ailleurs », un
+       chiffre fabriqué par des faux positifs (« stack overflow » = débordement
+       de pile, « assistant de configuration », « ne cherche pas la
+       documentation » compté comme un renvoi). Ne restent que des faits DURS,
+       échantillonnés à la main — voir l'en-tête de mesures/recours.js. */
+    siteLecons: milliers(s.lecons),
+    sitePortes: String(s.portes),
+    siteCoursPortes: String(s.coursPorte),
+    sitePourMille: String(s.pourMille).replace('.', ','),
+    siteSansPorte: milliers(s.sansPorte),
+    siteNomment: String(s.cpt.nomment),
+  };
+})();
+
+function remplirRecherche(corps) {
+  return corps
+    .replace(/@@CONSEILS@@/g, function () { return tableauConseils(); })
+    .replace(/@@AFFIRMATIONS@@/g, function () { return tableauAffirmations(); })
+    .replace(/@@SQUELETTES@@/g, function () { return tableauSquelettes(); })
+    .replace(/@@RECHNB:([a-zA-Z0-9]+)@@/g, function (_, cle) {
+      if (!RECH_NB.hasOwnProperty(cle)) {
+        console.error('ARRÊT : décompte de recherche inconnu « ' + cle + ' ».');
+        process.exit(1);
+      }
+      return RECH_NB[cle];
+    });
+}
+
 function remplirNorm(corps) {
   return corps.replace(/@@NORMNB:([a-zA-Z0-9]+)@@/g, function (_, cle) {
     if (!NORM_NB.hasOwnProperty(cle)) {
@@ -422,7 +603,7 @@ function remplirTextes(corps) {
    synchrone, et il faut l'attendre (voir drainer()). On remplace donc en deux
    temps — repérer, exécuter, puis substituer. */
 async function remplirMarqueurs(corps) {
-  let texte = remplirNorm(remplirVocab(remplirTextes(remplirMesures(corps))));
+  let texte = remplirRecherche(remplirNorm(remplirVocab(remplirTextes(remplirMesures(corps)))));
   const marqueurs = [...texte.matchAll(/@@(CODE|SORTIE):([a-z0-9-]+\.js)@@/g)];
   const remplacements = new Map();
   for (const m of marqueurs) {
