@@ -258,6 +258,23 @@ function probaCollision(n, bits) {
 // Le seuil « 50 % de risque » : environ 1,18 x racine(N). C'est la RACINE, et
 // c'est tout le sujet : une empreinte de 128 bits ne résiste qu'à 64 bits.
 const seuil50 = (bits) =&gt; 1.1774 * Math.pow(2, bits / 2);
+// Mais l'approximation SOUS-ESTIME le vrai seuil, et la question posée plus bas
+// est exacte. Tant qu'on peut l'atteindre, on cherche donc le seuil EXACT : on
+// ajoute une valeur à la fois et on s'arrête quand la probabilité de collision
+// passe 50 %. Au-delà de 32 bits ce seuil se compte en milliards de tirages : la
+// boucle n'aboutirait pas, et la page le DIT plutôt que de faire passer un ordre
+// de grandeur pour une réponse.
+const PLAFOND_RECHERCHE = 1000000;
+function seuilExact(bits) {
+  const N = Math.pow(2, bits);
+  let logDiff = 0;
+  for (let k = 1; k &lt;= PLAFOND_RECHERCHE; k++) {
+    logDiff += Math.log1p(-(k - 1) / N);
+    if (-Math.expm1(logDiff) &gt;= 0.5) return k;
+  }
+  return null;
+}
+const grouperEntier = (n) =&gt; String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 const court = (x) =&gt; {
   if (x &lt; 1000000) return x.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   const e = Math.floor(Math.log10(x));
@@ -267,8 +284,9 @@ const court = (x) =&gt; {
 console.log('SEUIL DES 50 % : combien de valeurs tirées avant qu\'une collision devienne');
 console.log('plus probable qu\'improbable ?');
 console.log('');
-console.log('bits'.padStart(5) + 'valeurs possibles'.padStart(22) + 'seuil 50 %'.padStart(20) + '   comparaison');
-console.log('-'.repeat(78));
+console.log('bits'.padStart(5) + 'valeurs possibles'.padStart(22) +
+  'seuil exact'.padStart(14) + 'approché'.padStart(16) + '   comparaison');
+console.log('-'.repeat(92));
 const REPERES = [
   [16, 'un compteur sur 2 octets'],
   [32, 'un identifiant « unique » de 32 bits'],
@@ -278,9 +296,17 @@ const REPERES = [
   [256, 'SHA-256'],
 ];
 for (const [bits, quoi] of REPERES) {
+  const exact = seuilExact(bits);
   console.log(String(bits).padStart(5) + court(Math.pow(2, bits)).padStart(22) +
-    court(seuil50(bits)).padStart(20) + '   ' + quoi);
+    (exact === null ? 'hors portée' : grouperEntier(exact)).padStart(14) +
+    court(seuil50(bits)).padStart(16) + '   ' + quoi);
 }
+console.log('');
+console.log('La colonne « approché » est 1,18 x racine(N). Elle sous-estime le seuil exact');
+console.log('d\'une ou deux unités — assez pour retenir un ordre de grandeur, pas assez pour');
+console.log('répondre à la question posée. « hors portée » veut dire que le seuil se compte');
+console.log('en milliards de tirages : on ne peut plus le chercher un par un, et c\'est bien');
+console.log('pour cela qu\'on se contente de la racine à partir de là.');
 
 console.log('');
 console.log('RISQUE POUR UN VOLUME DONNÉ');
@@ -317,14 +343,20 @@ console.log('   une conception neuve.');</code></pre></figure>
 <figure class="code-block" data-file="collisions.txt"><pre><code class="language-plaintext">SEUIL DES 50 % : combien de valeurs tirées avant qu'une collision devienne
 plus probable qu'improbable ?
 
- bits     valeurs possibles          seuil 50 %   comparaison
-------------------------------------------------------------------------------
-   16                65 536                 301   un compteur sur 2 octets
-   32           4.29 x 10^9              77 162   un identifiant « unique » de 32 bits
-   64          1.84 x 10^19         5.06 x 10^9   un identifiant de 64 bits
-  122          5.32 x 10^36        2.71 x 10^18   un UUID v4 (122 bits aléatoires)
-  128          3.40 x 10^38        2.17 x 10^19   MD5
-  256          1.16 x 10^77        4.01 x 10^38   SHA-256
+ bits     valeurs possibles   seuil exact        approché   comparaison
+--------------------------------------------------------------------------------------------
+   16                65 536           302             301   un compteur sur 2 octets
+   32           4.29 x 10^9        77 164          77 162   un identifiant « unique » de 32 bits
+   64          1.84 x 10^19   hors portée     5.06 x 10^9   un identifiant de 64 bits
+  122          5.32 x 10^36   hors portée    2.71 x 10^18   un UUID v4 (122 bits aléatoires)
+  128          3.40 x 10^38   hors portée    2.17 x 10^19   MD5
+  256          1.16 x 10^77   hors portée    4.01 x 10^38   SHA-256
+
+La colonne « approché » est 1,18 x racine(N). Elle sous-estime le seuil exact
+d'une ou deux unités — assez pour retenir un ordre de grandeur, pas assez pour
+répondre à la question posée. « hors portée » veut dire que le seuil se compte
+en milliards de tirages : on ne peut plus le chercher un par un, et c'est bien
+pour cela qu'on se contente de la racine à partir de là.
 
 RISQUE POUR UN VOLUME DONNÉ
 

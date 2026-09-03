@@ -1003,7 +1003,50 @@ Le revers de tout le reste. Un site de 1 400 leçons qui cite des versions vieil
   - **1 leçon « maigre »** : `sass/lecon-09.html`, 4 critères sous la médiane (svg 2<3, encadrés 3<5, glossaire 7<8, mots 2 129<2 159). La jauge est *relative à la médiane du site* : la vider durablement est un objectif qui se déplace tout seul, et la leçon n'a aucun défaut de fond.
   - **biais de longueur des QCM** : sur 6 167 questions, la bonne réponse est strictement la plus longue dans **5 478 (88,8 %)**, « nettement » la plus longue dans **4 315 (70,0 %)**. C'est un chantier éditorial connu (étoffer les distracteurs, jamais raccourcir la bonne réponse). Les options sont mélangées à l'affichage, donc la position ne trahit rien — mais la longueur, si.
   - **rythme des durées** : 90 cours, médiane 54 mots/minute annoncée, **13 cours hors du facteur 2** (de `powershell` à 26 jusqu'à `crypto` à 371). Calibrage, ni erreur ni urgence.
-- [ ] **F2 · Les mathématiques rejouées.** Tous les calculs du cours de la phase C ré-exécutés depuis zéro, par un contrôle indépendant qui ne fait pas confiance à ce qui est écrit. Un chiffre faux ici est plus grave qu'ailleurs.
+- [x] **F2 · Les mathématiques rejouées.** ✅ **2026-09-03. Les 13 leçons du cours de maths recalculées par une AUTRE méthode que celle qui les a écrites — 6 groupes, 237 contrôles, 8 801 lignes de code de contrôle qui ne lisent jamais le code du cours. Quatre faits publiés étaient faux, dont un que la leçon enseignait deux paragraphes plus haut. Et le contrôle a été mis à l'épreuve : 13 fautes injectées, 13 vues.**
+
+  **POURQUOI UN CINQUIÈME CONTRÔLE.** Le cours `maths` était déjà tenu par deux vérificateurs, et ils ont le même angle mort. `verif-sorties` rejoue le programme publié et compare sa sortie au bloc publié ; `verif-chiffres` exige que chaque nombre de la prose vienne d'une sortie. **Les deux font confiance au PROGRAMME.** S'il calcule faux, il calcule faux des deux côtés et tout reste vert — c'est arrivé au module 1, où `lois.js` annonçait 78 propositions évaluées pour 76 sous deux contrôles verts.
+
+  `tools/maths/verif-verite.js` ne lit pas le code du cours. Il **recalcule les faits** — énumération exhaustive, force brute, arithmétique exacte en BigInt, décodage binaire des flottants, élimination de Gauss — puis confronte le résultat au **texte publié**. Quand le cours dit « 253 paires », il compte les paires ; quand il dit qu'un nombre est premier, il essaie tous les diviseurs ; quand il dit « seuil exact », il cherche le seuil un entier à la fois. `verite/lib.js` ne fournit que l'accès au HTML publié : **aucune arithmétique n'y vit**, pour qu'aucun contrôle ne puisse emprunter sa réponse.
+
+  **A · LES QUATRE FAITS FAUX, ET CE QU'ILS ONT EN COMMUN**
+
+  | leçon | ce qui était publié | ce que le recalcul rend |
+  |---|---|---|
+  | **04** · `set-vs-tableau.js` | « chercher u0 … Set : **0 accès**, trouvé=true » | **1 accès.** Le programme imprimait `(accesSet === 0 ? 0 : 1)` — une expression évaluée **avant** l'appel qui incrémente le compteur. La première ligne annonçait donc zéro accès pour une recherche qui en coûte un, **dans la leçon même qui enseigne qu'elle en coûte un, toujours**. |
+  | **06** · `collisions.js` | colonne « **seuil 50 %** » : 301 à 16 bits, 77 162 à 32 bits | **302 et 77 164.** La colonne n'était pas un seuil, c'était l'approximation 1,1774·√N tronquée — elle **sous-estime** de 1 et de 2. Le tableau posait pourtant une question exacte : « combien de valeurs tirées avant qu'une collision devienne plus probable qu'improbable ». |
+  | **02** · prose | « **18** propositions, 17 vérifiées, **1** réfutée » | `lois.txt` publie lui-même « **19** propositions testées, 17 vérifiées, **2** réfutée(s) ». |
+  | **cours.html** · récapitulatif | idem, « 18 / 17 / 1 » | idem. Le même chiffre faux, recopié dans la page de cours. |
+
+  Le point commun des quatre : **aucun outil du dépôt ne pouvait les voir.** Les deux premiers sont des programmes qui calculent faux — `verif-sorties` compare la sortie au programme, et le programme était d'accord avec lui-même. Les deux derniers sont de la prose qui contredit une sortie **du même fichier** : personne ne recomptait.
+
+  **Corrections.** Leçon 04 : l'écart du compteur est **affiché**, jamais un chiffre posé à la main (`accesSet - avantCe`), et le commentaire du programme raconte la faute. Leçon 06 : le tableau a désormais **deux colonnes séparées**, « seuil exact » et « approché », et le programme **cherche vraiment** le seuil exact tant qu'il est atteignable (plafond de 10⁶ tirages) ; au-delà de 32 bits il écrit **« hors portée »** au lieu de faire passer un ordre de grandeur pour une réponse, et cinq lignes de prose disent pourquoi. Vérifié en exécutant : 302 et 77 164 sont bien les plus petits k tels que p(collision) ≥ ½, décidés par comparaison d'**entiers** (2·∏(N−i) ≤ N^k), sans un seul flottant.
+
+  **B · CE QUI EST MESURÉ**
+
+  | | |
+  |---|---|
+  | `tools/maths/verite/groupe-1..6.js` | **237 contrôles**, 6 groupes (01-03, 04-06, 07-08, 09, 10-11, 12-13), **470 Ko** de code — plus gros que le cours qu'il juge |
+  | `node tools/maths/verif-verite.js` | **237 contrôles, 237 concordants, 0 divergent** en 17,5 s |
+  | `verif-sorties` sur les 13 leçons | **105 blocs de sortie rejoués, 105 identiques au caractère près, 0 divergent** |
+  | régénération des modules 3, 4 et 5 | les **7 leçons engendrées (07→13) reproduites à l'octet près** : les sources et les pages ne divergent pas |
+  | `verif-rendu` sur les 4 pages touchées | 4 pages × 3 largeurs × 2 thèmes = **24 mesures, 0 erreur, 0 avertissement** (le tableau de la leçon 06 est passé de 78 à 92 colonnes : vérifié qu'il ne déborde pas à 320 px) |
+
+  **C · L'ÉPREUVE — parce qu'un contrôle toujours vert ne prouve rien.** `tools/maths/preuve-injection.js` abîme le cours, une leçon à la fois : il remplace un fait chiffré par un fait faux dans la page **publiée**, relance le groupe qui couvre cette leçon, et **exige qu'il rougisse**. Puis il restaure la page et **relit le fichier** pour vérifier qu'elle est revenue à l'octet près.
+
+  Les treize fautes sont choisies dans treize leçons et treize familles de faits : un nombre de la prose (2^20 = 1 048 579), un compteur d'appels (« estValide appelée 3 fois »), un résultat de dénombrement (475 000 destinataires), une colonne entière (l'approximation recopiée sous « seuil exact »), un reste modulaire (−5 mod 3 = 2), une densité de premiers (78 598 sous un million), un compte de décimales IEEE 754 (56 au lieu de 55), un nombre d'arêtes (11 au lieu de 10), une somme de colonne stochastique (1,5 au lieu de 1), un rang de bascule (n = 1 655), un logarithme (9,976). **Résultat : 13 posées, 13 VUES, 0 manquée**, et chaque page restaurée à l'identique.
+
+  Deux des injections méritent d'être citées. Celle de la leçon 11 n'a pas été inventée : le réveil précédent avait laissé `archive=7.000` dans `marche.txt` — une injection non restaurée. **Le contrôle l'a trouvée sans qu'on la lui annonce**, en recalculant que la colonne d'une page-puits somme à 1. Celle de la leçon 06 vise le contrôle **écrit ce réveil** : il exige désormais « hors portée » dans la colonne exacte au-delà de 64 bits, précisément pour que le défaut corrigé ne puisse pas revenir.
+
+  **D · LES DEUX CONTRÔLES ENTRENT DANS LA CHAÎNE.** `verif.js` passe de 16 à **17 vérificateurs** en `--rapide` (nouvelle étape `maths`, 17,5 s, aucun navigateur), et l'épreuve d'injection rejoint `mutants` en `--complet` sous le nom `mathinj` — les deux seules étapes qui **jugent les autres**. Chaîne relancée en entier : `node tools/verif.js --rapide` → **17 étapes, tout vert, 348 s**.
+
+  **CONTRÔLES** : `verif-html` **1 629 fichiers, 0 grave / 0 attention** · `verif-donnees` **25 contrôles, 0 erreur** · `node --check` sur les 9 fichiers JS écrits · **0 BOM**, UTF-8 sur les 4 pages et les 9 outils · **0 URL interdite** dans `pages/maths/` et `tools/maths/` · index dérivés régénérés (`search-index.js`, et `flashcards-data.js` qui était **resté périmé depuis E4** — une marque de fraîcheur d'`iac` n'y était pas ; `search-lite` et `antiseches` étaient déjà à jour).
+
+  **CE QUI N'A PAS ÉTÉ FAIT, ET QUI EST UNE VRAIE TROUVAILLE.** En lançant `verif-sorties` sur **tout** le site pour situer le cours de maths, deux divergences apparaissent **hors** du cours — et elles survivent parce que **`verif-sorties` n'est dans aucun mode de `verif.js`**, pas même `--strict` (F1 a passé 28 étapes sans lui) :
+  - `pages/doc/lecon-02.html` · `vocab-concurrence.txt` : **4 lignes publiées, 4 lignes rendues `undefined`** — la sortie est produite de façon asynchrone et le banc ne la capte pas ;
+  - `pages/offensive/lecon-07.html` · `cout.txt` : **dépassement du délai de 10 s** dans le bac à sable `vm` — le piège connu (le `vm` peut être dix fois plus lent que le navigateur), donc probablement pas une faute de contenu, mais un bloc **non jugé** en pratique.
+
+  Aucune des deux ne touche les mathématiques, donc aucune n'entre dans F2 ; les deux sont reportées à **F5**, avec la question qui les commande : **faut-il faire entrer `verif-sorties` dans la chaîne ?** Tant qu'il n'y est pas, 449 blocs de sortie du site ne sont rejoués que si quelqu'un y pense.
 - [ ] **F3 · Le visualiseur, éprouvé.** Chaque exemple pré-chargé s'ouvre et se déroule jusqu'au bout, réseau coupé.
 - [ ] **F4 · Mesure globale.** Études de cas publiées, notions visualisées, leçons de maths, pages datées. Comparer aux chiffres du constat en tête de ce fichier.
 - [ ] **F5 · Ce qui n'a pas été fait.** Lister et expliquer, sans arrondir.

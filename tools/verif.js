@@ -118,6 +118,15 @@ var ETAPES = [
      marques posees sont bien formees, bien placees, et qu'aucune n'a depasse son
      age. Il ne dit jamais si une version est a jour : il n'a pas de reseau. */
   { nom: "fraich ", fichier: "verif-fraicheur.js", args: STRICT ? ["--strict"] : [], quoi: "marques de fraicheur : bien formees, bien placees, dans leur duree" },
+  /* Le cours `maths` est le seul du site ou une erreur est INVISIBLE a la relecture :
+     un programme qui calcule faux publie une sortie fausse, et les deux controles qui
+     existent -- rejouer le programme, tracer les nombres de la prose jusqu'a une
+     sortie -- restent verts, puisqu'ils font tous les deux confiance au programme.
+     C'est arrive : `lois.js` annoncait 78 propositions evaluees pour 76. Cette etape ne
+     lit pas le code du cours, elle RECALCULE ses faits par une autre methode --
+     enumeration exhaustive, force brute, BigInt exact, decodage binaire des flottants --
+     puis confronte le resultat au texte publie. */
+  { nom: "maths  ", fichier: "maths/verif-verite.js", args: [], quoi: "les faits du cours maths, recalcules par une autre methode" },
 ];
 if (!RAPIDE) {
   ETAPES.push({
@@ -283,6 +292,21 @@ if (!RAPIDE) {
    « < » injecte, l'affichait... et rendait 0. La chaine restait verte sur le defaut
    meme qui fonde ce chantier. */
 if (COMPLET) {
+  /* Meme raison que `mutants`, appliquee au cours de maths : un controle qui rend
+     toujours « 0 divergent » rend la meme chose qu'un controle qui ne regarde rien.
+     Celui-ci pose treize faits faux dans treize lecons differentes -- un nombre de la
+     prose, un compteur d'appels, une cellule de tableau, une colonne entiere, une somme
+     de probabilites -- et exige que le groupe qui couvre la lecon rougisse. Il restaure
+     la page a l'octet pres apres chaque injection, y compris sur exception, et relit le
+     fichier pour le verifier. MEME RESERVE que `mutants` : un arret brutal pendant une
+     injection laisserait une page modifiee -- `git checkout -- <fichier>` la repare. */
+  ETAPES.push({
+    nom: "mathinj",
+    fichier: "maths/preuve-injection.js",
+    args: [],
+    quoi: "le controle des maths VOIT-IL une faute ? 13 fautes injectees, 13 attendues rouges",
+    lent: true,
+  });
   ETAPES.push({
     nom: "mutants",
     fichier: "verif-chaine-mutations.js",
