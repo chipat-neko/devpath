@@ -41,22 +41,68 @@
   }
 
   /* ----------------------------------------------------------- Lexique */
+  /* Les familles viennent des données : ajouter un mot au lexique suffit à
+     faire apparaître son filtre, sans toucher à ce fichier. */
+  var FAM_TITRES = {
+    base: "Vocabulaire de base",
+    promesse: "Ce que la doc promet",
+    code: "Ce que le code fait",
+    donnees: "Les données et leurs bords",
+    temps: "Le temps et la concurrence",
+    casse: "Quand ça casse",
+    phrase: "Les mots qui renversent la phrase"
+  };
+  var famActive = "";
+  var famillesEl = document.getElementById("lx-familles");
+
+  function familles() {
+    var vues = [];
+    for (var i = 0; i < DATA.length; i++) {
+      var f = DATA[i].fam || "base";
+      if (vues.indexOf(f) === -1) vues.push(f);
+    }
+    return vues;
+  }
+
+  function renderFamilles() {
+    if (!famillesEl) return;
+    var html = '<button type="button" class="lx-fam' + (famActive ? "" : " is-active") +
+      '" data-fam="" aria-pressed="' + (famActive ? "false" : "true") + '">Tout</button>';
+    familles().forEach(function (f) {
+      var n = DATA.filter(function (d) { return (d.fam || "base") === f; }).length;
+      var sel = famActive === f;
+      html += '<button type="button" class="lx-fam' + (sel ? " is-active" : "") +
+        '" data-fam="' + esc(f) + '" aria-pressed="' + (sel ? "true" : "false") + '">' +
+        esc(FAM_TITRES[f] || f) + ' <span class="lx-fam__n">' + n + "</span></button>";
+    });
+    famillesEl.innerHTML = html;
+  }
+
   function renderList() {
     var q = norm(searchEl ? searchEl.value.trim() : "");
     var rows = DATA.filter(function (d) {
-      return !q || norm(d.en + " " + d.fr).indexOf(q) !== -1;
+      if (famActive && (d.fam || "base") !== famActive) return false;
+      return !q || norm(d.en + " " + d.fr + " " + (d.naif || "") + " " + (d.sens || "") + " " + (d.piege || "")).indexOf(q) !== -1;
     });
     entriesEl.innerHTML = rows
       .map(function (d) {
+        var corps = esc(d.fr);
+        if (d.naif) corps += ' <span class="lx-naif">faux ami : ' + esc(d.naif) + "</span>";
+        if (d.sens) corps += '<span class="lx-sens">' + esc(d.sens) + "</span>";
+        if (d.piege) corps += '<span class="lx-piege"><strong>Piège.</strong> ' + esc(d.piege) + "</span>";
+        if (d.ex) corps += '<span class="lx-ex">' + esc(d.ex) + "</span>";
         return (
           '<div class="lx-entry">' +
           '<dt class="lx-en">' + esc(d.en) + "</dt>" +
-          '<dd class="lx-fr">' + esc(d.fr) + (d.ex ? '<span class="lx-ex">' + esc(d.ex) + "</span>" : "") + "</dd>" +
+          '<dd class="lx-fr">' + corps + "</dd>" +
           "</div>"
         );
       })
       .join("");
-    if (countEl) countEl.textContent = rows.length + " terme" + (rows.length > 1 ? "s" : "") + " sur " + DATA.length;
+    if (countEl) {
+      countEl.textContent = rows.length + " terme" + (rows.length > 1 ? "s" : "") + " sur " + DATA.length +
+        " — " + DATA.filter(function (d) { return d.piege; }).length + " portent un piège documenté";
+    }
   }
 
   /* -------------------------------------------------------------- Quiz */
@@ -157,6 +203,17 @@
     }
   });
 
+  if (famillesEl) {
+    famillesEl.addEventListener("click", function (e) {
+      var b = e.target && e.target.closest ? e.target.closest("[data-fam]") : null;
+      if (!b) return;
+      famActive = b.getAttribute("data-fam") || "";
+      renderFamilles();
+      renderList();
+    });
+  }
+
   if (searchEl) searchEl.addEventListener("input", renderList);
+  renderFamilles();
   renderList();
 })();

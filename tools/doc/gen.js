@@ -37,16 +37,38 @@ const PLAFOND_NAVIGATEUR_MS = 3000;   // js/runner.js interrompt un bloc après 
 const MARGE_MS = 1500;
 const DUREES = {};
 
-function executer(src, nom) {
+/* Le navigateur, lui, n'arrête pas à la dernière ligne synchrone : js/runner.js
+   attend encore 900 ms après le « done » du Worker, et affiche donc tout ce
+   qu'une promesse ou un minuteur produit dans cet intervalle. Un générateur qui
+   s'arrêterait au retour de runInNewContext publierait une sortie PLUS COURTE
+   que celle que l'apprenant voit — l'exacte divergence que ce chantier traque.
+   On draine donc la boucle d'événements tant que la sortie bouge. */
+const ATTENTE_MS = 900;      // le même délai que js/runner.js
+async function drainer(out, deja) {
+  let stable = out.length, immobile = 0;
+  while (immobile < ATTENTE_MS) {
+    await new Promise((r) => setTimeout(r, 25));
+    if (out.length !== stable) { stable = out.length; immobile = 0; } else immobile += 25;
+  }
+  return out.length - deja;
+}
+
+async function executer(src, nom) {
   const out = [];
   const push = function () { out.push(Array.prototype.slice.call(arguments).map(fmt).join(' ')); };
   const bac = { console: { log: push, warn: push, error: push, info: push, debug: push } };
   bac.globalThis = bac;
+  bac.setTimeout = setTimeout; bac.clearTimeout = clearTimeout;
+  bac.queueMicrotask = queueMicrotask;
   const t0 = Date.now();
   let incident = null;
   try { vm.runInNewContext(src, vm.createContext(bac), { timeout: PLAFOND_MS }); }
   catch (e) { incident = e.name + ': ' + e.message; out.push('!! ' + incident); }
   const ms = Date.now() - t0;
+  if (!incident) {
+    const tardives = await drainer(out, out.length);
+    if (tardives) console.log('  ' + nom + ' : ' + tardives + ' ligne(s) produite(s) après la fin du code synchrone');
+  }
   DUREES[nom || '?'] = ms;
   if (incident) {
     console.error('ARRÊT : ' + nom + ' a levé « ' + incident + ' ». Rien n a été écrit.');
@@ -134,6 +156,103 @@ function remplirMesures(corps) {
   });
 }
 
+/* ------------------------------------------------------- VOCABULAIRE (D2) */
+/* Les 82 fiches de la leçon 02 ne sont pas écrites dans le corps : elles sont
+   ASSEMBLÉES depuis tools/doc/vocab/mots.json, et les chiffres de leurs pièges
+   viennent de tools/doc/vocab/preuves.js — par exécution. Deux marqueurs :
+     @@VOCAB:famille@@   le tableau d'une famille de mots ;
+     @@VOCABNB:clé@@     un décompte du relevé (total, familles, absents…).   */
+const MOTS = require('./vocab/mots.json');
+const PREUVES = require('./vocab/preuves.js');
+const PRESENCE = require('./mesures/presence.js').mesurer();
+const PRES = new Map(PRESENCE.mots.map(function (m) { return [m.en, m]; }));
+
+function resoudrePreuves(texte, ou) {
+  return texte.replace(/\{\{(\w+)\}\}/g, function (_, cle) {
+    try { return '<code>' + ech(PREUVES.evaluer(cle).affiche) + '</code>'; }
+    catch (e) {
+      console.error('ARRÊT : ' + ou + ' cite la preuve inconnue « ' + cle + ' ».');
+      process.exit(1);
+    }
+  });
+}
+
+const FAMILLES = {
+  promesse: 'Ce que la doc promet — et ce qu’elle ne promet pas',
+  code: 'Ce que le code fait',
+  donnees: 'Les données et leurs bords',
+  temps: 'Le temps, l’ordre et la concurrence',
+  casse: 'Quand ça casse',
+  phrase: 'Les mots qui renversent la phrase',
+};
+
+function tableauVocab(famille) {
+  const mots = MOTS.filter(function (m) { return m.famille === famille; });
+  if (!mots.length) { console.error('ARRÊT : famille de vocabulaire inconnue « ' + famille + ' ».'); process.exit(1); }
+  const lignes = mots.map(function (m) {
+    const p = PRES.get(m.en) || { cours: 0 };
+    const presence = p.cours === 0
+      ? '<span class="vocab-abs" title="Ce mot n’apparaît dans aucune leçon du site.">absent du site</span>'
+      : '<span class="vocab-pres">' + p.cours + ' cours</span>';
+    return '                <tr>\n' +
+      '                  <td><code>' + ech(m.en) + '</code>' + (m.naif
+        ? '<br /><span class="vocab-naif">faux ami : ' + ech(m.naif) + '</span>' : '') + '</td>\n' +
+      '                  <td><strong>' + ech(m.fr) + '</strong><br />' + resoudrePreuves(ech(m.sens), m.en) + '</td>\n' +
+      '                  <td>' + (m.piege ? resoudrePreuves(ech(m.piege), m.en) : '—') + '</td>\n' +
+      '                  <td class="vocab-presence">' + presence + '</td>\n' +
+      '                </tr>';
+  });
+  return '              <div class="table-wrap">\n' +
+    '                <table class="vocab-table">\n' +
+    '                  <caption>' + FAMILLES[famille] + ' — ' + mots.length + ' mots. La dernière colonne dit dans combien des ' +
+    PRESENCE.cours + ' autres cours du site le mot apparaît déjà.</caption>\n' +
+    '                  <thead><tr><th scope="col">Mot</th><th scope="col">Sens technique</th><th scope="col">Le piège</th><th scope="col">Sur ce site</th></tr></thead>\n' +
+    '                  <tbody>\n' + lignes.join('\n') + '\n                  </tbody>\n' +
+    '                </table>\n' +
+    '              </div>';
+}
+
+const VOCAB_NB = (function () {
+  const absents = MOTS.filter(function (m) { return (PRES.get(m.en) || { cours: 0 }).cours === 0; });
+  const avecPiege = MOTS.filter(function (m) { return !!m.piege; });
+  const avecPreuve = MOTS.filter(function (m) { return m.preuves && m.preuves.length; });
+  const fauxAmis = MOTS.filter(function (m) { return !!m.naif; });
+  const err = PREUVES.corpusErreurs();
+  const nbPreuves = new Set([].concat.apply([], MOTS.map(function (m) { return m.preuves || []; }))).size;
+  return {
+    total: MOTS.length,
+    communs: MOTS.filter(function (m) { return m.dejaAuLexique; }).length,
+    familles: Object.keys(FAMILLES).length,
+    absents: absents.length,
+    listeAbsents: absents.map(function (m) { return '<code>' + ech(m.en) + '</code>'; }).join(', '),
+    avecPiege: avecPiege.length,
+    avecPreuve: avecPreuve.length,
+    preuves: nbPreuves,
+    fauxAmis: fauxAmis.length,
+    leconsCorpus: milliers(PRESENCE.lecons),
+    coursCorpus: String(PRESENCE.cours),
+    erreurs: String(err.total),
+    erreursTypes: String(Object.keys(err.types).length),
+    erreursTypeError: String(err.types.TypeError || 0),
+    erreursIsNotA: String(err.isNotA),
+    erreursCannot: String(err.cannot),
+    lexiqueTotal: String(require('./vocab/gen-lexique-compte.js').total()),
+    lexiqueBase: String(require('./vocab/gen-lexique-compte.js').base()),
+  };
+})();
+
+function remplirVocab(corps) {
+  return corps
+    .replace(/@@VOCAB:([a-z]+)@@/g, function (_, f) { return tableauVocab(f); })
+    .replace(/@@VOCABNB:([a-zA-Z]+)@@/g, function (_, cle) {
+      if (!VOCAB_NB.hasOwnProperty(cle)) {
+        console.error('ARRÊT : décompte de vocabulaire inconnu « ' + cle + ' ».');
+        process.exit(1);
+      }
+      return VOCAB_NB[cle];
+    });
+}
+
 /* @@TEXTE:x.txt@@ — un document lu tel quel dans tools/doc/reference/. C'est ainsi
    que la page de référence en anglais est publiée : elle vit dans un fichier, elle
    est vérifiée dans ce fichier, et la page ne peut pas en dériver. */
@@ -144,14 +263,23 @@ function remplirTextes(corps) {
   });
 }
 
-function remplirMarqueurs(corps) {
-  return remplirTextes(remplirMesures(corps)).replace(/@@(CODE|SORTIE):([a-z0-9-]+\.js)@@/g, function (_, quoi, fichier) {
-    const src = lireCode(fichier);
-    if (quoi === 'CODE') return blocCode(fichier, src);
-    const sortie = executer(src, fichier);
-    MESURES[fichier] = sortie.split('\n').length;
-    return blocSortie(fichier.replace(/\.js$/, '.txt'), sortie);
-  });
+/* asynchrone depuis D2 : une sortie peut arriver après la dernière ligne
+   synchrone, et il faut l'attendre (voir drainer()). On remplace donc en deux
+   temps — repérer, exécuter, puis substituer. */
+async function remplirMarqueurs(corps) {
+  let texte = remplirVocab(remplirTextes(remplirMesures(corps)));
+  const marqueurs = [...texte.matchAll(/@@(CODE|SORTIE):([a-z0-9-]+\.js)@@/g)];
+  const remplacements = new Map();
+  for (const m of marqueurs) {
+    if (remplacements.has(m[0])) continue;
+    const src = lireCode(m[2]);
+    if (m[1] === 'CODE') { remplacements.set(m[0], blocCode(m[2], src)); continue; }
+    const sortie = await executer(src, m[2]);
+    MESURES[m[2]] = sortie.split('\n').length;
+    remplacements.set(m[0], blocSortie(m[2].replace(/\.js$/, '.txt'), sortie));
+  }
+  for (const [cle, val] of remplacements) texte = texte.split(cle).join(val);
+  return texte;
 }
 
 /* ------------------------------------------------------------------ gabarit */
@@ -297,18 +425,25 @@ const META = require('./meta.json');
 const sortie = path.join(RACINE, 'pages', 'doc');
 if (!fs.existsSync(sortie)) fs.mkdirSync(sortie, { recursive: true });
 
-META.forEach(function (m) {
-  const src = path.join(__dirname, 'corps', 'l' + Number(m.num) + '.html');
-  if (!fs.existsSync(src)) { console.log('corps absent, leçon ' + m.num + ' non générée'); return; }
-  const corps = remplirMarqueurs(fs.readFileSync(src, 'utf8'));
-  const html = page(m, corps.replace(/\n+$/, ''));
-  const cible = path.join(sortie, 'lecon-' + m.num + '.html');
-  fs.writeFileSync(cible, html, 'utf8');
-  const visible = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;|&#\d+;/gi, ' ').replace(/\s+/g, ' ').trim();
-  console.log('écrit ' + cible + '  ' + Math.round(html.length / 1024) + ' Ko, ' + visible.split(/\s+/).length + ' mots visibles');
-});
-console.log('lignes de sortie insérées : ' + JSON.stringify(MESURES));
-const lent = Object.keys(DUREES).sort(function (a, b) { return DUREES[b] - DUREES[a]; }).slice(0, 3);
-console.log('le plus lent : ' + lent.map(function (n) { return n + ' ' + DUREES[n] + ' ms'; }).join(', ') +
-  '  (plafond du navigateur : ' + PLAFOND_NAVIGATEUR_MS + ' ms)');
+(async function () {
+  for (const m of META) {
+    const src = path.join(__dirname, 'corps', 'l' + Number(m.num) + '.html');
+    if (!fs.existsSync(src)) { console.log('corps absent, leçon ' + m.num + ' non générée'); continue; }
+    const corps = await remplirMarqueurs(fs.readFileSync(src, 'utf8'));
+    const reste = corps.match(/@@[A-Z]+:[^@]*@@/);
+    if (reste) { console.error('ARRÊT : marqueur non résolu « ' + reste[0] + ' » dans la leçon ' + m.num + '.'); process.exit(1); }
+    if (/\{\{\w+\}\}/.test(corps)) {
+      console.error('ARRÊT : preuve non résolue dans la leçon ' + m.num + '.'); process.exit(1);
+    }
+    const html = page(m, corps.replace(/\n+$/, ''));
+    const cible = path.join(sortie, 'lecon-' + m.num + '.html');
+    fs.writeFileSync(cible, html, 'utf8');
+    const visible = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;|&#\d+;/gi, ' ').replace(/\s+/g, ' ').trim();
+    console.log('écrit ' + cible + '  ' + Math.round(html.length / 1024) + ' Ko, ' + visible.split(/\s+/).length + ' mots visibles');
+  }
+  console.log('lignes de sortie insérées : ' + JSON.stringify(MESURES));
+  const lent = Object.keys(DUREES).sort(function (a, b) { return DUREES[b] - DUREES[a]; }).slice(0, 3);
+  console.log('le plus lent : ' + lent.map(function (n) { return n + ' ' + DUREES[n] + ' ms'; }).join(', ') +
+    '  (plafond du navigateur : ' + PLAFOND_NAVIGATEUR_MS + ' ms)');
+})();

@@ -233,7 +233,7 @@
     "home.cta.start": "Browse the catalog",
     "home.cta.catalog": "Choose a path",
     "home.meta.courses": "<strong>89</strong> courses in the catalogue",
-    "home.meta.lessons": "<strong>1537</strong> written lessons",
+    "home.meta.lessons": "<strong>1538</strong> written lessons",
     "home.meta.langs": "<strong>81</strong> languages &amp; tech",
   };
 
@@ -940,7 +940,7 @@
       if (!tk.length) {
         items = []; active = -1; input.setAttribute("aria-activedescendant", "");
         input.setAttribute("aria-expanded", "false");
-        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1537 leçons et 64 pages du site.</li>';
+        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1538 leçons et 64 pages du site.</li>';
         return;
       }
       items = doSearch(tk);
