@@ -526,9 +526,9 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       distracteurs. **Chaque distracteur réécrit doit rester FAUX** — c'est le piège de cette phase :
       en allongeant un mauvais choix, on le rend facilement vrai. Rejouer le QCM après correction.
 
-      **EN COURS — 2 cours sur 6 faits le 2026-09-03 : `iac` 100,0 % → 13,3 %, `archi` 100,0 % →
-      7,3 %.** La case reste décochée parce qu'elle en porte six ; le protocole ci-dessous est établi
-      et rejouable tel quel.
+      **EN COURS — 3 cours sur 6 faits le 2026-09-03 : `iac` 100,0 % → 13,3 %, `archi` 100,0 % →
+      7,3 %, `ux` 100,0 % → 19,6 %.** La case reste décochée parce qu'elle en porte six ; le protocole
+      ci-dessous est établi et rejouable tel quel.
 
       **Ce qui a été fait sur `iac`** (11 leçons, **45 questions**, 33 en QCM de leçon et 12 en QCM
       bilan) : **135 distracteurs sur 135 réécrits**, chacun tenu entre **70 % et 130 %** de la
@@ -585,8 +585,8 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       vert**, `verif-rendu` sur les pages touchées **0 erreur / 0 avertissement**, cliquet **vert**
       avec `iac` marqué `traite` et son épreuve **6/6**.
 
-      **LE PROTOCOLE, pour les quatre cours restants** (`equipe` 68 questions, `mobile` 73, `ux` 56,
-      `zig` 71 — **268 questions, 804 distracteurs**) : (1) un agent par lot de leçons, fichiers
+      **LE PROTOCOLE, pour les trois cours restants** (`equipe` 68 questions, `mobile` 73, `zig` 71 —
+      **212 questions, 636 distracteurs**) : (1) un agent par lot de leçons, fichiers
       disjoints ; (2) interdiction absolue de toucher `q`, `correct`, `explain` et la bonne réponse —
       **contrôlé après coup contre `git show HEAD:`**, pas sur parole, par
       `tools/mesure-qcm-intouchable.js` ; (3) fourchette 70–130 % **et les DEUX sens du biais**
@@ -673,6 +673,74 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       réponse. **Préexistant** (identique dans `HEAD`, ce n'est pas une régression) et **répandu :
       39 leçons sur 1 629** ont cet écart. Aucun vérificateur de la chaîne ne le voit ; seul
       `verif-rendu` le rend, en avertissement de console. À traiter en phase E ou en point neuf.
+      ---
+
+      **`ux` — FAIT le 2026-09-03 : 100,0 % → 19,6 %.** 11 leçons, **56 questions** (44 en QCM de
+      leçon, 12 en bilan), **168 distracteurs sur 168 réécrits**, tous entre **0,72 et 1,29**. Même
+      dispositif : cinq écrivains sur fichiers disjoints, cinq relecteurs adversariaux (**96 prises**),
+      un seul écrivain pour les corrections.
+
+      | mesure | avant | après 1ʳᵉ passe | après contradiction |
+      |---|---:|---:|---:|
+      | « la plus longue » | **100,0 %** | 25,0 % | **19,6 %** |
+      | « la plus COURTE » | 0,0 % | 25,0 % | **21,4 %** |
+      | « la plus détaillée » | 86,6 % | 47,9 % | **42,7 %** |
+      | pire stratégie exploitable | 100,0 % | 47,9 % | **42,7 %** (cible ≤ 60 %) |
+      | « le mot technique exclusif » | 64,9 % | 30,4 % | **31,4 %** |
+      | rangs de longueur | **56/0/0/0** | 14/17/11/14 | **11/20/15/10** |
+      | **stratégie « l'option à parenthèse »** | — | **46,1 %** | **34,1 %** (0,0 % en désignation unique) |
+      | global du site, « la plus longue » | 88,1 % | — | **87,4 %** |
+
+      ✅ **LA LEÇON D'`archi` S'EST PAYÉE IMMÉDIATEMENT.** Le piège du biais retourné a été mis dans
+      la consigne des cinq écrivains (« viser une distribution PLATE des rangs »). Résultat **dès la
+      première passe, sans aucun rattrapage : 25,0 % / 25,0 %, rangs 14/17/11/14** — là où `archi`
+      avait basculé à 53,1 % sur « la plus courte ». Une leçon écrite dans ce plan puis remise en
+      consigne vaut mieux qu'une leçon seulement constatée.
+
+      ⚠️ **MAIS LE BIAIS S'ÉTAIT DÉPLACÉ UNE FOIS DE PLUS — DE LA LONGUEUR VERS LA PONCTUATION.** Un
+      relecteur a remarqué que **seuls les distracteurs sont réécrits**, et que les nouveaux
+      n'emploient presque jamais de parenthèse ni de point-virgule — restés, eux, sur les bonnes
+      réponses d'origine. Mesuré : **14 questions sur 56 où la bonne réponse est la SEULE à en
+      porter une**. La stratégie « choisis l'option à parenthèse » rendait **46,1 % sur `ux`** et
+      **52,4 % sur `iac`** (traité au réveil précédent), contre **27,5 % sur `doc`**, le cours de
+      référence. Après correction — une parenthèse **AJOUTÉE à un distracteur**, jamais retirée
+      d'une bonne réponse — `ux` tombe à **34,1 %**, et la désignation unique à **0,0 %**, sous les
+      5,0 % de `doc`. **La règle qui s'en dégage vaut pour B4 : corriger un indice de forme sur les
+      seuls distracteurs en crée un autre, porté par ce que la bonne réponse a gardé.**
+
+      ⚠️ **DETTE OUVERTE, mesurée et non masquée** : `iac` reste à **52,4 %** sur ce critère, et
+      `archi` à **47,6 %**. Les deux cours ont été traités avant que l'indice soit connu. À reprendre
+      en B4, ou en un point dédié si le cliquet doit surveiller ce critère aussi.
+
+      **Défauts de FOND retenus sur les 96 prises**, tous corrigés : un distracteur énonçait le
+      **fait canonique du « $300 Million Button » de Spool** (le bouton *Register* renommé
+      *Continue*) alors que la leçon raconte la suppression d'un champ ; la **loi de Hick ne
+      s'applique justement pas** à une liste triée où l'on cherche un terme connu ; une **recherche
+      interne performante est une vraie parade** à un menu surchargé, et la leçon 08 le dit ;
+      **WCAG 4.1.3** impose bien d'exposer les messages de statut ; l'**accessibilité intégrée est un
+      apport documenté** d'un système de design ; la **signification des couleurs est imposée par des
+      normes** en secteur réglementé (ISO 3864, IEC 60601-1-8) ; et le cours **affirme lui-même que
+      les couleurs vives fatiguent l'œil**. Plus 8 doublons et une quinzaine d'indices de forme —
+      dont une **chaîne de flèches comptable** à la place des caractères, et le mot « utilisateur »
+      porté par la seule bonne réponse dans un cours d'UX.
+
+      ⚠️ **Une contradiction RÉFUTÉE** : « la bonne réponse reste la plus longue sur telle question,
+      donc le biais subsiste ». Non — **25 % par question EST le hasard** ; le grief ne vaut qu'au
+      niveau du cours, où la mesure est faite. Deux relecteurs l'ont formulé, il fallait le rejeter.
+
+      ⚠️ **`doc/lecon-03` s'est périmé une troisième fois** (5 394 → **5 349** manquements S3,
+      88,4 % → **87,6 %**, 9 mentions), avec la **seconde régénération d'index** que ce piège impose.
+      C'est désormais une étape du protocole, pas une surprise.
+
+      **Contrôles** : `mesure-qcm-intouchable` **0 atteinte** sur 56 questions ; index vérifié
+      lui-même ; `verif.js --rapide` **26 étapes tout vert (78,3 s)** ; `verif-html` **0** ;
+      `verif-donnees` **0 erreur** ; `verif-normatif` **60/60** ; cliquet refigé avec `ux` marqué
+      `traite` (**3 cours traités**) et son épreuve par injection **6/6**.
+
+      ⚠️ **Deux défauts relevés dans `ux` sans être corrigés, faute d'entrer dans ce point** :
+      l'énoncé de `ux/lecon-08` q2 n'a **pas de point d'interrogation final** (le point B3 interdit
+      de toucher `q`), et la bonne réponse du bilan q6 est **identique à celle de `lecon-04` q4** —
+      le bilan y rejoue une question au lieu de la vérifier. Les deux relèvent de B5.
 - [ ] **B4 · Les cours suivants, par lots.** Jusqu'à la cible fixée en B1.
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
