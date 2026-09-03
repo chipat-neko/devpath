@@ -5,7 +5,11 @@
    la seconde définition écrase la première, sans un avertissement. */
 function aire(cote) { return cote * cote; }
 function aire(largeur, hauteur) { return largeur * hauteur; }
-console.log('aire(3) =', aire(3));            // et non 9
+/* ATTENTION à l'affichage : le bac à sable de ce site sérialise ce qu'on lui
+   passe en JSON, et JSON ne connaît pas NaN — il l'écrit « null ». D'où le
+   String() ci-dessous : sans lui, la ligne dirait « null » là où la valeur est
+   NaN. Regarde les deux formes côte à côte dans la sortie. */
+console.log('aire(3) =', String(aire(3)), '— et sans String() :', aire(3));
 console.log('aire(3, 4) =', aire(3, 4));
 
 /* « mutable » — const parle du LIEN, jamais du contenu. */

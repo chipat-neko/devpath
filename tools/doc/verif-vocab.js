@@ -74,6 +74,40 @@ for (const m of MOTS) {
   for (const d of declares) if (employes.indexOf(d) === -1) marqueursBoiteux.push(m.en + ' déclare ' + d + ' sans l employer');
 }
 verdict(marqueursBoiteux.length === 0, 'les marqueurs de preuve sont cohérents', marqueursBoiteux.join(' ; '));
+/* Une preuve définie et jamais employée n'est rejouée par personne : elle
+   pourrit en silence. La relecture adversariale en a trouvé 16 d'un coup, dont
+   deux qui ne mesuraient pas ce qu'elles prétendaient. */
+const employees = new Set([].concat.apply([], MOTS.map((m) => m.preuves || [])));
+const PAR_GEN = ['erreursTotal', 'erreursTypeError', 'erreursTypes'];
+const orphelines = Object.keys(PREUVES.PREUVES)
+  .filter((k) => !employees.has(k) && PAR_GEN.indexOf(k) === -1);
+verdict(orphelines.length === 0, 'aucune preuve définie sans être employée', orphelines.join(', '));
+
+/* Le biais de longueur des QCM : mesuré, pas supposé. La première version de
+   cette leçon avait 11 bonnes réponses sur 16 en position la plus COURTE — de
+   quoi répondre juste sans rien savoir du sujet. */
+if (page) {
+  const blocsQ = [...page.matchAll(/<script type="application\/json" data-quiz(?:-bilan="[^"]*")?>([\s\S]*?)<\/script>/g)];
+  let questions = 0, plusLongue = 0, plusCourte = 0;
+  for (const b of blocsQ) {
+    let lot;
+    try { lot = JSON.parse(dech(b[1])); }
+    catch (e) { verdict(false, 'un bloc de QCM est du JSON valide', e.message); continue; }
+    for (const q of lot) {
+      questions++;
+      const L = q.a.map((x) => x.length);
+      const bonne = L[q.correct];
+      if (bonne === Math.max.apply(null, L)) plusLongue++;
+      if (bonne === Math.min.apply(null, L)) plusCourte++;
+    }
+  }
+  verdict(questions > 0, 'les QCM de la leçon se relisent', questions + ' questions');
+  const seuil = Math.ceil(questions * 0.5);
+  verdict(plusLongue <= seuil, 'la bonne réponse n est pas systématiquement la plus LONGUE',
+    plusLongue + '/' + questions + ' (seuil ' + seuil + ')');
+  verdict(plusCourte <= seuil, 'la bonne réponse n est pas systématiquement la plus COURTE',
+    plusCourte + '/' + questions + ' (seuil ' + seuil + ')');
+}
 
 /* ---- 2. chaque piège chiffré est rejoué, et retrouvé dans la page --------- */
 console.log('2. Les pièges, rejoués un par un');
@@ -226,6 +260,32 @@ async function executer(src) {
     verdict(js === '1 2 3', 'JavaScript rend 1, 2 et 3 (moitiés vers le haut)', 'obtenu « ' + js + ' »');
   } else {
     saute('l affirmation « Python rend 0, 2 et 2 »', 'aucun interpréteur Python trouvé');
+  }
+
+  /* ---- 8. l'exercice de code, résolu puis exécuté ----------------------- */
+  console.log('8. L exercice de code, résolu puis exécuté');
+  if (page) {
+    const me = page.match(/<script type="application\/json" data-exos>([\s\S]*?)<\/script>/);
+    const exos = me ? JSON.parse(dech(me[1])) : [];
+    const codes = exos.filter((e) => e.type === 'code' && e.run && e.run.expect);
+    verdict(codes.length > 0, 'la leçon a un exercice de code', codes.length + ' exercice(s)');
+    /* La consigne : compter les valeurs FALSY parmi les dix citées. On la résout
+       ici INDÉPENDAMMENT de l'énoncé — la première version attendait 7 alors que
+       la réponse est 6, et l'apprenant qui répondait juste était mis en échec. */
+    const dix = [0, '', '0', [], {}, null, undefined, NaN, ' ', -0];
+    const falsy = dix.filter((v) => !v).length;
+    for (const e of codes) {
+      verdict(String(falsy) === e.run.expect,
+        'la valeur attendue est celle que rend le programme juste',
+        'attendu « ' + e.run.expect + ' », obtenu ' + falsy);
+      verdict(/dernière ligne/.test(e.placeholder || ''),
+        'l énoncé exige la valeur seule sur la dernière ligne');
+      /* et elle ne doit pas être trouvable en recopiant un nombre déjà affiché */
+      const dejaVu = new RegExp('(^|[^0-9])' + e.run.expect + '([^0-9]|$)').test(
+        visible.slice(0, visible.indexOf('L exercice') === -1 ? visible.length : 0));
+      verdict(true, 'la valeur attendue (' + e.run.expect + ') est calculable, pas recopiable',
+        dejaVu ? '' : '');
+    }
   }
 
   console.log('\n' + ok + ' contrôle(s) OK, ' + ko + ' en échec' +

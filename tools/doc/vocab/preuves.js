@@ -31,6 +31,29 @@ function p(calcul, forme) {
   };
 }
 
+/* Un mini-ordonnanceur coopératif : deux tâches écrites comme des générateurs,
+   qui rendent la main à chaque `yield`. C'est le mécanisme exact d'un `await`,
+   en trente lignes et sans dépendre de l'ordonnanceur du moteur. */
+function ordonnancer(mode) {
+  let compteur = 0;
+  function* incrementer() {
+    const lu = compteur;   // je lis
+    yield;                 // je rends la main
+    compteur = lu + 1;     // j'écris ce que j'avais lu
+  }
+  const taches = [incrementer(), incrementer()];
+  if (mode === 'alterne') {
+    let reste = true;
+    while (reste) {
+      reste = false;
+      for (const t of taches) if (!t.next().done) reste = true;
+    }
+  } else {
+    for (const t of taches) while (!t.next().done) { /* on va au bout d'une tâche avant l'autre */ }
+  }
+  return compteur;
+}
+
 const PREUVES = {
 
   /* ---- ce que la doc promet ---------------------------------------------- */
@@ -48,8 +71,17 @@ const PREUVES = {
 
   /* « throws » est une promesse, et une promesse peut être trop large : la doc
      de slugify() annonçait un refus pour « not a string ». Un objet String
-     passe pourtant : son typeof vaut "object", mais il a bien .normalize(). */
+     passe pourtant : son typeof vaut "object", mais il a bien .normalize().
+     ⚠ La première version mesurait seulement typeof — c'est-à-dire rien : elle
+     ne montrait pas que l'objet PASSE. Elle appelle désormais la VRAIE fonction
+     du site, celle de js/lecon.js, qui ne contrôle aucun type. Sans quoi la
+     démonstration était circulaire : une garde écrite pour l'occasion prouve ce
+     qu'on a bien voulu y mettre. */
   throwsTropLarge: p(() => typeof new String('x')),
+  throwsPasse: p(() => {
+    const { fn: slugify } = require('../mesures/corpus-lib.js').slugifyDuSite();
+    return slugify(new String('Ada Lovelace'));
+  }),
 
   /* ---- ce que le code fait ------------------------------------------------ */
 
@@ -65,8 +97,15 @@ const PREUVES = {
   /* « mutable » : const parle du LIEN, jamais du contenu. */
   constMuable: p(() => { const t = []; t.push(1); t.push(2); return t; }),
 
-  /* « shadowing » : le nom de l'intérieur gagne, sans avertissement. */
-  masquage: p(() => { const n = 'externe'; return (function () { const n2 = 'interne'; return n2; })() + '/' + n; }),
+  /* « shadowing » : le nom de l'intérieur gagne, sans avertissement.
+     ATTENTION — la première version de cette preuve déclarait n à l'extérieur et
+     n2 à l'intérieur : deux noms différents ne masquent rien, et elle prouvait
+     donc exactement zéro chose. Trouvé par relecture adversariale. */
+  masquage: p(() => {
+    const n = 'externe';
+    const dedans = (function () { const n = 'interne'; return n; })();
+    return dedans + '/' + n;
+  }),
 
   /* « hoisting » : var existe avant sa ligne, let n'existe pas. */
   remonteeVar: p(() => (function () { return typeof x; /* eslint-disable-next-line */ var x = 1; })()),
@@ -112,8 +151,12 @@ const PREUVES = {
   conversionMoins: p(() => '5' - 2),
   conversionPlus: p(() => '5' + 2),
 
-  /* « overflow » : au-delà de 2^53, deux entiers voisins deviennent égaux. */
-  depassement: p(() => Number.MAX_SAFE_INTEGER + 1 === Number.MAX_SAFE_INTEGER + 2),
+  /* ⚠ « depassement » ne mesurait PAS un dépassement de capacité : au-delà de
+     2^53, le résultat tient toujours dans le type, c'est la PRÉCISION qui est
+     perdue. Le vrai débordement est ailleurs — et il est silencieux lui aussi. */
+  precisionPerdue: p(() => Number.MAX_SAFE_INTEGER + 1 === Number.MAX_SAFE_INTEGER + 2),
+  depassementInfini: p(() => Number.MAX_VALUE * 2),
+  depassement32: p(() => Math.pow(2, 31) | 0),
 
   /* « unsigned » : le même motif de bits lu sans signe change de valeur. */
   nonSigne: p(() => -1 >>> 0),
@@ -125,6 +168,9 @@ const PREUVES = {
   /* et Math.round(-0.5) ne rend pas 0 : il rend -0, que console.log affiche
      comme un zéro ordinaire. Object.is est le seul à faire la différence. */
   arrondiNegatif: p(() => Math.round(-0.5), (v) => (Object.is(v, -0) ? '-0' : String(v))),
+  /* et toFixed n'applique PAS la meme regle que Math.round : elle arrondit les
+     moities LOIN DE ZERO. Les deux divergent sur tous les negatifs. */
+  arrondiNegatifFixed: p(() => (-0.5).toFixed(0)),
   troncature: p(() => [Math.trunc(-1.5), Math.floor(-1.5)]),
 
   /* « precision » : la somme la plus célèbre du métier. */
@@ -159,8 +205,13 @@ const PREUVES = {
   /* ---- le temps, l'ordre, la concurrence ---------------------------------- */
 
   /* « stable » : un tri stable garde l'ordre d'arrivée des ex æquo. */
+  /* ⚠ La première version triait TROIS éléments — trop peu : l'ancien tri de
+     V8, qui n'était pas stable, rendait le même résultat sur un si petit jeu.
+     Une preuve que le cas instable satisfait ne prouve rien. Seize éléments à
+     deux clés, eux, séparent les deux comportements. */
   triStable: p(() => {
-    const v = [{ n: 'a', k: 1 }, { n: 'b', k: 1 }, { n: 'c', k: 0 }];
+    const v = [];
+    for (let i = 0; i < 16; i++) v.push({ n: 'abcdefghijklmnop'[i], k: i < 8 ? 1 : 0 });
     return v.sort((x, y) => x.k - y.k).map((o) => o.n).join('');
   }),
   /* et le tri par défaut ne compare pas des nombres : il compare des textes. */
@@ -179,19 +230,14 @@ const PREUVES = {
 
   /* « race condition » : deux tâches qui lisent avant d'écrire perdent une
      mise à jour. Deux incréments, un seul compté. */
-  concurrence: p(() => {
-    /* rejoué de façon SYNCHRONE : la microtâche est simulée en séquence
-       lire → (bascule) → écrire, ce que fait exactement le await ci-dessous.
-         async function inc() { const v = c; await null; c = v + 1; }
-       Le résultat est mesuré pour de vrai par le programme cliquable de la
-       leçon ; ici on montre le mécanisme sans dépendre de l'ordonnanceur. */
-    let c = 0;
-    const luA = c;              // tâche A lit
-    const luB = c;              // tâche B lit, avant que A n'ait écrit
-    c = luA + 1;                // A écrit
-    c = luB + 1;                // B écrit, en écrasant A
-    return c;
-  }),
+  /* ⚠ La première version écrivait la perte à la main, en ligne droite : elle
+     ne pouvait pas rendre autre chose que 1, quoi qu'il arrive. Une preuve qui
+     ne peut pas changer d'avis n'est pas une preuve.
+     Ici, deux tâches sont de VRAIS générateurs, et un ordonnanceur les entrelace
+     en alternant à chaque pause. Le résultat dépend de l'entrelacement : change
+     l'ordonnanceur (tout A puis tout B) et le compteur vaut 2. */
+  concurrence: p(() => ordonnancer('alterne')),
+  concurrenceSansEntrelacement: p(() => ordonnancer('lune-puis-lautre')),
   concurrenceAttendu: p(() => 2),
 
   /* « pending / fulfilled / rejected » : les trois états d'une promesse. */

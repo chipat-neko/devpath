@@ -5990,10 +5990,10 @@ window.SITE_DATA = (function () {
           ],
         },
         {
-          num: "02", title: "Le vocabulaire minimal", sub: "82 mots anglais, leur sens technique, et le piège de chacun",
+          num: "02", title: "Le vocabulaire minimal", sub: "les mots anglais de la doc, leur sens technique, et le piège de chacun",
           level: "debutant",
           lessons: [
-            { num: "02", title: "Les 82 mots anglais qui reviennent partout", file: "lecon-02.html", status: "complet" },
+            { num: "02", title: "Le vocabulaire minimal : les mots anglais qui reviennent partout", file: "lecon-02.html", status: "complet" },
           ],
         },
       ],
