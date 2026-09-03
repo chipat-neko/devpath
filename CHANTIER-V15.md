@@ -925,7 +925,55 @@ Le revers de tout le reste. Un site de 1 400 leçons qui cite des versions vieil
 
   **CONTRÔLES** : `node --check` sur les trois fichiers · `verif.js --rapide` **16 étapes, tout vert (298 s)** · `verif-fraicheur` **0 erreur / 0 avertissement** en `--strict` · `verif-html` **0/0** · aucune page modifiée par ce point (le vérificateur ne corrige rien, il constate).
 
-- [ ] **E4 · Passer les cours les plus exposés.** Ceux qui bougent vite en premier — frameworks, outils, cloud, conteneurs.
+- [x] **E4 · Passer les cours les plus exposés.** ✅ **2026-09-03. Les cinq cours d'infrastructure sont passés : `docker`, `cloud`, `cicd`, `kubernetes`, `iac` — 61 leçons lues en entier, 97 marques posées sur 52 pages, 0 écart dans un vrai Chrome. Et le relevé a rendu autre chose que du périssable : DOUZE RENVOIS INTERNES DEVENUS FAUX parce que les cours ont grandi — des leçons qui se présentent encore comme « la dernière du cours » alors que cinq autres les suivent. Ils sont corrigés.**
+
+  **CE QUI A ÉTÉ PASSÉ, ET POURQUOI CEUX-LÀ.** L'énoncé disait « ceux qui bougent vite en premier — frameworks, outils, cloud, conteneurs ». `react` l'avait été en E2 (le cours de framework le plus exposé du site). Ce point traite le versant infrastructure, **en entier** :
+
+| cours | leçons | marques | leçons sans aucune marque |
+|---|---:|---:|---:|
+| `docker` | 15 | **27** | 2 |
+| `cloud` | 12 | **22** | 1 |
+| `cicd` | 11 | **18** | 2 |
+| `kubernetes` | 12 | **17** | 0 |
+| `iac` | 11 | **13** | 4 |
+| **total** | **61** | **97** | **9** |
+
+  Six relecteurs ont lu les 61 leçons intégralement (lecture seule ; un seul écrivain, le pilote). Ils ont rendu **98 affirmations périssables, 382 faux positifs nommés avec leur raison, 101 affirmations qu'aucun motif n'aurait vues, et 12 erreurs factuelles**. Une marque a été écartée à la relecture : `docker/lecon-01` en portait cinq, dont deux disaient la même chose (« Docker est central ») — la règle de parcimonie tranche, on garde la plus précise et la plus fragile (« la brique de base des orchestrateurs comme Kubernetes », que le retrait de dockershim a déjà entamée).
+
+  **LA MESURE DE E2 SE CONFIRME, EN PLUS NET.** Répartition des 98 affirmations relevées :
+
+| nature | nombre |
+|---|---:|
+| **paysage d'outils** (« Docker Hub est le registre public », « Terraform ou Pulumi ») | **58** |
+| domination (« un outil incontournable », « la pratique courante ») | 17 |
+| **offre commerciale** (produit, quota, palier de facturation, canal d'installation) | **11** |
+| affirmation de récence | 9 |
+| chiffre de performance sans provenance | 2 |
+| **numéro de version** | **1** |
+
+  **Un seul numéro de version sur 98.** E1 comptait « 269 dettes de version » sur le site ; sur les cinq cours d'infrastructure — précisément ceux où l'on s'attendait à en trouver — il y en a **un**. Et le versant `offre` apparaît ici et n'existait pas dans `react` : Docker Desktop qui change de licence, un quota de registre, un palier de facturation cloud. C'est du périssable pur, et aucun motif ne le voit.
+
+  **SUR L'ENSEMBLE DU SITE MAINTENANT : 149 marques, dont 140 (94 %) invisibles aux motifs d'E1.** La proportion monte de 87 % (react seul) à 94 % : les cours d'infrastructure sont encore plus faits de noms d'outils que les cours de framework.
+
+  **LES DOUZE RENVOIS FAUX, ET CE QU'ILS DISENT.** Le relevé demandait aussi de signaler ce qui est **déjà faux aujourd'hui**. Les relecteurs ont trouvé douze affirmations, toutes de la même famille — **le contenu qui se décrit lui-même, périmé quand le cours a grandi** :
+
+  - `docker/lecon-15` : « **Onze leçons plus tôt**, Docker était un mot mystérieux » — quatorze la précèdent. Et son énumération des acquis s'arrêtait à la leçon 10, ignorant ENTRYPOINT/ARG/ENV, BuildKit, la pile Compose et la gestion de l'espace ;
+  - `docker/lecon-06` : « le cours se referme sur un projet de synthèse (**leçon 11**) » — la 11 est « Configurer l'image », le projet est la 15 ;
+  - `docker/lecon-03` : le build multi-étapes annoncé comme « l'objet de **la dernière leçon** » — il est enseigné à la leçon 6 ;
+  - `cicd/lecon-06` : « **Cette dernière leçon** rassemble les pratiques… » — cinq leçons la suivent. La même page renvoyait les *feature flags* aux sujets « à approfondir » hors du cours, alors qu'ils sont **la leçon 10 du même cours** ;
+  - `iac/lecon-06` : « **Dernière étape** […] C'est la synthèse de tout le cours » — la synthèse est la leçon 11, et la page l'admet elle-même plus bas ;
+  - `cloud/lecon-07` : « **Dernière étape** : relier toutes les briques » — cinq leçons du même cours suivent ;
+  - `kubernetes/lecon-04` : les sondes « qu'on verra **au capstone** » — elles sont enseignées à la leçon 7 ; vestige de la version à 7 leçons ;
+  - `iac/lecon-11` : « le projet assemble **les 4 modules** du cours » — il y en a cinq (le cinquième étant ce projet).
+
+  **Les douze sont corrigés**, et à chaque fois qu'un compte pouvait disparaître, il a disparu plutôt que d'être mis à jour : « Onze leçons plus tôt » est devenu « Au début de ce cours ». Un compte interne ne se date pas — il se supprime ou il se contrôle. C'est très exactement le défaut trouvé sur `react` en E2 (« 17 leçons » pour 26) : **il n'était pas isolé, il est systémique, et il frappe toujours les leçons de fin de cours d'un cours qui s'est allongé.**
+
+  **CE QUI N'A PAS ÉTÉ FAIT, ET POURQUOI** — écrit plutôt que tu. Les cours d'écosystème **front** (`nodejs`, `typescript`, `vue`, `sass`, `graphql`, `ml`, `llm`, `data-eng`, `dataviz`) n'ont pas été passés. La raison est nette : le relevé exige une **lecture intégrale** — c'est la conclusion d'E1 et la mesure d'E2 —, chaque vague de six relecteurs couvre une soixantaine de leçons, et le réveil en autorise deux. `react` + les cinq cours d'infrastructure sont ces deux vagues. La suite se fait à l'identique, cours par cours : `tools/fraicheur/appliquer.js` et les relevés archivés dans `tools/fraicheur/releves/` donnent la recette et le format.
+
+  **CONTRÔLES** : `verif-affichage` **75 pages, 149 marques, 0 écart** dans un vrai Chrome · `verif-fraicheur --strict` **0 erreur, 0 avertissement** (1 798 pages lues, 75 marquées) · `verif.js --rapide` **16 étapes, tout vert (283 s)** · `verif-html` **0/0** · `verif-donnees` **25 contrôles, 0 erreur** · `verif-rendu` sur 5 leçons marquées × 3 largeurs × 2 thèmes : **0 erreur, 0 avertissement** · les 8 fichiers corrigés relus : **UTF-8, sans BOM** · comptes « N leçons » du site : **6 occurrences, 0 en désaccord avec `data.js`** · `search-index.js` et `search-lite.js` régénérés.
+
+
+  🏁 **La phase E est close : 4 cases sur 4.** Le site sait désormais **dire quand il a écrit ce qui périme** — 149 marques sur 75 pages, six cours passés à la lecture, un vérificateur qui se projette dans le temps — et il a découvert au passage que son périssable le plus sûr était ce qu'il disait de **lui-même** : quinze comptes et renvois internes devenus faux parce que les cours ont grandi.
 
 ---
 
