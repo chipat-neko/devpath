@@ -1107,7 +1107,35 @@ Le revers de tout le reste. Un site de 1 400 leçons qui cite des versions vieil
   **UN SECOND SIGNALEMENT, NON DIAGNOSTIQUÉ, DIT SANS ARRONDIR.** La même chaîne a vu `sql-lec` signaler (91,7 s). Relancé seul deux fois, il rend **41 blocs SQL cliqués, 28 résultats, 13 erreurs SQL du contenu, MOTEUR EN ÉCHEC : 0**, code de sortie **0**. Je n'ai donc **pas** reproduit le signalement et je ne conclus rien : la ressemblance avec le cas `vexec` — vert seul, rouge en fin de chaîne chargée — est une **hypothèse**, pas une mesure. Reporté à **F5**.
 
   **CONTRÔLES** : `verif-html` **1 629 fichiers, 0 grave / 0 attention** · `verif-donnees` **25 contrôles, 0 erreur** · `node --check` sur les 4 fichiers JS touchés · **0 BOM**, **0 URL interdite** · `js/execution.js` relu après la campagne : **identique à l'octet** (aucune mutation survivante).
-- [ ] **F4 · Mesure globale.** Études de cas publiées, notions visualisées, leçons de maths, pages datées. Comparer aux chiffres du constat en tête de ce fichier.
+- [x] **F4 · Mesure globale.** ✅ **2026-09-03. Les quatre angles morts du constat, remesurés un par un. Trois sont comblés, le quatrième l'est à moitié et le chiffre le dit. Et une des mesures de départ se reproduit à l'unité près — celle qui fondait la phase B.**
+
+  **A · LE TABLEAU DU CONSTAT, REFAIT** — chaque « après » est une mesure prise aujourd'hui, pas une addition de comptes rendus.
+
+  | angle mort | avant (constat) | après (mesuré ce jour) | comment |
+  |---|---:|---:|---|
+  | **Lire le code des autres** | **0** étude de cas | **6** études + **1** hub | `ls pages/etude-*.html` = 6, `pages/etudes.html` existe |
+  | **Voir un programme s'exécuter** | expliquée dans **48** leçons, montrée **0** fois | expliquée dans **48**, montrée par **26** exemples depuis **19** leçons | `grep -rl "pile d'appels"` = **48**, à l'unité près comme au départ ; `js/execution-exemples.js` = 26 ; table `VISUALISEUR` de `js/lecon.js` = 19 |
+  | **Les mathématiques du métier** | **0** cours sur 83 | **1** cours, **13** leçons, **1 187 Ko** | `pages/maths/lecon-*.html` |
+  | **Lire la documentation officielle** | **20** pages y renvoient sans l'enseigner | **23** pages la citent, dont **2** l'enseignent — cours `doc`, **4** leçons | `grep -rl "documentation officielle" pages` = 23 (2 dans `pages/doc/`) |
+  | **Ce qui périme** | rien ne le surveille | **149** marques sur **75** pages, **0** hors durée | `verif-fraicheur` : 1 798 pages lues, plus ancienne à 0 mois, 0 à échéance sous 6 mois |
+
+  **La mesure la plus intéressante est celle qui n'a PAS bougé** : « pile d'appels » se lit toujours dans **exactement 48** leçons. Le constat n'avait donc pas surestimé son problème, et la phase B n'a pas *réduit* le nombre de leçons qui expliquent la pile — elle a ajouté un endroit où on la **voit**. Les deux comptes se lisent côte à côte : **48 l'expliquent, 19 y mènent.** Il reste **29 leçons** qui parlent de la pile sans proposer de la regarder tourner ; B6 avait écarté 23 leçons à dessein (le mécanisme n'y est pas celui de JavaScript), le reste est du chantier ouvert.
+
+  **B · LE SITE, AVANT ET APRÈS LA CHAÎNE** — mesures reproduites, pas recopiées :
+
+  | | au lancement de V15 | aujourd'hui | source |
+  |---|---:|---:|---|
+  | cours | **83** | **90** | `SITE_DATA.courses.length` |
+  | leçons | **1 463** | **1 540** | `build-index.js` ; recoupé sur le disque : **1 629** fichiers `lecon-*.html`, dont **89** dans quatre dossiers `*-avance` qui ne sont pas des cours déclarés (1 540 + 89 = 1 629, écart entièrement expliqué) |
+  | parcours | **25** | **25** | `SITE_DATA.tracks.length` — inchangé, aucune phase n'en créait |
+  | vérificateurs de `verif.js` | **28** (mesure de F1) | **32** en mode normal, **34** en `--complet`, **17** en `--rapide` | 4 ajoutés ce réveil : `maths`, `vexec`, `vexlien`, `vexancr` ; + `mathinj` et `mutants` en `--complet` |
+  | outils du dépôt | — | **292** fichiers `.js` sous `tools/` | `find tools -name "*.js"` |
+
+  **C · CE QUE CETTE MESURE APPREND, ET QUI N'ÉTAIT PAS PRÉVU.** Les sept cours et 77 leçons ajoutés sont le résultat visible ; l'invisible est ailleurs. **Quatre vérificateurs sur les 32** n'existaient pas il y a deux jours, et **deux d'entre eux jugent les autres** (`mathinj`, et `mutants` qui existait déjà). Surtout : parmi les quatre étapes câblées ce réveil, **trois** (`vexec`, `vexlien`, `vexancr`) portaient sur du contenu écrit en phase B, **prouvé à l'époque, et qui n'était contrôlé par aucun mode de la chaîne depuis**. Le chantier ne s'est donc pas seulement mesuré en pages : il a mesuré que **le travail prouvé une fois ne reste prouvé que s'il entre dans la chaîne**.
+
+  **D · UN CHIFFRE DU CONSTAT QUI NE SE REPRODUIT TOUJOURS PAS, redit ici pour ne pas le perdre.** Le cadrage de la phase E annonce « 51 pages citent un numéro de version, 4 portent une date ». E1 avait déjà relevé **112** et **47** et expliqué l'écart par la méthode. Ce point ne le rejuge pas : il constate que **le chiffre publié dans ce plan n'a jamais été reproductible**, et que c'est le relevé de E1 (`tools/fraicheur/releves/`) qui fait foi.
+
+  **CONTRÔLES** : aucune modification de contenu — ce point ne fait que mesurer. `verif-html` **1 629 fichiers, 0 grave / 0 attention** · `verif-donnees` **25 contrôles, 0 erreur** · `verif-fraicheur` **0 erreur, 0 avertissement**.
 - [ ] **F5 · Ce qui n'a pas été fait.** Lister et expliquer, sans arrondir.
 
 ---
