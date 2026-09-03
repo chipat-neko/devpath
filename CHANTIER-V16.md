@@ -364,10 +364,48 @@ distinguent, et elles ne se traitent pas pareil :
       en A1). Ensemble **plus de 45 minutes**, hors budget d'une passe qui doit aussi écrire. Leur
       relevé d'A1 tient ; le mode les enchaîne sans changement.
 
-- [ ] **A5 · Le garde-fou qui manquait.** Un contrôle qui compare la liste des `tools/**/verif-*.js`
+- [x] **A5 · Le garde-fou qui manquait.** Un contrôle qui compare la liste des `tools/**/verif-*.js`
       à ceux que `verif.js` lance réellement, et **échoue** si un vérificateur n'est dans aucun mode
       sans être déclaré « hors chaîne assumé » avec sa raison. Sans ce garde-fou, le problème
       reviendra au chantier suivant.
+
+      **FAIT le 2026-09-03.** Deux fichiers neufs et une correction de recensement.
+
+      1. `tools/verif-chaine-declaree.js` — il demande le recensement à `recense-chaine.js --json`,
+         qui demande lui-même à `verif.js --lister` la liste de **chaque mode** : rien n'est recopié.
+         **Il échoue sur cinq cas**, et chacun a été provoqué pour le vérifier, code de sortie relevé
+         (et non lu au travers d'un `tail`, qui aurait rendu 0 dans tous les cas) :
+
+         | cas provoqué | code |
+         |---|:---:|
+         | un `tools/verif-bidon-a5.js` créé, dans aucun mode, non déclaré | **1** |
+         | raison ramenée à « TODO » (4 caractères, minimum 40) | **1** |
+         | déclaration **périmée** : `verif-html.js` déclaré dehors alors que 4 modes le lancent | **1** |
+         | déclaration **orpheline** : un `verif-disparu.js` qui n'existe pas | **1** |
+         | `hors-chaine.json` volontairement cassé | **1** |
+         | état normal du dépôt | **0** |
+
+      2. `tools/hors-chaine.json` — les **7 dettes écrites**, chacune avec sa raison mesurée et ce
+         qu'il faudrait pour la lever : `verif-clic.js` (ne termine pas), `verif-liste-alternatives.js`
+         (ne peut pas rougir), les trois `maths/module-{3,4,5}/verif-chiffres.js` (utilitaires
+         paramétrés, appelés par l'épreuve par injection) et les deux
+         `maths/module-{3,4}/verif-cours-progression.js` (attentes figées sur un état révolu).
+
+      3. **Une faute du recensement, trouvée en branchant le garde-fou** : `recense-chaine.js`
+         n'interrogeait que quatre modes et ignorait `--mutations`, né en A4. Il comptait donc encore
+         **17 outils à régler** alors que les 10 épreuves venaient d'entrer dans un mode. Corrigé :
+         **17 → 7**, et les 7 restants sont exactement les 7 déclarés.
+
+      **Mesure après branchement** (`gardech`, dans les quatre modes courants) : `verif.js --rapide`
+      passe de 24 à **25 étapes, 75,6 s, tout vert** ; sans option **50** étapes, `--complet` **53**,
+      `--strict` **50**, `--mutations` **12**. Le garde-fou lui-même coûte **0,2 s** — et il s'est
+      d'abord signalé lui-même comme non déclaré avant d'être branché, ce qui est la meilleure preuve
+      qu'il regarde le disque et non une liste écrite d'avance.
+
+      ⚠️ **Ce qu'il ne couvre pas, et c'est assumé** : il exige qu'un vérificateur soit *lancé*, pas
+      qu'il soit *capable d'échouer*. `verif-liste-alternatives.js` prouve que les deux questions sont
+      distinctes. Le premier garde-fou contre la seconde est le mode `--mutations` (A4) ; l'étendre à
+      tous les vérificateurs serait un chantier à part entière.
 
 ---
 

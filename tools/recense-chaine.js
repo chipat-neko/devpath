@@ -47,7 +47,10 @@ var tous = walk(TOOLS, []).map(rel).sort();
 /* On ne lit pas le source a la grep : on DEMANDE a verif.js sa liste, mode par
    mode. Recopier une liste au lieu de la lire est exactement le defaut qui a
    rendu la surveillance aveugle au chantier V16 lui-meme. */
-var MODES = ["--rapide", "", "--complet", "--strict"];
+/* `--mutations` est un mode a part entiere depuis le point A4 : les 12 epreuves
+   par injection y sont lancees, et les oublier ici ferait compter comme « hors
+   chaine » des outils qui viennent d'y entrer. */
+var MODES = ["--rapide", "", "--complet", "--strict", "--mutations"];
 var parMode = {};
 MODES.forEach(function (m) {
   var args = [path.join(TOOLS, "verif.js"), "--lister"].concat(m ? [m] : []);

@@ -16,15 +16,15 @@
      gitgraf  node tools/verif-git-graphe.js  le graphe dessine face a git log --graph
      gitscen  node tools/verif-git-scenarios.js  les situations guidees : la solution atteint le but
 
-   USAGE (durees mesurees le 2026-09-03, apres l'entree des 17 outils du point A3)
-     node tools/verif.js            # 49 etapes, plusieurs minutes (le rendu pilote Chrome)
-     node tools/verif.js --rapide   # 24 etapes, ~77 s : tout ce qui ne pilote pas Chrome,
+   USAGE (durees mesurees le 2026-09-03, apres l'entree du garde-fou du point A5)
+     node tools/verif.js            # 50 etapes, plusieurs minutes (le rendu pilote Chrome)
+     node tools/verif.js --rapide   # 25 etapes, 75,6 s : tout ce qui ne pilote pas Chrome,
                                     #   moins les trois bacs a sable Git (voir l'arbitrage
                                     #   plus bas : ils pesaient 76 % du mode a eux seuls)
-     node tools/verif.js --complet  # 52 etapes : le rendu balaie 229 pages, la fraicheur est
+     node tools/verif.js --complet  # 53 etapes : le rendu balaie 229 pages, la fraicheur est
                                     #   lue A L'AFFICHAGE, ET les verificateurs sont eux-memes
                                     #   mis a l epreuve par 9 + 13 fautes injectees
-     node tools/verif.js --strict   # 49 etapes, code 1 des qu'un outil signale quoi que ce soit
+     node tools/verif.js --strict   # 50 etapes, code 1 des qu'un outil signale quoi que ce soit
      node tools/verif.js --lister   # la liste des etapes du mode demande, sans rien lancer
      node tools/verif.js --mutations  # les 12 epreuves par injection, et rien d'autre : elles
                                     #   MODIFIENT des fichiers avant de les restaurer, et le mode
@@ -150,6 +150,15 @@ var ETAPES = [
    * son code de sortie exige different de 0, les octets restaures et relus).
    * 16 candidats, 16 fautes vues. Cout mesure du lot : 8,4 s.
    * ===================================================================== */
+  /* LE GARDE-FOU DE LA CHAINE ELLE-MEME (point A5). Il croise la liste des
+     verificateurs presents sur le disque avec ceux que ce fichier lance vraiment
+     — en la LISANT via `--lister`, pas en la recopiant — et echoue des qu'un outil
+     n'est dans aucun mode sans etre declare dans `tools/hors-chaine.json` avec sa
+     raison. Sans lui, le defaut qui a fonde le chantier V16 (35 outils hors
+     chaine, dont un qui trouvait de vraies fautes que personne ne lisait)
+     reviendrait au chantier suivant, et de la meme facon : en ecrivant un nouveau
+     verif-*.js sans penser a le brancher. */
+  { nom: "gardech", fichier: "verif-chaine-declaree.js", args: [], quoi: "aucun verificateur hors chaine sans declaration ecrite" },
   /* Un caractere de controle ecrit par accident est INVISIBLE a la relecture :
      un « \b » devenu un vrai backspace dans une expression reguliere avait fait
      afficher « 0 » a deux compteurs, et seule une capture d'ecran l'avait montre. */
