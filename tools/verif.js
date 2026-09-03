@@ -545,7 +545,10 @@ if (flag("mutations")) {
      Les durees sont celles du releve A1, refaites par ce mode a chaque passage. */
   var EPREUVES = [
     { nom: "mth-chif", fichier: "maths/module-5/verif-chiffres-mutations.js", vues: "toutes" },
-    { nom: "qcmbiai ", fichier: "verif-qcm-biais-mutations.js", vues: "6 / 6" },
+    /* 7 depuis B4 : le 7e cas eprouve « l'incise entre parentheses », entree dans
+       EXPLOITABLES le 2026-09-04. Une branche de verificateur que rien n'eprouve
+       ne vaut pas mieux qu'un verificateur absent. */
+    { nom: "qcmbiai ", fichier: "verif-qcm-biais-mutations.js", vues: "7 / 7" },
     { nom: "fraich  ", fichier: "fraicheur/verif-fraicheur-mutations.js", vues: "13 / 13" },
     { nom: "fr-affi ", fichier: "fraicheur/verif-affichage-mutations.js", vues: "14 / 14" },
     { nom: "mth-inj ", fichier: "maths/preuve-injection.js", vues: "13 / 13" },
@@ -610,6 +613,20 @@ if (flag("mutations")) {
   if (reference === null) { console.log("git est introuvable : ce mode ne peut pas garantir la propriete du depot."); process.exit(2); }
   console.log("verif.js --mutations — " + EPREUVES.length + " epreuve(s) par injection");
   console.log("  etat du depot au depart : " + (reference.length ? reference.length + " fichier(s) deja modifie(s), ignores" : "propre"));
+  /* ET ON LES NOMME (B4, 2026-09-04). Ce mode ignore a dessein les fichiers deja
+     modifies : un chantier en cours est la situation normale. Mais quand une
+     execution precedente a ete INTERROMPUE, elle laisse une faute injectee dans
+     un fichier du site -- et la ligne ci-dessus la comptait sans la nommer, si
+     bien que la mutation orpheline se fondait dans le chantier en cours.
+     C'est arrive : un `js/execution.js` ampute de sa fleche droite est reste
+     dans l'arbre de travail apres l'arret d'un passage, et seul un `git status`
+     manuel l'a vu. Les nommer coute deux lignes ; ne pas les nommer coute une
+     faute publiee. */
+  reference.forEach(function (l) { console.log("      deja modifie : " + cheminDe(l)); });
+  if (reference.length) {
+    console.log("      ^ si l'un d'eux n'est PAS de vous, c'est la trace d'un passage interrompu :");
+    console.log("        une faute injectee y est peut-etre restee. Verifier avant de commiter.");
+  }
   console.log("  plafond par epreuve : " + argMin + " min\n");
 
   var bilan = [];

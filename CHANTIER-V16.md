@@ -1145,7 +1145,27 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       en avait 5, parce que `grep -c` compte des lignes et non des occurrences. *Un motif de
       remplacement trop large casse ce qui était juste* — le garde-fou est ce qui l'a empêché.
 
-      **Contrôles finaux** : `verif.js --rapide` **26 étapes tout vert (76,6 s)** ; `verif-html`
+      ⚠️⚠️ **TROUVÉ EN ROUTE, ET CORRIGÉ : INTERROMPRE `verif.js --mutations` PUBLIE UNE FAUTE.**
+      Le mode a été arrêté après 25 minutes (13 épreuves, plafond de 25 min chacune : il n'est pas
+      fait pour être attendu dans une passe). Le `git status` qui a suivi a montré **`js/execution.js`
+      modifié** : une mutation injectée — la flèche droite du visualiseur amputée de son
+      `aller(etat.pas + 1)` — restée dans l'arbre de travail. Les filets du harnais couvrent `exit`,
+      `SIGINT` et `uncaughtException`, **pas l'arrêt brutal**, et ses propres commentaires le disent.
+      **Le pire n'est pas là : au passage suivant, le mode a compté ce fichier parmi « 3 fichiers
+      déjà modifiés, ignorés » — sans les nommer.** Une mutation orpheline se fondait donc dans le
+      chantier en cours, et seul un `git status` manuel l'a vue. Sans lui, **un raccourci clavier
+      cassé partait dans le commit de ce point.** `verif.js` **nomme désormais** chaque fichier déjà
+      modifié et avertit que l'un d'eux peut être la trace d'un passage interrompu. Deux lignes.
+      C'est la même famille que « un vérificateur hors chaîne vaut un vérificateur inexistant » :
+      **un compteur qui ne nomme pas ce qu'il compte cache ce qu'il compte.**
+
+      ⚠️ **Et la même famille encore, à un autre endroit** : le mode `--mutations` déclarait
+      l'épreuve du cliquet à **« 6 / 6 »** alors qu'elle en rend 7 depuis ce point. L'étiquette n'est
+      pas une assertion — le verdict vient du code de sortie — mais **un relevé faux dans le pilote
+      est un relevé qu'on finira par croire.** Corrigé, et l'épreuve rejouée dans le mode : `qcmbiai`
+      **OK en 7,8 s**, « dépôt à la sortie : propre, comme au départ ».
+
+      **Contrôles finaux** : `verif.js --rapide` **26 étapes tout vert (78,6 s)** ; `verif-html`
       **0 / 1 629 fichiers** ; `verif-donnees` **0 erreur** ; `verif-normatif` **60/60** ; cliquet
       **vert**, refigé (`js` **non** marqué `traite` : 55,7 % contre une cible de 40 %), épreuve
       **7/7**.
