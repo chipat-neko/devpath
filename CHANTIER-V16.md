@@ -526,9 +526,9 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       distracteurs. **Chaque distracteur réécrit doit rester FAUX** — c'est le piège de cette phase :
       en allongeant un mauvais choix, on le rend facilement vrai. Rejouer le QCM après correction.
 
-      **EN COURS — 3 cours sur 6 faits le 2026-09-03 : `iac` 100,0 % → 13,3 %, `archi` 100,0 % →
-      7,3 %, `ux` 100,0 % → 19,6 %.** La case reste décochée parce qu'elle en porte six ; le protocole
-      ci-dessous est établi et rejouable tel quel.
+      **EN COURS — 4 cours sur 6 faits le 2026-09-03 : `iac` 100,0 % → 13,3 %, `archi` 100,0 % →
+      7,3 %, `ux` 100,0 % → 19,6 %, `equipe` 100,0 % → 30,1 %.** La case reste décochée parce qu'elle
+      en porte six ; le protocole ci-dessous est établi et rejouable tel quel.
 
       **Ce qui a été fait sur `iac`** (11 leçons, **45 questions**, 33 en QCM de leçon et 12 en QCM
       bilan) : **135 distracteurs sur 135 réécrits**, chacun tenu entre **70 % et 130 %** de la
@@ -585,8 +585,8 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       vert**, `verif-rendu` sur les pages touchées **0 erreur / 0 avertissement**, cliquet **vert**
       avec `iac` marqué `traite` et son épreuve **6/6**.
 
-      **LE PROTOCOLE, pour les trois cours restants** (`equipe` 68 questions, `mobile` 73, `zig` 71 —
-      **212 questions, 636 distracteurs**) : (1) un agent par lot de leçons, fichiers
+      **LE PROTOCOLE, pour les deux cours restants** (`mobile` 73 questions, `zig` 71 —
+      **144 questions, 432 distracteurs**) : (1) un agent par lot de leçons, fichiers
       disjoints ; (2) interdiction absolue de toucher `q`, `correct`, `explain` et la bonne réponse —
       **contrôlé après coup contre `git show HEAD:`**, pas sur parole, par
       `tools/mesure-qcm-intouchable.js` ; (3) fourchette 70–130 % **et les DEUX sens du biais**
@@ -741,6 +741,70 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       l'énoncé de `ux/lecon-08` q2 n'a **pas de point d'interrogation final** (le point B3 interdit
       de toucher `q`), et la bonne réponse du bilan q6 est **identique à celle de `lecon-04` q4** —
       le bilan y rejoue une question au lieu de la vérifier. Les deux relèvent de B5.
+      ---
+
+      **`equipe` — FAIT le 2026-09-03 : 100,0 % → 30,1 %.** 14 leçons, **68 questions** (56 en QCM de
+      leçon, 12 en bilan), **204 distracteurs sur 204 réécrits**, tous entre **0,70 et 1,26**. Cinq
+      écrivains, cinq relecteurs adversariaux, un seul écrivain pour les corrections.
+
+      | mesure | avant | après 1ʳᵉ passe | après contradiction |
+      |---|---:|---:|---:|
+      | « la plus longue » | **100,0 %** | 25,0 % | **30,1 %** |
+      | « la plus COURTE » | 0,0 % | 25,0 % | **16,2 %** |
+      | « la plus détaillée » | 93,8 % | 54,2 % | **45,6 %** |
+      | « le mot technique exclusif » | 69,0 % | 30,6 % | **28,8 %** |
+      | rangs de longueur | **68/0/0/0** | **17/17/17/17** | 21/20/16/11 |
+      | stratégie « l'option à parenthèse » | — | 33,8 % (0,0 % unique) | **36,5 %** (0,0 % unique) |
+      | **stratégie « l'option qui énumère »** | — | **38,5 %** (**19,1 %** unique) | **27,8 %** (0,0 % unique) |
+      | **stratégie « écarter les absolus »** | 27,7 % | **32,0 %** (3 questions sûres) | **28,8 %** (0 sûre) |
+      | global du site, « la plus longue » | 87,4 % | — | **86,6 %** |
+
+      ✅ **LES DEUX LEÇONS DES COURS PRÉCÉDENTS, MISES EN CONSIGNE, ONT TENU DU PREMIER COUP.** Rangs
+      de longueur **17/17/17/17** — uniforme parfait — et ponctuation à **0,0 % en désignation
+      unique**, sans aucun rattrapage. Il aura fallu deux passes pour transformer une leçon
+      *constatée* (`archi`) en leçon *appliquée* : c'est le seul mécanisme de ce chantier qui a
+      montré un rendement croissant.
+
+      ⚠️ **MAIS LA CONTRADICTION A TROUVÉ DEUX AUTRES BIAIS, ET LES A MESURÉS.**
+      - **L'ÉNUMÉRATION** : la bonne réponse est celle qui empile trois éléments. « Choisis l'option
+        à ≥ 3 virgules » rendait **38,5 %** sur `equipe`, avec **19,1 % de désignation unique**
+        (13 questions sur 68), contre 25,0 % et 2,5 % pour `doc`. Corrigé en ajoutant une énumération
+        à un distracteur des 12 questions concernées → **27,8 %, désignation unique 0,0 %**.
+      - **LES QUANTIFICATEURS ABSOLUS** : « écarter les options à *toujours* / *jamais* / *aucun* »
+        rendait **32,0 %**, avec **3 questions résolues à coup sûr**. ⚠️ Un relecteur annonçait
+        35,4 % ; **ma mesure donne 32,0 %** — l'écart de méthode est noté plutôt que recopié.
+        Corrigé sur `equipe` **et** sur `ux` → **0 question résolue à coup sûr sur les 4 cours**.
+
+      ⚠️ **ET LE PIÈGE S'EST REFERMÉ PENDANT LA CORRECTION ELLE-MÊME.** En remplaçant des parenthèses
+      par des énumérations, j'ai fait **remonter l'indice de ponctuation de 0,0 % à 10,3 %**.
+      Rattrapé (0,0 %). **LA RÈGLE EST DÉSORMAIS ÉTABLIE, et elle vaut pour B4 : corriger un indice
+      de forme en crée un autre ; il faut REMESURER TOUS LES INDICES APRÈS CHAQUE CORRECTION, pas
+      seulement celui qu'on visait.**
+
+      **Défauts de FOND corrigés** : Brooks documente lui-même l'exception des tâches parallélisables ;
+      `git blame` et `bisect` ne lisent effectivement **pas** le message ; un commit poussé **peut**
+      être réécrit (`rebase` + `--force-with-lease`) ; l'auto-merge après approbation existe (Mergify,
+      `bors`) ; ESLint a bien des règles de style et Biome/Ruff sont linter **et** formateur ; geler la
+      chaîne de déploiement **est** une mesure d'endiguement réelle ; la leçon 10 prescrit elle-même la
+      somme des sous-tâches et la péremption d'une estimation ; « le coupable est celui qui
+      connaissait le mieux le sujet » est l'**argument canonique** du post-mortem sans blâme ; et la
+      leçon 09 enseigne elle-même qu'un bon nom rend le commentaire superflu.
+
+      🔵 **Corrigé hors périmètre, trouvé par DEUX relecteurs indépendamment** :
+      `pages/equipe/lecon-12.html` disait « le support **crênoule** sous les messages » — mot
+      inexistant, lire « croule ». Présent dans `HEAD`, **aucun vérificateur ne le voyait**.
+
+      ⚠️ **Dette laissée ouverte** : un relecteur a mesuré que « choisir l'option qui emploie un terme
+      du glossaire du cours » rendrait **50,5 %** sur le bilan d'`equipe`. Non corrigé, et c'est
+      délibéré : un cours emploie forcément son vocabulaire, et neutraliser cet indice demanderait
+      d'injecter le jargon dans des distracteurs faux — au risque de les rendre plausibles pour de
+      mauvaises raisons. **À trancher en B4 : est-ce un biais à corriger, ou la définition même d'une
+      question qui vérifie qu'on a lu le cours ?**
+
+      **Contrôles** : `mesure-qcm-intouchable` **0 atteinte** sur 68 questions ; `quiz-index` régénéré
+      deux fois (`doc/lecon-03` s'est repérimé : **5 349 → 5 301**, 87,6 % → **86,9 %**) ;
+      `verif-normatif` **60/60** ; `verif.js --rapide` **26 étapes tout vert (78,8 s)** ; `verif-html`
+      **0** ; `verif-donnees` **0 erreur** ; cliquet refigé (**4 cours traités**), épreuve **6/6**.
 - [ ] **B4 · Les cours suivants, par lots.** Jusqu'à la cible fixée en B1.
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
