@@ -1,0 +1,379 @@
+<p>La leçon précédente a posé le graphe et sa matrice d'adjacence côte à côte, comme deux écritures d'une même chose. C'était vrai, mais incomplet&nbsp;: écrire un graphe en matrice ne sert pas seulement à le ranger. Cela sert à le <strong>calculer</strong>. Et c'est le sujet de cette leçon — le moment où deux domaines qui n'ont apparemment rien à voir, les réseaux et les réseaux de <em>neurones</em>, se révèlent être la même opération répétée.</p>
+
+<p>Il y a une raison très concrète d'y consacrer une leçon entière&nbsp;: le produit de matrices est probablement l'opération sur laquelle le plus grand nombre d'heures de calcul sont dépensées dans le monde. Un moteur de recherche, un moteur 3D, un modèle de langue, un plan de requête, un filtre d'image&nbsp;: ils passent tous l'essentiel de leur temps dans les trois boucles imbriquées qu'on va écrire ci-dessous.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que cette leçon suppose acquis</p><p>Rien d'autre que la <a href="lecon-10.html">leçon 10</a> — sommets, arêtes, matrice d'adjacence — et les bases du langage. Aucune notion d'algèbre linéaire n'est présupposée&nbsp;: les mots <em>vecteur</em>, <em>produit</em>, <em>transposée</em>, <em>vecteur propre</em> sont définis ici, chacun par le programme qui le fait tourner.</p></div></div>
+
+<h2>Une matrice est une machine, pas un tableau</h2>
+
+<p>On présente presque toujours une matrice comme «&nbsp;un tableau de nombres à deux dimensions&nbsp;». C'est exact et c'est trompeur, parce que cela n'explique rien&nbsp;: un tableau à deux dimensions ne <em>fait</em> rien. Une matrice, elle, <strong>transforme un vecteur en un autre vecteur</strong>. C'est une fonction, et le produit matrice-vecteur est la manière de l'appliquer.</p>
+
+<p>Le programme ci-dessous prend un petit graphe de cinq sommets, y pose un jeton sur A, et applique quatre fois la matrice d'adjacence.</p>
+
+@@CODE:matrice-vecteur.js@@
+
+@@SORTIE:matrice-vecteur.js@@
+
+<p>Regardons la première ligne du calcul. Le vecteur de départ est <code>[1, 0, 0, 0, 0]</code>&nbsp;: tout est en A. Après un produit, il vaut <code>[0, 1, 1, 0, 0]</code> — la valeur a été poussée vers les voisins de A. Après deux produits, <code>[2, 1, 1, 1, 1]</code>. <strong>Un produit matrice-vecteur, c'est un pas de propagation.</strong></p>
+
+<p>Une précision que le programme affiche exprès&nbsp;: le <em>total</em> ne se conserve pas. Il passe de 1 à 2, 6, 14 puis 36. Rien n'est «&nbsp;réparti&nbsp;» au sens d'une masse qui se distribuerait&nbsp;: on compte des chemins, et il y en a de plus en plus. La section sur la marche aléatoire, en fin de leçon, emploiera une matrice bâtie pour que le total, lui, reste à 1.</p>
+
+<p>Les nombres qui apparaissent ne sont pas décoratifs&nbsp;: ce sont les <strong>nombres de chemins</strong>. La case du sommet <em>j</em> après <em>k</em> produits vaut le nombre de chemins de longueur <em>k</em> qui vont de A à <em>j</em>. Le programme ne le suppose pas&nbsp;: il énumère ces chemins un par un, par une descente récursive qui ne multiplie jamais rien, et compare. <strong>0 désaccord</strong> sur les quatre longueurs.</p>
+
+<p>Deux autres façons d'employer le même produit apparaissent ensuite&nbsp;:</p>
+
+<ul>
+<li>multiplier par le vecteur <code>[1, 1, 1, 1, 1]</code> revient à demander à chaque sommet «&nbsp;combien de voisins as-tu&nbsp;?&nbsp;»&nbsp;: le résultat est la liste des <strong>degrés</strong>, 2, 3, 3, 2, 2 — identique au comptage direct&nbsp;;</li>
+<li>une matrice n'est pas obligée d'être carrée. Celle de 3 lignes et 5 colonnes du programme regroupe cinq sommets en trois zones&nbsp;: elle transforme un vecteur de 5 nombres en un vecteur de 3, et la population totale est conservée (<strong>116</strong> des deux côtés).</li>
+</ul>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>La règle des dimensions, et le silence de JavaScript.</strong> Une matrice de <em>l</em> lignes et <em>c</em> colonnes ne peut multiplier qu'un vecteur de <strong>exactement</strong> <em>c</em> cases. La dernière ligne du programme montre ce qui arrive quand on l'oublie&nbsp;: avec un vecteur de 3 cases au lieu de 5, le calcul rend <code>[3,3,0]</code> — <em>aucune erreur levée</em>, un résultat parfaitement plausible, et faux. La boucle est écrite sur <code>v.length</code>&nbsp;: elle s'arrête à la troisième colonne, et les deux dernières colonnes de la matrice sont purement et simplement <strong>ignorées</strong>. Aucune valeur <code>undefined</code> n'apparaît, aucun <code>NaN</code> non plus — rien ne signale quoi que ce soit. C'est le premier contrôle à écrire dans toute fonction qui manipule des matrices, et l'exercice 4 le construit.</p></div></div>
+
+<h2>Le produit de deux matrices, et ce qu'il compte</h2>
+
+<p>Multiplier deux matrices, c'est appliquer le produit matrice-vecteur une fois par colonne. La définition tient en trois boucles imbriquées&nbsp;: la case (<em>i</em>, <em>j</em>) du résultat est la somme, sur <em>k</em>, de X[<em>i</em>][<em>k</em>] × Y[<em>k</em>][<em>j</em>]. On dit «&nbsp;la ligne <em>i</em> de X fois la colonne <em>j</em> de Y&nbsp;».</p>
+
+<p>Cette définition a l'air arbitraire tant qu'on ne l'a pas vue à l'œuvre sur un graphe. Là, elle devient évidente&nbsp;: <strong>chaque terme teste une escale</strong>. Il vaut 1 quand les deux arêtes existent, 0 sinon, et la somme compte les escales qui marchent.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 660 300" role="img" aria-label="Schéma montrant comment se calcule une case du produit de deux matrices. À gauche, la matrice d'adjacence A d'un graphe de cinq sommets A à E, dont la ligne B est mise en évidence. Au centre, un signe multiplié, puis la même matrice A avec sa colonne E mise en évidence. À droite, le détail du calcul terme à terme : 1 fois 0  +  0 fois 0  +  1 fois 1  +  1 fois 1  +  0 fois 0, dont la somme vaut 2. Une légende explique que cette case (B, E) de A au carré vaut 2, et que ce nombre compte les chemins de longueur deux qui mènent de B à E, à savoir B vers C vers E et B vers D vers E. Chaque terme du produit teste une escale possible : il vaut 1 quand les deux arêtes existent, 0 sinon.">
+    <text class="d-label" x="330" y="24" text-anchor="middle" font-size="13">Une case du produit : la ligne de l'une, la colonne de l'autre</text>
+    <text class="d-mut" x="115" y="54" text-anchor="middle" font-size="11">A — on prend la ligne B</text>
+    <text class="d-mut" x="55" y="72" text-anchor="middle" font-size="10">A</text>
+    <text class="d-mut" x="29" y="98" text-anchor="middle" font-size="10">A</text>
+    <text class="d-mut" x="85" y="72" text-anchor="middle" font-size="10">B</text>
+    <text class="d-mut" x="29" y="128" text-anchor="middle" font-size="10">B</text>
+    <text class="d-mut" x="115" y="72" text-anchor="middle" font-size="10">C</text>
+    <text class="d-mut" x="29" y="158" text-anchor="middle" font-size="10">C</text>
+    <text class="d-mut" x="145" y="72" text-anchor="middle" font-size="10">D</text>
+    <text class="d-mut" x="29" y="188" text-anchor="middle" font-size="10">D</text>
+    <text class="d-mut" x="175" y="72" text-anchor="middle" font-size="10">E</text>
+    <text class="d-mut" x="29" y="218" text-anchor="middle" font-size="10">E</text>
+    <rect class="d-box" x="40" y="80" width="30" height="30" />
+    <text class="d-text" x="55" y="99" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="70" y="80" width="30" height="30" />
+    <text class="d-text" x="85" y="99" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="100" y="80" width="30" height="30" />
+    <text class="d-text" x="115" y="99" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="130" y="80" width="30" height="30" />
+    <text class="d-text" x="145" y="99" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="160" y="80" width="30" height="30" />
+    <text class="d-text" x="175" y="99" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-accent" x="40" y="110" width="30" height="30" />
+    <text class="d-text" x="55" y="129" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-accent" x="70" y="110" width="30" height="30" />
+    <text class="d-text" x="85" y="129" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-accent" x="100" y="110" width="30" height="30" />
+    <text class="d-text" x="115" y="129" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-accent" x="130" y="110" width="30" height="30" />
+    <text class="d-text" x="145" y="129" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-accent" x="160" y="110" width="30" height="30" />
+    <text class="d-text" x="175" y="129" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="40" y="140" width="30" height="30" />
+    <text class="d-text" x="55" y="159" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="70" y="140" width="30" height="30" />
+    <text class="d-text" x="85" y="159" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="100" y="140" width="30" height="30" />
+    <text class="d-text" x="115" y="159" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="130" y="140" width="30" height="30" />
+    <text class="d-text" x="145" y="159" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="160" y="140" width="30" height="30" />
+    <text class="d-text" x="175" y="159" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="40" y="170" width="30" height="30" />
+    <text class="d-text" x="55" y="189" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="70" y="170" width="30" height="30" />
+    <text class="d-text" x="85" y="189" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="100" y="170" width="30" height="30" />
+    <text class="d-text" x="115" y="189" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="130" y="170" width="30" height="30" />
+    <text class="d-text" x="145" y="189" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="160" y="170" width="30" height="30" />
+    <text class="d-text" x="175" y="189" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="40" y="200" width="30" height="30" />
+    <text class="d-text" x="55" y="219" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="70" y="200" width="30" height="30" />
+    <text class="d-text" x="85" y="219" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="100" y="200" width="30" height="30" />
+    <text class="d-text" x="115" y="219" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="130" y="200" width="30" height="30" />
+    <text class="d-text" x="145" y="219" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="160" y="200" width="30" height="30" />
+    <text class="d-text" x="175" y="219" text-anchor="middle" font-size="10">0</text>
+    <text class="d-tag" x="214" y="159" text-anchor="middle" font-size="16">×</text>
+    <text class="d-mut" x="335" y="54" text-anchor="middle" font-size="11">A — on prend la colonne E</text>
+    <text class="d-mut" x="275" y="72" text-anchor="middle" font-size="10">A</text>
+    <text class="d-mut" x="249" y="98" text-anchor="middle" font-size="10">A</text>
+    <text class="d-mut" x="305" y="72" text-anchor="middle" font-size="10">B</text>
+    <text class="d-mut" x="249" y="128" text-anchor="middle" font-size="10">B</text>
+    <text class="d-mut" x="335" y="72" text-anchor="middle" font-size="10">C</text>
+    <text class="d-mut" x="249" y="158" text-anchor="middle" font-size="10">C</text>
+    <text class="d-mut" x="365" y="72" text-anchor="middle" font-size="10">D</text>
+    <text class="d-mut" x="249" y="188" text-anchor="middle" font-size="10">D</text>
+    <text class="d-mut" x="395" y="72" text-anchor="middle" font-size="10">E</text>
+    <text class="d-mut" x="249" y="218" text-anchor="middle" font-size="10">E</text>
+    <rect class="d-box" x="260" y="80" width="30" height="30" />
+    <text class="d-text" x="275" y="99" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="290" y="80" width="30" height="30" />
+    <text class="d-text" x="305" y="99" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="320" y="80" width="30" height="30" />
+    <text class="d-text" x="335" y="99" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="350" y="80" width="30" height="30" />
+    <text class="d-text" x="365" y="99" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-accent" x="380" y="80" width="30" height="30" />
+    <text class="d-text" x="395" y="99" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="260" y="110" width="30" height="30" />
+    <text class="d-text" x="275" y="129" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="290" y="110" width="30" height="30" />
+    <text class="d-text" x="305" y="129" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="320" y="110" width="30" height="30" />
+    <text class="d-text" x="335" y="129" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="350" y="110" width="30" height="30" />
+    <text class="d-text" x="365" y="129" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-accent" x="380" y="110" width="30" height="30" />
+    <text class="d-text" x="395" y="129" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="260" y="140" width="30" height="30" />
+    <text class="d-text" x="275" y="159" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="290" y="140" width="30" height="30" />
+    <text class="d-text" x="305" y="159" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="320" y="140" width="30" height="30" />
+    <text class="d-text" x="335" y="159" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="350" y="140" width="30" height="30" />
+    <text class="d-text" x="365" y="159" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-accent" x="380" y="140" width="30" height="30" />
+    <text class="d-text" x="395" y="159" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="260" y="170" width="30" height="30" />
+    <text class="d-text" x="275" y="189" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="290" y="170" width="30" height="30" />
+    <text class="d-text" x="305" y="189" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="320" y="170" width="30" height="30" />
+    <text class="d-text" x="335" y="189" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="350" y="170" width="30" height="30" />
+    <text class="d-text" x="365" y="189" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-accent" x="380" y="170" width="30" height="30" />
+    <text class="d-text" x="395" y="189" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="260" y="200" width="30" height="30" />
+    <text class="d-text" x="275" y="219" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="290" y="200" width="30" height="30" />
+    <text class="d-text" x="305" y="219" text-anchor="middle" font-size="10">0</text>
+    <rect class="d-box" x="320" y="200" width="30" height="30" />
+    <text class="d-text" x="335" y="219" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-box" x="350" y="200" width="30" height="30" />
+    <text class="d-text" x="365" y="219" text-anchor="middle" font-size="10">1</text>
+    <rect class="d-accent" x="380" y="200" width="30" height="30" />
+    <text class="d-text" x="395" y="219" text-anchor="middle" font-size="10">0</text>
+    <text class="d-tag" x="440" y="159" font-size="16">=</text>
+    <text class="d-text" x="462" y="149" font-size="11">1×0  +  0×0  +  1×1  +  1×1  +  0×0</text>
+    <text class="d-text" x="462" y="171" font-size="13">= 2</text>
+    <text class="d-mut" x="20" y="256" font-size="11">La case (B, E) de A² vaut 2.</text>
+    <text class="d-mut" x="20" y="274" font-size="11">Ce 2, ce sont les chemins de longueur 2 qui vont de B a E : B→C→E et B→D→E.</text>
+    <text class="d-mut" x="20" y="292" font-size="11">Chaque terme du produit teste une escale ; il vaut 1 quand les deux arêtes existent, 0 sinon.</text>
+  </svg>
+  <figcaption>Le produit de matrices n'est pas une convention arbitraire : sur un graphe, chaque terme teste une escale, et la somme compte les chemins.</figcaption>
+</figure>
+
+@@CODE:produit.js@@
+
+@@SORTIE:produit.js@@
+
+<p>Le résultat central est celui du tableau du milieu&nbsp;: pour <em>k</em> allant de 1 à 5, les <strong>125</strong> cases de A<sup><em>k</em></sup> ont été comparées à une énumération directe des chemins, et il y a <strong>0 désaccord</strong>. La case (<em>i</em>, <em>j</em>) de A<sup><em>k</em></sup> compte exactement les chemins de longueur <em>k</em> allant de <em>i</em> à <em>j</em>.</p>
+
+<p>«&nbsp;Chemin&nbsp;» est ici à prendre au sens large&nbsp;: rien n'interdit de repasser au même endroit. C'est pourquoi la diagonale de A<sup>2</sup> ne vaut pas 0 mais les <strong>degrés</strong> — partir de A, aller chez un voisin, revenir, cela fait bien un chemin de longueur 2.</p>
+
+<p>La diagonale de A<sup>3</sup> est plus jolie encore. Elle compte les chemins fermés de longueur 3, c'est-à-dire les <strong>triangles</strong>, chacun compté six fois&nbsp;: trois sommets de départ possibles, deux sens de parcours. Le programme obtient une trace de <strong>6</strong>, donc <strong>1</strong> triangle&nbsp;; le comptage direct, triangle par triangle, en trouve <strong>1</strong> aussi. Sur un vrai réseau social, ce même calcul est la brique du <em>coefficient de regroupement</em> — la proportion de vos amis qui sont amis entre eux&nbsp;: il faut deux produits pour obtenir A<sup>3</sup>, et un second comptage pour les triplets connectés qui servent de dénominateur.</p>
+
+<h3>Il ne commute pas, mais il est associatif</h3>
+
+<p>Deux propriétés séparent le produit de matrices de la multiplication ordinaire, et les confondre coûte cher.</p>
+
+<p><strong>X × Y n'est presque jamais Y × X.</strong> Le programme le montre sur deux matrices 2 × 2 — <code>[[7,2],[3,1]]</code> contre <code>[[1,2],[3,7]]</code> —, la plus petite taille où le phénomène existe. Puis il mesure&nbsp;: sur <strong>10 000</strong> paires à coefficients entiers de 0 à 4, le produit commute <strong>291</strong> fois, soit <strong>2,91 %</strong>.</p>
+
+<p>Ce 2,91 % est une estimation, et la loi étant finie, on peut faire mieux qu'estimer&nbsp;: le programme énumère les <strong>390 625</strong> paires possibles et obtient la valeur <em>exacte</em>, <strong>2,66 %</strong>. L'écart avec le tirage est du simple bruit d'échantillonnage — et c'est une bonne raison, quand c'est possible, de compter plutôt que de sonder. Plus instructif encore&nbsp;: <strong>66 %</strong> de ces cas de commutation sont triviaux (l'une des deux matrices est scalaire, ou les deux sont égales). La non-commutativité est donc la règle, et l'exercice 6 montre qu'elle se voit à l'écran.</p>
+
+<p><strong>(X × Y) × Z est en revanche mathématiquement égal à X × (Y × Z)</strong>&nbsp;: <strong>2 000</strong> triplets à coefficients entiers, <strong>2 000</strong> accords exacts. Mais le programme refait aussitôt l'essai avec des coefficients <em>décimaux</em>, et le verdict s'inverse&nbsp;: <strong>0 résultat identique au dernier bit sur 2 000</strong>, avec un écart maximal de l'ordre de 10<sup>−16</sup>. L'associativité est une propriété de l'algèbre, pas de la virgule flottante — c'est très exactement le sujet de la <a href="lecon-09.html">leçon 9</a>, et cela signifie qu'un changement d'ordre de calcul peut modifier les derniers chiffres d'un résultat sans que personne ne l'ait demandé.</p>
+
+<p>Cette associativité n'est pas une remarque de cours&nbsp;: elle laisse le <em>choix de l'ordre</em>, et l'ordre change le travail. Pour la chaîne (50 × 5)(5 × 60)(60 × 4), le parenthésage de gauche coûte <strong>27 000</strong> multiplications, celui de droite <strong>2 200</strong> — un rapport de <strong>12,3</strong>. Sur la chaîne (10 × 100)(100 × 5)(5 × 50), c'est l'inverse&nbsp;: <strong>7 500</strong> contre <strong>75 000</strong>, un rapport de <strong>10</strong> dans l'autre sens.</p>
+
+<p>Autrement dit&nbsp;: le résultat est le même, le travail non. Trouver le meilleur parenthésage d'une chaîne de matrices est d'ailleurs l'exemple d'école de la programmation dynamique, et c'est aussi, très concrètement, ce que fait l'optimiseur d'une bibliothèque de calcul quand on lui donne une expression à évaluer.</p>
+
+<h2>Ce que coûte un produit</h2>
+
+<p>Le coût du produit de deux matrices <em>n</em> × <em>n</em> se lit directement dans les trois boucles&nbsp;: <em>n</em> × <em>n</em> cases, chacune demandant <em>n</em> multiplications. Soit <strong><em>n</em>³</strong>. Le programme ne le déduit pas, il <em>compte</em>.</p>
+
+@@CODE:cout.js@@
+
+@@SORTIE:cout.js@@
+
+<p>Le compteur confirme <em>n</em>³ sur les six tailles, jusqu'à <strong>262 144</strong> multiplications pour <em>n</em> = 64. La conséquence tient en une phrase&nbsp;: <strong>doubler <em>n</em> multiplie le travail par huit.</strong> C'est ce qui rend le passage à l'échelle si brutal ici — 10<sup>9</sup> multiplications à <em>n</em> = 1 000, 10<sup>15</sup> à <em>n</em> = 100 000.</p>
+
+<p>Deux échappatoires existent, et il faut les distinguer nettement.</p>
+
+<p><strong>La première change le travail sans changer l'exposant&nbsp;: exploiter les zéros.</strong> Le produit «&nbsp;creux&nbsp;» saute les cases nulles, et le relevé est net&nbsp;: à la densité visée de 0,01 — soit <strong>0,0088</strong> réellement obtenue, colonne que le programme publie pour ne pas faire dire à un tirage plus qu'il ne contient —, il fait <strong>2 304</strong> multiplications là où le produit dense en fait <strong>262 144</strong>, pour des résultats <em>identiques</em> à toutes les densités. Une précision qui change la lecture&nbsp;: seule la matrice de gauche est creuse ici, celle de droite reste pleine. Le gain vient donc des zéros d'<em>un seul</em> opérande — avec deux matrices creuses, il serait plus grand encore. C'est exactement le lien avec la leçon 10&nbsp;: une matrice d'adjacence de graphe réel est presque vide, et le produit dense passerait 99 % de son temps à multiplier par zéro.</p>
+
+<p><strong>La seconde change l'exposant.</strong> L'algorithme de Strassen découpe chaque matrice en quatre blocs et n'en fait que <strong>sept</strong> produits au lieu de huit, ce qui donne un exposant de log(7)/log(2) = <strong>2,8074</strong> au lieu de 3. Le gain existe, mais le tableau invite à la mesure&nbsp;: à constantes égales, il vaut <strong>2,55</strong> à <em>n</em> = 128 et <strong>4,96</strong> à <em>n</em> = 4 096. Et les constantes ne <em>sont pas</em> égales — Strassen paie en additions et en mémoire ce qu'il gagne en produits, ce qui explique que les bibliothèques ne l'activent qu'au-delà de plusieurs centaines de lignes.</p>
+
+<h3>Cas réel&nbsp;: ce que coûte une inférence de réseau de neurones</h3>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Pourquoi on achète des cartes graphiques</p><p>La dernière partie du programme chiffre l'<em>inférence</em> d'un classifieur d'images minuscule, à trois couches&nbsp;: <strong>535 040</strong> multiplications pour <strong>une seule</strong> image — exactement autant que de <em>poids</em>, puisque chaque coefficient de W sert une fois — auxquels s'ajoutent <strong>778</strong> biais, soit <strong>535 818 paramètres</strong>. Le mot juste est «&nbsp;paramètres&nbsp;»&nbsp;: les poids et les biais ne se comptent pas ensemble sous le nom des premiers. Pour un lot de 128 images&nbsp;: <strong>6,85 × 10<sup>7</sup></strong> multiplications. Un modèle de langue actuel fait cela avec des matrices des milliers de fois plus grandes, des dizaines de fois par seconde. Une carte graphique n'est pas «&nbsp;plus rapide&nbsp;» en général&nbsp;: elle sait faire <em>cette</em> opération, et presque uniquement celle-là, sur des milliers de cases à la fois.</p></div></div>
+
+<h2>Un réseau de neurones est une suite de produits</h2>
+
+<p>La phrase est exacte, et elle cache l'essentiel. Une <strong>couche</strong> de réseau, c'est trois choses&nbsp;: un produit matrice-vecteur, l'ajout d'un vecteur de <strong>biais</strong>, puis une fonction appliquée case par case — l'<strong>activation</strong>. En code, cela tient en une ligne. Ce qui rend l'ensemble intéressant, c'est uniquement la troisième.</p>
+
+@@CODE:couche.js@@
+
+@@SORTIE:couche.js@@
+
+<p>Le problème choisi est le plus petit qui résiste à une droite&nbsp;: le <strong>OU exclusif</strong>. Avec activation, le réseau à deux couches répond juste <strong>4 fois sur 4</strong>. Sans activation — rien d'autre ne change, les mêmes poids, les mêmes biais — il tombe à <strong>3 sur 4</strong>.</p>
+
+<p>Le programme donne ensuite la raison, et il la donne deux fois plutôt qu'une.</p>
+
+<p><strong>Première raison, algébrique&nbsp;:</strong> sans activation, les deux couches se <em>replient</em> en une seule. Le programme calcule cette couche unique — W<sub>2</sub> × W<sub>1</sub> = <code>[[-1,-1]]</code>, biais <code>[2]</code> — et vérifie qu'elle donne exactement les mêmes sorties&nbsp;: <strong>0 écart sur 4</strong>. Deux couches linéaires <em>sont</em> une couche linéaire.</p>
+
+<p><strong>Seconde raison, sur le problème lui-même&nbsp;:</strong> aucune couche linéaire ne peut résoudre le OU exclusif. L'argument ne dépend d'aucun tirage&nbsp;: pour toute fonction affine, <em>f</em>(0,0) + <em>f</em>(1,1) = <em>f</em>(0,1) + <em>f</em>(1,0). Le OU exclusif exige que cette égalité s'écrive 0 = 2. C'est impossible, et cela le restera quelle que soit la puissance de la machine.</p>
+
+<p>Le tableau des tirages qui suit mérite d'être lu <em>avec</em> cet argument, et non à sa place — c'est le piège que ce programme a été refait pour éviter. À tolérance 0,5&nbsp;: <strong>0 réussite sur 200 000</strong>. Mais ce zéro n'est pas une découverte&nbsp;: l'identité impose un écart total d'au moins 2, donc à tolérance 0,5 il faudrait les quatre erreurs à exactement 0,5, c'est-à-dire une seule fonction dans un espace à trois paramètres — de probabilité nulle. L'échec était <strong>acquis avant la boucle</strong>, et qualifier 0,5 de «&nbsp;tolérance généreuse&nbsp;» serait exactement l'inverse de la vérité&nbsp;: c'est le fil du rasoir. Les lignes suivantes le prouvent en desserrant le seuil&nbsp;: rien encore à 0,6, puis <strong>6</strong> réussites à 0,75 et <strong>40</strong> à 1. Une expérience dont le résultat est déterminé d'avance ne démontre rien&nbsp;: elle illustre.</p>
+
+<p>Le résultat vaut à n'importe quelle profondeur. Dix couches linéaires empilées sont remplacées par <strong>une seule</strong> matrice 4 × 4, avec un pire écart de <strong>5,68 × 10<sup>−14</sup></strong> sur 500 entrées — un écart qui n'est pas nul uniquement à cause des arrondis flottants de la <a href="lecon-09.html">leçon 9</a>. Les mêmes dix couches avec ReLU, en revanche, donnent un résultat différent sur <strong>500 entrées sur 500</strong>, avec un écart allant jusqu'à <strong>121,66</strong>.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Ce qu'il faut retenir de cette section</p><p><strong>Sans fonction non linéaire, la profondeur ne sert à rien.</strong> Ajouter des couches à un réseau purement linéaire ne lui apprend rien de plus&nbsp;: cela le rend seulement plus lent à calculer une fonction qu'une seule matrice représentait déjà. C'est la raison d'être de ReLU, de la sigmoïde et de leurs cousines — et c'est pour cela qu'une erreur de configuration qui désactive l'activation d'une couche ne provoque aucune erreur, seulement un modèle qui n'apprend pas.</p></div></div>
+
+<h2>Marcher au hasard, indéfiniment</h2>
+
+<p>Reste une dernière question, et c'est celle qui a fondé un moteur de recherche&nbsp;: <em>si l'on clique au hasard, sans jamais s'arrêter, sur quelles pages passe-t-on le plus de temps&nbsp;?</em> Elle se pose sur un graphe orienté, et sa réponse est une puissance de matrice.</p>
+
+@@CODE:marche.js@@
+
+@@SORTIE:marche.js@@
+
+<p>La matrice employée ici n'est plus une matrice d'adjacence mais une matrice de <strong>transition</strong>&nbsp;: la case (<em>i</em>, <em>j</em>) donne la <em>probabilité</em> d'aller en <em>i</em> quand on est en <em>j</em>. Chaque colonne somme à 1 — le programme le vérifie sur les six —, ce qui s'appelle une matrice <em>stochastique</em>.</p>
+
+<p>On part d'une répartition uniforme et on applique l'opération, encore et encore. Le vecteur se stabilise&nbsp;: après <strong>34</strong> pas, la variation d'un tour à l'autre tombe sous 10<sup>−9</sup>, et un pas de plus ne le déplace que de <strong>3,43 × 10<sup>−10</sup></strong>. Ce vecteur immobile s'appelle un <strong>vecteur propre</strong> — «&nbsp;propre&nbsp;» au sens de «&nbsp;qui lui appartient&nbsp;», pas de «&nbsp;pas sale&nbsp;». C'est l'état d'équilibre de la marche.</p>
+
+<h3>Vecteur propre de quoi, exactement&nbsp;?</h3>
+
+<p>La question n'est pas une chicane de vocabulaire, et le programme la tranche parce que la réponse évidente est fausse. <strong>Ce n'est pas T qui est itérée</strong>, c'est <em>G</em>(<em>v</em>) = (1−<em>d</em>)/<em>n</em> + <em>d</em> × T × <em>v</em>&nbsp;: la matrice de transition amortie. Appliquer T au vecteur obtenu ne le laisse pas en place, et les rapports case par case le montrent — ils vont de <strong>0,167</strong> à <strong>1,078</strong>, alors qu'un vecteur propre exigerait qu'ils soient <em>tous égaux</em>. Le vecteur publié est le vecteur propre de G, pas de T.</p>
+
+<p>Le vecteur propre de T, lui, existe bel et bien&nbsp;: le programme l'obtient en itérant T seule, en <strong>46</strong> pas, et il est <strong>différent</strong> — écart maximal de <strong>0,0477</strong>. Surtout, <em>archive</em> y tombe à <strong>0,0000</strong>&nbsp;: le groupe fermé accueil / cours / catalogue a absorbé toute la masse. C'est précisément ce que l'amortissement corrige.</p>
+
+<p>Une nuance à ne pas confondre au passage&nbsp;: les pages <em>puits</em> — comme <em>archive</em>, sans lien sortant — ne sont pas traitées par l'amortissement mais dès la <strong>construction de T</strong>, où leur colonne reçoit 1/<em>n</em> partout. La preuve en est que l'itération de T seule ne bloque pas&nbsp;: elle converge, simplement vers un autre vecteur. Ce que l'amortissement apporte est ailleurs&nbsp;: il garantit l'<strong>unicité</strong> du point fixe et la convergence vers lui, et empêche un groupe fermé de tout absorber. L'existence, elle, est acquise pour toute matrice stochastique.</p>
+
+<p>Et surtout, le programme ne s'arrête pas là. Il ne <em>croit</em> pas la matrice&nbsp;: il <strong>marche</strong>. Un million de clics tirés au sort avec exactement la même règle, et un comptage des visites. Le pire écart entre le calcul et la simulation est de <strong>0,0006</strong>. Deux méthodes qui n'ont rien en commun — l'une itère une matrice, l'autre lance un dé un million de fois — tombent sur la même réponse&nbsp;: c'est ce qui autorise à faire confiance à la première.</p>
+
+<h3>Pourquoi ce n'est pas la même chose que compter les liens</h3>
+
+<p>Le classement obtenu place <em>cours</em> en tête, puis <em>accueil</em>. Le comptage naïf des liens entrants, lui, place <em>accueil</em> en tête, avec 3 liens contre 2. Le programme compare les deux classements paire par paire&nbsp;: <strong>1 paire sur 15</strong> est classée dans l'ordre inverse, et c'est précisément celle-là — <em>accueil</em>, 3 liens entrants et un temps de visite de <strong>0,2629</strong>, contre <em>cours</em>, 2 liens entrants et <strong>0,3001</strong>.</p>
+
+<p>La raison est l'idée centrale de la méthode&nbsp;: <strong>un lien depuis une page importante vaut plus qu'un lien quelconque</strong>. C'est une définition circulaire — l'importance d'une page dépend de l'importance de celles qui la pointent — et la puissance de matrice est exactement ce qui la résout&nbsp;: elle transforme la circularité en un point fixe qu'on atteint en itérant.</p>
+
+<p>Le facteur d'<strong>amortissement</strong>, noté <em>d</em>, vaut ici <strong>0,85</strong>&nbsp;: c'est la probabilité de <em>suivre</em> un lien. Le complément, <strong>0,15</strong>, est la probabilité de sauter n'importe où. Les deux chiffres décrivent le même réglage vu des deux côtés, et il vaut mieux dire lequel on nomme — <em>d</em> = 0,85 est la convention de la littérature, et c'est la constante <code>d</code> du programme.</p>
+
+<h2>L'antisèche&nbsp;: une écriture matricielle, une signification</h2>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Ce que chaque écriture matricielle veut dire concrètement — toutes vérifiées par un second calcul dans cette leçon</caption>
+    <thead><tr><th scope="col">L'écriture</th><th scope="col">Ce qu'elle calcule</th><th scope="col">Ce qu'elle veut dire</th></tr></thead>
+    <tbody>
+      <tr><td>A × <em>v</em></td><td>un produit matrice-vecteur</td><td>un pas de propagation sur le graphe</td></tr>
+      <tr><td>A<sup><em>k</em></sup>[<em>i</em>][<em>j</em>]</td><td>la case (<em>i</em>, <em>j</em>) de la puissance <em>k</em></td><td>le nombre de chemins de longueur <em>k</em> de <em>i</em> à <em>j</em>, répétitions comprises</td></tr>
+      <tr><td>diagonale de A²</td><td>A²[<em>i</em>][<em>i</em>]</td><td>le degré du sommet <em>i</em> — aller chez un voisin puis revenir</td></tr>
+      <tr><td>trace(A³) / 6</td><td>somme de la diagonale de A³, divisée par 6</td><td>le nombre de triangles du graphe</td></tr>
+      <tr><td>A ∨ A² ∨ … en booléen</td><td>puissances booléennes cumulées</td><td>la fermeture transitive&nbsp;: qui peut atteindre qui, directement ou non</td></tr>
+      <tr><td>T × <em>v</em>, T stochastique (colonnes sommant à 1)</td><td>un produit matrice-vecteur qui conserve le total</td><td>la distribution de probabilité après un clic</td></tr>
+      <tr><td>(1−<em>d</em>)/<em>n</em> + <em>d</em> × T × <em>v</em>, itéré</td><td>le point fixe de cette opération amortie</td><td>le vecteur propre de la matrice amortie&nbsp;: le temps de visite à l'équilibre — <em>pas</em> celui de T seule</td></tr>
+      <tr><td>activation(W × <em>x</em> + <em>b</em>)</td><td>produit, biais, fonction non linéaire</td><td>une couche de réseau de neurones — sans l'activation, elle se replie dans la précédente</td></tr>
+      <tr><td>M × <em>p</em> en coordonnées homogènes</td><td>matrice 3 × 3 sur un point (x, y, 1)</td><td>une transformation géométrique, composable par simple produit</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Ce qu'il faut retenir</h2>
+
+<ul>
+<li><strong>Une matrice est une machine, pas un tableau</strong>&nbsp;: le produit matrice-vecteur l'applique. Sur un graphe, un produit = <em>un pas de propagation</em>.</li>
+<li><strong>La case (<em>i</em>, <em>j</em>) de A<sup><em>k</em></sup> compte les chemins de longueur <em>k</em> de <em>i</em> à <em>j</em></strong>. Vérifié sur <strong>125</strong> cases contre une énumération directe&nbsp;: <strong>0 désaccord</strong>. La diagonale de A<sup>2</sup> donne les degrés, celle de A<sup>3</sup> donne six fois le nombre de triangles.</li>
+<li><strong>La règle des dimensions ne se devine pas&nbsp;: elle se contrôle.</strong> Une matrice (<em>l</em> × <em>c</em>) exige un vecteur de <em>c</em> cases. Avec 3 au lieu de 5, JavaScript ne lève rien et rend <code>[3,3,0]</code>.</li>
+<li><strong>Le produit ne commute pas</strong>&nbsp;: <strong>2,66 %</strong> de commutation, valeur exacte obtenue en énumérant les 390 625 paires — dont 66 % de cas triviaux. <strong>Il est associatif en mathématiques</strong> (2 000 triplets entiers sur 2 000) mais <strong>pas au dernier bit en virgule flottante</strong> (0 sur 2 000 avec des décimaux). L'ordre choisi change le coût&nbsp;: <strong>27 000</strong> multiplications contre <strong>2 200</strong> pour le même résultat.</li>
+<li><strong>Le coût est <em>n</em>³</strong>, compté et non déduit. Doubler <em>n</em> multiplie le travail par <strong>8</strong>. Exploiter les zéros d'un seul opérande ramène 262 144 multiplications à <strong>2 304</strong> à 1 % de densité&nbsp;; Strassen abaisse l'exposant à <strong>2,8074</strong>, pour un gain réel modeste avant plusieurs centaines de lignes.</li>
+<li><strong>Une couche de réseau de neurones = un produit, un biais, une activation.</strong> Sans l'activation, dix couches se replient en une seule matrice — pire écart <strong>5,68 × 10<sup>−14</sup></strong>, dû aux seuls arrondis flottants.</li>
+<li><strong>Aucune couche linéaire ne résout le OU exclusif</strong>, et la raison ne dépend d'aucun tirage&nbsp;: toute fonction affine impose <em>f</em>(0,0) + <em>f</em>(1,1) = <em>f</em>(0,1) + <em>f</em>(1,0), soit 0 = 2. Le «&nbsp;0 sur 200 000&nbsp;» à tolérance 0,5 <em>illustre</em> ce théorème&nbsp;; il ne le démontre pas — à ce seuil, l'échec est acquis d'avance.</li>
+<li><strong>Itérer une transition amortie converge vers un vecteur propre</strong> — celui de la matrice <em>amortie</em>, pas de T&nbsp;: appliquer T au résultat donne des rapports allant de 0,167 à 1,078. <strong>34</strong> pas ici, confirmés par une marche aléatoire d'un million de clics&nbsp;: pire écart <strong>0,0006</strong>.</li>
+<li><strong>Compter les liens n'est pas les pondérer</strong>&nbsp;: <strong>1 paire sur 15</strong> est classée à l'envers par le comptage naïf, dont la première place.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Une fonction reçoit une matrice et un vecteur et rend un résultat plausible mais faux une fois sur dix. Quelle est la première chose que tu vérifies, et quelle ligne ajoutes-tu&nbsp;?</li>
+<li>Un collègue veut «&nbsp;améliorer&nbsp;» un modèle en passant de 3 à 12 couches, sans changer autre chose. Dans quel cas cela ne changera-t-il strictement rien, et comment le lui montres-tu en cinq lignes&nbsp;?</li>
+<li>Une équipe classe des articles par nombre de citations reçues. Quel calcul proposerais-tu à la place, et quelle propriété de ce calcul justifie qu'il donne un classement différent&nbsp;?</li>
+</ol></div>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Matrice</dt><dd>Tableau rectangulaire de nombres, mais surtout <em>fonction</em> qui transforme un vecteur en un autre. Une matrice de <em>l</em> lignes et <em>c</em> colonnes envoie un vecteur de <em>c</em> cases sur un vecteur de <em>l</em> cases.</dd>
+  <dt>Vecteur</dt><dd>Liste ordonnée de nombres. Sur un graphe, un vecteur porte une quantité par sommet&nbsp;: une population, une probabilité, un jeton.</dd>
+  <dt>Produit matrice-vecteur</dt><dd>La case <em>i</em> du résultat est la somme des M[<em>i</em>][<em>j</em>] × v[<em>j</em>]. Sur une matrice d'adjacence, c'est un pas de propagation.</dd>
+  <dt>Produit matriciel</dt><dd>La case (<em>i</em>, <em>j</em>) est la ligne <em>i</em> de la première fois la colonne <em>j</em> de la seconde. Sur un graphe, chaque terme teste une escale possible.</dd>
+  <dt>Règle des dimensions</dt><dd>Le nombre de colonnes de la gauche doit égaler le nombre de lignes de la droite. Non vérifiée, elle produit un résultat faux <em>sans erreur</em>&nbsp;: c'est le premier garde-fou à écrire.</dd>
+  <dt>Transposée</dt><dd>La matrice obtenue en échangeant lignes et colonnes. Se trouver du mauvais côté d'une transposition est l'erreur la plus fréquente en calcul matriciel.</dd>
+  <dt>Commutativité</dt><dd>Propriété X × Y = Y × X. <strong>Fausse</strong> pour les matrices&nbsp;: 2,66 % de commutation sur les 390 625 paires 2 × 2 à coefficients entiers de 0 à 4, énumérées exhaustivement — et deux tiers de ces cas sont triviaux.</dd>
+  <dt>Associativité</dt><dd>Propriété (X × Y) × Z = X × (Y × Z), <strong>vraie</strong> en algèbre — mais pas au dernier bit en virgule flottante, mesuré à 10<sup>−16</sup> près. Elle laisse le choix de l'ordre, et l'ordre change le coût dans un rapport mesuré de 12,3.</dd>
+  <dt>Matrice creuse</dt><dd>Matrice majoritairement nulle. Sauter les zéros donne le même résultat pour bien moins de travail&nbsp;: 2 304 multiplications au lieu de 262 144 à 1 % de densité.</dd>
+  <dt>Strassen</dt><dd>Méthode de produit en sept produits de blocs au lieu de huit, d'exposant log(7)/log(2) = 2,8074. Gain réel modeste avant plusieurs centaines de lignes.</dd>
+  <dt>Couche</dt><dd>Dans un réseau de neurones&nbsp;: un produit matrice-vecteur, un biais, une activation. Rien d'autre. Ses <em>paramètres</em> sont ses poids <em>et</em> ses biais&nbsp;: 535 040 + 778 pour le classifieur du programme.</dd>
+  <dt>Biais</dt><dd>Vecteur ajouté après le produit. C'est lui qui permet à une couche de représenter une fonction <em>affine</em> et non seulement linéaire.</dd>
+  <dt>Activation</dt><dd>Fonction non linéaire appliquée case par case — ReLU, sigmoïde… Sans elle, empiler des couches revient à une seule matrice, mesuré à 5,68 × 10<sup>−14</sup> près.</dd>
+  <dt>ReLU</dt><dd><em>Rectified linear unit</em>&nbsp;: <code>max(0, x)</code>. L'activation la plus employée, parce qu'elle est non linéaire tout en restant triviale à calculer et à dériver.</dd>
+  <dt>Matrice stochastique</dt><dd>Matrice de transition dont chaque colonne somme à 1. Appliquée à une distribution de probabilité, elle en rend une autre.</dd>
+  <dt>Vecteur propre</dt><dd>Vecteur que la matrice laisse inchangé, à un facteur près. Le vecteur publié ici est celui de la transition <em>amortie</em>, atteint en 34 itérations&nbsp;; celui de T seule est différent, atteint en 46 itérations, et y annule la page sans lien sortant.</dd>
+  <dt>Amortissement</dt><dd>Facteur <em>d</em>, ici <strong>0,85</strong>&nbsp;: la probabilité de <em>suivre</em> un lien, le complément 0,15 étant celle de sauter au hasard. Il garantit l'unicité du point fixe et empêche un groupe fermé d'absorber toute la masse&nbsp;; les pages puits, elles, sont traitées dès la construction de la matrice.</dd>
+  <dt>Coordonnées homogènes</dt><dd>Ajout d'une troisième coordonnée valant 1, qui permet d'écrire une translation — non linéaire — sous forme de matrice, et donc de composer toutes les transformations par un seul produit.</dd>
+</dl>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que compte la case (i, j) de A³, où A est une matrice d'adjacence ?","a":["Le nombre de chemins de longueur exactement 3 allant de i à j, répétitions autorisées","Le nombre de chemins simples de i à j, sans repasser par un sommet","La distance de i à j si elle vaut au plus 3","Le nombre de triangles contenant à la fois i et j"],"correct":0,"explain":"Vérifié sur 125 cases contre une énumération directe : 0 désaccord. Rien n'interdit de repasser au même endroit, ce qui explique que la diagonale de A² donne les degrés et non des zéros."},
+  {"q":"On multiplie une matrice de 3 lignes et 5 colonnes par un vecteur de 3 cases, en JavaScript, sans contrôle. Que se passe-t-il ?","a":["Aucune erreur n'est levée et le résultat est faux : la boucle s'arrête simplement plus tôt","Une TypeError est levée à la première case manquante","Le résultat contient des NaN, ce qui rend l'erreur visible","Les cases manquantes sont traitées comme des zéros, donc le résultat reste juste"],"correct":0,"explain":"Mesuré : le calcul rend [3,3,0], parfaitement plausible. C'est pour cela que le contrôle des dimensions est la première ligne à écrire dans une fonction matricielle."},
+  {"q":"Le produit de matrices est-il commutatif ?","a":["Non : en énumérant les 390 625 paires 2×2 à coefficients entiers de 0 à 4, X × Y = Y × X dans 2,66 % des cas seulement","Oui, comme la multiplication des nombres","Oui pour les matrices carrées, non pour les autres","Oui pour les matrices d'adjacence, qui sont symétriques"],"correct":0,"explain":"La non-commutativité est la règle, pas l'exception — et deux tiers des rares cas de commutation sont triviaux (une matrice scalaire, ou X = Y). Elle se voit à l'écran : « tourner puis déplacer » et « déplacer puis tourner » diffèrent de 141 pixels sur l'exemple de l'exercice 6."},
+  {"q":"Pourquoi l'ordre de parenthésage d'une chaîne de matrices est-il important si le produit est associatif ?","a":["Parce que le résultat est le même mais le nombre de multiplications non : 27 000 contre 2 200 sur la même chaîne","Parce que le parenthésage de gauche est le seul qui donne le résultat mathématiquement correct","Parce que l'ordre décide de la taille de la matrice finale","Parce que seul le parenthésage de droite permet de réutiliser un résultat intermédiaire"],"correct":0,"explain":"Mesuré sur (50×5)(5×60)(60×4) : un rapport de 12,3. Sur une autre chaîne, c'est l'autre parenthésage qui gagne, dans un rapport de 10. Trouver le meilleur ordre est l'exemple d'école de la programmation dynamique."},
+  {"q":"Quel est le coût d'un produit de deux matrices n × n par la méthode ordinaire ?","a":["n³ multiplications : doubler n multiplie le travail par 8","n² multiplications, une par case du résultat","n log n multiplications, grâce à la décomposition en blocs","2n² multiplications, une par case de chaque opérande"],"correct":0,"explain":"Compté et non déduit : 262 144 multiplications pour n = 64. La conséquence pratique est brutale — 10⁹ à n = 1 000, 10¹⁵ à n = 100 000."},
+  {"q":"Que devient un réseau de dix couches si l'on retire toutes les fonctions d'activation ?","a":["Il devient équivalent à UNE seule matrice, aux arrondis flottants près (5,68 × 10⁻¹⁴ mesuré)","Il devient dix fois plus lent mais reste aussi expressif","Il ne peut plus rien apprendre du tout et rend des zéros","Il devient équivalent à un réseau de deux couches, sans pouvoir descendre plus bas"],"correct":0,"explain":"Le produit des dix matrices EST la matrice équivalente. Sans fonction non linéaire, la profondeur ne sert à rien — c'est la raison d'être de ReLU et de ses cousines."},
+  {"q":"Pourquoi aucune couche linéaire ne peut-elle résoudre le OU exclusif ?","a":["Parce que toute fonction affine impose f(0,0) + f(1,1) = f(0,1) + f(1,0), ce qui exigerait ici 0 = 2","Parce que quatre exemples ne suffisent pas à déterminer trois paramètres","Parce que les poids devraient être négatifs, ce qu'une couche linéaire interdit","Parce qu'il faudrait une matrice non carrée, impossible avec deux entrées"],"correct":0,"explain":"200 000 couches tirées au sort, 0 réussite même avec une tolérance de 0,5 — et surtout un argument qui ne dépend d'aucun tirage. Aucune puissance de calcul ne changera cela."},
+  {"q":"Qu'obtient-on en itérant une matrice stochastique jusqu'à stabilisation ?","a":["Un vecteur propre de la transition AMORTIE : l'état d'équilibre de la marche, que cette opération laisse inchangé","La moyenne des colonnes de la matrice","Le vecteur nul, puisque les probabilités décroissent à chaque pas","Le classement des sommets par nombre de liens entrants"],"correct":0,"explain":"Atteint ici en 34 pas, avec un déplacement résiduel de 3,43 × 10⁻¹⁰, et confirmé par un million de clics tirés au sort : pire écart 0,0006. Attention à l'objet : ce n'est PAS le vecteur propre de T. Appliquer T au résultat donne des rapports allant de 0,167 à 1,078 ; le vecteur propre de T seule est différent, atteint en 46 pas."},
+  {"q":"Pourquoi ce classement diffère-t-il d'un simple comptage des liens entrants ?","a":["Parce qu'un lien depuis une page importante pèse davantage : 1 paire sur 15 est classée à l'envers, dont la première place","Parce que le comptage des liens entrants ignore les liens sortants","Parce que l'amortissement de 0,85 introduit un biais qui fausse légèrement le classement","Il n'en diffère pas : les deux méthodes donnent toujours le même ordre"],"correct":0,"explain":"Mesuré : « accueil » a 3 liens entrants et un temps de visite de 0,2629 ; « cours » n'en a que 2 et obtient 0,3001. L'importance d'une page dépend de celle des pages qui la pointent — une définition circulaire que la puissance de matrice résout."}
+]
+</script>
+
+<script type="application/json" data-exos>
+[
+  {"type":"code","run":{"expect":"12500"},"placeholder":"un programme qui affiche, seul sur la dernière ligne, la quantité de lait nécessaire pour 12 crêpes, 5 gâteaux et 8 flans","hints":["Attention au sens : il faut la matrice TRANSPOSÉE, 4 ingrédients par 3 plats.","Le lait est le troisième ingrédient : 500, 100 et 750 par plat.","Vérifie ton résultat par une somme directe, sans matrice."],"link":{"href":"lecon-11.html","label":"Revoir « Une matrice est une machine »"}},
+  {"type":"text","accept":["14"],"placeholder":"nombre de paires (service, service) atteignables, directement ou non, sur les 49 possibles : ____","hints":["Le programme de la solution l'affiche, avec son dénominateur.","C'est un peu moins du tiers des paires.","La solution le redonne seul sur sa dernière ligne."],"link":{"href":"lecon-11.html","label":"Revoir l'exercice 5"}},
+  {"type":"text","accept":["2153"],"placeholder":"nombre de paires de transformations, sur les 5 000 tirées au sort, où l'ordre change le résultat : ____","hints":["Le programme de la solution l'affiche, avec son pourcentage.","C'est un peu plus de 43 %.","La solution le redonne seul sur sa dernière ligne."],"link":{"href":"lecon-11.html","label":"Revoir l'exercice 6"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 4</span><span class="exercise__level">Échauffement</span></div><p>Trois recettes consomment quatre ingrédients&nbsp;: crêpes (250 g de farine, 3 œufs, 500 ml de lait, 50 g de sucre), gâteau (200, 4, 100, 150), flan (0, 6, 750, 120). Pour 12 crêpes, 5 gâteaux et 8 flans, calcule les besoins <strong>par un produit matrice-vecteur</strong>, ajoute un contrôle des dimensions, et affiche la quantité de <em>lait</em> seule sur la dernière ligne.</p>
+<details><summary>Voir une solution</summary>@@CODE:solution-4.js@@
+@@SORTIE:solution-4.js@@
+<p>Le piège est le <strong>sens</strong>. La table des recettes est écrite «&nbsp;un plat par ligne&nbsp;», mais le vecteur des commandes a une case par plat&nbsp;: il faut donc la <strong>transposée</strong>, 4 lignes (les ingrédients) sur 3 colonnes (les plats). Se tromper de côté est l'erreur la plus fréquente en calcul matriciel, et elle ne se voit pas toujours&nbsp;: ici, une matrice 3 × 4 multipliée par un vecteur de 3 cases donnerait une erreur de dimensions… mais seulement parce que 4 ≠ 3. Avec quatre plats, elle serait passée silencieusement.</p>
+<p>Le contrôle final est ce qui rend le résultat croyable&nbsp;: la même somme est refaite <em>sans aucune matrice</em>, et les deux méthodes coïncident sur les <strong>4</strong> ingrédients.</p>
+<p>La démonstration du garde-fou mérite un regard attentif. Avec un vecteur de commandes tronqué à deux valeurs, la version sans contrôle rend <code>[4000,56,6500,1350]</code> sans la moindre erreur. Et l'écart avec la vraie réponse vaut <strong>0 sur la farine</strong> — parce que le flan n'en contient pas. Une ligne juste au milieu de trois lignes fausses&nbsp;: c'est exactement ce qui fait qu'on ne remarque rien.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 5</span><span class="exercise__level">Application</span></div><p>Sept services s'appellent les uns les autres. Détermine, pour chacun, l'ensemble de ceux qu'il peut atteindre <em>directement ou non</em> — la <strong>fermeture transitive</strong> —, une première fois par puissances de matrice, une seconde fois par un parcours depuis chaque service, et prouve sur 500 graphes tirés au sort que les deux méthodes ne divergent jamais.</p>
+<details><summary>Voir une solution</summary>@@CODE:solution-5.js@@
+@@SORTIE:solution-5.js@@
+<p>Le produit employé ici n'est pas le produit ordinaire mais le produit <strong>booléen</strong>&nbsp;: le «&nbsp;+&nbsp;» est remplacé par un «&nbsp;ou&nbsp;». On ne compte plus les chemins, on demande seulement s'il en existe au moins un — ce qui est exactement la question posée, et qui évite au passage des nombres qui exploseraient.</p>
+<p>Un chemin <strong>sans répétition</strong> — la leçon employait jusqu'ici «&nbsp;chemin&nbsp;» au sens large, où l'on peut repasser au même endroit&nbsp;; ici il faut le sens strict — ne dépasse jamais <em>n</em>−1 arêtes dans un graphe de <em>n</em> sommets. Et s'il existe un chemin quelconque de <em>i</em> à <em>j</em>, il en existe un sans répétition. La borne sur l'<em>exposant</em> est donc 6 ici, et celle sur le nombre de <em>produits</em> est 5, un produit de moins puisqu'on part de A.</p>
+
+<p>En pratique, le programme s'arrête dès que plus rien ne change&nbsp;: il atteint l'exposant <strong>4</strong> pour <strong>3 produits</strong> effectués, dont <strong>2</strong> ont réellement enrichi la clôture. Distinguer ces trois chiffres n'est pas de la pédanterie&nbsp;: c'est la différence entre un exposant, un nombre d'opérations et un nombre d'opérations utiles, et les confondre fait annoncer un coût qu'on n'a pas payé. Cette détection de point fixe est ce qui rend la méthode utilisable&nbsp;: sans elle, on paierait la borne à chaque fois.</p>
+<p>Le verdict porte sur les deux échelles&nbsp;: <strong>0 désaccord</strong> sur les 7 services, et <strong>0 désaccord</strong> sur les <strong>32 000</strong> paires des 500 graphes tirés au sort. C'est ce qui autorise à employer l'une ou l'autre selon ce qui est le plus commode.</p>
+<p>Et l'usage, lui, est immédiat&nbsp;: la fermeture transitive répond à «&nbsp;qui dépend de quoi <em>sans le savoir</em>&nbsp;». Ici, une panne du service <em>audit</em> se voit depuis <strong>4 services sur 7</strong>, alors que deux seulement l'appellent directement.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 6</span><span class="exercise__level">Défi</span></div><p>Montre, en matrices, pourquoi «&nbsp;tourner puis déplacer&nbsp;» ne donne pas «&nbsp;déplacer puis tourner&nbsp;». Emploie les <strong>coordonnées homogènes</strong> pour écrire une translation sous forme de matrice, refais les deux calculs à la main pour vérifier, puis mesure sur 5 000 paires de transformations à quelle fréquence l'ordre change le résultat.</p>
+<details><summary>Voir une solution</summary>@@CODE:solution-6.js@@
+@@SORTIE:solution-6.js@@
+<p>Une translation n'est pas linéaire — elle déplace l'origine — et ne peut donc pas s'écrire comme une matrice 2 × 2. L'astuce des <strong>coordonnées homogènes</strong> consiste à ajouter une troisième coordonnée valant toujours 1&nbsp;: la translation devient une matrice 3 × 3, et <em>toutes</em> les transformations se composent alors par un simple produit. C'est ce que fait la propriété CSS <code>transform</code>, et c'est pour cela que l'ordre y compte.</p>
+<p>Le point (10, 0) le montre sans ambiguïté&nbsp;: <code>[0, 110]</code> dans un sens, <code>[100, 10]</code> dans l'autre — <strong>141,421 pixels</strong> d'écart. Les mêmes calculs refaits à la main, sans aucune matrice, donnent exactement les deux mêmes points&nbsp;: la matrice ne fabrique pas le désaccord, elle le décrit.</p>
+<p>Sur 5 000 paires tirées au sort, l'ordre change le résultat <strong>2 153 fois</strong>, soit <strong>43,1 %</strong>, avec un écart allant jusqu'à <strong>391,9 pixels</strong>. Le taux n'est pas de 100 %, et le détail par type de paire dit exactement pourquoi&nbsp;: échelle + échelle, échelle + rotation, rotation + rotation et translation + translation donnent <strong>0 %</strong> de désaccord, tandis que les deux catégories contenant <em>une seule</em> translation en donnent <strong>99,5 %</strong> et <strong>99,9 %</strong>. Ce ne sont donc pas «&nbsp;les rotations&nbsp;» qui commutent — c'est <strong>tout ce qui ne mélange pas une translation avec autre chose</strong>. La vérification sur 5 000 paires de rotations seules (<strong>0</strong> désaccord) confirme un cas parmi quatre, pas la règle entière.</p>
+<p>La dernière mesure est celle qui sert tous les jours. Composer quatre transformations en <strong>une</strong> matrice donne le même résultat à <strong>8,04 × 10<sup>−14</sup> pixel</strong> près, pour <strong>9</strong> multiplications par point au lieu de <strong>36</strong>. Un moteur graphique ne fait pas autre chose&nbsp;: il compose une fois, puis applique un million de fois.</p>
+
+<p>Ce chiffre a lui-même une histoire instructive. La première version du programme comparait deux points <em>arrondis à 10<sup>−9</sup></em>, parce que la fonction d'affichage arrondissait&nbsp;: l'écart mesuré ne pouvait alors valoir que 0 ou exactement 10<sup>−9</sup>, et il annonçait 10<sup>−9</sup>. On mesurait la graduation de l'instrument, pas la chose mesurée. En comparant les valeurs brutes, le vrai écart apparaît&nbsp;: <strong>quatre ordres de grandeur plus petit</strong>.</p></details></div>

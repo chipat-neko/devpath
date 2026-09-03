@@ -1,0 +1,354 @@
+<p>Les trois premiers modules regardaient des objets isolés&nbsp;: une proposition, un ensemble, un nombre. Celui-ci change de sujet — il ne regarde plus les choses, il regarde <strong>ce qui les relie</strong>. Un réseau de machines, une carte routière, les dépendances d'un projet, les abonnements d'un réseau social, les liens d'un site&nbsp;: ce sont cinq domaines différents et <em>un seul objet mathématique</em>, le graphe.</p>
+
+<p>L'intérêt n'est pas théorique. Le jour où l'on reconnaît un graphe derrière un problème, on hérite de trois siècles d'algorithmes qui le résolvent&nbsp;: le plus court chemin, l'ordre d'installation, la détection de cycle, les points de défaillance unique. Ce qui ressemblait à un problème métier devient un problème déjà résolu. Cette leçon apprend à faire cette reconnaissance, et à choisir la <strong>représentation</strong> qui décide de tout ce qui suit.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Où ce module sert, ailleurs sur le site</p><p>Le <a href="../algo/cours.html">cours d'algorithmique</a> emploie les parcours de graphe et les arbres&nbsp;; le <a href="../distribue/cours.html">cours sur les systèmes distribués</a> raisonne sur un graphe de machines et sur ses partitions&nbsp;; le <a href="../neurones/cours.html">cours sur les réseaux de neurones</a> repose entièrement sur l'objet de la leçon suivante, la matrice. Ici, on pose les deux calmement — et la leçon 11 montrera qu'ils sont <em>le même objet vu de deux côtés</em>.</p></div></div>
+
+<h2>Le vocabulaire tient en six mots</h2>
+
+<p>Un <strong>graphe</strong>, c'est une collection de <strong>sommets</strong> (les choses) et d'<strong>arêtes</strong> (les liens). Rien d'autre. Tout le reste est du vocabulaire posé sur ces deux mots&nbsp;:</p>
+
+<ul>
+<li>une arête est <strong>orientée</strong> quand elle va dans un seul sens — «&nbsp;A dépend de B&nbsp;» n'est pas «&nbsp;B dépend de A&nbsp;». On parle alors d'<em>arc</em>, et de <strong>graphe orienté</strong>&nbsp;;</li>
+<li>une arête est <strong>pondérée</strong> quand elle porte un nombre&nbsp;: une durée, un prix, une bande passante&nbsp;;</li>
+<li>le <strong>degré</strong> d'un sommet est son nombre de voisins. Dans un graphe orienté, on distingue le degré <em>entrant</em> et le degré <em>sortant</em>&nbsp;;</li>
+<li>un <strong>chemin</strong> est une suite de sommets reliés de proche en proche&nbsp;; un <strong>cycle</strong> est un chemin qui revient à son point de départ&nbsp;;</li>
+<li>un graphe est <strong>connexe</strong> quand on peut aller de n'importe où à n'importe où. Sinon, il se découpe en <strong>composantes connexes</strong>.</li>
+</ul>
+
+<p>Ces six mots suffisent pour lire à peu près n'importe quel article sur le sujet. Ce qui suit ne fait que les mettre en machine.</p>
+
+<h2>Le même graphe, écrit de trois façons</h2>
+
+<p>Un graphe n'a pas de forme naturelle en mémoire&nbsp;: il faut en choisir une, et ce choix a des conséquences que la suite de la leçon va chiffrer. Le programme ci-dessous prend un petit réseau de transport — huit stations, dix liaisons — et l'écrit <strong>trois fois</strong>&nbsp;: en liste d'arêtes, en liste d'adjacence, et en matrice d'adjacence.</p>
+
+@@CODE:representations.js@@
+
+@@SORTIE:representations.js@@
+
+<p>Quatre observations méritent d'être relevées.</p>
+
+<p><strong>La matrice est symétrique.</strong> Le programme compte les cases où <code>M[i][j]</code> diffère de <code>M[j][i]</code>&nbsp;: il en trouve <strong>0</strong>. Ce n'est pas une coïncidence, c'est la définition d'un graphe non orienté. La conséquence pratique est immédiate&nbsp;: la moitié de la matrice est redondante, et une implémentation soigneuse ne stocke qu'un triangle — c'est ce que font, par exemple, les formats de matrices symétriques des bibliothèques d'algèbre linéaire.</p>
+
+<p>Le relevé des places occupées mérite une précaution&nbsp;: la liste d'arêtes et la liste d'adjacence affichent toutes deux <strong>20</strong> cases, et ce n'est pas une coïncidence — c'est 2<em>m</em> des deux côtés, par le lemme rappelé plus bas. Ces deux structures ne se départagent pas sur la place, mais sur ce qu'elles savent faire vite&nbsp;; seule la matrice, avec ses 64 cases, se distingue ici. Et le compte de la liste d'adjacence ignore ses <em>n</em> en-têtes, ce qui reste négligeable devant 2<em>m</em> dès qu'un graphe a plus d'une arête par sommet.</p>
+
+<p><strong>Le degré se lit des deux côtés.</strong> Sur la liste d'adjacence, c'est la longueur du tableau&nbsp;; sur la matrice, c'est la somme de la ligne. Les deux méthodes sont d'accord sur les huit stations — <strong>0 désaccord</strong> — et c'est bien le minimum qu'on attend de deux écritures du même objet.</p>
+
+<p><strong>Dans un graphe non orienté, la somme des degrés vaut exactement deux fois le nombre d'arêtes</strong>&nbsp;: 20 pour 10 arêtes. Ce petit théorème porte un nom, le <em>lemme des poignées de main</em>, et sa démonstration tient en une phrase&nbsp;: chaque arête est comptée à ses deux extrémités. Il sert plus souvent qu'on ne croit — c'est le contrôle de cohérence qu'on écrit quand on importe un graphe depuis un fichier.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 660 360" role="img" aria-label="Schéma comparant deux écritures d'un même graphe de cinq sommets nommés A à E. À gauche, le dessin : A relié à B, A relié à C, B relié à C, B relié à D, D relié à E, C relié à E. À droite, la matrice d'adjacence de cinq lignes et cinq colonnes, où chaque case vaut 1 quand les deux sommets sont reliés et 0 sinon. Les 12 cases à 1 sont mises en évidence. La matrice est symétrique par rapport à sa diagonale, et la somme de chaque ligne donne le degré du sommet : A a 2 voisins, B a 3 voisins, C a 3 voisins, D a 2 voisins, E a 2 voisins. Une légende rappelle que la matrice occupe 25 cases là où la liste d'adjacence en occupe 12.">
+    <text class="d-label" x="330" y="24" text-anchor="middle" font-size="13">Le même graphe, deux écritures</text>
+    <text class="d-mut" x="150" y="48" text-anchor="middle" font-size="11">le dessin</text>
+    <text class="d-mut" x="485" y="48" text-anchor="middle" font-size="11">la matrice d'adjacence</text>
+    <line class="d-line" x1="90" y1="90" x2="200" y2="60" />
+    <line class="d-line" x1="90" y1="90" x2="150" y2="190" />
+    <line class="d-line" x1="200" y1="60" x2="150" y2="190" />
+    <line class="d-line" x1="200" y1="60" x2="265" y2="165" />
+    <line class="d-line" x1="265" y1="165" x2="210" y2="275" />
+    <line class="d-line" x1="150" y1="190" x2="210" y2="275" />
+    <circle class="d-box" cx="90" cy="90" r="17" />
+    <text class="d-text" x="90" y="94" text-anchor="middle" font-size="12">A</text>
+    <circle class="d-box" cx="200" cy="60" r="17" />
+    <text class="d-text" x="200" y="64" text-anchor="middle" font-size="12">B</text>
+    <circle class="d-box" cx="150" cy="190" r="17" />
+    <text class="d-text" x="150" y="194" text-anchor="middle" font-size="12">C</text>
+    <circle class="d-box" cx="265" cy="165" r="17" />
+    <text class="d-text" x="265" y="169" text-anchor="middle" font-size="12">D</text>
+    <circle class="d-box" cx="210" cy="275" r="17" />
+    <text class="d-text" x="210" y="279" text-anchor="middle" font-size="12">E</text>
+    <text class="d-mut" x="417" y="88" text-anchor="middle" font-size="11">A</text>
+    <text class="d-mut" x="388" y="117" text-anchor="middle" font-size="11">A</text>
+    <text class="d-mut" x="451" y="88" text-anchor="middle" font-size="11">B</text>
+    <text class="d-mut" x="388" y="151" text-anchor="middle" font-size="11">B</text>
+    <text class="d-mut" x="485" y="88" text-anchor="middle" font-size="11">C</text>
+    <text class="d-mut" x="388" y="185" text-anchor="middle" font-size="11">C</text>
+    <text class="d-mut" x="519" y="88" text-anchor="middle" font-size="11">D</text>
+    <text class="d-mut" x="388" y="219" text-anchor="middle" font-size="11">D</text>
+    <text class="d-mut" x="553" y="88" text-anchor="middle" font-size="11">E</text>
+    <text class="d-mut" x="388" y="253" text-anchor="middle" font-size="11">E</text>
+    <rect class="d-box" x="400" y="96" width="34" height="34" />
+    <text class="d-text" x="417" y="117" text-anchor="middle" font-size="11">0</text>
+    <rect class="d-accent" x="434" y="96" width="34" height="34" />
+    <text class="d-text" x="451" y="117" text-anchor="middle" font-size="11">1</text>
+    <rect class="d-accent" x="468" y="96" width="34" height="34" />
+    <text class="d-text" x="485" y="117" text-anchor="middle" font-size="11">1</text>
+    <rect class="d-box" x="502" y="96" width="34" height="34" />
+    <text class="d-text" x="519" y="117" text-anchor="middle" font-size="11">0</text>
+    <rect class="d-box" x="536" y="96" width="34" height="34" />
+    <text class="d-text" x="553" y="117" text-anchor="middle" font-size="11">0</text>
+    <rect class="d-accent" x="400" y="130" width="34" height="34" />
+    <text class="d-text" x="417" y="151" text-anchor="middle" font-size="11">1</text>
+    <rect class="d-box" x="434" y="130" width="34" height="34" />
+    <text class="d-text" x="451" y="151" text-anchor="middle" font-size="11">0</text>
+    <rect class="d-accent" x="468" y="130" width="34" height="34" />
+    <text class="d-text" x="485" y="151" text-anchor="middle" font-size="11">1</text>
+    <rect class="d-accent" x="502" y="130" width="34" height="34" />
+    <text class="d-text" x="519" y="151" text-anchor="middle" font-size="11">1</text>
+    <rect class="d-box" x="536" y="130" width="34" height="34" />
+    <text class="d-text" x="553" y="151" text-anchor="middle" font-size="11">0</text>
+    <rect class="d-accent" x="400" y="164" width="34" height="34" />
+    <text class="d-text" x="417" y="185" text-anchor="middle" font-size="11">1</text>
+    <rect class="d-accent" x="434" y="164" width="34" height="34" />
+    <text class="d-text" x="451" y="185" text-anchor="middle" font-size="11">1</text>
+    <rect class="d-box" x="468" y="164" width="34" height="34" />
+    <text class="d-text" x="485" y="185" text-anchor="middle" font-size="11">0</text>
+    <rect class="d-box" x="502" y="164" width="34" height="34" />
+    <text class="d-text" x="519" y="185" text-anchor="middle" font-size="11">0</text>
+    <rect class="d-accent" x="536" y="164" width="34" height="34" />
+    <text class="d-text" x="553" y="185" text-anchor="middle" font-size="11">1</text>
+    <rect class="d-box" x="400" y="198" width="34" height="34" />
+    <text class="d-text" x="417" y="219" text-anchor="middle" font-size="11">0</text>
+    <rect class="d-accent" x="434" y="198" width="34" height="34" />
+    <text class="d-text" x="451" y="219" text-anchor="middle" font-size="11">1</text>
+    <rect class="d-box" x="468" y="198" width="34" height="34" />
+    <text class="d-text" x="485" y="219" text-anchor="middle" font-size="11">0</text>
+    <rect class="d-box" x="502" y="198" width="34" height="34" />
+    <text class="d-text" x="519" y="219" text-anchor="middle" font-size="11">0</text>
+    <rect class="d-accent" x="536" y="198" width="34" height="34" />
+    <text class="d-text" x="553" y="219" text-anchor="middle" font-size="11">1</text>
+    <rect class="d-box" x="400" y="232" width="34" height="34" />
+    <text class="d-text" x="417" y="253" text-anchor="middle" font-size="11">0</text>
+    <rect class="d-box" x="434" y="232" width="34" height="34" />
+    <text class="d-text" x="451" y="253" text-anchor="middle" font-size="11">0</text>
+    <rect class="d-accent" x="468" y="232" width="34" height="34" />
+    <text class="d-text" x="485" y="253" text-anchor="middle" font-size="11">1</text>
+    <rect class="d-accent" x="502" y="232" width="34" height="34" />
+    <text class="d-text" x="519" y="253" text-anchor="middle" font-size="11">1</text>
+    <rect class="d-box" x="536" y="232" width="34" height="34" />
+    <text class="d-text" x="553" y="253" text-anchor="middle" font-size="11">0</text>
+    <text class="d-mut" x="20" y="314" font-size="11">La ligne d'un sommet donne ses voisins ; sa somme donne son degré : A=2, B=3, C=3, D=2, E=2.</text>
+    <text class="d-mut" x="20" y="332" font-size="11">La matrice est symétrique parce que le graphe n'est pas orienté : 12 cases à 1 pour 6 arêtes.</text>
+    <text class="d-mut" x="20" y="350" font-size="11">Elle occupe 25 cases quand la liste d'adjacence en occupe 12.</text>
+  </svg>
+  <figcaption>Un graphe et sa matrice d'adjacence : la même information, deux formes. Le dessin se lit, la matrice se calcule.</figcaption>
+</figure>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Une conséquence directe du lemme</p><p>Dans n'importe quel graphe, le nombre de sommets de degré <strong>impair</strong> est pair. La somme de tous les degrés est paire — elle vaut 2<em>m</em> —, les degrés pairs n'y changent rien, il faut donc un nombre pair de degrés impairs pour que le total reste pair. C'est le premier résultat de la théorie des graphes&nbsp;: Euler l'établit en 1736 pour montrer qu'on ne peut pas traverser les sept ponts de Königsberg une fois chacun. Le mémoire, présenté en 1735, paraîtra dans le volume des <em>Commentarii</em> daté de 1736.</p></div></div>
+
+<h2>Laquelle choisir&nbsp;? La densité tranche</h2>
+
+<p>«&nbsp;La matrice gaspille de la place&nbsp;»&nbsp;: c'est la phrase qu'on lit partout, et elle est <em>à moitié</em> vraie. Elle dépend entièrement de ce qu'on met dans les cases, et le programme suivant le mesure au lieu de le supposer. On y compare, sur mille sommets, une liste d'adjacence d'entiers 32 bits, une matrice d'octets, et une matrice de <strong>bits</strong>.</p>
+
+@@CODE:densite.js@@
+
+@@SORTIE:densite.js@@
+
+<p>Le tableau se lit en une ligne&nbsp;: <strong>la liste gagne en dessous de 3 % de densité, la matrice de bits gagne au-dessus</strong>. Le basculement se voit entre la ligne 0,03 — 120 896 octets pour la liste, contre 125 000 pour la matrice de bits — et la ligne 0,05, où le rapport s'inverse&nbsp;: 199 488 contre 125 000. Et ce seuil n'est pas approché à la louche, il se résout.</p>
+
+<p>Une matrice de bits occupe <em>n</em>²/8 octets&nbsp;; une liste d'adjacence non orientée occupe 2<em>m</em> entiers, soit 8<em>m</em> octets. L'égalité <em>n</em>²/8 = 8<em>m</em> donne <em>m</em> = <em>n</em>²/64, et comme <em>m</em> = <em>d</em> × <em>n</em>(<em>n</em>−1)/2, la densité de bascule vaut <em>n</em> / (32(<em>n</em>−1)), c'est-à-dire <strong>3,128 %</strong> pour <em>n</em> = 1 000. Le tableau mesuré et le calcul tombent au même endroit&nbsp;: c'est la seule vraie preuve qu'aucun des deux ne se trompe.</p>
+
+<p>Pour la matrice d'octets, le même calcul donne <strong>25,025 %</strong> — huit fois plus loin, parce qu'elle dépense huit bits là où un seul suffit. C'est le genre de facteur qu'on paie sans le voir en écrivant <code>new Array(n * n).fill(0)</code>, qui en JavaScript coûte bien davantage encore, puisque chaque case y est un emplacement générique et non un octet.</p>
+
+<h3>Le coût d'une question, et non des millisecondes</h3>
+
+<p>La seconde partie du programme pose 200 000 fois la même question — «&nbsp;<em>i</em> et <em>j</em> sont-ils reliés&nbsp;?&nbsp;» — et compte les <strong>cases lues</strong> plutôt que des millisecondes. Le choix est délibéré&nbsp;: un chronomètre ne rend pas deux fois le même chiffre, alors que le nombre de cases lues est une propriété de la structure, reproductible à l'identique d'une machine à l'autre.</p>
+
+<p>La matrice lit <strong>200 000</strong> cases&nbsp;: une par question, quelle que soit la taille du graphe. La liste en lit <strong>1 980 934</strong> à 1 % de densité, <strong>9 720 256</strong> à 5 %, et <strong>43 689 364</strong> à 25 % — un facteur <strong>218</strong>. Les deux structures rendent exactement les mêmes réponses (49 965 positives dans le dernier cas), ce qui garantit qu'on compare bien deux façons de faire la même chose.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Choisir la matrice parce qu'elle est plus simple à écrire.</strong> La dernière ligne du programme donne l'ordre de grandeur qui tranche&nbsp;: un million de personnes ayant chacune cent amis, c'est <strong>125 Go</strong> en matrice de bits contre <strong>400 Mo</strong> en liste d'adjacence — pour une densité réelle de <strong>0,01 %</strong>. À cette échelle, la matrice n'est pas «&nbsp;moins efficace&nbsp;», elle est <em>impossible</em>. Les graphes de terrain sont presque tous de ce côté-là du seuil&nbsp;: creux, très creux. La matrice reste pertinente pour les petits graphes denses — une table de distances entre villes, un graphe de conflits, un plateau de jeu.</p></div></div>
+
+<h2>Visiter un graphe&nbsp;: la file ou la pile</h2>
+
+<p>Une fois le graphe en mémoire, la première chose qu'on veut en faire est de le <strong>parcourir</strong>&nbsp;: atteindre tout ce qui est atteignable depuis un point. Il existe deux façons de le faire, et elles ne diffèrent que par <em>une ligne</em> — la structure dans laquelle on range les sommets à visiter.</p>
+
+<ul>
+<li>une <strong>file</strong> (premier arrivé, premier servi) donne le <strong>parcours en largeur</strong>&nbsp;: on épuise tous les voisins directs avant de regarder les voisins des voisins&nbsp;;</li>
+<li>une <strong>pile</strong> (dernier arrivé, premier servi) donne le <strong>parcours en profondeur</strong>&nbsp;: on s'enfonce aussi loin que possible avant de revenir sur ses pas.</li>
+</ul>
+
+<p>On lit souvent que ce choix est affaire de goût. Il ne l'est pas&nbsp;: l'un des deux donne le <strong>plus court chemin</strong>, l'autre non. Le programme le vérifie plutôt que de l'affirmer, en confrontant les deux à une <em>troisième</em> méthode qui ne partage aucune ligne avec elles.</p>
+
+@@CODE:parcours.js@@
+
+@@SORTIE:parcours.js@@
+
+<p>Sur le petit réseau, le parcours en largeur donne la bonne distance pour les huit stations. Le parcours en profondeur se trompe <strong>3 fois sur 8</strong> — et l'erreur la plus parlante est celle de Halles, à <strong>une</strong> arête de Nord, que la profondeur annonce à <strong>trois</strong>. Elle est allée voir ailleurs d'abord, et n'est revenue à Halles qu'après un long détour.</p>
+
+<p>Mais huit stations ne prouvent rien, et le programme le sait&nbsp;: il rejoue le contrôle sur <strong>200 graphes tirés au sort</strong>, en jugeant cette fois avec <strong>Floyd-Warshall</strong>, un algorithme qui calcule toutes les distances par un chemin entièrement différent. Le verdict porte sur 2 001 sommets atteignables&nbsp;: le parcours en largeur se trompe <strong>0 fois</strong>, le parcours en profondeur <strong>1 367 fois</strong>, soit <strong>68,3 %</strong>, avec un écart pouvant atteindre <strong>10 arêtes de trop</strong>. Ce taux dépend de la famille de graphes tirée — ici 12 sommets et une paire reliée sur quatre&nbsp;; il monte quand le graphe grossit ou se densifie. Ce qui ne dépend d'aucune famille, c'est le <strong>0</strong> de la première ligne.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Pourquoi la référence n'est pas le parcours en largeur lui-même</p><p>Il aurait été plus simple de comparer la profondeur à la largeur. Mais cela n'aurait rien prouvé&nbsp;: on aurait jugé une méthode avec l'autre, sans jamais vérifier que la seconde a raison. Floyd-Warshall n'a pas une ligne en commun avec elles — il remplit un tableau de toutes les distances en testant chaque sommet comme <em>escale</em> possible. Quand deux méthodes indépendantes tombent d'accord 2 001 fois sur 2 001, l'accord veut dire quelque chose.</p></div></div>
+
+<h3>Pourquoi la largeur, elle, ne peut pas se tromper</h3>
+
+<p>La raison tient en une phrase&nbsp;: la file ne contient jamais que des sommets à distance <em>d</em> et <em>d</em>+1. Quand on découvre un sommet, on le découvre donc à la plus petite distance possible, et on ne le redécouvrira plus jamais. Le parcours en profondeur, lui, découvre un sommet <em>par le premier chemin qu'il a emprunté</em>, qui n'a aucune raison d'être le plus court.</p>
+
+<p>Cette propriété a un prix&nbsp;: elle ne vaut que si <strong>toutes les arêtes coûtent la même chose</strong>. Dès que les poids diffèrent, le parcours en largeur continue de rendre le chemin ayant le <em>moins d'arêtes</em> — il ne devient pas faux, il répond simplement à une autre question que celle qu'on lui pose. C'est le sujet de la section suivante.</p>
+
+<h2>Quand les arêtes ont un poids</h2>
+
+<p>Une carte routière n'est pas un réseau social&nbsp;: ses liaisons portent des minutes. Et «&nbsp;le moins d'étapes&nbsp;» cesse alors d'être «&nbsp;le plus court&nbsp;». Le programme confronte trois méthodes sur une petite carte&nbsp;: le parcours en largeur, l'algorithme de <strong>Dijkstra</strong>, et l'énumération de tous les chemins — impraticable en vrai, parfaitement praticable sur huit villes, et c'est elle qui sert d'arbitre.</p>
+
+@@CODE:dijkstra.js@@
+
+@@SORTIE:dijkstra.js@@
+
+<p>Dijkstra est en accord avec l'énumération complète sur les <strong>7</strong> destinations. Le parcours en largeur, lui, donne un trajet plus long pour Besançon&nbsp;: <strong>255 minutes en 2 étapes</strong> contre <strong>200 minutes en 3 étapes</strong>. Le trajet en moins d'étapes est ici plus long de <strong>55 minutes</strong> — et sur l'ensemble des sept destinations, c'est exactement l'écart total.</p>
+
+<p>Là encore, une carte ne prouve rien. Sur <strong>300 cartes tirées au sort</strong> et 2 555 trajets, le chemin en moins d'étapes est plus long en minutes <strong>916 fois</strong>, soit <strong>35,9 %</strong>, avec un retard moyen de <strong>50,8 minutes</strong> et un pire cas à <strong>246 minutes</strong>. Un tiers des trajets&nbsp;: ce n'est pas un cas limite, c'est le régime normal.</p>
+
+<h3>L'idée de Dijkstra, et sa condition</h3>
+
+<p>L'algorithme tient en une phrase&nbsp;: <em>à chaque tour, on ferme définitivement la ville non encore fermée dont le total est le plus petit.</em> L'ordre de fermeture, que le programme affiche, est celui des totaux croissants — Lyon(0), Mâcon(60), Valence(65), Chambéry(75)… Une fois une ville fermée, on n'y revient plus.</p>
+
+<p>Cette fermeture définitive est ce qui rend l'algorithme rapide, et c'est aussi <strong>sa condition d'emploi</strong>&nbsp;: elle suppose qu'aucun détour ne peut faire <em>baisser</em> un total. Autrement dit, elle suppose des poids positifs. Le contre-exemple publié tient en trois arcs&nbsp;: 0 → 1 coûte 1, 0 → 2 coûte 5, et 2 → 1 coûte −10. Dijkstra ferme d'abord la source, puis le sommet 1 au tour suivant, à 1 — et ne le rouvre jamais&nbsp;; la vraie réponse est <strong>−5</strong>, par 0 → 2 → 1. L'écart est de <strong>6</strong>, et l'algorithme <em>ne signale rien</em>.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Un poids négatif arrive rarement d'une carte, souvent d'un modèle métier.</strong> Un arc «&nbsp;remise&nbsp;», un «&nbsp;gain de temps&nbsp;», un crédit, une compensation&nbsp;: on modélise un coût qui peut être négatif, on branche l'algorithme du plus court chemin déjà écrit, et il rend un résultat parfaitement plausible qui est faux. Le remède n'est pas de tester le résultat, c'est de <strong>tester l'entrée</strong> — refuser un poids négatif, ou basculer sur Bellman-Ford, qui les accepte et détecte en prime les cycles de gain infini.</p></div></div>
+
+<h2>Les flèches qui ne se remontent pas</h2>
+
+<p>Jusqu'ici, les liens allaient dans les deux sens. Beaucoup de graphes du métier n'ont pas cette politesse&nbsp;: «&nbsp;<em>A dépend de B</em>&nbsp;» ne se retourne pas, «&nbsp;<em>cette page renvoie vers celle-là</em>&nbsp;» non plus, «&nbsp;<em>ce commit a pour parent celui-ci</em>&nbsp;» encore moins. Ce sont des <strong>graphes orientés</strong>, et la question qu'on leur pose le plus souvent est celle que tout gestionnaire de paquets résout à chaque installation&nbsp;: <em>dans quel ordre&nbsp;?</em></p>
+
+@@CODE:dependances.js@@
+
+@@SORTIE:dependances.js@@
+
+<p>L'algorithme s'appelle le <strong>tri topologique</strong>, et il tient en une idée&nbsp;: on compte, pour chaque paquet, combien de choses il attend — son <em>degré entrant</em> —, on installe ceux qui n'attendent rien, et chaque installation en débloque d'autres. C'est exactement ce que fait <code>npm</code>, <code>apt</code>, <code>cargo</code>, et le planificateur de tâches d'un système d'intégration continue.</p>
+
+<p>Quatre choses sont à retenir de ce relevé.</p>
+
+<p><strong>L'ordre produit est vérifié, pas supposé.</strong> Le programme relit les <strong>9</strong> dépendances déclarées et contrôle que chacune arrive bien <em>avant</em> celui qui l'exige&nbsp;: <strong>0 violation</strong>. Écrire l'algorithme et écrire son contrôle sont deux exercices différents&nbsp;; le second est celui qu'on saute, et c'est celui qui attrape les erreurs.</p>
+
+<p><strong>Il n'y a pas un ordre valide, il y en a plusieurs.</strong> L'énumération complète en trouve <strong>19</strong>, à comparer aux <strong>40 320</strong> ordres qu'on aurait sans aucune contrainte. Ce chiffre a une conséquence pratique&nbsp;: deux exécutions du même gestionnaire peuvent installer dans un ordre différent sans qu'aucune ne soit fautive. Si un projet ne compile que dans <em>un</em> de ces 19 ordres, la déclaration de dépendances est incomplète — et c'est une cause classique de «&nbsp;ça marche sur ma machine&nbsp;».</p>
+
+<p><strong>Un cycle bloque plus que lui-même.</strong> Une seule ligne ajoutée — <em>utils</em> dépend de <em>app</em> — et l'installation s'arrête après <strong>2</strong> paquets&nbsp;: <strong>6 paquets sur 8</strong> restent bloqués. Le programme ne se contente pas de le dire, il <em>sépare</em> les deux causes en calculant les composantes fortement connexes&nbsp;: <strong>5</strong> paquets sont pris dans un cycle, et <strong>1</strong> — <em>rapport</em> — est bloqué sans en faire partie, uniquement parce qu'il dépend de <em>app</em>. Les deux survivants, <em>sockets</em> et <em>http</em>, sont précisément ceux qui ne touchent au cycle ni de près ni de loin.</p>
+
+<h3>Cas réel&nbsp;: le cycle qui paralyse une installation</h3>
+
+<p><strong>Et nommer <em>un</em> cycle ne suffit pas.</strong> C'est le point que ce programme a été refait pour montrer, parce qu'il est contre-intuitif. Un outil qui affiche «&nbsp;dépendance circulaire détectée&nbsp;» est inutilisable&nbsp;; mais un outil qui affiche <code>app → ui → moteur-rendu → utils → app</code> l'est presque autant, et voici pourquoi.</p>
+
+<p>Ce graphe contient <strong>trois</strong> cycles élémentaires, pas un&nbsp;: celui de longueur 4 que l'algorithme trouve en premier, et deux de longueur 3 (<code>app → ui → utils → app</code> et <code>app → api → utils → app</code>) qu'il ne voit jamais, puisqu'il s'arrête au premier. Ces trois cycles impliquent <strong>7</strong> arêtes.</p>
+
+<p>Le programme les <em>essaie</em> alors une par une, en retirant chacune et en relançant l'installation. Sur ces 7 arêtes, <strong>une seule</strong> débloque tout&nbsp;: <code>utils → app</code>, celle qu'on venait d'ajouter. Sur les <strong>4</strong> arêtes du cycle affiché, <strong>1</strong> suffit&nbsp;: casser l'une des trois autres laisse un cycle en place. Un message qui nomme un cycle dit donc <em>où</em> chercher, mais pas <em>quoi</em> casser — et l'écrire autrement serait promettre ce qu'on ne tient pas.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Le même algorithme, sous d'autres noms</p><p>Un graphe orienté sans cycle s'appelle un <strong>DAG</strong> (<em>directed acyclic graph</em>), et il est partout&nbsp;: l'historique de Git, un plan d'exécution de requête SQL, les cellules d'un tableur, les tâches d'un pipeline, le graphe des modules d'un projet, la table des makefiles. Chaque fois que vous voyez «&nbsp;résolution des dépendances&nbsp;», «&nbsp;ordre de build&nbsp;» ou «&nbsp;recalcul des cellules&nbsp;», c'est un tri topologique qui tourne.</p></div></div>
+
+<h2>Pourquoi le monde est petit</h2>
+
+<p>«&nbsp;Six degrés de séparation&nbsp;»&nbsp;: la phrase est connue, la raison ne l'est pas. On l'attribue en général au nombre de relations que chacun entretient — nous connaîtrions beaucoup de monde, donc les distances seraient courtes. Le programme suivant montre que <strong>ce n'est pas cela</strong>, et le montre en construisant les deux situations côte à côte.</p>
+
+@@CODE:petit-monde.js@@
+
+@@SORTIE:petit-monde.js@@
+
+<p>Le point de départ est un «&nbsp;village&nbsp;»&nbsp;: mille personnes en cercle, chacune reliée à ses six plus proches voisines. Tout le monde a des relations, mais uniquement <em>proches</em>. Résultat&nbsp;: une distance moyenne de <strong>83,75</strong> et un diamètre de <strong>167</strong>. Pour joindre quelqu'un à l'autre bout du cercle, il faut traverser tout le cercle.</p>
+
+<p>On déplace ensuite une petite part des relations au hasard — <strong>sans en ajouter aucune</strong>, le nombre d'arêtes reste à 3 000 sur toutes les lignes du tableau. À <strong>21 arêtes déplacées sur 3 000</strong>, la distance moyenne tombe de 83,75 à <strong>20,41</strong> et le diamètre de 167 à <strong>46</strong>. À 297 arêtes déplacées, la distance moyenne vaut <strong>6,18</strong> et le diamètre <strong>11</strong>.</p>
+
+<p>La comparaison finale est celle qui tranche. Un anneau où chacun aurait <strong>dix</strong> relations au lieu de six — soit <strong>2 000 arêtes en plus</strong>, 67 % de plus — descend seulement à une distance moyenne de <strong>50,45</strong> et un diamètre de <strong>100</strong>. Autrement dit&nbsp;: <strong>21 arêtes déplacées font beaucoup mieux que 2 000 arêtes ajoutées.</strong></p>
+
+<p>Il faut énoncer ce résultat avec précision, et le programme s'en charge lui-même. Ce qu'il établit, c'est&nbsp;: <strong>dans un réseau où tous les liens sont locaux, en ajouter d'autres — locaux eux aussi — ne sert presque à rien, alors que déplacer une poignée de liens vers des sommets lointains change tout.</strong> Ce n'est pas la même chose que «&nbsp;le nombre de relations ne compte pas&nbsp;», et les deux dernières lignes du relevé le montrent&nbsp;: sur des graphes <em>déjà</em> aléatoires, où la portée est maximale et donc neutralisée, passer de 6 à 10 relations fait encore tomber la distance moyenne de <strong>4,04</strong> à <strong>3,26</strong>. Le degré compte&nbsp;; il compte simplement beaucoup moins que la portée.</p>
+
+<p>C'est le modèle publié par Duncan Watts et Steven Strogatz en 1998, et c'est ce qui explique qu'un réseau social de milliards de comptes ait une <em>distance moyenne</em> de quelques unités&nbsp;: il suffit que très peu de gens aient déménagé. Attention à ne pas confondre avec le diamètre, que la leçon vient de définir comme le pire cas&nbsp;: «&nbsp;six degrés de séparation&nbsp;» et les mesures publiées sur les grands réseaux sociaux portent sur la distance <strong>typique</strong>, pas sur la plus grande.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que cela change en pratique</p><p>La conséquence directe et mesurée est celle-ci&nbsp;: <strong>un réseau de serveurs gagne davantage à recevoir quelques liaisons «&nbsp;transversales&nbsp;» qu'à densifier son voisinage</strong>. Le tableau le chiffre&nbsp;: 21 liaisons déplacées font passer le pire délai de 167 sauts à 46, quand 2 000 liaisons ajoutées entre voisins ne le ramènent qu'à 100 — pour un coût de câblage bien supérieur. La même propriété explique la difficulté à contenir une propagation par la seule distance&nbsp;: tant que subsistent des liens lointains, isoler un voisinage ne suffit pas.</p></div></div>
+
+<h2>L'antisèche&nbsp;: quelle question, quelle méthode</h2>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Ce qu'on veut savoir d'un graphe, et par quoi on l'obtient — chaque ligne mesurée dans cette leçon</caption>
+    <thead><tr><th scope="col">La question posée</th><th scope="col">La méthode</th><th scope="col">Ce qu'elle coûte</th><th scope="col">Ce qui la fait échouer</th></tr></thead>
+    <tbody>
+      <tr><td>«&nbsp;<em>i</em> et <em>j</em> sont-ils reliés&nbsp;?&nbsp;»</td><td>matrice d'adjacence</td><td>1 lecture</td><td><em>n</em>² cases&nbsp;: impossible au-delà de quelques dizaines de milliers de sommets</td></tr>
+      <tr><td>«&nbsp;qui sont les voisins de <em>i</em>&nbsp;?&nbsp;»</td><td>liste d'adjacence</td><td>degré(<em>i</em>) lectures</td><td>la matrice, elle, en lit <em>n</em> — dont les zéros</td></tr>
+      <tr><td>«&nbsp;combien de morceaux séparés&nbsp;?&nbsp;»</td><td>composantes connexes, par parcours</td><td>un parcours du graphe</td><td>oublier les sommets isolés en construisant le graphe depuis les seules arêtes</td></tr>
+      <tr><td>«&nbsp;le plus court chemin, en nombre d'arêtes&nbsp;»</td><td>parcours en largeur (file)</td><td>un parcours</td><td>rien&nbsp;: il répond toujours juste — mais à cette question-là, pas au coût</td></tr>
+      <tr><td>«&nbsp;le plus court chemin, en minutes&nbsp;»</td><td>Dijkstra</td><td>un parcours par priorité</td><td>un seul poids négatif, et le résultat est faux sans avertissement</td></tr>
+      <tr><td>«&nbsp;toutes les distances, deux à deux&nbsp;»</td><td>Floyd-Warshall</td><td><em>n</em>³ étapes</td><td>impraticable au-delà de quelques milliers de sommets</td></tr>
+      <tr><td>«&nbsp;dans quel ordre installer&nbsp;?&nbsp;»</td><td>tri topologique</td><td>un parcours</td><td>un cycle&nbsp;: il faut alors le <em>nommer</em>, pas seulement le signaler</td></tr>
+      <tr><td>«&nbsp;quelle liaison est critique&nbsp;?&nbsp;»</td><td>ponts, par l'algorithme de Tarjan</td><td>un seul parcours en profondeur</td><td>la méthode naïve refait un parcours <em>par arête</em></td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Ce qu'il faut retenir</h2>
+
+<ul>
+<li><strong>Un graphe, c'est des sommets et des arêtes</strong>, et six mots suffisent à en parler&nbsp;: orienté, pondéré, degré, chemin, cycle, connexe. Reconnaître un graphe dans un problème, c'est hériter des algorithmes qui le résolvent déjà.</li>
+<li><strong>La somme des degrés vaut 2<em>m</em></strong> — 20 pour 10 arêtes dans le programme. C'est le contrôle de cohérence le moins cher qui existe quand on importe un graphe.</li>
+<li><strong>Le choix de la représentation se calcule.</strong> Pour <em>n</em> = 1 000, la liste d'adjacence est plus compacte en dessous de <strong>3,128 %</strong> de densité, la matrice de bits au-dessus&nbsp;; pour une matrice d'octets, le seuil est à <strong>25,025 %</strong>. Un réseau social d'un million de personnes est à <strong>0,01 %</strong>&nbsp;: 125 Go contre 400 Mo.</li>
+<li><strong>La matrice répond en une lecture, la liste doit parcourir</strong>&nbsp;: 200 000 cases contre 43 689 364 à 25 % de densité, soit un facteur 218 — pour les mêmes réponses.</li>
+<li><strong>La file donne le plus court chemin, la pile non.</strong> Mesuré sur 200 graphes et 2 001 sommets, jugé par un algorithme indépendant&nbsp;: le parcours en largeur se trompe <strong>0</strong> fois, le parcours en profondeur <strong>68,3 %</strong> du temps.</li>
+<li><strong>Dès qu'une arête porte un poids, «&nbsp;le moins d'étapes&nbsp;» n'est plus «&nbsp;le plus court&nbsp;»</strong>&nbsp;: sur 300 cartes tirées au sort, cela arrive <strong>35,9 %</strong> du temps, avec un retard moyen de 50,8 minutes.</li>
+<li><strong>Dijkstra exige des poids positifs</strong>, et il ne le vérifie pas. Sur trois arcs dont un à −10, il se trompe de <strong>6</strong> sans rien signaler. Contrôler l'entrée, ou employer Bellman-Ford.</li>
+<li><strong>Un cycle de dépendances bloque plus que lui-même</strong>&nbsp;: ici <strong>6 paquets sur 8</strong>, dont un qui n'appartient à aucun cycle. Et <strong>nommer un cycle ne suffit pas</strong>&nbsp;: le graphe en contient trois, et sur les 7 arêtes impliquées, <strong>une seule</strong> débloque tout.</li>
+<li><strong>Ce ne sont pas les liens nombreux qui rapprochent, ce sont les liens lointains</strong>&nbsp;: <strong>21</strong> arêtes déplacées font mieux que <strong>2 000</strong> arêtes ajoutées.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>On te confie un graphe de 50 000 sommets et 300 000 arêtes, sur lequel il faudra surtout répondre à «&nbsp;qui sont les voisins de <em>x</em>&nbsp;?&nbsp;». Quelle représentation choisis-tu, et quel calcul le justifie&nbsp;?</li>
+<li>Un collègue a implémenté un «&nbsp;plus court chemin&nbsp;» avec une pile parce que «&nbsp;c'est plus simple à écrire récursivement&nbsp;». Quel test écris-tu pour lui montrer le problème, et sur quel graphe minimal&nbsp;?</li>
+<li>Un service de livraison calcule ses tournées avec Dijkstra. Le métier demande d'ajouter un bonus de −15 minutes sur les tronçons équipés d'une voie réservée. Que réponds-tu, et que proposes-tu&nbsp;?</li>
+</ol></div>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Graphe</dt><dd>Ensemble de <em>sommets</em> et d'<em>arêtes</em> reliant certains d'entre eux. C'est tout&nbsp;: le reste du vocabulaire décrit des cas particuliers.</dd>
+  <dt>Sommet</dt><dd>Un élément du graphe. Aussi appelé <em>nœud</em>. Une station, une machine, un paquet, une personne.</dd>
+  <dt>Arête</dt><dd>Un lien entre deux sommets. Orientée, on l'appelle un <em>arc</em>&nbsp;; portant un nombre, on la dit <em>pondérée</em>.</dd>
+  <dt>Degré</dt><dd>Nombre de voisins d'un sommet. Dans un graphe non orienté, la somme des degrés vaut 2<em>m</em> — le lemme des poignées de main. Dans un graphe orienté, on distingue degré entrant et degré sortant, dont les sommes valent <em>m</em> chacune.</dd>
+  <dt>Graphe orienté</dt><dd>Graphe dont les arêtes ont un sens. Sa matrice d'adjacence n'a plus de raison d'être symétrique — mais elle peut l'être, si chaque arc a son opposé. L'implication ne vaut donc que dans un sens&nbsp;: non orienté ⇒ symétrique.</dd>
+  <dt>Liste d'adjacence</dt><dd>Représentation où chaque sommet porte la liste de ses voisins. 2<em>m</em> cases. C'est le choix par défaut, parce que les graphes réels sont creux.</dd>
+  <dt>Matrice d'adjacence</dt><dd>Tableau <em>n</em> × <em>n</em> où la case (<em>i</em>, <em>j</em>) dit s'il y a une arête. <em>n</em>² cases, mais une réponse en une lecture — et, comme le montre la leçon 11, un objet <em>calculable</em>.</dd>
+  <dt>Densité</dt><dd>Part des paires de sommets effectivement reliées. C'est elle qui décide de la représentation&nbsp;: seuil mesuré à 3,128 % pour <em>n</em> = 1 000 face à une matrice de bits.</dd>
+  <dt>Graphe creux</dt><dd>Graphe dont la densité est très faible. Presque tous les graphes de terrain le sont&nbsp;: un réseau social d'un million de personnes est à 0,01 %.</dd>
+  <dt>Parcours en largeur</dt><dd>Visite par une <em>file</em>&nbsp;: distance 1, puis 2, puis 3. Donne le plus court chemin <strong>en nombre d'arêtes</strong>, et seulement dans ce cas.</dd>
+  <dt>Parcours en profondeur</dt><dd>Visite par une <em>pile</em>&nbsp;: on s'enfonce puis on remonte. Idéal pour détecter des cycles ou trouver les ponts&nbsp;; faux pour les distances — mesuré à 68,3 % d'erreurs sur les graphes de 12 sommets du banc, davantage sur des graphes plus grands.</dd>
+  <dt>Composante connexe</dt><dd>Groupe de sommets qui peuvent tous se joindre. Un sommet isolé forme à lui seul une composante — un piège classique quand on construit le graphe à partir des seules arêtes.</dd>
+  <dt>Dijkstra</dt><dd>Plus court chemin dans un graphe <em>pondéré à poids positifs</em>. Ferme à chaque tour le sommet de plus petit total, et ne le rouvre jamais&nbsp;: c'est là que tient sa vitesse et sa limite.</dd>
+  <dt>Bellman-Ford</dt><dd>Plus court chemin acceptant les poids négatifs, et détectant les cycles de gain infini. Plus lent que Dijkstra&nbsp;; c'est la contrepartie.</dd>
+  <dt>Floyd-Warshall</dt><dd>Calcule <em>toutes</em> les distances deux à deux, en testant chaque sommet comme escale. Sert ici de juge indépendant des deux parcours.</dd>
+  <dt>DAG</dt><dd>Graphe orienté sans cycle. L'historique de Git, un plan de requête, les cellules d'un tableur, un pipeline d'intégration&nbsp;: tous des DAG.</dd>
+  <dt>Tri topologique</dt><dd>Ordre dans lequel traiter les sommets d'un DAG sans jamais passer avant une dépendance. Il en existe en général plusieurs&nbsp;: 19 pour les 8 paquets du programme.</dd>
+  <dt>Pont</dt><dd>Arête dont la suppression augmente le nombre de composantes connexes. Un point de défaillance unique, au sens le plus littéral.</dd>
+  <dt>Diamètre</dt><dd>La plus grande distance entre deux sommets d'un graphe&nbsp;: son pire cas. 167 pour l'anneau de mille personnes, 46 après avoir déplacé 21 arêtes.</dd>
+  <dt>Petit monde</dt><dd>Propriété d'un graphe très regroupé localement mais de faible diamètre. Obtenue en déplaçant une poignée d'arêtes vers des sommets lointains, pas en en ajoutant.</dd>
+</dl>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Un graphe a 12 sommets et la somme de ses degrés vaut 35. Que peut-on en conclure ?","a":["Que les données sont fausses : cette somme vaut toujours deux fois le nombre d'arêtes, donc un nombre pair","Que le graphe compte 35 arêtes, une par unité de degré comptée","Que le graphe est orienté : la somme des degrés y vaudrait alors la moitié du nombre d'arcs","Que trois sommets sont isolés, leur degré nul faisant descendre la somme sous un nombre pair"],"correct":0,"explain":"Le lemme des poignées de main : chaque arête est comptée à ses deux extrémités, donc la somme des degrés est nécessairement paire. C'est le contrôle de cohérence le moins cher à écrire quand on importe un graphe depuis un fichier."},
+  {"q":"Pour un graphe de 1 000 sommets, à partir de quelle densité une matrice de BITS occupe-t-elle moins de place qu'une liste d'adjacence d'entiers 32 bits ?","a":["Environ 3 % : n²/8 octets contre 8m octets, ce qui donne n/(32(n−1))","Environ 25 %, comme pour toute matrice","Jamais : la matrice occupe toujours n² cases, donc davantage","Dès 50 %, c'est-à-dire quand la moitié des paires sont reliées"],"correct":0,"explain":"Mesuré et recalculé : 3,128 % pour n = 1 000. Les 25 % correspondent à une matrice d'OCTETS, huit fois plus gourmande. La réponse dépend entièrement de ce qu'on met dans les cases."},
+  {"q":"Pourquoi le parcours en largeur donne-t-il le plus court chemin, et pas le parcours en profondeur ?","a":["Parce que sa file ne contient jamais que des sommets à distance d et d+1 : un sommet est donc découvert à sa plus petite distance possible","Parce qu'il visite les sommets dans l'ordre alphabétique de leur nom, ce qui rend son parcours déterministe","Parce qu'il emploie une pile, structure dont la profondeur mesure directement la distance parcourue","Parce qu'il repasse plusieurs fois par chaque sommet et conserve à chaque fois la plus petite distance trouvée"],"correct":0,"explain":"Le parcours en profondeur découvre un sommet par le PREMIER chemin qu'il a emprunté, qui n'a aucune raison d'être le plus court. Mesuré sur 200 graphes et jugé par Floyd-Warshall : 68,3 % de ses distances sont fausses, jusqu'à 10 arêtes de trop."},
+  {"q":"Sur une carte routière pondérée en minutes, que donne un parcours en largeur ?","a":["Le trajet ayant le moins d'étapes, qui est plus long en minutes dans 35,9 % des cas mesurés","Le trajet le plus rapide, puisqu'il explore par distance croissante","Le trajet le plus rapide seulement si tous les poids sont entiers","Rien d'exploitable : il ne termine pas sur un graphe pondéré"],"correct":0,"explain":"Le parcours en largeur ignore les poids : il compte des arêtes. Sur 300 cartes tirées au sort, son trajet est plus long que celui de Dijkstra 916 fois sur 2 555, avec un retard moyen de 50,8 minutes et un pire cas à 246 minutes."},
+  {"q":"Que se passe-t-il si l'on donne à Dijkstra une arête de poids négatif ?","a":["Il peut rendre un résultat faux sans rien signaler, parce qu'il ferme définitivement un sommet et ne le rouvre jamais","Il lève une erreur dès la lecture de cette arête, la positivité des poids étant contrôlée à l'entrée","Il boucle indéfiniment, refaisant sans fin le tour du cycle de poids négatif pour améliorer son total","Il rend malgré tout le bon résultat, mais en visitant davantage de sommets, donc plus lentement"],"correct":0,"explain":"Contre-exemple mesuré en trois arcs : 0→1 coûte 1, 0→2 coûte 5, 2→1 coûte −10. Dijkstra annonce 1, la vraie réponse est −5. Écart de 6, aucun avertissement. Le remède est de contrôler l'ENTRÉE, ou d'employer Bellman-Ford."},
+  {"q":"Un outil affiche « dépendance circulaire : app → ui → moteur-rendu → utils → app ». Que sait-on alors ?","a":["Où chercher, mais pas quoi casser : une seule de ces 4 arêtes suffit ici à tout débloquer, et deux autres cycles existent que le message ne mentionne pas","Qu'il suffit de casser n'importe laquelle des 4 arêtes citées pour rétablir l'installation","Que ces 4 paquets sont les seuls bloqués, les autres pouvant s'installer normalement","Que le graphe ne contient qu'un seul cycle, à savoir celui qui vient d'être affiché"],"correct":0,"explain":"Mesuré : le graphe contient TROIS cycles élémentaires, et l'algorithme s'arrête au premier. Les 7 arêtes impliquées ont été essayées une par une : une seule, utils → app, débloque tout. Et 6 paquets sur 8 sont bloqués, dont un — rapport — qui n'appartient à aucun cycle."},
+  {"q":"Qu'est-ce qui raccourcit le plus les distances dans un réseau ?","a":["Déplacer quelques liens vers des sommets lointains : 21 arêtes déplacées font mieux que 2 000 ajoutées","Ajouter des liens entre voisins proches, ce qui densifie le graphe","Augmenter le degré de chaque sommet de façon uniforme","Supprimer les sommets de faible degré, qui allongent les chemins"],"correct":0,"explain":"Mesuré sur un anneau de 1 000 personnes : 21 arêtes déplacées font tomber la distance moyenne de 83,75 à 20,41, alors que 2 000 arêtes AJOUTÉES entre voisins ne la ramènent qu'à 50,45. Ce n'est pas le nombre de liens qui compte, c'est leur portée."},
+  {"q":"Quel est le risque de construire un graphe à partir de la seule liste de ses arêtes ?","a":["Les sommets isolés disparaissent, ce qui fait sous-compter les composantes connexes","Les arêtes déclarées deux fois font apparaître un sommet supplémentaire","La matrice d'adjacence obtenue n'est plus symétrique","Le degré de chaque sommet est doublé"],"correct":0,"explain":"Un sommet qui n'apparaît dans aucune arête n'existe tout simplement pas dans le graphe reconstruit. Mesuré dans l'exercice 1 : 13 machines vues sur 14, et une composante manquante sur cinq."}
+]
+</script>
+
+<script type="application/json" data-exos>
+[
+  {"type":"code","run":{"expect":"5"},"placeholder":"un programme qui affiche, seul sur la dernière ligne, le nombre de composantes connexes du parc de 14 machines décrit dans l'énoncé","hints":["Pars de chaque machine non encore vue et visite tout ce qu'elle atteint.","N'oublie pas les machines qui n'apparaissent dans aucun câble.","Le total des tailles des composantes doit redonner 14."],"link":{"href":"lecon-10.html","label":"Revoir « Visiter un graphe »"}},
+  {"type":"text","accept":["906"],"placeholder":"nombre de graphes bipartis parmi les 2 000 tirés au sort : ____","hints":["Le programme de la solution l'affiche, avec son pourcentage.","C'est un peu moins de la moitié.","La solution le redonne seul sur sa dernière ligne."],"link":{"href":"lecon-10.html","label":"Revoir l'exercice 2"}},
+  {"type":"text","accept":["155"],"placeholder":"nombre de réseaux d'un seul tenant ayant au moins un pont, sur les 500 tirés au sort : ____","hints":["Attention : la question porte sur les réseaux CONNEXES, pas sur les 500.","Le programme de la solution donne les deux chiffres, 475 puis celui-ci.","La solution le redonne seul sur sa dernière ligne."],"link":{"href":"lecon-10.html","label":"Revoir l'exercice 3"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un parc de 14 machines&nbsp;: <code>srv1</code> à <code>srv4</code>, <code>bdd1</code> à <code>bdd3</code>, <code>cache1</code> à <code>cache4</code>, <code>relais1</code>, <code>relais2</code> et <code>sonde</code>. Les câbles sont&nbsp;: srv1-srv2, srv2-srv3, srv3-srv1, srv3-srv4, bdd1-bdd2, bdd2-bdd3, cache1-cache2, cache2-cache3, cache3-cache4, cache4-cache1, relais1-relais2. Compte les <strong>composantes connexes</strong>, et affiche leur nombre <em>seul sur la dernière ligne</em>.</p>
+<details><summary>Voir une solution</summary>@@CODE:solution-1.js@@
+@@SORTIE:solution-1.js@@
+<p>Le parc se découpe en <strong>5</strong> morceaux, dont un de taille 1&nbsp;: la machine <code>sonde</code>, qui n'apparaît dans aucun câble.</p>
+<p>C'est exactement le piège de l'exercice, et il coûte cher en vrai. Si l'on construit le graphe à partir de la seule liste des câbles — ce que fait naturellement un import de fichier CSV — on ne voit que <strong>13 machines sur 14</strong>, et on compte 4 composantes au lieu de 5. La machine qui n'a pas de lien est précisément celle qu'on cherchait&nbsp;: une sonde qui ne remonte rien.</p>
+<p>Le contrôle de la fin n'est pas décoratif&nbsp;: la somme des tailles doit valoir le parc entier (<strong>14</strong>), et le nombre de machines distinctes aussi. Deux composantes qui se recouvriraient, ou un sommet compté deux fois, sortiraient immédiatement.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Six tâches — <code>import</code>, <code>export</code>, <code>index</code>, <code>sauvegarde</code>, <code>rapport</code>, <code>purge</code> — doivent tourner sur <strong>deux</strong> machines. Les paires qui ne peuvent pas partager la même sont, dans cet ordre&nbsp;: import/export, export/index, index/sauvegarde, sauvegarde/rapport, rapport/purge et purge/import. Écris le test qui répond à «&nbsp;cette répartition est-elle possible&nbsp;?&nbsp;», vérifie ta réponse conflit par conflit, ajoute ensuite le conflit import/index et observe. Enfin, montre sur 2&nbsp;000 graphes de 7 sommets tirés au sort — avec le générateur à graine <code>4000 + t × 65537</code> et une paire reliée sur trois — que ta réponse coïncide avec un critère complètement différent&nbsp;: «&nbsp;le graphe n'a aucun cycle de longueur impaire&nbsp;». Combien de ces 2&nbsp;000 graphes sont bipartis&nbsp;?</p>
+<details><summary>Voir une solution</summary>@@CODE:solution-2.js@@
+@@SORTIE:solution-2.js@@
+<p>La question a un nom&nbsp;: le graphe des conflits est-il <strong>biparti</strong>&nbsp;? Et le test est un parcours en largeur qui donne alternativement l'une des deux couleurs, en surveillant qu'aucune arête ne relie deux sommets de la même.</p>
+<p>Sur les six tâches en cycle, la répartition existe&nbsp;: <em>import, index, rapport</em> d'un côté, <em>export, sauvegarde, purge</em> de l'autre, et <strong>0 conflit mal séparé</strong> sur 6. Un seul conflit ajouté — import contre index — et elle devient impossible&nbsp;: <strong>2 arêtes sur 7</strong> se retrouvent avec deux extrémités de la même couleur.</p>
+
+<p>Un mot sur ce «&nbsp;2&nbsp;», parce que le programme affichait d'abord «&nbsp;4&nbsp;». Un parcours voit chaque arête <em>deux fois</em>, une fois depuis chaque extrémité&nbsp;: compter les alertes brutes compte donc des incidences, pas des arêtes. Le programme range maintenant la paire dans un ensemble avant de compter — et le contrôle du haut, lui, comptait déjà correctement (0 sur 6). Deux façons de compter dans un même programme, présentées comme la même mesure&nbsp;: c'est exactement le genre d'écart qu'une relecture attentive rattrape.</p>
+
+<p>Le programme énumère aussi les longueurs de cycles avant et après. Avant&nbsp;: <strong>6</strong>. Après&nbsp;: <strong>3, 5 et 6</strong>. Le 6-cycle n'a pas «&nbsp;changé de longueur&nbsp;»&nbsp;: il est toujours là, et des cycles impairs sont <em>apparus à côté de lui</em>. La formulation compte&nbsp;: le critère porte sur l'<strong>existence</strong> d'un cycle impair, jamais sur la disparition d'un cycle pair.</p>
+<p>La partie qui compte vraiment est la dernière. Le critère «&nbsp;deux couleurs&nbsp;» et le critère «&nbsp;aucun cycle impair&nbsp;» sont deux énoncés qui n'ont visiblement rien à voir, et deux programmes qui ne partagent aucune ligne. Ils tombent pourtant d'accord <strong>2 000 fois sur 2 000</strong>, dont <strong>906</strong> graphes bipartis — c'est la réponse attendue dans le champ ci-dessus. C'est un théorème (celui de Kőnig, 1916), et c'est aussi une manière très concrète de tester du code&nbsp;: faire répondre deux méthodes indépendantes à la même question.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un réseau de 9 machines numérotées 0 à 8, reliées par 11 liaisons&nbsp;: 0-1, 1-2, 2-0, 2-3, 3-4, 4-5, 5-3, 5-6, 6-7, 7-8, 8-6. Quelle liaison, si elle tombe, coupe le réseau en deux&nbsp;? Écris d'abord la méthode évidente — retirer chaque arête et recompter les morceaux —, puis l'algorithme de Tarjan qui répond en <strong>un seul</strong> parcours, et prouve sur 500 réseaux de 10 sommets tirés au sort — générateur à graine <code>11000 + t × 2654435761</code>, une paire reliée sur cinq environ — qu'ils donnent exactement le même verdict. Combien de ces réseaux sont d'un seul tenant <em>et</em> ont au moins un pont&nbsp;?</p>
+<details><summary>Voir une solution</summary>@@CODE:solution-3.js@@
+@@SORTIE:solution-3.js@@
+<p>Une telle arête s'appelle un <strong>pont</strong>, et c'est un point de défaillance unique au sens le plus littéral. Sur le réseau à deux grappes, les deux ponts sont <code>2-3</code>, la liaison entre les grappes, et <code>5-6</code>, l'antenne — les arêtes des triangles, elles, ne le sont pas, parce qu'on peut toujours faire le tour.</p>
+<p>L'idée de Tarjan tient en une phrase&nbsp;: on note l'ordre de découverte de chaque sommet, puis le plus petit ordre qu'il peut atteindre <em>sans repasser par l'arête qui l'a amené</em>. Si un enfant ne peut pas remonter au-dessus de son parent, l'arête qui les relie est un pont&nbsp;: rien ne la contourne.</p>
+<p>Le gain se lit dans les chiffres&nbsp;: <strong>12</strong> parcours complets pour la méthode naïve contre <strong>1</strong> pour Tarjan sur le petit réseau, et <strong>5 471</strong> contre <strong>500</strong> sur les 500 réseaux du banc. Pour <strong>0 désaccord</strong> — ce qui est le seul résultat qui autorise à jeter la méthode lente.</p>
+<p>Un chiffre mérite d'être relevé au passage, et il faut le lire avec précaution. <strong>475 réseaux sur 500</strong> ont au moins un pont — mais <strong>332 de ces 500 étaient déjà en morceaux</strong> avant la moindre panne, et un graphe en morceaux n'est pas une infrastructure dont on se demande si une liaison est critique. C'est pourquoi le programme publie aussi le chiffre honnête&nbsp;: sur les <strong>168</strong> réseaux d'un seul tenant, <strong>155</strong> ont au moins un pont, soit <strong>92,3 %</strong>. La conclusion survit, et elle est maintenant fondée sur la bonne population&nbsp;: à cette densité, un réseau connexe <em>sans</em> point de défaillance unique est l'exception.</p></details></div>
