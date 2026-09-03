@@ -24,7 +24,29 @@ $tache = 'Syntaxe-Autonomie'
 function Stamp { (Get-Date).ToString('yyyy-MM-dd HH:mm') }
 
 # --- ce que les plans contiennent reellement --------------------------------
-$plans = @('CHANTIER-V12.md','CHANTIER-V13.md','CHANTIER-V14.md','CHANTIER-V15.md')
+# LA LISTE DES PLANS EST LUE DANS LE WRAPPER, jamais recopiee ici. Deux erreurs
+# successives le 2026-09-03 l'ont impose : d'abord une liste en dur qui s'arretait au
+# V15, si bien que le V16 et ses 22 cases etaient invisibles et qu'aucune anomalie
+# n'aurait ete signalee ; puis une decouverte par glob, qui ramassait les anciens
+# chantiers V4 a V11 que le wrapper ne traite plus -- une case oubliee dans l'un d'eux
+# aurait ete presentee comme le plan courant. La seule liste qui compte est $CHAINE
+# dans autonomie.ps1 : on la lit la-bas.
+$plans = @()
+try {
+  $wrapper = Get-Content (Join-Path $dir 'autonomie.ps1') -Raw -ErrorAction Stop
+  $m = [regex]::Match($wrapper, '(?m)^\$CHAINE\s*=\s*@\((.*?)\)')
+  if ($m.Success) {
+    $plans = @([regex]::Matches($m.Groups[1].Value, "'([^']+)'") | ForEach-Object { $_.Groups[1].Value })
+  }
+} catch {}
+if ($plans.Count -eq 0) {
+  # Le wrapper est illisible : c'est une anomalie en soi, on le dira plus bas.
+  $chaineIllisible = $true
+  $plans = @(Get-ChildItem -Path $proj -Filter 'CHANTIER-V*.md' -File -ErrorAction SilentlyContinue |
+             Sort-Object { [int]([regex]::Match($_.Name, 'V(\d+)').Groups[1].Value) } |
+             Select-Object -ExpandProperty Name | Select-Object -Last 1)
+} else { $chaineIllisible = $false }
+
 $restant = 0; $detail = @(); $courant = $null
 foreach ($p in $plans) {
   $f = Join-Path $proj $p
@@ -77,6 +99,7 @@ if (-not $volontaire) {
     $anomalies += "aucune trace depuis $silenceH h alors que la tache est active"
   }
   if ($etatTache -eq 'INTROUVABLE') { $anomalies += 'la tache planifiee a disparu' }
+  if ($chaineIllisible) { $anomalies += 'la liste $CHAINE est illisible dans autonomie.ps1 : le controle travaille a l aveugle' }
 }
 $sain = ($anomalies.Count -eq 0)
 
