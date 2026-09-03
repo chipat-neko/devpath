@@ -229,11 +229,11 @@
     "home.kicker": "The school of code",
     "home.title": "Learn to code <em>in depth</em>, not on the surface.",
     "home.lead":
-      "Programming courses designed as a real journey: we start from what you know, explain the <em>why</em>, show the pitfalls, and every module ends with practice. <strong>89 courses</strong>, 88 of them fully written, from web to systems — <strong>pick your language</strong> and learn at your own pace.",
+      "Programming courses designed as a real journey: we start from what you know, explain the <em>why</em>, show the pitfalls, and every module ends with practice. <strong>89 courses</strong>, all of them fully written, from web to systems — <strong>pick your language</strong> and learn at your own pace.",
     "home.cta.start": "Browse the catalog",
     "home.cta.catalog": "Choose a path",
     "home.meta.courses": "<strong>89</strong> courses in the catalogue",
-    "home.meta.lessons": "<strong>1534</strong> written lessons",
+    "home.meta.lessons": "<strong>1536</strong> written lessons",
     "home.meta.langs": "<strong>81</strong> languages &amp; tech",
   };
 
@@ -940,7 +940,7 @@
       if (!tk.length) {
         items = []; active = -1; input.setAttribute("aria-activedescendant", "");
         input.setAttribute("aria-expanded", "false");
-        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1534 leçons et 64 pages du site.</li>';
+        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1536 leçons et 64 pages du site.</li>';
         return;
       }
       items = doSearch(tk);

@@ -1,0 +1,320 @@
+<p>Il existe une phrase que tout le monde a prononcée un jour&nbsp;: «&nbsp;chez moi ça marche&nbsp;». Le programme tourne en une seconde sur le fichier de test, et il met quarante minutes en production. Rien n'a changé dans le code&nbsp;; seule la <strong>taille de l'entrée</strong> a changé. Cette leçon porte exactement là-dessus&nbsp;: comment savoir, <em>avant</em> de le déployer, comment un programme se comportera quand son entrée sera cent fois, mille fois, un million de fois plus grande.</p>
+
+<p>Le titre du module annonce «&nbsp;ce que veut dire O(n²) quand on a un million de lignes&nbsp;». La réponse, chiffrée à la fin de cette leçon, tient en une ligne&nbsp;: <strong>huit minutes contre une milliseconde</strong>, pour la même tâche et le même résultat. Mais avant d'y arriver, il faut se doter d'un instrument de mesure qui ne mente pas — et le premier réflexe, celui du chronomètre, n'en est pas un.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que cette leçon suppose acquis</p><p>Rien d'autre que les bases du langage&nbsp;: des boucles, des tableaux, des fonctions. Aucune formule n'est admise sans être vérifiée par un programme, et <strong>tous les blocs de sortie de cette page sont ce que le code affiche</strong> — clique sur «&nbsp;▶ Tester&nbsp;» sur n'importe lequel pour t'en assurer. Les logarithmes, employés ici comme de simples compteurs de divisions, sont posés calmement dans la <a href="lecon-13.html">leçon 13</a>.</p></div></div>
+
+<h2>Le chronomètre ne se publie pas</h2>
+
+<p>La façon évidente de comparer deux programmes est de les chronométrer. C'est aussi la façon la plus trompeuse, et il vaut la peine de voir pourquoi avant d'apprendre autre chose.</p>
+
+<p>Le programme ci-dessous trie le même tableau de 16&nbsp;000 nombres de deux façons&nbsp;: le tri par insertion, qu'on écrit spontanément, et le tri fusion. Il fait les deux mesures — celle du chronomètre, puis celle d'un compteur d'opérations posé dans les boucles.</p>
+
+@@CODE:chrono.js@@
+
+@@SORTIE:chrono.js@@
+
+<p>Regarde ce que le chronomètre accepte de dire, et ce qu'il refuse. Il dit que le tri par insertion est le plus lent&nbsp;: c'est vrai, et c'est reproductible. Mais la <strong>durée elle-même n'est pas publiable</strong>, et ce programme n'en imprime aucune. Ajoute un <code>console.log(msIns, msFus)</code> à la fin et lance-le trois fois de suite&nbsp;: tu liras trois nombres différents, parce qu'une durée dépend de la machine, de ce qui tourne à côté, du navigateur, de la température du processeur et de l'humeur du ramasse-miettes.</p>
+
+<p>Le compteur, lui, donne un nombre&nbsp;: <strong>127&nbsp;502&nbsp;330</strong> opérations pour le tri par insertion contre <strong>427&nbsp;035</strong> pour le tri fusion, soit <strong>298,6</strong> fois plus. Ce nombre-là ne bougera pas d'une unité, ni chez toi, ni dans dix ans, ni sur une machine mille fois plus rapide. C'est une propriété de l'<em>algorithme</em>, pas de la machine.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z" /></svg><div class="callout__body"><p class="callout__title">La règle de tout le module</p><p><strong>On compte, on ne chronomètre pas.</strong> Le chronomètre sert à confirmer une intuition sur <em>ta</em> machine, un jour donné. Le compteur sert à raisonner, à comparer, à prévoir — et à écrire quelque chose qui restera vrai. Toute la notation qu'on va poser dans cette leçon décrit des <strong>comptes d'opérations</strong>, jamais des durées chronométrées.</p><p><strong>Deux tables de cette page donnent pourtant des durées</strong>, en minutes et en années. Elles ne sont pas chronométrées&nbsp;: ce sont des comptes d'opérations <em>divisés</em> par un débit posé en hypothèse — un milliard d'opérations par seconde. Une durée convertie se recalcule quand l'hypothèse change&nbsp;; une durée mesurée, non.</p></div></div>
+
+<h2>Huit familles, et l'écart entre elles</h2>
+
+<p>Presque tous les algorithmes qu'on rencontre tombent dans une poignée de familles de croissance. On les récite souvent&nbsp;; on les chiffre rarement. Le programme suivant les chiffre, pour quatre tailles d'entrée, en entiers exacts quand c'est possible et par leur logarithme décimal quand le nombre est trop grand pour être écrit.</p>
+
+@@CODE:familles.js@@
+
+@@SORTIE:familles.js@@
+
+<p>Cette table mérite qu'on s'y arrête ligne par ligne, parce qu'elle contient tout le reste de la leçon.</p>
+
+<ul>
+<li>À <em>n</em> = 10, <strong>tout est instantané</strong>, y compris le factoriel&nbsp;: 3&nbsp;628&nbsp;800 opérations, soit 3,63 ms. C'est pourquoi une mauvaise complexité peut vivre des années sans se faire remarquer.</li>
+<li>À <em>n</em> = 1&nbsp;000, l'écart se creuse mais reste supportable&nbsp;: le quadratique demande 1&nbsp;000&nbsp;000 d'opérations, une milliseconde. Le cubique demande une seconde pleine.</li>
+<li>À <em>n</em> = 10<sup>6</sup>, la table bascule. Le linéaire tient en <strong>1,00 ms</strong>, le quasi-linéaire en <strong>20,0 ms</strong>… et le quadratique demande <strong>1&nbsp;000&nbsp;000&nbsp;000&nbsp;000</strong> d'opérations, soit <strong>16,7 minutes</strong>. Le cubique, lui, demanderait <strong>31,7 ans</strong>.</li>
+<li>L'exponentiel et le factoriel ne sont pas «&nbsp;très lents&nbsp;». Ils sont d'une autre nature&nbsp;: à <em>n</em> = 100 déjà, 2<sup><em>n</em></sup> opérations demanderaient, au débit posé d'un milliard par seconde, <strong>2&nbsp;914 fois l'âge de l'univers</strong>. Il n'existe aucune machine, aucun financement et aucun futur qui change cela.</li>
+</ul>
+
+<p>Retiens surtout le rapport entre les deux lignes du milieu, celles qu'on rencontre vraiment. À un million d'éléments, <strong>20,0 millisecondes contre 16,7 minutes</strong>&nbsp;: c'est la différence entre une page qui répond et une page qui expire. Les deux programmes peuvent tenir en vingt lignes chacun.</p>
+
+<h2>Ce que «&nbsp;O(n²)&nbsp;» dit exactement — et ce qu'il ne dit pas</h2>
+
+<p>La notation O() a une définition précise, et la connaître évite trois quarts des malentendus. La voici&nbsp;:</p>
+
+<blockquote><p>Une fonction <em>f</em> est en <strong>O(<em>g</em>)</strong> s'il existe une constante <em>c</em> &gt; 0 et un rang <em>n</em><sub>0</sub> tels que <em>f</em>(<em>n</em>) ≤ <em>c</em> · <em>g</em>(<em>n</em>) pour tout <em>n</em> ≥ <em>n</em><sub>0</sub>.</p></blockquote>
+
+<p>Deux quantificateurs, donc deux nombres à exhiber. Le programme les exhibe, sur un coût qui vaut exactement 3<em>n</em>² + 50<em>n</em> + 200.</p>
+
+@@CODE:definition.js@@
+
+@@SORTIE:definition.js@@
+
+<p>Trois choses se lisent dans cette sortie.</p>
+
+<p><strong>Un seul couple suffit.</strong> Avec <em>c</em> = 4, le rang <em>n</em><sub>0</sub> = 54 convient&nbsp;; avec <em>c</em> = 10, c'est <em>n</em><sub>0</sub> = 10&nbsp;; avec <em>c</em> = 53, c'est <em>n</em><sub>0</sub> = 3. Le choix de <em>c</em> change <em>n</em><sub>0</sub>, jamais la conclusion. Et avec <em>c</em> = 3 il n'existe <em>aucun</em> rang, parce que 3<em>n</em>² est toujours dépassé par 3<em>n</em>² + 50<em>n</em> + 200&nbsp;: la définition n'est donc pas vide, elle exclut vraiment des valeurs.</p>
+
+<p><strong>Jeter les termes de second ordre n'est légitime qu'à partir d'un certain rang.</strong> La table du milieu le mesure&nbsp;: à <em>n</em> = 1, les 50<em>n</em> + 200 qu'on jette pèsent <strong>98,81&nbsp;%</strong> du coût total. À <em>n</em> = 10, encore <strong>70,00&nbsp;%</strong>. Ils ne passent sous 1&nbsp;% qu'à partir de <em>n</em> = <strong>1&nbsp;654</strong>, et ils pèsent <em>au moins autant</em> que le terme dominant jusqu'à <em>n</em> = <strong>20</strong> — où les deux valent exactement 1&nbsp;200, à égalité. Le terme dominant ne l'emporte vraiment qu'à partir de 21. Dire «&nbsp;c'est du O(n²)&nbsp;» à propos d'une fonction appelée sur cinq éléments est donc exact et parfaitement inutile.</p>
+
+<p><strong>La classe ne dit pas qui gagne.</strong> C'est le point le plus contre-intuitif, et le programme le rend indiscutable. Un algorithme A en 3<em>n</em>² — la «&nbsp;mauvaise&nbsp;» classe — bat un algorithme B en 1000·<em>n</em>·log₂<em>n</em> — la «&nbsp;bonne&nbsp;» — jusqu'à <em>n</em> = <strong>3&nbsp;987</strong> inclus&nbsp;; B ne passe devant qu'au rang suivant, <strong>3&nbsp;988</strong>. À <em>n</em> = 100, A fait <strong>30&nbsp;000</strong> opérations quand B en fait <strong>664&nbsp;386</strong>&nbsp;: vingt-deux fois moins. Le rapport s'inverse donc dès le quatre-millième élément — mais il faut atteindre <em>n</em> = 10<sup>6</sup> pour qu'il devienne écrasant&nbsp;: <strong>151</strong> fois en faveur de B.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 660 340" role="img" aria-label="Graphique à deux courbes, en échelles logarithmiques sur les deux axes. En abscisse la taille de l’entrée, de 10 à 100 000 ; en ordonnée le nombre d’opérations, de 10^2 à 10^10. La première courbe est A = 3n², quadratique ; la seconde est B = 1000·n·log₂n, quasi-linéaire. Jusqu’à n = 3987, la courbe A passe sous la courbe B : l’algorithme de la « mauvaise » classe coûte moins cher. Les deux se croisent à n = 3988, point marqué d’un cercle et d’un trait pointillé vertical. Au-delà, A monte plus vite et s’éloigne définitivement de B.">
+    <text class="d-label" x="330" y="22" text-anchor="middle" font-size="13">Deux algorithmes, deux classes — et le rang où l’ordre s’inverse</text>
+    <line class="d-line" x1="62" y1="42" x2="62" y2="286" />
+    <line class="d-line" x1="62" y1="286" x2="634" y2="286" />
+    <line class="d-line" x1="62.0" y1="286" x2="62.0" y2="291" />
+    <text class="d-mut" x="62.0" y="304" text-anchor="middle" font-size="10">10</text>
+    <line class="d-line" x1="205.0" y1="286" x2="205.0" y2="291" />
+    <text class="d-mut" x="205.0" y="304" text-anchor="middle" font-size="10">100</text>
+    <line class="d-line" x1="348.0" y1="286" x2="348.0" y2="291" />
+    <text class="d-mut" x="348.0" y="304" text-anchor="middle" font-size="10">10^3</text>
+    <line class="d-line" x1="491.0" y1="286" x2="491.0" y2="291" />
+    <text class="d-mut" x="491.0" y="304" text-anchor="middle" font-size="10">10^4</text>
+    <line class="d-line" x1="634.0" y1="286" x2="634.0" y2="291" />
+    <text class="d-mut" x="634.0" y="304" text-anchor="middle" font-size="10">10^5</text>
+    <line class="d-line" x1="57" y1="286.0" x2="62" y2="286.0" />
+    <text class="d-mut" x="53" y="289.5" text-anchor="end" font-size="10">10^2</text>
+    <line class="d-line" x1="57" y1="228.4" x2="62" y2="228.4" />
+    <text class="d-mut" x="53" y="231.9" text-anchor="end" font-size="10">10^4</text>
+    <line class="d-line" x1="57" y1="170.9" x2="62" y2="170.9" />
+    <text class="d-mut" x="53" y="174.4" text-anchor="end" font-size="10">10^6</text>
+    <line class="d-line" x1="57" y1="113.3" x2="62" y2="113.3" />
+    <text class="d-mut" x="53" y="116.8" text-anchor="end" font-size="10">10^8</text>
+    <line class="d-line" x1="57" y1="55.7" x2="62" y2="55.7" />
+    <text class="d-mut" x="53" y="59.2" text-anchor="end" font-size="10">10^10</text>
+    <text class="d-mut" x="348" y="318" text-anchor="middle" font-size="11">taille de l’entrée, n (échelle logarithmique)</text>
+    <text class="d-mut" x="14" y="164" text-anchor="middle" font-size="11" transform="rotate(-90 14 164)">opérations</text>
+    <polyline class="d-line" fill="none" points="62.0,272.3 64.9,271.1 67.7,270.0 70.6,268.8 73.4,267.7 76.3,266.5 79.2,265.4 82.0,264.2 84.9,263.1 87.7,261.9 90.6,260.8 93.5,259.6 96.3,258.5 99.2,257.3 102.0,256.1 104.9,255.0 107.8,253.8 110.6,252.7 113.5,251.5 116.3,250.4 119.2,249.2 122.1,248.1 124.9,246.9 127.8,245.8 130.6,244.6 133.5,243.5 136.4,242.3 139.2,241.2 142.1,240.0 144.9,238.9 147.8,237.7 150.7,236.6 153.5,235.4 156.4,234.3 159.2,233.1 162.1,232.0 165.0,230.8 167.8,229.7 170.7,228.5 173.5,227.4 176.4,226.2 179.3,225.1 182.1,223.9 185.0,222.8 187.8,221.6 190.7,220.5 193.6,219.3 196.4,218.2 199.3,217.0 202.1,215.9 205.0,214.7 207.9,213.5 210.7,212.4 213.6,211.2 216.4,210.1 219.3,208.9 222.2,207.8 225.0,206.6 227.9,205.5 230.7,204.3 233.6,203.2 236.5,202.0 239.3,200.9 242.2,199.7 245.0,198.6 247.9,197.4 250.8,196.3 253.6,195.1 256.5,194.0 259.3,192.8 262.2,191.7 265.1,190.5 267.9,189.4 270.8,188.2 273.6,187.1 276.5,185.9 279.4,184.8 282.2,183.6 285.1,182.5 287.9,181.3 290.8,180.2 293.7,179.0 296.5,177.9 299.4,176.7 302.2,175.6 305.1,174.4 308.0,173.3 310.8,172.1 313.7,170.9 316.5,169.8 319.4,168.6 322.3,167.5 325.1,166.3 328.0,165.2 330.8,164.0 333.7,162.9 336.6,161.7 339.4,160.6 342.3,159.4 345.1,158.3 348.0,157.1 350.9,156.0 353.7,154.8 356.6,153.7 359.4,152.5 362.3,151.4 365.2,150.2 368.0,149.1 370.9,147.9 373.7,146.8 376.6,145.6 379.5,144.5 382.3,143.3 385.2,142.2 388.0,141.0 390.9,139.9 393.8,138.7 396.6,137.6 399.5,136.4 402.3,135.3 405.2,134.1 408.1,133.0 410.9,131.8 413.8,130.7 416.6,129.5 419.5,128.4 422.4,127.2 425.2,126.0 428.1,124.9 430.9,123.7 433.8,122.6 436.7,121.4 439.5,120.3 442.4,119.1 445.2,118.0 448.1,116.8 451.0,115.7 453.8,114.5 456.7,113.4 459.5,112.2 462.4,111.1 465.3,109.9 468.1,108.8 471.0,107.6 473.8,106.5 476.7,105.3 479.6,104.2 482.4,103.0 485.3,101.9 488.1,100.7 491.0,99.6 493.9,98.4 496.7,97.3 499.6,96.1 502.4,95.0 505.3,93.8 508.2,92.7 511.0,91.5 513.9,90.4 516.7,89.2 519.6,88.1 522.5,86.9 525.3,85.8 528.2,84.6 531.0,83.4 533.9,82.3 536.8,81.1 539.6,80.0 542.5,78.8 545.3,77.7 548.2,76.5 551.1,75.4 553.9,74.2 556.8,73.1 559.6,71.9 562.5,70.8 565.4,69.6 568.2,68.5 571.1,67.3 573.9,66.2 576.8,65.0 579.7,63.9 582.5,62.7 585.4,61.6 588.2,60.4 591.1,59.3 594.0,58.1 596.8,57.0 599.7,55.8 602.5,54.7 605.4,53.5 608.3,52.4 611.1,51.2 614.0,50.1 616.8,48.9 619.7,47.8 622.6,46.6 625.4,45.5 628.3,44.3 631.1,43.2 634.0,42.0" />
+    <polyline class="d-accent" fill="none" points="62.0,213.4 64.9,212.6 67.7,211.8 70.6,211.0 73.4,210.2 76.3,209.4 79.2,208.6 82.0,207.8 84.9,207.0 87.7,206.2 90.6,205.4 93.5,204.6 96.3,203.8 99.2,203.1 102.0,202.3 104.9,201.5 107.8,200.7 110.6,200.0 113.5,199.2 116.3,198.5 119.2,197.7 122.1,197.0 124.9,196.2 127.8,195.5 130.6,194.7 133.5,194.0 136.4,193.2 139.2,192.5 142.1,191.7 144.9,191.0 147.8,190.3 150.7,189.5 153.5,188.8 156.4,188.1 159.2,187.4 162.1,186.6 165.0,185.9 167.8,185.2 170.7,184.5 173.5,183.8 176.4,183.1 179.3,182.3 182.1,181.6 185.0,180.9 187.8,180.2 190.7,179.5 193.6,178.8 196.4,178.1 199.3,177.4 202.1,176.7 205.0,176.0 207.9,175.3 210.7,174.6 213.6,173.9 216.4,173.2 219.3,172.5 222.2,171.8 225.0,171.1 227.9,170.4 230.7,169.7 233.6,169.0 236.5,168.3 239.3,167.7 242.2,167.0 245.0,166.3 247.9,165.6 250.8,164.9 253.6,164.2 256.5,163.5 259.3,162.9 262.2,162.2 265.1,161.5 267.9,160.8 270.8,160.1 273.6,159.5 276.5,158.8 279.4,158.1 282.2,157.4 285.1,156.8 287.9,156.1 290.8,155.4 293.7,154.8 296.5,154.1 299.4,153.4 302.2,152.7 305.1,152.1 308.0,151.4 310.8,150.7 313.7,150.1 316.5,149.4 319.4,148.7 322.3,148.1 325.1,147.4 328.0,146.8 330.8,146.1 333.7,145.4 336.6,144.8 339.4,144.1 342.3,143.4 345.1,142.8 348.0,142.1 350.9,141.5 353.7,140.8 356.6,140.2 359.4,139.5 362.3,138.8 365.2,138.2 368.0,137.5 370.9,136.9 373.7,136.2 376.6,135.6 379.5,134.9 382.3,134.3 385.2,133.6 388.0,133.0 390.9,132.3 393.8,131.6 396.6,131.0 399.5,130.3 402.3,129.7 405.2,129.0 408.1,128.4 410.9,127.8 413.8,127.1 416.6,126.5 419.5,125.8 422.4,125.2 425.2,124.5 428.1,123.9 430.9,123.2 433.8,122.6 436.7,121.9 439.5,121.3 442.4,120.6 445.2,120.0 448.1,119.4 451.0,118.7 453.8,118.1 456.7,117.4 459.5,116.8 462.4,116.1 465.3,115.5 468.1,114.9 471.0,114.2 473.8,113.6 476.7,112.9 479.6,112.3 482.4,111.7 485.3,111.0 488.1,110.4 491.0,109.7 493.9,109.1 496.7,108.5 499.6,107.8 502.4,107.2 505.3,106.6 508.2,105.9 511.0,105.3 513.9,104.7 516.7,104.0 519.6,103.4 522.5,102.7 525.3,102.1 528.2,101.5 531.0,100.8 533.9,100.2 536.8,99.6 539.6,98.9 542.5,98.3 545.3,97.7 548.2,97.0 551.1,96.4 553.9,95.8 556.8,95.1 559.6,94.5 562.5,93.9 565.4,93.3 568.2,92.6 571.1,92.0 573.9,91.4 576.8,90.7 579.7,90.1 582.5,89.5 585.4,88.8 588.2,88.2 591.1,87.6 594.0,87.0 596.8,86.3 599.7,85.7 602.5,85.1 605.4,84.4 608.3,83.8 611.1,83.2 614.0,82.6 616.8,81.9 619.7,81.3 622.6,80.7 625.4,80.1 628.3,79.4 631.1,78.8 634.0,78.2" />
+    <circle class="d-accent" cx="433.9" cy="122.5" r="5" />
+    <line class="d-line" x1="433.9" y1="122.5" x2="433.9" y2="286" stroke-dasharray="3 3" />
+    <text class="d-text" x="441.9" y="114.5" font-size="11">n = 3988</text>
+    <text class="d-text" x="596.3" y="46.8" text-anchor="end" font-size="11">A = 3n² (quadratique)</text>
+    <text class="d-text" x="279.2" y="151.6" font-size="11">B = 1000·n·log₂n (quasi-linéaire)</text>
+    <text class="d-mut" x="68" y="54" font-size="10">à gauche du trait, la « mauvaise » classe est la plus rapide</text>
+  </svg>
+  <figcaption>La classe de complexité ne dit pas qui gagne&nbsp;: elle dit qui gagne <em>à la fin</em>. Le croisement, ici à n&nbsp;=&nbsp;3988, est calculé par le programme de cette section, pas placé à l’œil.</figcaption>
+</figure>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>«&nbsp;C'est du O(n log n), donc c'est mieux.&nbsp;»</strong> Non&nbsp;: c'est mieux <em>asymptotiquement</em>, c'est-à-dire à partir d'un rang qu'il faut connaître. Ici ce rang vaut 3&nbsp;988. Si tes entrées font 200 éléments, la «&nbsp;mauvaise&nbsp;» solution fait 120&nbsp;000 opérations contre 1&nbsp;528&nbsp;771 — près de <strong>treize fois moins</strong> —, et elle est en prime plus courte à écrire et plus facile à relire. La notation O() répond à la question «&nbsp;que se passe-t-il quand <em>n</em> grandit sans limite&nbsp;?&nbsp;». Si ton <em>n</em> ne grandit pas, elle ne répond pas à ta question.</p></div></div>
+
+<h2>Classer un programme sans lire son code</h2>
+
+<p>Voici la technique la plus utile de cette leçon, et la seule qui s'applique à un programme dont on n'a ni le code, ni le temps de le lire&nbsp;: <strong>le test du doublement</strong>. On double la taille de l'entrée et on regarde par combien le travail est multiplié. L'exposant se lit directement dans ce rapport.</p>
+
+@@CODE:doublement.js@@
+
+@@SORTIE:doublement.js@@
+
+<p>Les rapports mesurés sont sans ambiguïté&nbsp;: <strong>1,00</strong> pour le coût constant, <strong>2,00</strong> pour le linéaire, <strong>4,00</strong> pour le quadratique, <strong>8,02</strong> pour le cubique. L'exposant s'obtient par log₂ du rapport, et il redonne exactement <strong>0,00</strong>&nbsp;; <strong>1,00</strong>&nbsp;; <strong>2,00</strong>&nbsp;; <strong>3,00</strong>. Aucune de ces six lignes n'a été devinée&nbsp;: le programme a exécuté les six algorithmes sur quatre tailles.</p>
+
+<p>Deux lignes demandent un commentaire. Le tri fusion donne un rapport de <strong>2,22</strong>, un peu plus que 2 — c'est la signature du <em>n</em> log <em>n</em>&nbsp;: le facteur 2 vient du <em>n</em>, et le supplément vient du log, qui augmente d'une unité à chaque doublement. Ce supplément décroît lentement&nbsp;: <strong>2,29</strong> puis <strong>2,25</strong> puis <strong>2,22</strong>.</p>
+
+<p>Et la recherche dichotomique donne <strong>1,13</strong>, soit un exposant de <strong>0,17</strong>. Le test ne la distingue pas franchement d'un coût constant à ces tailles, et c'est une <em>limite réelle de la méthode</em> qu'il vaut mieux connaître que masquer&nbsp;: pour trancher, il faudrait deux doublements de plus. C'est aussi la meilleure preuve que log <em>n</em> est presque plat.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z" /></svg><div class="callout__body"><p class="callout__title">À emporter en production</p><p>Le test du doublement est ce qu'on fait devant un incident. Un traitement met 4 minutes sur le fichier d'hier et 16 sur celui d'aujourd'hui, deux fois plus gros&nbsp;? Rapport 4&nbsp;: c'est quadratique, et le fichier de la semaine prochaine mettra plus d'une heure. On n'a lu aucune ligne de code, et on sait déjà quoi chercher — une boucle dans une boucle.</p></div></div>
+
+<h2>Ce que la notation jette, et qui coûte cher</h2>
+
+<p>La notation O() jette les constantes. C'est ce qui la rend utile, et c'est aussi ce qui la rend insuffisante à elle seule. Le programme suivant le montre sur une question très concrète, celle qu'on rencontre en écrivant une bibliothèque de tri&nbsp;: <em>à partir de quelle taille le tri fusion gagne-t-il vraiment&nbsp;?</em></p>
+
+@@CODE:croisement.js@@
+
+@@SORTIE:croisement.js@@
+
+<p>Première mesure&nbsp;: le tri fusion ne gagne qu'à partir de <em>n</em> = <strong>10</strong>, et de très peu — <strong>56,4</strong> opérations contre <strong>56,5</strong>. En dessous, la «&nbsp;bonne&nbsp;» classe perd, parce que ses appels et ses tableaux intermédiaires coûtent plus cher que les quelques déplacements du tri quadratique. Les deux tris rendent le même tableau sur les <strong>520</strong> tirages du banc — ce n'est pas une comparaison entre un programme juste et un programme faux.</p>
+
+<p>Deuxième mesure, plus intéressante&nbsp;: un tri <strong>hybride</strong>, qui bascule sur l'insertion dès qu'un morceau tient en <em>S</em> cases. Sur 4&nbsp;096 éléments, le nombre d'opérations passe de <strong>93&nbsp;138</strong> à <em>S</em> = 1 à <strong>564&nbsp;204</strong> à <em>S</em> = 256, soit <strong>6,1</strong> fois plus. Et pourtant, <em>toutes ces variantes sont en O(n log n)</em>&nbsp;: <em>S</em> est une constante, la notation la jette entièrement.</p>
+
+<p>Troisième mesure, et c'est la plus instructive, parce qu'elle contredit la première conclusion qu'on serait tenté d'en tirer. En ne comptant que les comparaisons et les déplacements, le seuil optimal vaut <strong>4</strong> — un chiffre absurdement bas au regard de ce que font les vraies bibliothèques. La raison est que ce modèle de coût <em>ne facture pas les appels récursifs</em>, dont les internes allouent pourtant trois tableaux chacun. Le programme refait donc le classement en facturant <em>K</em> unités par appel&nbsp;: le seuil optimal passe à <strong>8</strong> pour <em>K</em> = 5, puis à <strong>16</strong> pour <em>K</em> = 20 et <em>K</em> = 60.</p>
+
+<p>Autrement dit&nbsp;: <strong>le «&nbsp;meilleur&nbsp;» seuil dépend du modèle de coût qu'on a choisi</strong>, et un modèle qui ne compte que les comparaisons répond à côté. C'est la limite honnête de tout ce chapitre&nbsp;: compter des opérations est infiniment mieux que chronométrer, mais compter <em>quelles</em> opérations reste une décision, et cette décision se justifie.</p>
+
+<h2>Meilleur cas, cas moyen, pire cas&nbsp;: trois nombres, pas un</h2>
+
+<p>«&nbsp;Le tri par insertion est en O(n²)&nbsp;» est une phrase incomplète. En O(n²) <em>dans quel cas</em>&nbsp;? Le programme suivant donne les trois réponses, sur les mêmes 1&nbsp;000 éléments présentés de quatre façons.</p>
+
+@@CODE:cas.js@@
+
+@@SORTIE:cas.js@@
+
+<p>Pour le tri par insertion, l'écart entre le meilleur et le pire cas vaut <strong>501</strong> fois. Sur une entrée déjà triée il fait <strong>1&nbsp;998</strong> opérations, c'est-à-dire exactement 2(<em>n</em>−1)&nbsp;: il est <em>linéaire</em>. Sur une entrée triée à l'envers, <strong>999&nbsp;999</strong>. Sur une entrée tirée au sort, <strong>495&nbsp;409</strong>, soit <strong>49,5&nbsp;%</strong> du pire cas.</p>
+
+<p>Le tri rapide raconte l'histoire inverse, et c'est un vrai incident de production. Sur une entrée tirée au sort, il est excellent&nbsp;: <strong>16&nbsp;960</strong> opérations là où l'insertion en demande 495&nbsp;409. Sur une entrée <strong>déjà triée</strong>, il en demande <strong>999&nbsp;999</strong> — soit soixante fois plus que sur du désordre. La raison tient à son choix de pivot&nbsp;: le dernier élément est toujours le plus grand, les partitions valent 0 et <em>n</em>−1, et la récursion descend de <em>n</em> étages.</p>
+
+<p>La ligne <strong>«&nbsp;presque triée&nbsp;»</strong> est celle qui décide en pratique, parce que c'est la donnée qu'on rencontre vraiment&nbsp;: un fichier trié dont 1&nbsp;% des lignes ont bougé. Le tri par insertion y coûte <strong>11&nbsp;558</strong> opérations — <strong>43</strong> fois moins que sur du désordre, et <strong>34,2</strong> fois moins que le tri rapide sur la même entrée. Voilà pourquoi ce tri réputé mauvais n'a pas disparu, et pourquoi les tris hybrides s'en servent&nbsp;: il n'est quadratique que sur les entrées qui le méritent.</p>
+
+<p>La ligne «&nbsp;toutes égales&nbsp;» mérite elle aussi un regard&nbsp;: le tri par insertion y retrouve son meilleur cas, <strong>1&nbsp;998</strong>, tandis que le tri rapide y demande <strong>500&nbsp;499</strong> opérations. Un tableau rempli d'une seule valeur est, lui aussi, une donnée parfaitement ordinaire.</p>
+
+<p>Le dernier bloc de la sortie est celui qui compte. Sur <strong>300</strong> entrées de 300 éléments tirées au sort, le tri rapide coûte en moyenne <strong>4&nbsp;051</strong> opérations, avec un pire cas observé à <strong>5&nbsp;294</strong> — soit <strong>1,31</strong> fois la moyenne, et seulement <strong>3</strong> tirages sur 300 dépassent 1,25 fois la moyenne. Le pire cas <em>théorique</em>, <strong>44&nbsp;850</strong> comparaisons, n'est jamais approché par le hasard. Mais la même taille <strong>déjà triée</strong> coûte <strong>89&nbsp;999</strong> opérations, soit <strong>22,2</strong> fois la moyenne — et ces deux nombres ne comptent pas la même chose&nbsp;: 44&nbsp;850 est un nombre de <em>comparaisons</em>, 89&nbsp;999 un nombre de comparaisons <em>et</em> d'échanges. L'entrée déjà triée n'a donc pas «&nbsp;dépassé&nbsp;» le pire cas théorique&nbsp;: elle l'a atteint exactement, ses 44&nbsp;850 comparaisons comprises. <strong>Le hasard ne trouve pas le pire cas&nbsp;; une donnée ordinaire, si.</strong></p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>«&nbsp;Le cas moyen, c'est entre le meilleur et le pire.&nbsp;»</strong> Non. Le cas moyen est une moyenne sur une <em>loi de tirage</em>, et cette loi est une hypothèse sur tes données. Le tri rapide a un excellent cas moyen <em>sous l'hypothèse que l'entrée est en désordre</em>. Or les données réelles arrivent triées bien plus souvent que le hasard ne le prévoit&nbsp;: exports de bases triés par clé, journaux triés par date, identifiants séquentiels. Changer la loi change le cas moyen — et ici, il devient le pire cas.</p></div></div>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Le motif le plus fréquent de tous est celui de l'exercice&nbsp;2 de cette leçon&nbsp;: une <strong>jointure écrite comme une double boucle</strong>. Un rapport quotidien associe des commandes à des clients en parcourant, pour chaque commande, le tableau des clients. Sur les 300 lignes du jeu de test, il répond instantanément&nbsp;; sur les 5&nbsp;000 lignes de la production, il fait <strong>12&nbsp;405&nbsp;398</strong> opérations là où une <code>Map</code> en demande <strong>10&nbsp;000</strong> — <strong>1&nbsp;241</strong> fois plus. Le piège n'est pas la lenteur&nbsp;: c'est que le coût grandit avec le <em>produit</em> des deux tailles, pas avec leur somme. Doubler le nombre de clients ET le nombre de commandes multiplie le travail par quatre. C'est exactement ce que dit le rapport <strong>4,03</strong> mesuré par le test du doublement — et c'est pour cela qu'un traitement « qui a toujours marché » se met un jour à ne plus finir la nuit.</p></div></div>
+
+<h2>Le coût amorti&nbsp;: cher de temps en temps, gratuit le reste du temps</h2>
+
+<p>Il y a une quatrième façon de compter, qu'on croise dès qu'on écrit <code>push()</code> sur un tableau. Un tableau dynamique a une capacité fixe&nbsp;; quand elle est atteinte, il en alloue une plus grande et recopie tout. La plupart des insertions ne coûtent rien&nbsp;; quelques-unes coûtent très cher.</p>
+
+@@CODE:amorti.js@@
+
+@@SORTIE:amorti.js@@
+
+<p>La première table chiffre le compromis. Agrandir de <strong>capacité + 1</strong> demande <strong>4&nbsp;999&nbsp;950&nbsp;000</strong> recopies pour 100&nbsp;000 insertions — c'est-à-dire <strong>49999,500</strong> recopies par insertion, un comportement quadratique. Doubler la capacité en demande <strong>131&nbsp;071</strong>, soit <strong>1,311</strong> par insertion, au prix d'une mémoire finale de <strong>131&nbsp;%</strong> de ce qui est utilisé. Quadrupler ramène à <strong>0,874</strong> recopie par insertion, pour une mémoire finale de <strong>262&nbsp;%</strong> de ce qui est utilisé.</p>
+
+<p>Cette première table a un défaut qu'il faut nommer, parce qu'il est instructif&nbsp;: elle ne mesure qu'<em>une</em> taille. Or à <em>n</em> = 100&nbsp;000, «&nbsp;×2&nbsp;» vient tout juste de doubler et occupe 131&nbsp;%, tandis que «&nbsp;×1,5&nbsp;» occupe 138&nbsp;% <em>et</em> recopie davantage&nbsp;: la table donne «&nbsp;×1,5&nbsp;» perdante sur les deux axes, ce qui contredit l'idée même de compromis. La seconde table moyenne donc sur <strong>96 tailles</strong>, de 50&nbsp;000 à 145&nbsp;000, et le compromis réapparaît proprement&nbsp;: <strong>2,437</strong> recopies pour <strong>122&nbsp;%</strong> de mémoire en ×1,5&nbsp;; <strong>1,419</strong> pour <strong>142&nbsp;%</strong> en ×2&nbsp;; <strong>0,790</strong> pour <strong>237&nbsp;%</strong> en ×4. Moins on recopie, plus on gaspille — et «&nbsp;×2&nbsp;» est le point d'équilibre usuel.</p>
+
+<p>La démonstration est ensuite refaite proprement&nbsp;: les recopies valent 1 + 2 + 4 + … + 2<sup><em>k</em></sup>, une somme géométrique qui vaut 2<sup><em>k</em>+1</sup> − 1, donc au plus 2<em>n</em> − 1. Le rapport mesuré dépend de la position de <em>n</em> entre deux puissances de 2&nbsp;: il vaut <strong>1,02300</strong> à <em>n</em> = 1&nbsp;000, juste avant un doublement, et <strong>1,99995</strong> à <em>n</em> = 65&nbsp;537, juste après. Il <em>frôle</em> donc 2 sans jamais l'atteindre. Il est <em>borné</em>, donc constant au sens de la notation — et c'est bien la borne 2<em>n</em>, pas <em>n</em>, qu'il faut annoncer.</p>
+
+<p>Mais le vrai enseignement est dans le dernier bloc. Le coût amorti vaut <strong>2,311</strong> unités par insertion, ce qui est excellent&nbsp;; la plus chère des insertions coûte <strong>65&nbsp;537</strong> unités, soit <strong>28&nbsp;362</strong> fois la moyenne. Et cette insertion-là n'apparaît nulle part dans les mesures usuelles&nbsp;: le coût médian vaut <strong>1</strong>, le 99<sup>e</sup> centile vaut <strong>1</strong>, le 99,9<sup>e</sup> vaut encore <strong>1</strong>, et il faut monter au <strong>99,99<sup>e</sup></strong> centile pour voir apparaître un <strong>129</strong>. Un serveur qui surveille sa latence au 99<sup>e</sup> centile <strong>ne verra rien</strong>. Les «&nbsp;pics inexpliqués&nbsp;» se cachent exactement là&nbsp;: dans une moyenne parfaitement rassurante.</p>
+
+<h2>La mémoire a sa propre complexité</h2>
+
+<p>Tout ce qui précède compte des opérations. Or un programme consomme aussi de la mémoire, et cette consommation a sa propre croissance, qui n'est pas la même. On peut être rapide et gourmand, lent et sobre, ou les deux à la fois.</p>
+
+@@CODE:memoire.js@@
+
+@@SORTIE:memoire.js@@
+
+<p>Les trois versions de Fibonacci donnent la même valeur, <strong>832&nbsp;040</strong>, pour des coûts sans commune mesure&nbsp;: <strong>2&nbsp;692&nbsp;537</strong> appels pour la version récursive naïve, <strong>59</strong> pour la version mémoïsée, <strong>30</strong> pour l'itérative. Le récursif fait <strong>45&nbsp;636</strong> fois plus d'appels que le mémoïsé et <strong>89&nbsp;751</strong> fois plus que l'itératif, pour un résultat identique. Mais la comparaison ne s'arrête pas au temps&nbsp;: le mémoïsé garde <strong>29</strong> cases en mémoire quand l'itératif n'en garde <strong>2</strong>. Le mémoïsé achète du temps avec de la mémoire — c'est un échange, pas un progrès gratuit.</p>
+
+<p>La table du milieu contient une jolie surprise. Le nombre d'appels du récursif naïf est multiplié par <strong>2,6180</strong> chaque fois que <em>n</em> augmente de 2. Ce nombre est φ², le carré du <strong>nombre d'or</strong> — c'est-à-dire que le coût vaut O(φ<sup><em>n</em></sup>), une exponentielle de base <strong>1,6180</strong> et non 2. Elle croît donc <em>moins vite</em> que 2<sup><em>n</em></sup> — <strong>577</strong> fois moins à <em>n</em> = 30 —, et cela ne la sauve pas&nbsp;: elle reste exponentielle, et c'est cela qui décide.</p>
+
+<p>Le dernier bloc est celui à retenir. Deux fonctions somment un tableau récursivement. Elles ont le même air, rendent le même résultat, et une seule passe à l'échelle&nbsp;: celle qui écrit <code>t.slice(1)</code> alloue (<em>n</em>−1) + (<em>n</em>−2) + … + 1 + 0 cellules — chaque étage recopie tout sauf la première case —, soit <em>n</em>(<em>n</em>−1)/2 = <strong>319&nbsp;600</strong> cellules pour additionner 800 nombres — toutes vivantes en même temps, puisque chaque étage tient la sienne. Sa complexité est <strong>quadratique en mémoire</strong>, et en temps aussi, puisque copier ces cellules est du travail. Un seul appel de méthode sépare les deux versions dans le code.</p>
+
+<h2>Un million de lignes, chiffré</h2>
+
+<p>Reste à répondre à la question du titre. Voici la même tâche — trouver les doublons d'un fichier — écrite de trois façons, mesurée sur des tailles réelles, puis extrapolée à un million de lignes par une formule qu'on aura vérifiée d'abord.</p>
+
+@@CODE:echelle.js@@
+
+@@SORTIE:echelle.js@@
+
+<p>Notons la précaution prise avant d'extrapoler&nbsp;: le programme confronte son <em>modèle</em> à ses <em>mesures</em>. Les deux boucles imbriquées coûtent entre <strong>0,885</strong> et <strong>0,912</strong> fois la borne <em>n</em>(<em>n</em>−1)/2, l'écart venant du <code>break</code> qui sort dès qu'un doublon est trouvé&nbsp;; le tri suivi d'un passage coûte entre <strong>1,0010</strong> et <strong>1,0007</strong> fois <em>n</em>·log₂<em>n</em> + (<em>n</em>−1). Ce second modèle mérite un mot&nbsp;: la première version de ce programme comparait la mesure au seul <em>n</em>·log₂<em>n</em>, obtenait un excédent de 8 à 11&nbsp;% et l'attribuait vaguement aux «&nbsp;fins de fusion&nbsp;». C'était faux. La fusion seule coûte <em>n</em>·log₂<em>n</em> à un millième près&nbsp;; la totalité de l'excédent est le <strong>passage final</strong> qui compare les voisins, <em>n</em>−1 opérations. Nommer ce terme fait passer l'écart de 8&nbsp;% à <strong>0,1&nbsp;%</strong> — et le rend stable, alors que le correctif de 8&nbsp;% décroissait avec <em>n</em>.</p>
+
+<p>L'extrapolation emploie ensuite la borne exacte <em>n</em>(<em>n</em>−1)/2 pour les deux boucles — c'est-à-dire le <em>pire</em> cas, celui d'un fichier sans aucun doublon — et ce modèle à deux termes pour le tri.</p>
+
+<p>Voici alors la réponse, pour un million de lignes&nbsp;:</p>
+
+<ul>
+<li>deux boucles imbriquées&nbsp;: <strong>5.00e+11</strong> opérations, soit <strong>8,3 min</strong>&nbsp;;</li>
+<li>trier puis passer une fois&nbsp;: <strong>2.09e+7</strong> opérations, soit <strong>20,9 ms</strong>&nbsp;;</li>
+<li>une table de hachage&nbsp;: <strong>1.00e+6</strong> opérations, soit <strong>1,0 ms</strong>.</li>
+</ul>
+
+<p>Un rapport de <strong>5.0e+5</strong> entre la première et la dernière. Et il ne s'agit pas d'un algorithme sophistiqué contre un algorithme naïf&nbsp;: la troisième version tient en trois lignes et emploie un <code>Set</code>, que tout le monde connaît.</p>
+
+<p>Le contrepoint est tout aussi important, et le programme le donne&nbsp;: sur <strong>200</strong> lignes, les mêmes deux boucles coûtent <strong>19&nbsp;900</strong> opérations contre 200, soit un écart absolu de <strong>19,7 µs</strong>. Invisible. Ce n'est pas la <em>classe</em> qui change entre les deux situations — les deux boucles sont quadratiques dans les deux cas —, c'est <strong>ce qu'elle coûte</strong>. Réécrire les deux boucles quand <em>n</em> vaut 200 est une perte de temps&nbsp;; ne pas les réécrire quand <em>n</em> vaut un million est une panne.</p>
+
+<p>Le dernier bloc, enfin, ne mesure rien&nbsp;: il <em>résout</em> l'inéquation <em>n</em>(<em>n</em>−1)/2 &gt; 10<sup>9</sup> par balayage, sur la machine hypothétique. Le seuil qu'il donne est peut-être le chiffre le plus utile de la leçon&nbsp;: les deux boucles dépassent la seconde à partir de <strong>44&nbsp;722</strong> lignes, et la minute à partir de <strong>346&nbsp;411</strong>. En dessous de quarante-cinq mille lignes, personne ne s'aperçoit de rien.</p>
+
+<h2>L'antisèche&nbsp;: quel symptôme, quelle cause, quelle mesure</h2>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Diagnostiquer une croissance — chaque ligne chiffrée dans cette leçon, par une mesure ou par un calcul explicite</caption>
+    <thead><tr><th scope="col">Ce qu'on observe</th><th scope="col">Ce que c'est</th><th scope="col">Comment le confirmer</th><th scope="col">Ce qu'on y gagne</th></tr></thead>
+    <tbody>
+      <tr><td>Le temps ×4 quand l'entrée ×2</td><td>quadratique&nbsp;: une boucle dans une boucle</td><td>test du doublement&nbsp;: rapport 4,00 mesuré</td><td>passer en table de hachage&nbsp;: 5,0 × 10<sup>5</sup> fois moins d'opérations à un million de lignes</td></tr>
+      <tr><td>Le temps ×8 quand l'entrée ×2</td><td>cubique&nbsp;: trois boucles</td><td>rapport 8,02, exposant 3,00</td><td>31,7 ans à un million (à 10<sup>9</sup> op/s)&nbsp;: c'est à repenser, pas à optimiser</td></tr>
+      <tr><td>Le temps un peu plus que ×2</td><td>quasi-linéaire, <em>n</em> log <em>n</em></td><td>rapport 2,22, décroissant vers 2</td><td>rien à faire&nbsp;: c'est déjà le bon régime pour un tri</td></tr>
+      <tr><td>Le temps ne bouge presque pas</td><td>logarithmique ou constant</td><td>rapport 1,13&nbsp;: le test ne tranche pas à cette échelle</td><td>doubler deux fois de plus pour lever le doute</td></tr>
+      <tr><td>Lent seulement sur les données du client</td><td>pire cas atteint par une donnée ordinaire</td><td>rejouer sur une entrée <em>déjà triée</em>&nbsp;: 22,2 fois la moyenne</td><td>changer le choix du pivot, ou l'algorithme</td></tr>
+      <tr><td>Pics rares et inexpliqués, moyenne saine</td><td>coût amorti&nbsp;: réallocation, redimensionnement</td><td>regarder le maximum, pas le 99<sup>e</sup> centile (1 contre 65&nbsp;537)</td><td>préallouer, ou accepter le pic en connaissance de cause</td></tr>
+      <tr><td>Mémoire qui explose, temps correct</td><td>copie à chaque étage récursif</td><td>compter les cellules&nbsp;: 319&nbsp;600 pour 800 nombres</td><td>passer un indice au lieu d'une tranche</td></tr>
+      <tr><td>La «&nbsp;bonne&nbsp;» solution est plus lente</td><td>on est en dessous du croisement</td><td>calculer le rang&nbsp;: 3&nbsp;987 pour 3<em>n</em>² contre 1000·<em>n</em>·log₂<em>n</em></td><td>garder la version simple, et le documenter</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>Ce qu'il faut retenir</h2>
+
+<ul>
+<li><strong>On compte, on ne chronomètre pas.</strong> Une durée dépend de la machine&nbsp;; un compte d'opérations est une propriété de l'algorithme. 127&nbsp;502&nbsp;330 contre 427&nbsp;035, soit 298,6 fois&nbsp;: ce rapport est le même partout.</li>
+<li><strong>À un million d'éléments, la table bascule.</strong> À un milliard d'opérations par seconde&nbsp;: linéaire 1,00 ms, quasi-linéaire 20,0 ms, quadratique 16,7 min, cubique 31,7 ans. Et 2<sup>100</sup> opérations demanderaient 2&nbsp;914 fois l'âge de l'univers.</li>
+<li><strong>O(g) veut dire «&nbsp;il existe c et n<sub>0</sub>&nbsp;»</strong>, et ces deux nombres s'exhibent&nbsp;: <em>c</em> = 4 donne <em>n</em><sub>0</sub> = 54&nbsp;; <em>c</em> = 3 ne marche pour aucun rang.</li>
+<li><strong>La notation ne dit pas qui gagne, elle dit qui gagne à la fin.</strong> 3<em>n</em>² bat 1000·<em>n</em>·log₂<em>n</em> jusqu'à <em>n</em> = 3&nbsp;987 inclus&nbsp;; l'autre ne passe devant qu'à 3&nbsp;988.</li>
+<li><strong>Le test du doublement classe un programme sans le lire</strong>&nbsp;: rapport 2 → linéaire, 4 → quadratique, 8 → cubique, un peu plus de 2 → <em>n</em> log <em>n</em>. Exposant = log₂(rapport).</li>
+<li><strong>Les constantes que la notation jette changent le temps réel.</strong> Entre <em>S</em> = 1 et <em>S</em> = 256, le même tri hybride en O(n log n) passe de 93&nbsp;138 à 564&nbsp;204 opérations.</li>
+<li><strong>Et le modèle de coût est une décision.</strong> En ne comptant que les comparaisons et les déplacements, le seuil optimal du tri hybride vaut 4&nbsp;; en facturant 20 unités par appel récursif, il monte à 16.</li>
+<li><strong>Quatre cas, pas un.</strong> Le tri par insertion&nbsp;: 1&nbsp;998 au mieux, 11&nbsp;558 sur une entrée presque triée, 495&nbsp;409 sur du désordre, 999&nbsp;999 au pire — 501 fois d'écart entre les extrêmes. Le tri rapide&nbsp;: 16&nbsp;960 sur du désordre, 999&nbsp;999 sur du trié.</li>
+<li><strong>Le hasard ne trouve pas le pire cas&nbsp;; une donnée ordinaire, si.</strong> 300 tirages n'ont jamais dépassé 1,31 fois la moyenne&nbsp;; une entrée déjà triée coûte 22,2 fois la moyenne.</li>
+<li><strong>Amorti ne veut pas dire uniforme.</strong> 2,311 unités par insertion en moyenne, 65&nbsp;537 pour la plus chère — invisible jusqu'au 99,9<sup>e</sup> centile, qui vaut encore 1.</li>
+<li><strong>La mémoire a sa propre complexité.</strong> Un <code>slice</code> par étage récursif&nbsp;: 319&nbsp;600 cellules pour additionner 800 nombres.</li>
+<li><strong>Et la réponse au titre du module</strong>&nbsp;: sur un million de lignes, 8,3 min contre 1,0 ms. Sur deux cents lignes, 19,7 µs d'écart — invisible.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Un traitement met 12 secondes sur 50&nbsp;000 lignes et 190 secondes sur 200&nbsp;000. Quelle est sa classe de complexité, et combien de temps mettra-t-il sur un million de lignes&nbsp;? Détaille le calcul.</li>
+<li>Un collègue veut remplacer un tri par insertion par un tri fusion dans une fonction appelée sur des listes de 8 éléments. Que lui réponds-tu, et sur quel chiffre de cette leçon t'appuies-tu&nbsp;?</li>
+<li>Un service affiche une latence médiane de 3 ms et un 99<sup>e</sup> centile de 4 ms, mais les utilisateurs signalent des blocages d'une seconde. Quelle hypothèse de cette leçon vérifies-tu d'abord, et comment&nbsp;?</li>
+</ol></div>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Complexité en temps</dt><dd>Le nombre d'<em>opérations</em> effectuées en fonction de la taille de l'entrée. Jamais une durée&nbsp;: une durée dépend de la machine, un compte d'opérations non.</dd>
+  <dt>Complexité en mémoire</dt><dd>La quantité de mémoire mobilisée en fonction de la taille de l'entrée. Indépendante de la complexité en temps&nbsp;: la somme récursive par tranches est linéaire en apparence et quadratique en mémoire.</dd>
+  <dt>O(g), grand O</dt><dd>Une <em>majoration</em> asymptotique&nbsp;: il existe <em>c</em> et <em>n</em><sub>0</sub> tels que <em>f</em>(<em>n</em>) ≤ <em>c</em>·<em>g</em>(<em>n</em>) au-delà de <em>n</em><sub>0</sub>. Dire qu'un algorithme est en O(n²) n'interdit pas qu'il soit aussi en O(n³)&nbsp;: une majoration reste vraie si on la relâche.</dd>
+  <dt>Θ(g), grand thêta</dt><dd>Une majoration <em>et</em> une minoration&nbsp;: le coût est encadré par deux multiples de <em>g</em>. C'est ce qu'on veut dire la plupart du temps quand on écrit O(), mais O() est plus court et le pli est pris.</dd>
+  <dt>Ω(g), grand oméga</dt><dd>Une minoration. Sert surtout à énoncer des limites théoriques&nbsp;: «&nbsp;aucun tri par comparaisons ne peut faire mieux que Ω(n log n)&nbsp;».</dd>
+  <dt>Constante multiplicative</dt><dd>Le facteur que la notation jette. Elle ne change pas la classe et change tout le reste&nbsp;: 6,1 fois de travail entre deux variantes du même tri hybride.</dd>
+  <dt>Terme dominant</dt><dd>Celui qui finit par écraser les autres. Dans 3<em>n</em>² + 50<em>n</em> + 200, c'est 3<em>n</em>² — mais il ne l'emporte qu'à partir de <em>n</em> = 21, il y a égalité à 20, et les autres pèsent encore 14,77 % à <em>n</em> = 100.</dd>
+  <dt>Croisement</dt><dd>La taille à partir de laquelle une classe supérieure devient effectivement plus rapide. 3&nbsp;988 pour 1000·<em>n</em>·log₂<em>n</em> face à 3<em>n</em>²&nbsp;; 10 pour le tri fusion face au tri par insertion.</dd>
+  <dt>Test du doublement</dt><dd>Doubler <em>n</em> et lire le rapport des coûts&nbsp;: 1 constant, 2 linéaire, 4 quadratique, 8 cubique. L'exposant vaut log₂ du rapport. S'applique à un programme dont on n'a pas le code.</dd>
+  <dt>Meilleur cas</dt><dd>Le coût sur l'entrée la plus favorable. 1&nbsp;998 pour le tri par insertion sur 1&nbsp;000 éléments déjà triés — linéaire.</dd>
+  <dt>Pire cas</dt><dd>Le coût sur l'entrée la plus défavorable. C'est ce que majore O() par convention. Attention&nbsp;: il n'est pas toujours rare — une entrée déjà triée l'atteint exactement pour le tri rapide à pivot terminal.</dd>
+  <dt>Cas moyen</dt><dd>La moyenne du coût sur une <em>loi de tirage</em> des entrées. Ce n'est pas la moyenne du meilleur et du pire, et la loi est une hypothèse qu'il faut oser écrire.</dd>
+  <dt>Coût amorti</dt><dd>Le coût moyen d'une opération sur une <em>suite</em> d'opérations, quand certaines sont rares et chères. 2,311 unités par insertion dans un tableau dynamique, alors que la plus chère en coûte 65&nbsp;537.</dd>
+  <dt>Tableau dynamique</dt><dd>Tableau qui s'agrandit tout seul en multipliant sa capacité par un facteur constant — souvent 2, parfois 1,5 — et en recopiant. C'est ce mécanisme qui se cache derrière un <code>push()</code>. Avec un facteur 2, le total des recopies est borné par 2<em>n</em>.</dd>
+  <dt>Mémoïsation</dt><dd>Garder en mémoire les résultats déjà calculés pour ne pas les recalculer. Échange du temps contre de la mémoire&nbsp;: 2&nbsp;692&nbsp;537 appels deviennent 59, au prix de 29 cases.</dd>
+  <dt>Modèle de coût</dt><dd>La décision de ce qu'on compte&nbsp;: comparaisons seules, comparaisons et déplacements, appels de fonction, accès mémoire. Le seuil optimal du tri hybride passe de 4 à 16 selon ce choix.</dd>
+  <dt>Asymptotique</dt><dd>«&nbsp;Quand <em>n</em> tend vers l'infini.&nbsp;» Tout le vocabulaire de cette leçon est asymptotique, et c'est sa force comme sa limite&nbsp;: il ne dit rien de ton <em>n</em> à toi tant que tu n'as pas calculé le croisement.</dd>
+</dl>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Cette leçon publie des durées en minutes et en années, mais aucune durée CHRONOMÉTRÉE. Pourquoi ?","a":["Parce qu'une durée chronométrée dépend de la machine, de la charge et du navigateur, alors qu'un compte d'opérations divisé par un débit posé en hypothèse se recalcule et se vérifie","Parce que JavaScript ne permet pas de mesurer le temps dans un Web Worker","Parce que les durées mesurées étaient trop courtes pour être significatives à ces tailles","Parce que la notation O() interdit par définition de parler de secondes"],"correct":0,"explain":"Les « 16,7 min » et « 31,7 ans » des tables viennent d'un compte d'opérations divisé par un milliard d'opérations par seconde : change l'hypothèse, la table se recalcule. Le programme chrono.js, lui, publie un verdict issu du chronomètre — « tri par insertion plus lent : true » — mais jamais la durée. Le compteur donne 127 502 330 contre 427 035, soit 298,6 fois : ce rapport ne bouge sur aucune machine."},
+  {"q":"Un algorithme coûte 3n² + 50n + 200 opérations. Que faut-il exhiber pour prouver qu'il est en O(n²) ?","a":["Une constante c et un rang n0 tels que le coût reste sous c·n² au-delà de n0 : par exemple c = 4 et n0 = 54","Uniquement la constante c, le rang étant toujours 1 par convention","Que le coût est exactement égal à c·n² pour une certaine constante c","Que 50n + 200 devient nul au-delà d'un certain rang"],"correct":0,"explain":"La définition demande DEUX nombres. Le programme les cherche : c = 3,5 donne n0 = 104 ; c = 4 donne n0 = 54 ; c = 10 donne n0 = 10. Et c = 3 ne marche pour aucun rang, ce qui montre que la définition exclut vraiment des valeurs."},
+  {"q":"Un traitement met 4 minutes sur un fichier, et 16 minutes sur un fichier deux fois plus gros. Que sais-tu ?","a":["Que le coût est quadratique : le rapport 4 quand n double donne un exposant log₂(4) = 2","Que le coût est linéaire, puisque la taille et le temps ont tous deux augmenté","Que le coût est cubique, 16 étant le cube de la taille doublée","Rien : deux points ne suffisent jamais à conclure quoi que ce soit"],"correct":0,"explain":"C'est le test du doublement. Mesuré sur six algorithmes : rapport 1,00 pour un coût constant, 2,00 linéaire, 4,00 quadratique, 8,02 cubique. Deux points suffisent à formuler cette hypothèse, et c'est la bonne réponse ici — mais la leçon montre aussi qu'ils peuvent tromper : la dichotomie donne 1,13, indiscernable d'un coût constant à ces tailles. Un troisième point confirme, un quatrième rassure."},
+  {"q":"Un algorithme en O(n log n) est-il toujours préférable à un algorithme en O(n²) ?","a":["Non : il ne l'est qu'au-delà du croisement, calculé ici à n = 3 988 pour 1000·n·log₂n face à 3n²","Oui : c'est la définition même d'une meilleure classe de complexité","Oui, sauf si le tableau est déjà trié","Non, mais uniquement si les données tiennent en mémoire"],"correct":0,"explain":"À n = 100, l'algorithme quadratique fait 30 000 opérations et le quasi-linéaire 664 386 : vingt-deux fois plus. Le quasi-linéaire ne passe devant qu'à partir de n = 3 988, et il faut atteindre un million pour qu'il soit 151 fois plus rapide."},
+  {"q":"Le même tri hybride, réglé avec un seuil S = 1 puis S = 256, passe de 93 138 à 564 204 opérations. Que dit la notation O() de ces deux variantes ?","a":["Qu'elles sont toutes deux en O(n log n) : S est une constante, et la notation jette les constantes","Que la seconde est en O(n²), puisqu'elle emploie un tri quadratique sur 256 éléments","Que la première est en O(n log n) et la seconde en O(n log n / S)","Que la notation ne s'applique pas à un algorithme hybride"],"correct":0,"explain":"C'est exactement ce que la notation ne voit pas. Toutes les valeurs de S donnent du O(n log n), parce que le travail quadratique porte sur des morceaux de taille bornée. Et pourtant le travail réel varie d'un facteur 6,1."},
+  {"q":"Le tri rapide à pivot terminal coûte 16 960 opérations sur 1 000 éléments tirés au sort. Combien sur 1 000 éléments déjà triés ?","a":["999 999 : le pivot est toujours le plus grand, les partitions valent 0 et n−1, et le coût devient quadratique","À peu près la même chose : un tri est indifférent à l'ordre initial","Moins : un tableau déjà trié n'a aucune permutation à effectuer","Le programme lève une erreur de débordement de pile"],"correct":0,"explain":"Soixante fois plus cher sur des données ORDONNÉES que sur du désordre. Et sur 300 tirages au sort de 300 éléments, le pire observé n'atteint que 1,31 fois la moyenne, tandis que la même taille déjà triée atteint exactement le pire cas théorique, soit 22,2 fois la moyenne. Le hasard ne trouve pas le pire cas ; une donnée ordinaire, si."},
+  {"q":"Un tableau dynamique double sa capacité. Quel est le coût AMORTI d'une insertion, et quel est le pire coût d'une insertion isolée ?","a":["2,311 unités en moyenne, mais jusqu'à 65 537 pour une seule insertion — invisible jusqu'au 99,9e centile","2,311 unités dans les deux cas : c'est le sens du mot amorti","65 537 unités en moyenne, la recopie étant systématique","1 unité dans les deux cas, la réallocation étant faite par le système"],"correct":0,"explain":"Sur 100 000 insertions, 99 983 coûtent 1 unité et 17 recopient. Le coût médian vaut 1, le 99e centile vaut 1, le 99,9e vaut encore 1, et le 99,99e vaut 129. Un serveur qui surveille son 99e centile ne verra jamais le pic à 65 537."},
+  {"q":"Deux fonctions somment un tableau récursivement, l'une avec t.slice(1), l'autre avec un indice. Qu'est-ce qui les sépare ?","a":["La version slice alloue n(n−1)/2 cellules toutes vivantes en même temps : 319 600 pour 800 nombres, soit une complexité quadratique en mémoire ET en temps","Rien de mesurable : slice ne fait que déplacer un pointeur","La version à indice déborde la pile plus tôt, car elle ne libère pas ses cadres","La version slice est plus rapide, la copie étant faite par le moteur en une instruction"],"correct":0,"explain":"Chaque étage garde sa tranche, et slice(1) d'un tableau de k cases en alloue k−1 : les cellules s'additionnent en (n−1) + (n−2) + … + 1 + 0 = n(n−1)/2. Les deux fonctions rendent le même résultat, ont le même air, et une seule passe à l'échelle."},
+  {"q":"Sur un million de lignes, chercher les doublons par deux boucles imbriquées coûte 5,00 × 10^11 opérations, contre 10^6 avec un Set. Faut-il toujours réécrire les deux boucles ?","a":["Non : sur 200 lignes l'écart absolu vaut 19,7 µs, invisible. Le seuil calculé est de 44 722 lignes pour dépasser la seconde","Oui : une complexité quadratique est un défaut à corriger quelle que soit la taille","Oui, car la table de hachage est aussi plus lisible dans tous les cas","Non : la table de hachage consomme trop de mémoire au-delà de 10 000 entrées"],"correct":0,"explain":"La classe est la même dans les deux situations ; c'est son coût qui change. Réécrire les deux boucles quand n vaut 200 est une perte de temps ; ne pas les réécrire quand n vaut un million est une panne. Le seuil de la minute est à 346 411 lignes."}
+]
+</script>
+
+<script type="application/json" data-exos>
+[
+  {"type":"code","run":{"expect":"1.99"},"placeholder":"un programme qui affiche, seul sur la dernière ligne, l'exposant déduit du test du doublement sur la fonction « mystere » de l'énoncé, arrondi à deux décimales","hints":["Tu n'as pas le droit de modifier « mystere » : compte les accès au tableau que tu lui passes.","Un Proxy avec un piège « get » sur les clés numériques suffit à compter.","Prends les tailles 125, 250, 500 et 1000, et lis log₂ du dernier rapport."],"link":{"href":"lecon-12.html","label":"Revoir « Classer un programme sans lire son code »"}},
+  {"type":"text","accept":["1241"],"placeholder":"rapport entre le nombre d'opérations de la version naïve et celui de la version indexée, arrondi à l'entier : ____","hints":["Le programme de la solution l'affiche, avec les deux comptes qui le composent.","La version naïve parcourt en moyenne la moitié des clients : n²/2 opérations.","La solution le redonne seul sur sa dernière ligne."],"link":{"href":"lecon-12.html","label":"Revoir « Un million de lignes, chiffré »"}},
+  {"type":"text","accept":["1.95","1,95"],"placeholder":"coût amorti par opération de la file à deux piles, arrondi à deux décimales : ____","hints":["Compte les push et les pop élémentaires, pas les appels à enfiler et défiler.","Chaque élément est déplacé quatre fois au maximum : c'est la borne à vérifier.","La solution le redonne seul sur sa dernière ligne."],"link":{"href":"lecon-12.html","label":"Revoir « Le coût amorti »"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Voici une fonction que tu n'as pas le droit de modifier&nbsp;:</p>
+@@CODE:mystere.js@@
+<p>Classe-la par le <strong>test du doublement</strong>, sur les tailles 125, 250, 500 et 1&nbsp;000, en comptant les <em>accès indexés</em> au tableau qu'elle effectue — <code>t[i]</code>, <code>t[j]</code>, <code>t[k]</code>&nbsp;; les lectures de <code>t.length</code> ne comptent pas. Affiche l'exposant déduit du dernier rapport, arrondi à deux décimales, <em>seul sur la dernière ligne</em>.</p>
+<details><summary>Voir une solution</summary>@@CODE:solution-1.js@@
+@@SORTIE:solution-1.js@@
+<p>L'astuce est le <code>Proxy</code>&nbsp;: on ne modifie pas <code>mystere</code>, on lui passe un tableau qui compte ses propres lectures. Le piège <code>get</code> ne compte que les clés numériques, pour ne pas facturer les lectures de <code>length</code>.</p>
+<p>Les rapports mesurés montent vers 4&nbsp;: <strong>3,895</strong>, puis <strong>3,938</strong>, puis <strong>3,965</strong>. L'exposant déduit vaut <strong>1,99</strong> — et non 2,00, parce que la boucle en <em>k</em> ajoute un terme en <em>n</em>·log₂<em>n</em> qui n'a pas encore complètement disparu à ces tailles. C'est exactement le phénomène mesuré dans la section sur la définition&nbsp;: les termes de second ordre pèsent encore, et le rapport converge vers 4 par en dessous.</p>
+<p>La lecture théorique confirme la mesure&nbsp;: la boucle interne en <em>j</em> fait <em>n</em>, <em>n</em>−1, …, 1 tours, soit <em>n</em>(<em>n</em>+1)/2 au total, et la boucle en <em>k</em> fait log₂<em>n</em> tours répétés <em>n</em> fois. Le premier terme est quadratique, le second quasi-linéaire&nbsp;: la fonction est en O(<em>n</em>²).</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Un rapport quotidien associe <strong>5&nbsp;000 commandes</strong> à <strong>5&nbsp;000 clients</strong>. Les clients portent les identifiants 0 à 4&nbsp;999 et les noms <code>client-0</code> à <code>client-4999</code>&nbsp;; les commandes portent les références <code>C0</code> à <code>C4999</code> et un identifiant de client tiré au sort avec le générateur <code>xorshift32</code> de graine <strong>20260912</strong>, dans cet ordre. La version d'origine cherche le nom du client de chaque commande en parcourant le tableau des clients. Réécris-la avec une <code>Map</code>, prouve que les deux versions rendent exactement la même liste, applique le test du doublement aux deux, et affiche le <strong>rapport du nombre d'opérations</strong> entre la naïve et l'indexée, arrondi à l'entier, <em>seul sur la dernière ligne</em>. Convention de comptage, pour que la réponse soit unique&nbsp;: une opération par client examiné du côté naïf, et du côté indexé <em>tout</em> le travail — les <em>n</em> insertions dans la <code>Map</code> <strong>et</strong> les <em>n</em> lectures.</p>
+<details><summary>Voir une solution</summary>@@CODE:solution-2.js@@
+@@SORTIE:solution-2.js@@
+<p>Le résultat&nbsp;: <strong>12&nbsp;405&nbsp;398</strong> opérations contre <strong>10&nbsp;000</strong>, soit <strong>1&nbsp;241</strong> fois. Et la mesure valide le modèle&nbsp;: la version naïve parcourt en moyenne la moitié des clients avant de trouver, donc <em>n</em>²/2 = 12&nbsp;500&nbsp;000 opérations attendues — mesuré <strong>0,992</strong> fois le modèle.</p>
+<p>Le test du doublement départage les deux sans ambiguïté&nbsp;: <strong>3,96</strong> puis <strong>4,02</strong> puis <strong>4,03</strong> d'un côté, <strong>2,00</strong> exactement de l'autre. Quadratique contre linéaire.</p>
+<p>C'est le motif le plus fréquent de tous&nbsp;: une jointure écrite comme une double boucle. Il passe inaperçu tant que les deux tables sont petites, et il devient le point chaud dès qu'elles grossissent — parce que son coût grandit avec le <em>produit</em> des deux tailles, pas avec leur somme. La réécriture ne demande aucune bibliothèque, aucune structure exotique&nbsp;: une <code>Map</code>, construite une fois, lue ensuite.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Construis une <strong>file</strong> (premier entré, premier sorti) à partir de <strong>deux piles</strong>, sans jamais employer autre chose que <code>push</code> et <code>pop</code>. Prouve que son coût amorti est borné&nbsp;: joue <strong>100&nbsp;000 opérations</strong> tirées avec le générateur <code>xorshift32</code> de graine <strong>20260913</strong> — enfilement si le tirage est inférieur à 0,55 ou si la file est vide, défilement sinon —, compte les <code>push</code> et <code>pop</code> élémentaires, vérifie que le total reste sous 4 fois le nombre d'enfilements, et compare à une file naïve écrite avec <code>shift()</code>. Affiche le <strong>coût amorti par opération</strong>, arrondi à deux décimales, <em>seul sur la dernière ligne</em>.</p>
+<details><summary>Voir une solution</summary>@@CODE:solution-3.js@@
+@@SORTIE:solution-3.js@@
+<p>Le coût amorti mesuré vaut <strong>1,9460</strong>, pour <strong>194&nbsp;598</strong> opérations élémentaires sur <strong>54&nbsp;959</strong> enfilements et <strong>45&nbsp;041</strong> défilements. La borne à vérifier est 4 × 54&nbsp;959 = <strong>219&nbsp;836</strong>, et elle tient.</p>
+<p>La preuve ne demande aucune probabilité, et c'est ce qui en fait la beauté&nbsp;: chaque élément est poussé sur la pile d'entrée, dépilé, poussé sur la pile de sortie, puis dépilé. <strong>Quatre opérations, jamais plus</strong>, quelle que soit la suite d'appels. C'est le raisonnement type de l'amortissement&nbsp;: on ne majore pas le coût d'une opération, on majore le coût total d'un <em>élément</em> sur toute sa vie.</p>
+<p>La distribution reste très inégale&nbsp;: <strong>99&nbsp;967</strong> opérations coûtent 1 unité, et la plus chère en coûte <strong>17&nbsp;031</strong>, soit <strong>8&nbsp;752</strong> fois le coût amorti. Un transfert de pile n'est pas gratuit, il est seulement <em>rare</em>.</p>
+<p>Le témoin donne le contraste&nbsp;: la file écrite avec <code>shift()</code> demande <strong>225&nbsp;301&nbsp;566</strong> opérations élémentaires, <strong>1&nbsp;158</strong> fois plus. Le test du doublement le confirme&nbsp;: <strong>1,91</strong> d'un côté — linéaire —, <strong>3,96</strong> de l'autre — quadratique. Les deux files ont pourtant l'air d'être «&nbsp;en O(1) par opération&nbsp;» quand on lit leur code&nbsp;; une seule l'est.</p></details></div>
