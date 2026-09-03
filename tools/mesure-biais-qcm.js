@@ -224,6 +224,7 @@ corpus.forEach(function (q) { (parCours[q.cours] = parCours[q.cours] || []).push
 var coursMesure = Object.keys(parCours).map(function (c) {
   var qs = parCours[c];
   var best = { nom: "", taux: -1 };
+  var parStrategie = {};
   STRATEGIES.slice(1).forEach(function (s) {
     var succes = 0;
     qs.forEach(function (q) {
@@ -231,6 +232,7 @@ var coursMesure = Object.keys(parCours).map(function (c) {
       if (choix.indexOf(q.k) !== -1) succes += 1 / choix.length;
     });
     var t = succes / qs.length;
+    parStrategie[s.nom] = t;
     if (t > best.taux) best = { nom: s.nom, taux: t };
   });
   var lg = 0;
@@ -238,7 +240,8 @@ var coursMesure = Object.keys(parCours).map(function (c) {
     var choix = argMax(longueurs(q));
     if (choix.indexOf(q.k) !== -1) lg += 1 / choix.length;
   });
-  return { cours: c, questions: qs.length, longueur: lg / qs.length, meilleure: best.nom, taux: best.taux };
+  return { cours: c, questions: qs.length, longueur: lg / qs.length,
+    meilleure: best.nom, taux: best.taux, parStrategie: parStrategie };
 }).sort(function (a, b) { return b.taux - a.taux; });
 
 /* Les questions les plus devinables : combien de strategies exploitables tombent

@@ -477,10 +477,51 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       - **les quatre indices à surveiller** sont donc : longueur, détail, mot technique exclusif,
         écho de l'énoncé. Les trois écartés le sont **par la mesure**, et le vérificateur de B2 n'a
         pas à les contrôler.
-- [ ] **B2 · Le vérificateur, avant les corrections.** `tools/verif-qcm-biais.js` : signale une
+- [x] **B2 · Le vérificateur, avant les corrections.** `tools/verif-qcm-biais.js` : signale une
       question dont la bonne réponse dépasse les distracteurs au-delà d'un seuil mesuré. **Éprouvé
       par injection** : des questions volontairement biaisées doivent être vues. Entre dans la
       chaîne (phase A).
+
+      **FAIT le 2026-09-03.** Un choix de conception, d'abord, parce qu'il commande tout le reste :
+      **un vérificateur qui exigerait la cible tout de suite rougirait pendant des mois** — 89,5 % de
+      biais aujourd'hui, 40 cours à réécrire — **et cesserait donc d'être lu.** C'est ainsi qu'un outil
+      devient décoratif. `verif-qcm-biais.js` est donc un **CLIQUET** : il ne juge pas le passé, il
+      interdit qu'il empire. Il ne mesure rien lui-même, il lit `mesure-biais-qcm.js --json` (B1).
+
+      **Quatre échecs, adossés à `tools/qcm-biais-reference.json`** (90 cours figés au 2026-09-03,
+      global 89,5 %) : **régression** d'un cours de plus d'un point ; **cible perdue** par un cours
+      marqué `traite` (au-dessus de 40 % sur la longueur, ou de 60 % sur toute stratégie
+      exploitable) ; **cours neuf non conforme** — un cours absent de la référence doit naître sous la
+      cible, ce que cinq cours récents prouvent faisable ; **référence orpheline**. La référence se
+      refige avec `--ecrire`, jamais automatiquement : un cliquet qui se remet à zéro tout seul ne
+      cliquette pas.
+
+      **Éprouvé par injection — `tools/verif-qcm-biais-mutations.js`, 6 cas sur 6 vus, 7,4 s**, dépôt
+      « propre, comme au départ » :
+
+      | cas injecté | attendu | vu |
+      |---|:---:|:---:|
+      | 6 questions devinables ajoutées à `doc` (0,0 % au départ) | régression | ✔ |
+      | 60 questions devinables, `doc` marqué « traité » | cible perdue | ✔ |
+      | `zig` (100 %) retiré de la référence, il redevient un cours neuf | cours neuf non conforme | ✔ |
+      | un `cours-fantome` ajouté à la référence | référence orpheline | ✔ |
+      | la référence rendue illisible | code 1 | ✔ |
+      | **CONTRE-ÉPREUVE : 6 questions ÉQUILIBRÉES au même endroit** | **reste vert** | ✔ |
+
+      **La contre-épreuve est le cas qui compte le plus.** Sans elle, un outil qui rougirait sur
+      *toute* modification passerait l'épreuve les cinq premiers cas : c'est exactement le défaut
+      inverse de `verif-liste-alternatives.js`, qui ne peut pas rougir. Les questions équilibrées sont
+      écrites avec quatre options de longueur comparable **et la bonne réponse en dernière position**,
+      pour qu'aucun indice résiduel ne puisse la sauver.
+
+      **Entré dans la chaîne** (`qcmbiai`, 0,4 s) et son épreuve dans le mode dédié : `--rapide`
+      passe de 25 à **26 étapes (76,6 s, tout vert)**, sans option **51**, `--complet` **54**,
+      `--strict` **51**, `--mutations` **13**.
+
+      ⚠️ **Ce que le cliquet ne fait pas** : il ne signale pas les 5 519 questions déjà devinables.
+      C'est délibéré — ce serait 90 lignes rouges à chaque passe. La dette reste mesurée par
+      `mesure-biais-qcm.js` et par l'avertissement non bloquant de `verif-contenu.js` ; elle se solde
+      en B3 et B4, cours par cours, et chaque gain se verrouille avec `--ecrire`.
 - [ ] **B3 · Les six cours à 100 %** (`archi`, `equipe`, `iac`, `mobile`, `ux`, `zig`). Étoffer les
       distracteurs. **Chaque distracteur réécrit doit rester FAUX** — c'est le piège de cette phase :
       en allongeant un mauvais choix, on le rend facilement vrai. Rejouer le QCM après correction.

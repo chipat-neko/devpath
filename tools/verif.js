@@ -16,17 +16,17 @@
      gitgraf  node tools/verif-git-graphe.js  le graphe dessine face a git log --graph
      gitscen  node tools/verif-git-scenarios.js  les situations guidees : la solution atteint le but
 
-   USAGE (durees mesurees le 2026-09-03, apres l'entree du garde-fou du point A5)
-     node tools/verif.js            # 50 etapes, plusieurs minutes (le rendu pilote Chrome)
-     node tools/verif.js --rapide   # 25 etapes, 75,6 s : tout ce qui ne pilote pas Chrome,
+   USAGE (durees mesurees le 2026-09-03, apres l'entree du cliquet des QCM, point B2)
+     node tools/verif.js            # 51 etapes, plusieurs minutes (le rendu pilote Chrome)
+     node tools/verif.js --rapide   # 26 etapes, 76,6 s : tout ce qui ne pilote pas Chrome,
                                     #   moins les trois bacs a sable Git (voir l'arbitrage
                                     #   plus bas : ils pesaient 76 % du mode a eux seuls)
-     node tools/verif.js --complet  # 53 etapes : le rendu balaie 229 pages, la fraicheur est
+     node tools/verif.js --complet  # 54 etapes : le rendu balaie 229 pages, la fraicheur est
                                     #   lue A L'AFFICHAGE, ET les verificateurs sont eux-memes
                                     #   mis a l epreuve par 9 + 13 fautes injectees
-     node tools/verif.js --strict   # 50 etapes, code 1 des qu'un outil signale quoi que ce soit
+     node tools/verif.js --strict   # 51 etapes, code 1 des qu'un outil signale quoi que ce soit
      node tools/verif.js --lister   # la liste des etapes du mode demande, sans rien lancer
-     node tools/verif.js --mutations  # les 12 epreuves par injection, et rien d'autre : elles
+     node tools/verif.js --mutations  # les 13 epreuves par injection, et rien d'autre : elles
                                     #   MODIFIENT des fichiers avant de les restaurer, et le mode
                                     #   verifie lui-meme que le depot ressort comme il est entre
 
@@ -159,6 +159,13 @@ var ETAPES = [
      reviendrait au chantier suivant, et de la meme facon : en ecrivant un nouveau
      verif-*.js sans penser a le brancher. */
   { nom: "gardech", fichier: "verif-chaine-declaree.js", args: [], quoi: "aucun verificateur hors chaine sans declaration ecrite" },
+  /* LE CLIQUET DU BIAIS DES QCM (point B2). Un apprenant qui choisit toujours la
+     reponse la plus longue reussit 89,5 % des 6 167 questions du site : une dette
+     editoriale de 40 cours, que ce verificateur ne pretend pas solder. Il interdit
+     qu'elle EMPIRE — regression d'un cours de plus d'un point, cours marque traite
+     qui reperd sa cible, cours NEUF publie hors cible, reference orpheline. Il ne
+     mesure rien lui-meme : il lit `mesure-biais-qcm.js --json`. */
+  { nom: "qcmbiai", fichier: "verif-qcm-biais.js", args: [], quoi: "le biais des QCM n'a empire nulle part (cliquet)" },
   /* Un caractere de controle ecrit par accident est INVISIBLE a la relecture :
      un « \b » devenu un vrai backspace dans une expression reguliere avait fait
      afficher « 0 » a deux compteurs, et seule une capture d'ecran l'avait montre. */
@@ -538,6 +545,7 @@ if (flag("mutations")) {
      Les durees sont celles du releve A1, refaites par ce mode a chaque passage. */
   var EPREUVES = [
     { nom: "mth-chif", fichier: "maths/module-5/verif-chiffres-mutations.js", vues: "toutes" },
+    { nom: "qcmbiai ", fichier: "verif-qcm-biais-mutations.js", vues: "6 / 6" },
     { nom: "fraich  ", fichier: "fraicheur/verif-fraicheur-mutations.js", vues: "13 / 13" },
     { nom: "fr-affi ", fichier: "fraicheur/verif-affichage-mutations.js", vues: "14 / 14" },
     { nom: "mth-inj ", fichier: "maths/preuve-injection.js", vues: "13 / 13" },
