@@ -26,6 +26,9 @@
                                     #   mis a l epreuve par 9 + 13 fautes injectees
      node tools/verif.js --strict   # 49 etapes, code 1 des qu'un outil signale quoi que ce soit
      node tools/verif.js --lister   # la liste des etapes du mode demande, sans rien lancer
+     node tools/verif.js --mutations  # les 12 epreuves par injection, et rien d'autre : elles
+                                    #   MODIFIENT des fichiers avant de les restaurer, et le mode
+                                    #   verifie lui-meme que le depot ressort comme il est entre
 
    Note : en mode rapide, « exemples » n'execute que JavaScript (pur Node, ~1 s) ;
    Python (via l'interpreteur, ~35 s) n'est joue qu'en mode complet.
@@ -492,6 +495,157 @@ if (COMPLET) {
     quoi: "les verificateurs VOIENT-ILS une faute ? 9 fautes injectees, 9 attendues rouges",
     lent: true,
   });
+}
+
+/* =========================================================================== *
+ * MODE --mutations : LES EPREUVES PAR INJECTION, ET RIEN D'AUTRE.
+ *
+ * POURQUOI UN MODE A PART. Ces douze outils prouvent que les verificateurs
+ * VOIENT vraiment une faute — c'est le controle le plus precieux du projet, et
+ * le point A1 a mesure que dix d'entre eux n'etaient lances par rien. Mais ils
+ * MODIFIENT des fichiers du depot avant de les restaurer, et ils coutent
+ * ensemble pres d'une heure : les verser dans `verif.js` ordinaire serait a la
+ * fois risque et intenable. D'ou un mode dedie.
+ *
+ * CE QUE CE MODE GARANTIT, ET QU'AUCUNE EPREUVE NE PEUT GARANTIR SEULE.
+ * Chaque epreuve pose deja ses filets (`exit`, `SIGINT`, `uncaughtException`).
+ * Aucun de ces filets ne se declenche sur un ARRET BRUTAL : c'est ce qui est
+ * arrive au point A1, ou `preuves/execution-ancres-mutations.js`, tuee a 614 s,
+ * a laisse sa faute injectee dans `js/execution.js`. Le mode releve donc l'etat
+ * du depot AVANT chaque epreuve, le recompare APRES, et RESTAURE lui-meme tout
+ * fichier laisse modifie — en comptant l'epreuve en echec, car une epreuve qui
+ * salit le depot a echoue meme si son verdict etait bon.
+ * Il ramasse aussi les Chrome orphelins : apres le kill de `verif-clic.js`,
+ * cinquante `chrome.exe` tournaient encore. Seuls les Chrome de test sont tues
+ * (ceux dont la ligne de commande porte un profil du projet), jamais celui de
+ * l'utilisateur.
+ *
+ *   node tools/verif.js --mutations
+ *   node tools/verif.js --mutations --seul=git-modele
+ *   node tools/verif.js --mutations --minutes=20    # plafond par epreuve
+ * ========================================================================== */
+if (flag("mutations")) {
+  /* Ordre : de la plus courte a la plus longue, pour qu'un defaut se voie vite.
+     Les durees sont celles du releve A1, refaites par ce mode a chaque passage. */
+  var EPREUVES = [
+    { nom: "mth-chif", fichier: "maths/module-5/verif-chiffres-mutations.js", vues: "toutes" },
+    { nom: "fraich  ", fichier: "fraicheur/verif-fraicheur-mutations.js", vues: "13 / 13" },
+    { nom: "fr-affi ", fichier: "fraicheur/verif-affichage-mutations.js", vues: "14 / 14" },
+    { nom: "mth-inj ", fichier: "maths/preuve-injection.js", vues: "13 / 13" },
+    { nom: "chaine  ", fichier: "verif-chaine-mutations.js", vues: "9 / 9" },
+    { nom: "vexlien ", fichier: "verif-execution-liens-mutations.js", vues: "8 / 8" },
+    { nom: "git-mod ", fichier: "verif-git-modele-mutations.js", vues: "29 / 29" },
+    { nom: "git-graf", fichier: "verif-git-graphe-mutations.js", vues: "29 / 29" },
+    { nom: "git-scen", fichier: "verif-git-scenarios-mutations.js", vues: "30 / 30" },
+    { nom: "vexec   ", fichier: "verif-execution-mutations.js", vues: "11 / 12 — un angle mort connu" },
+    { nom: "git-cmd ", fichier: "verif-git-commandes-mutations.js", vues: "?" },
+    { nom: "vexancr ", fichier: "preuves/execution-ancres-mutations.js", vues: "?" },
+  ];
+
+  var argSeul = (args.filter(function (a) { return a.indexOf("--seul=") === 0; })[0] || "").slice(7);
+  var argMin = Number((args.filter(function (a) { return a.indexOf("--minutes=") === 0; })[0] || "").slice(10)) || 25;
+  var PLAFOND = argMin * 60 * 1000;
+  if (argSeul) {
+    /* Plusieurs motifs, separes par des virgules : le releve se fait par lots,
+       les cinq epreuves longues ne tenant pas dans le meme passage que les courtes. */
+    var motifs = argSeul.split(",").map(function (m) { return m.trim(); }).filter(Boolean);
+    EPREUVES = EPREUVES.filter(function (e) {
+      return motifs.some(function (m) { return e.fichier.indexOf(m) !== -1; });
+    });
+    if (!EPREUVES.length) { console.log("aucune epreuve ne correspond a --seul=" + argSeul); process.exit(2); }
+  }
+
+  /* L'etat du depot, ligne par ligne. On ne se contente pas d'exiger un depot
+     PROPRE au depart : un chantier en cours est la situation normale. On releve
+     donc l'etat de reference et on ne s'alarme que des lignes NOUVELLES. */
+  function etatDepot() {
+    var r = cp.spawnSync("git", ["status", "--porcelain"], { cwd: RACINE, encoding: "utf8" });
+    if (r.status !== 0) return null;
+    return (r.stdout || "").split("\n").filter(function (l) { return l.trim(); });
+  }
+  function cheminDe(ligne) {
+    var p = ligne.slice(3).trim();
+    if (p.indexOf(" -> ") !== -1) p = p.split(" -> ")[1];
+    return p.replace(/^"|"$/g, "");
+  }
+  /* Ne tue QUE les Chrome de test : ceux dont la ligne de commande porte un
+     profil du projet. Le Chrome de l'utilisateur n'est jamais touche. */
+  function ramasserChrome() {
+    if (process.platform !== "win32") return 0;
+    var ps = "Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" | " +
+      "Where-Object { $_.CommandLine -match 'syntaxe-|scratchpad..chrome|verif-stockage' } | " +
+      "ForEach-Object { try { Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop; 'tue' } catch {} }";
+    var r = cp.spawnSync("powershell", ["-NoProfile", "-NonInteractive", "-Command", ps],
+      { encoding: "utf8", timeout: 60000 });
+    return ((r.stdout || "").match(/tue/g) || []).length;
+  }
+
+  /* `--lister` doit rester INOFFENSIF dans tous les modes. Sans ce garde, un
+     `--mutations --lister` lancait les douze epreuves : c'est arrive, et le run
+     interrompu a laisse une mutation dans `pages/js/lecon-02.html`. */
+  if (flag("lister")) {
+    EPREUVES.forEach(function (e) { console.log(e.fichier); });
+    process.exit(0);
+  }
+
+  var reference = etatDepot();
+  var referenceDepart = reference;
+  if (reference === null) { console.log("git est introuvable : ce mode ne peut pas garantir la propriete du depot."); process.exit(2); }
+  console.log("verif.js --mutations — " + EPREUVES.length + " epreuve(s) par injection");
+  console.log("  etat du depot au depart : " + (reference.length ? reference.length + " fichier(s) deja modifie(s), ignores" : "propre"));
+  console.log("  plafond par epreuve : " + argMin + " min\n");
+
+  var bilan = [];
+  var t0Total = Date.now();
+  EPREUVES.forEach(function (e) {
+    process.stdout.write("  " + e.nom + "  " + e.fichier + "\n");
+    /* L'etat de reference est relu JUSTE AVANT chaque epreuve, et non une fois
+       pour toutes : ainsi le mode n'impute a une epreuve que ce qu'elle a elle-meme
+       laisse, et il ne restaure pas un fichier modifie entre-temps par autre chose. */
+    reference = etatDepot() || reference;
+    var t0 = Date.now();
+    var r = cp.spawnSync(process.execPath, [path.join(TOOLS, e.fichier)], {
+      encoding: "utf8", cwd: RACINE, timeout: PLAFOND, killSignal: "SIGKILL",
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    var duree = ((Date.now() - t0) / 1000).toFixed(1);
+    var tues = ramasserChrome();
+    /* La garantie du mode : ce que l'epreuve a laisse derriere elle. */
+    var apres = etatDepot() || [];
+    var traces = apres.filter(function (l) { return reference.indexOf(l) === -1; });
+    var restaures = [];
+    traces.forEach(function (l) {
+      var f = cheminDe(l);
+      if (/^\?\?/.test(l)) return;                       /* un fichier NOUVEAU n'est pas une trace a effacer */
+      var g = cp.spawnSync("git", ["checkout", "--", f], { cwd: RACINE, encoding: "utf8" });
+      restaures.push(f + (g.status === 0 ? "" : " (ECHEC)"));
+    });
+    var expire = r.error && r.error.code === "ETIMEDOUT";
+    var etat = expire ? "EXPIRE" : r.status === 0 ? "OK" : "SIGNALE";
+    if (restaures.length) etat = "SALE";
+    bilan.push({ e: e, etat: etat, duree: duree, code: r.status, restaures: restaures, tues: tues,
+      sortie: (r.stdout || "") + (r.stderr || "") });
+    process.stdout.write("          -> " + etat + " en " + duree + " s" +
+      (tues ? "  (" + tues + " chrome.exe ramasse(s))" : "") +
+      (restaures.length ? "  ⚠ fichier(s) laisse(s) modifie(s), restaure(s) : " + restaures.join(", ") : "") + "\n\n");
+  });
+
+  console.log("=".repeat(70));
+  bilan.forEach(function (b) {
+    var lignes = b.sortie.split("\n").filter(function (l) {
+      return /vue|voit|inject|mutation|aveugle|ECHEC|OK/i.test(l) && l.trim();
+    });
+    console.log("  " + b.e.nom + "  " + b.etat + "   (" + b.duree + " s)");
+    lignes.slice(-1).forEach(function (l) { console.log("            " + l.trim().slice(0, 100)); });
+  });
+  console.log("=".repeat(70));
+  var mauvais = bilan.filter(function (b) { return b.etat !== "OK"; });
+  var final = etatDepot() || [];
+  var restant = final.filter(function (l) { return referenceDepart.indexOf(l) === -1 && !/^\?\?/.test(l); });
+  console.log("  total : " + ((Date.now() - t0Total) / 1000).toFixed(1) + " s · " +
+    (mauvais.length ? mauvais.length + " epreuve(s) en defaut" : "les " + bilan.length + " epreuves ont vu leurs fautes"));
+  console.log("  depot a la sortie : " + (restant.length ? "SALE — " + restant.map(cheminDe).join(", ") : "propre, comme au depart"));
+  process.exit(mauvais.length || restant.length ? 1 : 0);
 }
 
 /* --lister : rendre la liste des etapes du mode demande, une par ligne, sans rien

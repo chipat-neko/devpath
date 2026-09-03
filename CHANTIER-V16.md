@@ -313,10 +313,56 @@ distinguent, et elles ne se traitent pas pareil :
       un état révolu). Les **10 épreuves par injection** restantes sont l'objet de A4, et leur
       déclaration formelle celui de A5 : le recensement affiche encore **17 à régler**.
 
-- [ ] **A4 · Un mode `--mutations` pour les 7 épreuves par injection.** Elles prouvent que les
+- [x] **A4 · Un mode `--mutations` pour les 7 épreuves par injection.** Elles prouvent que les
       vérificateurs voient vraiment les fautes — c'est le contrôle le plus précieux du projet et il
       n'est lancé par rien. **Exigence : chaque épreuve doit restaurer l'état initial même en cas
       d'échec**, et le mode doit le vérifier (`git status` propre à la sortie).
+
+      **FAIT le 2026-09-03.** `node tools/verif.js --mutations` — **12 épreuves**, pas 7 : le cadrage
+      en comptait sept, A1 en avait recensé dix, et le décompte réel de `--lister` en donne **douze**
+      (les deux de plus sont `maths/preuve-injection.js` et `verif-chaine-mutations.js`, qu'aucun
+      inventaire n'avait rattachées à cette famille). Options : `--seul=motif[,motif]`,
+      `--minutes=N` (plafond par épreuve, 25 par défaut), `--lister`.
+
+      **Ce que le mode garantit, et qu'aucune épreuve ne garantit seule.** Chaque épreuve pose déjà
+      ses filets (`exit`, `SIGINT`, `uncaughtException`) et aucun ne se déclenche sur un **arrêt
+      brutal** — c'est ainsi qu'A1 a retrouvé une faute injectée dans `js/execution.js`. Le mode
+      relève donc l'état du dépôt **juste avant chaque épreuve**, le recompare après, **restaure
+      lui-même** tout fichier laissé modifié et **compte l'épreuve en échec** (`SALE`) : une épreuve
+      qui salit le dépôt a échoué même quand son verdict était bon. Il ramasse aussi les Chrome de
+      test orphelins (filtrés sur la ligne de commande : le Chrome de l'utilisateur n'est jamais
+      touché). La référence est relue avant chaque épreuve et non une fois pour toutes, sinon un
+      fichier modifié entre-temps par un autre travail serait écrasé.
+
+      **Relevé de ce passage — les 7 épreuves tenant dans le budget, mesurées, pas estimées :**
+
+      | épreuve | verdict | durée | fautes vues |
+      |---|:---:|---:|---|
+      | `maths/module-5/verif-chiffres-mutations.js` | OK | 0,2 s | 5 / 5 |
+      | `fraicheur/verif-fraicheur-mutations.js` | OK | 2,3 s | 13 / 13 |
+      | `fraicheur/verif-affichage-mutations.js` | OK | 39,3 s | 14 / 14 |
+      | `maths/preuve-injection.js` | OK | 30,7 s | toutes, cours intact |
+      | `verif-chaine-mutations.js` | OK | 151,3 s | 9 / 9, arbre identique |
+      | `verif-execution-liens-mutations.js` | OK | 100,9 s | 8 / 8 |
+      | **total des six** | **6 OK** | **329,4 s** | dépôt « propre, comme au départ » |
+      | `preuves/execution-ancres-mutations.js` (plafond 2 min) | **SALE** | 120,0 s | tuée : a laissé `js/execution.js` muté |
+
+      **La septième est la preuve du filet, et c'est pour elle que le mode existe.** Tuée au plafond,
+      elle a laissé `js/execution.js` modifié ; le mode l'a vu, l'a restauré, l'a comptée en échec, et
+      a rendu « depot a la sortie : propre, comme au depart ». `node --check js/execution.js` vert
+      après coup. Sans le mode, cette mutation partait au commit suivant.
+
+      **Un défaut trouvé en le testant, et corrigé :** `--mutations --lister` **lançait** les douze
+      épreuves au lieu de les lister. Le run interrompu a laissé une mutation dans
+      `pages/js/lecon-02.html` (restaurée, `git status` propre). `--lister` est désormais inoffensif
+      dans ce mode aussi. Retenir aussi que **tuer le mode lui-même ne restaure rien** : il ne protège
+      que des épreuves, pas de sa propre mort.
+
+      **Non rejouées dans ce passage, sciemment** : les 5 épreuves longues — `verif-git-modele`
+      (287,6 s en A1), `verif-git-graphe` (414,5 s), `verif-git-scenarios` (538,1 s),
+      `verif-execution-mutations` et `verif-git-commandes-mutations` (> 600 s chacune, non terminées
+      en A1). Ensemble **plus de 45 minutes**, hors budget d'une passe qui doit aussi écrire. Leur
+      relevé d'A1 tient ; le mode les enchaîne sans changement.
 
 - [ ] **A5 · Le garde-fou qui manquait.** Un contrôle qui compare la liste des `tools/**/verif-*.js`
       à ceux que `verif.js` lance réellement, et **échoue** si un vérificateur n'est dans aucun mode
