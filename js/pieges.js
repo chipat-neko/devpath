@@ -2,8 +2,8 @@
    pieges.js — Les pièges du code, rassemblés PAR COURS.
 
    POURQUOI (point V12-D1). Le site s'est donné une convention éditoriale forte —
-   1 893 encadrés « Piège fréquent » (et « Erreur fréquente ») sur 1 057 leçons et
-   65 cours — et aucune page ne les rassemblait. Or un piège est exactement le
+   1 908 encadrés « Piège fréquent » (et « Erreur fréquente ») sur 1 070 leçons et
+   89 cours — et aucune page ne les rassemblait. Or un piège est exactement le
    matériau qu'on veut relire avant un exercice : une prédiction vérifiable, pas
    une définition. Zéro contenu nouveau : tout est déjà écrit dans les leçons.
 

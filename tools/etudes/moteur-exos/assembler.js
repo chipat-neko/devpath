@@ -57,8 +57,8 @@ Object.keys(REPERES).forEach(function (nom) {
   r.texte = extrait(r.a, r.b);
 });
 
-if (lignesLecon.length !== 1899) {
-  fautes.push("js/lecon.js fait " + lignesLecon.length + " lignes ; l'étude en annonce 1899 (mets à jour le texte de la page)");
+if (lignesLecon.length !== 2019) {
+  fautes.push("js/lecon.js fait " + lignesLecon.length + " lignes ; l'étude en annonce 2019 (mets à jour le texte de la page)");
 }
 
 if (fautes.length) {

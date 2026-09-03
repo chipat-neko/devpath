@@ -940,7 +940,7 @@
       if (!tk.length) {
         items = []; active = -1; input.setAttribute("aria-activedescendant", "");
         input.setAttribute("aria-expanded", "false");
-        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1540 leçons et 64 pages du site.</li>';
+        list.innerHTML = '<li class="cmdk__empty" role="presentation">Tape au moins deux lettres pour chercher parmi 1540 leçons et 74 pages du site.</li>';
         return;
       }
       items = doSearch(tk);
