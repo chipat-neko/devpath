@@ -526,8 +526,9 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       distracteurs. **Chaque distracteur réécrit doit rester FAUX** — c'est le piège de cette phase :
       en allongeant un mauvais choix, on le rend facilement vrai. Rejouer le QCM après correction.
 
-      **EN COURS — 1 cours sur 6 fait le 2026-09-03 : `iac`, 100,0 % → 13,3 %.** La case reste
-      décochée parce qu'elle en porte six ; le protocole ci-dessous est établi et rejouable tel quel.
+      **EN COURS — 2 cours sur 6 faits le 2026-09-03 : `iac` 100,0 % → 13,3 %, `archi` 100,0 % →
+      7,3 %.** La case reste décochée parce qu'elle en porte six ; le protocole ci-dessous est établi
+      et rejouable tel quel.
 
       **Ce qui a été fait sur `iac`** (11 leçons, **45 questions**, 33 en QCM de leçon et 12 en QCM
       bilan) : **135 distracteurs sur 135 réécrits**, chacun tenu entre **70 % et 130 %** de la
@@ -584,13 +585,94 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       vert**, `verif-rendu` sur les pages touchées **0 erreur / 0 avertissement**, cliquet **vert**
       avec `iac` marqué `traite` et son épreuve **6/6**.
 
-      **LE PROTOCOLE, pour les cinq cours restants** (`archi` 48 questions, `equipe` 68, `mobile` 73,
-      `ux` 56, `zig` 71 — **316 questions, ~950 distracteurs**) : (1) un agent par lot de leçons,
-      fichiers disjoints ; (2) interdiction absolue de toucher `q`, `correct`, `explain` et la bonne
-      réponse — **contrôlé après coup contre `git show HEAD:`**, pas sur parole ; (3) fourchette
-      70–130 % vérifiée par mesure ; (4) **contradiction adversariale obligatoire** — sans elle, 22
-      questions de `iac` avaient deux réponses défendables ; (5) régénérer `quiz-index` **et**
-      relancer `doc/verif-normatif` ; (6) marquer le cours `traite` et refiger la référence.
+      **LE PROTOCOLE, pour les quatre cours restants** (`equipe` 68 questions, `mobile` 73, `ux` 56,
+      `zig` 71 — **268 questions, 804 distracteurs**) : (1) un agent par lot de leçons, fichiers
+      disjoints ; (2) interdiction absolue de toucher `q`, `correct`, `explain` et la bonne réponse —
+      **contrôlé après coup contre `git show HEAD:`**, pas sur parole, par
+      `tools/mesure-qcm-intouchable.js` ; (3) fourchette 70–130 % **et les DEUX sens du biais**
+      vérifiés par `tools/mesure-qcm-longueurs.js` ; (4) **contradiction adversariale obligatoire** —
+      sans elle, 22 questions de `iac` et une vingtaine de `archi` avaient deux réponses défendables ;
+      (5) régénérer `quiz-index` **et** relancer `doc/verif-normatif`, puis **régénérer une seconde
+      fois** ; (6) marquer le cours `traite` et refiger la référence.
+
+      ---
+
+      **`archi` — FAIT le 2026-09-03 : 100,0 % → 7,3 %.** 12 leçons, **48 questions** (36 en QCM de
+      leçon, 12 en bilan), **144 distracteurs sur 144 réécrits**, tous entre **0,72 et 1,30** de la
+      longueur de leur bonne réponse. Cinq agents écrivains en parallèle sur des fichiers disjoints,
+      puis cinq relecteurs adversariaux, puis **un seul écrivain (moi) pour toutes les corrections**.
+
+      | mesure | avant | après 1ʳᵉ passe | après contradiction |
+      |---|---:|---:|---:|
+      | « la plus longue » | **100,0 %** | 20,8 % | **7,3 %** |
+      | **« la plus COURTE »** | **0,0 %** | **53,1 %** | **8,3 %** |
+      | « la plus détaillée » | 85,4 % | 39,1 % | **43,2 %** |
+      | « le mot technique exclusif » | 82,5 % | 22,6 % | **25,7 %** |
+      | pire stratégie exploitable | 100,0 % | 39,1 % | **43,2 %** (cible ≤ 60 %) |
+      | rangs de longueur (0 = la plus longue) | **48/0/0/0** | 10/9/4/**25** | **4/14/27/3** |
+      | global du site, « la plus longue » | 88,9 % | 88,3 % | **88,1 %** |
+
+      *Colonnes « la plus longue », « détaillée », « technique » et « global » : `mesure-biais-qcm.js`,
+      qui pondère les ex æquo. Colonnes « la plus COURTE » et « rangs » : `mesure-qcm-longueurs.js`,
+      qui compte brut — d'où 8,3 % là où la première rend 7,3 % sur le critère symétrique. Les trois
+      colonnes « avant » ont été mesurées en restaurant `pages/archi` depuis `HEAD~1`, pas recopiées.*
+
+      ⚠️ **LA LEÇON DE CE POINT, et elle change le protocole pour les quatre cours suivants :
+      ÉTOFFER LES DISTRACTEURS N'AVAIT PAS FERMÉ LA FAILLE, IL L'AVAIT RETOURNÉE.** Après la première
+      passe, la bonne réponse était la **plus COURTE dans 25 questions sur 48** — « toujours la plus
+      courte » rendait **53,1 %** contre 25 % au hasard, soit **au-dessus du seuil de 50 %** que
+      `doc/verif-normatif.js` applique déjà au cours `doc` sur ce critère exact. Trois relecteurs sur
+      cinq l'ont vu **sans se concerter**, et la mesure a tranché. C'est le même défaut de forme que
+      le biais d'origine, dans l'autre sens : un correctif qui déplace une faille au lieu de la
+      fermer. **`tools/mesure-qcm-longueurs.js` rend désormais les DEUX sens et la distribution des
+      rangs**, pour qu'un cours « traité » soit réellement plat et pas seulement retourné.
+
+      **68 prises rendues par les cinq relecteurs, dont une vingtaine de défauts de FOND** — des
+      distracteurs devenus vrais ou défendables, tous corrigés après jugement pièce par pièce :
+      - « la file achemine les messages plus vite que le bus, **qui recopie chaque événement sur
+        disque avant de le diffuser** » — la seconde moitié est ce que fait réellement Kafka, que la
+        leçon 08 cite elle-même dans son encadré ;
+      - « le bus n'existe qu'en mode synchrone : l'émetteur **attend l'accusé de réception** » — les
+        *publisher confirms* et `acks=all` existent, seul le glissement « de chaque abonné » est faux ;
+      - « **l'inversion de la règle de dépendance** : à force d'adaptateurs, le domaine finit par
+        importer le pilote de base » — c'est un piège que la leçon 05 enseigne dans sa propre liste ;
+      - « une ADR est un **livrable contractuel** imposé par les normes du métier » — vrai dans toute
+        organisation régulée ; « son numéro sert de clé primaire, le modifier casserait les liens » —
+        vrai aussi, la leçon 11 renvoie elle-même à « ADR-0012 » ;
+      - « la base de référence et **son cache mémoire** » pour CQRS — une base de lecture
+        dénormalisée *est* fonctionnellement ce cache, et la leçon 09 la décrit ainsi ;
+      - « mettre en attente les appels qui n'aboutissent pas, puis les **rejouer au rétablissement** »
+        — c'est mot pour mot le « Cas réel » imprimé trois écrans plus haut dans la même leçon.
+
+      **6 doublons** (deux distracteurs décrivant la même chose, le QCM tombant à deux choix) et une
+      dizaine d'**indices de forme** corrigés : parenthèses, deux-points et capitales portés par la
+      seule bonne réponse ; un motif « l'option qui parle de chiffrement est fausse » repérable d'une
+      question à l'autre ; des distracteurs s'auto-disqualifiant par un absolu ou par une queue
+      indéfendable. **Aucune bonne réponse n'a été touchée** : les indices de forme ont été neutralisés
+      en les **ajoutant aux distracteurs**, jamais en les retirant de la bonne réponse.
+
+      ⚠️ **Deux contradictions RÉFUTÉES par le code, comme sur `iac`** : « la bonne réponse est en
+      première position, donc le travail est cosmétique » — `shuffle` mélange dans `buildQuiz`
+      (`js/lecon.js`) **et** dans `js/examen.js`. Vérifié avant d'écarter la remarque.
+
+      ⚠️ **Le contenu qui se mesure lui-même s'est périmé une seconde fois.** `doc/verif-normatif.js`
+      est passé à **58/60 tout seul** : `doc/lecon-03` publie le taux de manquement à sa propre règle
+      `S3`, que mes 48 questions ont déplacé — **5 439 → 5 394 manquements sur 6 103 (89,1 % →
+      88,4 %)**, **9 mentions** corrigées, puis 60/60. Et **il a fallu régénérer `quiz-index` DEUX
+      fois** : le chiffre figurait aussi dans l'**explication d'un QCM** de cette leçon, invisible à
+      une recherche dans le bloc `data-quiz` brut. Exactement le piège de `iac`, au même endroit.
+
+      **Contrôles finaux** : `mesure-qcm-intouchable` **0 atteinte** sur 48 questions (énoncés, index
+      `correct`, explications et bonnes réponses identiques à `git show HEAD:`) ; index vérifié
+      lui-même (**48 questions d'`archi`, 8,3 % au comptage brut**) ; `verif-html` **0** ;
+      `verif-donnees` **0 erreur** ; `verif.js --rapide` **26 étapes tout vert (76,6 s)** ; cliquet
+      refigé avec `archi` marqué `traite` (**2 cours traités**) et son épreuve par injection **6/6**.
+
+      ⚠️ **TROUVÉ HORS PÉRIMÈTRE, non corrigé** : `verif-rendu` signale que `archi/lecon-12` déclare
+      **3 exercices dans `data-exos` pour 4 blocs `.exercise`** — le bloc en excès reste sans champ de
+      réponse. **Préexistant** (identique dans `HEAD`, ce n'est pas une régression) et **répandu :
+      39 leçons sur 1 629** ont cet écart. Aucun vérificateur de la chaîne ne le voit ; seul
+      `verif-rendu` le rend, en avertissement de console. À traiter en phase E ou en point neuf.
 - [ ] **B4 · Les cours suivants, par lots.** Jusqu'à la cible fixée en B1.
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
