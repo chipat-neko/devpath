@@ -1,0 +1,252 @@
+<p>Ouvre n'importe quelle console de navigateur et tape <code>0.1 + 0.2</code>. La réponse est <code>0.30000000000000004</code>. C'est probablement la question la plus posée de toute l'informatique, elle a sa propre adresse web, elle fait le tour des réseaux sociaux tous les six mois, et la réponse habituelle — «&nbsp;c'est à cause des flottants&nbsp;» — n'explique rien du tout.</p>
+
+<p>Cette leçon donne la réponse complète. Pas une intuition&nbsp;: <strong>la valeur exacte</strong>, tous ses chiffres, et ce qu'on en fait. Parce que ce n'est pas une curiosité&nbsp;: c'est ce qui fait diverger deux totaux de facture, boucler indéfiniment une animation, et changer un identifiant de commande entre le serveur et le navigateur.</p>
+
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que cette leçon ajoute à ce que le site dit déjà</p><p>Une vingtaine de leçons du site mentionnent <code>0.1 + 0.2</code>, et la <a href="../js/lecon-14.html">leçon sur les nombres en JavaScript</a> montre déjà la structure d'un flottant sur 64 bits. Toutes s'arrêtent au conseil&nbsp;: «&nbsp;ne compare pas avec <code>===</code>&nbsp;». Ici, on va plus loin&nbsp;: la valeur exacte de 0,1 avec ses 55 décimales, l'espacement réel entre deux flottants voisins, le moment où l'égalité stricte redevient sûre, la limite de la règle <code>Number.EPSILON</code>, dont on mesurera l'échelle exacte à laquelle elle cesse de mesurer quoi que ce soit, et ce qu'il faut faire pour l'argent et pour les identifiants.</p></div></div>
+
+<h2>Ce que 0,1 vaut vraiment</h2>
+
+<p>Commençons par ce que personne ne montre&nbsp;: la valeur exacte. Un nombre à virgule flottante n'est pas «&nbsp;un nombre approché&nbsp;»&nbsp;; c'est un <strong>entier multiplié par une puissance de 2</strong>, et cet entier comme cette puissance sont parfaitement déterminés. On peut donc les extraire et écrire le résultat en décimal, sans rien arrondir.</p>
+
+@@CODE:valeur-exacte.js@@
+
+@@SORTIE:valeur-exacte.js@@
+
+<p>Voilà la réponse, et elle tient en une ligne&nbsp;: <strong>la variable ne contient pas 0,1</strong>. Elle contient</p>
+
+<figure class="code-block" data-file="valeur-de-0-1.txt" data-runner="skip"><pre><code class="language-plaintext">0.1000000000000000055511151231257827021181583404541015625</code></pre></figure>
+
+<p>soit 7 205 759 403 792 794 × 2<sup>−56</sup>, avec <strong>55 chiffres après la virgule</strong>. Ce nombre est le plus proche voisin de 0,1 que la machine sache écrire, et il est légèrement <em>au-dessus</em>. De même, le flottant nommé <code>0.2</code> est au-dessus de la valeur 0,2, et celui nommé <code>0.3</code> est en dessous de la valeur 0,3.</p>
+
+<p>À partir de là, <code>0.1 + 0.2 !== 0.3</code> n'est plus une bizarrerie&nbsp;: c'est <strong>arithmétiquement correct</strong>. Le programme donne les deux valeurs exactes&nbsp;; leur <em>écart</em>, lui, n'apparaît qu'à la dix-septième décimale — les deux écritures, elles, divergent dès le premier chiffre, l'une commençant par 0,3000… et l'autre par 0,2999…. Mieux&nbsp;: la dernière mesure montre qu'elles sont <strong>voisines immédiates</strong> — un seul flottant les sépare. Le calcul ne s'est pas «&nbsp;trompé&nbsp;» de beaucoup&nbsp;: il a donné le résultat le plus proche possible, qui se trouve n'être pas celui qu'on attendait.</p>
+
+<h3>Pourquoi 0,1 et pas 0,5</h3>
+
+<p>La cause est la même que pour un tiers en base 10. Écrire 1/3 en décimal demande une infinité de chiffres&nbsp;: 0,333… On tronque, et 3 × 0,333333 ne fait pas 1. En base 2, ce sont les fractions dont le dénominateur n'est <em>pas</em> une puissance de 2 qui deviennent infinies. Or 0,1 = 1/10, et 10 = 2 × 5&nbsp;: le facteur 5 est fatal.</p>
+
+<p>La dernière partie du programme le vérifie plutôt que de l'affirmer. Sur les cent valeurs 0,1 · 0,2 · … · 10,0, <strong>20 seulement sont exactes</strong>, et ce sont exactement les multiples de 0,5. La règle prédite — «&nbsp;exact si le dénominateur réduit est une puissance de 2&nbsp;» — a été confrontée aux cent écritures exactes&nbsp;: <strong>zéro désaccord</strong>.</p>
+
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Alors pourquoi la console affiche-t-elle «&nbsp;0.1&nbsp;»&nbsp;?</p><p>Parce que l'affichage ne montre pas la valeur&nbsp;: il montre l'écriture qui emploie le <strong>moins de chiffres significatifs</strong> tout en redonnant, relue, ce même flottant. Comme aucun autre flottant n'est plus proche de 0,1 que celui-là, un seul chiffre significatif suffit à le désigner sans ambiguïté — donc «&nbsp;0.1&nbsp;» s'affiche. Ce n'est pas la plus courte <em>chaîne</em>&nbsp;: la page imprime ailleurs <code>100000000000000000000</code> là où <code>1e20</code> aurait désigné le même nombre en quatre caractères. Le mensonge n'est pas dans le calcul, il est dans l'écran. <code>(0.1).toPrecision(20)</code> lève le voile&nbsp;: <code>0.10000000000000000555</code>.</p></div></div>
+
+<h2>Les flottants ne sont pas répartis régulièrement</h2>
+
+<p>Voici la propriété qui explique tout le reste, et que presque personne n'a en tête&nbsp;: l'écart entre deux nombres flottants consécutifs <strong>n'est pas constant</strong>. Il double chaque fois qu'on franchit une puissance de 2 — tant qu'on reste dans le domaine <em>normalisé</em>&nbsp;; tout en bas, sous 2,2 × 10<sup>−308</sup>, l'écart redevient constant, et la première ligne du tableau est déjà dans ce régime.</p>
+
+@@CODE:espacement.js@@
+
+@@SORTIE:espacement.js@@
+
+<p>Le tableau se lit comme une carte du terrain&nbsp;: au voisinage de 1, deux flottants consécutifs sont séparés de 2,2 × 10<sup>−16</sup>&nbsp;; au voisinage d'un million, de 1,16 × 10<sup>−10</sup>&nbsp;; au voisinage de 10<sup>20</sup>, de <strong>16 384</strong>. À cette échelle, il n'existe aucun flottant entre 10<sup>20</sup> et 10<sup>20</sup> + 16 383&nbsp;: <em>ces nombres n'existent pas</em>.</p>
+
+<p>Trois conséquences immédiates, toutes visibles dans la sortie&nbsp;:</p>
+
+<ul>
+<li><strong><code>Number.EPSILON</code> n'est pas «&nbsp;la précision des flottants&nbsp;».</strong> C'est l'écart au voisinage de <em>1</em>, et de 1 seulement. Au voisinage d'un million, l'écart réel vaut <strong>524 288 fois</strong> cette valeur. Toute comparaison qui emploie <code>EPSILON</code> comme tolérance absolue est donc fausse dès qu'on quitte le voisinage de 1 — la section suivante le mesure.</li>
+<li><strong>Juste au-delà de 2<sup>53</sup>, l'écart vaut 2</strong>&nbsp;: ajouter 1 ne change plus rien. Et il continue de doubler — 4 après 2<sup>54</sup>, 16 autour de 10<sup>17</sup>. <code>2**53 + 1</code> rend exactement <code>2**53</code>. C'est la limite des «&nbsp;entiers sûrs&nbsp;», et elle a des conséquences très concrètes sur les identifiants.</li>
+<li><strong>La moitié des flottants <em>positifs</em> vit entre 0 et 1.</strong> Mesuré&nbsp;: <strong>49,98 %</strong> des flottants positifs finis sont inférieurs à 1 — soit un quart de tous les flottants finis, les négatifs étant symétriques. La droite des nombres flottants est massivement concentrée près de zéro — ce qui est exactement ce qu'on veut pour des calculs scientifiques, et exactement ce qu'on ne veut pas pour de la comptabilité.</li>
+</ul>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Schéma montrant que l'espacement entre deux nombres flottants consécutifs double à chaque puissance de deux. Trois règles horizontales sont superposées. La première, au voisinage de un, porte des graduations très serrées et l'étiquette : écart de deux virgule deux fois dix puissance moins seize. La deuxième, au voisinage de deux puissance cinquante-trois, porte des graduations espacées et l'étiquette : écart de deux unités, donc ajouter un ne change rien. La troisième, au voisinage de dix puissance vingt, porte des graduations très écartées et l'étiquette : écart de seize mille trois cent quatre-vingt-quatre. Une légende conclut que la précision d'un flottant est relative à sa taille et non absolue, que passé deux puissance cinquante-trois ajouter un est absorbé, et que 49,98 % des flottants positifs vivent sous 1.">
+    <text class="d-label" x="320" y="24" text-anchor="middle" font-size="13">L'écart entre deux flottants voisins double à chaque puissance de 2</text>
+
+    <text class="d-tag" x="30" y="62" font-size="11">AUTOUR DE 1</text>
+    <path class="d-line" style="fill:none" d="M30 78 L440 78" />
+    <path class="d-line" style="fill:none" d="M30 72 L30 84 M74 72 L74 84 M118 72 L118 84 M162 72 L162 84 M206 72 L206 84 M250 72 L250 84 M294 72 L294 84 M338 72 L338 84 M382 72 L382 84 M426 72 L426 84 M440 72 L440 84" />
+    <text class="d-mut" x="456" y="82" font-size="10.5">écart : 2,2 × 10⁻¹⁶</text>
+
+    <text class="d-tag" x="30" y="130" font-size="11">AUTOUR DE 2⁵³</text>
+    <path class="d-line" style="fill:none" d="M30 146 L440 146" />
+    <path class="d-line" style="fill:none" d="M30 140 L30 152 M140 140 L140 152 M250 140 L250 152 M360 140 L360 152 M440 140 L440 152" />
+    <text class="d-mut" x="456" y="150" font-size="10.5">écart : 2</text>
+
+    <text class="d-tag" x="30" y="198" font-size="11">AUTOUR DE 10²⁰</text>
+    <path class="d-line" style="fill:none" d="M30 214 L440 214" />
+    <path class="d-line" style="fill:none" d="M30 208 L30 220 M250 208 L250 220 M440 208 L440 220" />
+    <text class="d-mut" x="456" y="218" font-size="10.5">écart : 16 384</text>
+
+    <text class="d-mut" x="320" y="242" text-anchor="middle" font-size="10.5">Précision RELATIVE à la taille, jamais absolue. Passé 2⁵³, « +1 » est absorbé : 49,98 % des flottants vivent sous 1.</text>
+  </svg>
+  <figcaption>Tant qu'on reste dans le domaine normalisé, un flottant garde environ 16 chiffres significatifs&nbsp;: c'est le <em>pas</em>, pas le nombre de chiffres, qui change avec la taille. Sous 2,2 × 10<sup>−308</sup>, en revanche, les valeurs dites <em>dénormalisées</em> perdent progressivement leurs chiffres jusqu'à n'en garder qu'un.</figcaption>
+</figure>
+
+<h2>Comparer deux nombres à virgule</h2>
+
+<p>Trois règles circulent. La première — l'égalité stricte — est déclarée dangereuse partout. La deuxième — <code>Math.abs(a - b) &lt; Number.EPSILON</code> — est celle qu'on recopie sans réfléchir. La troisième, relative, est la bonne dans la plupart des cas. Aucune n'est universelle, et le programme le montre en les mettant en échec toutes les trois.</p>
+
+@@CODE:comparer.js@@
+
+@@SORTIE:comparer.js@@
+
+<p>Le tableau du haut est déjà instructif&nbsp;: pour <code>1e9 + 0.1</code> et <code>1e9 + 0.2</code>, la règle 2 répond «&nbsp;différents&nbsp;» alors que ce sont deux nombres qui ne diffèrent que de 0,1 à l'échelle du milliard — c'est-à-dire d'un dix-milliardième en relatif. La règle 3 les déclare proches, ce qui est presque toujours le comportement voulu.</p>
+
+<p>Mais le second tableau est le plus important, et il a corrigé cette leçon en cours d'écriture. La règle 2 appliquée à deux nombres censés différer de 0,1&nbsp;:</p>
+
+<ul>
+<li>à 10<sup>12</sup>, l'écart calculé vaut encore <strong>0,0999755859375</strong> — proche de 0,1&nbsp;;</li>
+<li>à 10<sup>15</sup>, il vaut <strong>0,125</strong> — exactement le pas de la grille à cette échelle, que la colonne de droite affiche&nbsp;: le 0,1 a été arrondi au cran le plus proche&nbsp;;</li>
+<li>à 10<sup>16</sup>, il vaut <strong>zéro</strong>, et la règle 2 répond enfin «&nbsp;égaux&nbsp;» — non parce que les deux valeurs sont proches, mais parce qu'<em>elles sont devenues le même nombre à l'addition</em>.</li>
+</ul>
+
+<p>Ce détail vaut d'être souligné&nbsp;: la règle 2 ne finit pas par «&nbsp;bien fonctionner&nbsp;» aux grandes échelles. Elle cesse de mesurer quoi que ce soit. Elle lit zéro parce que l'information a disparu avant elle.</p>
+
+<p>Et la règle 3 n'est pas une solution universelle non plus&nbsp;: sur 1 × 10<sup>−20</sup> et 2 × 10<sup>−20</sup>, deux valeurs qui diffèrent d'un facteur 2, tout dépend du seuil choisi. Avec 10<sup>−9</sup> elle répond correctement «&nbsp;différents&nbsp;»&nbsp;; avec un seuil de 0,6, elle répond «&nbsp;proches&nbsp;». <strong>La tolérance n'est pas une propriété des nombres&nbsp;: c'est une propriété de ce qu'ils mesurent.</strong> Un prix, une distance et une probabilité n'ont pas les mêmes exigences.</p>
+
+<figure class="cheat-table">
+  <table>
+    <caption>Quelle comparaison employer, selon ce que le nombre représente</caption>
+    <thead><tr><th scope="col">Situation</th><th scope="col">Comparaison</th><th scope="col">Pourquoi</th></tr></thead>
+    <tbody>
+      <tr><td>Entiers sous 2<sup>53</sup></td><td><code>a === b</code></td><td>Exacts&nbsp;: l'égalité stricte est sûre et lisible</td></tr>
+      <tr><td>Montants monétaires</td><td>entiers de centimes, <code>===</code></td><td>On ne compare pas des flottants&nbsp;: on n'en fabrique pas</td></tr>
+      <tr><td>Mesures physiques, résultats de calcul</td><td>tolérance <strong>relative</strong></td><td>La précision d'un flottant est relative à sa taille</td></tr>
+      <tr><td>Valeurs proches de zéro</td><td>tolérance <strong>absolue</strong>, choisie selon le domaine</td><td>Le relatif n'a plus de sens quand la référence tend vers 0</td></tr>
+      <tr><td>Tests automatisés</td><td>tolérance explicite, jamais <code>EPSILON</code> nu</td><td>Un test qui passe par chance est pire qu'un test absent</td></tr>
+    </tbody>
+  </table>
+</figure>
+
+<h2>L'erreur qui s'accumule</h2>
+
+<p>Une erreur d'arrondi isolée est invisible. Le vrai sujet est ce qui se passe quand on en fait dix millions à la suite.</p>
+
+@@CODE:accumulation.js@@
+
+@@SORTIE:accumulation.js@@
+
+<p>Additionner 0,1 dix mille fois donne <strong>1000,0000000001588</strong>. Le décrochage commence dès la <strong>troisième</strong> addition — c'est-à-dire au fameux <code>0.1 + 0.2</code>. Et l'erreur grandit&nbsp;: 1,4 × 10<sup>−12</sup> après mille additions, 1,6 × 10<sup>−4</sup> après dix millions.</p>
+
+<p>Un point mérite d'être noté parce qu'il contredit une intuition courante&nbsp;: l'erreur ne s'accumule pas en ligne droite. Son <strong>signe alterne</strong> — la somme est au-dessus du compte à 100 000 additions, en dessous à 10 et à 10 millions. L'erreur d'arrondi n'est pas un biais systématique&nbsp;: c'est une marche irrégulière, ce qui la rend impossible à corriger par une constante. En relatif, elle passe tout de même de 1,1 × 10<sup>−16</sup> à 1,6 × 10<sup>−10</sup> quand on va de 10 à 10 millions d'additions&nbsp;: <strong>un million de fois pire pour un million de fois plus d'additions</strong> — la dégradation est, elle, bien proportionnelle.</p>
+
+<h3>L'addition n'est pas associative</h3>
+
+<p>Voici le fait qui surprend le plus, et qui a des conséquences immédiates&nbsp;: <strong>(<em>a</em> + <em>b</em>) + <em>c</em> et <em>a</em> + (<em>b</em> + <em>c</em>) ne donnent pas toujours le même résultat.</strong></p>
+
+<p>Avec <em>a</em> = 10<sup>16</sup> et <em>b</em> = <em>c</em> = 1, le premier parenthésage rend <strong>10 000 000 000 000 000</strong> et le second <strong>10 000 000 000 000 002</strong>. Dans le premier cas, chaque 1 est absorbé séparément par le géant&nbsp;; dans le second, les deux petits s'additionnent d'abord et pèsent alors assez pour compter.</p>
+
+<p>La conséquence pratique est mesurée juste après&nbsp;: sommer 10<sup>8</sup> puis un million de 10<sup>−8</sup> donne <code>100000000.01490116</code> dans l'ordre du tableau, et <code>100000000.01</code> en triant du plus petit au plus grand. <strong>Trier avant de sommer change le total.</strong> C'est pourquoi deux moteurs de base de données, ou deux versions d'un même moteur, peuvent rendre des totaux différents sur les mêmes lignes&nbsp;: ils n'ont pas parcouru les lignes dans le même ordre.</p>
+
+<h3>La parade&nbsp;: garder l'erreur au lieu de la jeter</h3>
+
+<p>La sommation compensée de Kahan (1965) repose sur une idée limpide&nbsp;: à chaque addition, on <em>calcule ce que l'addition vient de perdre</em>, et on le reporte au tour suivant. Trois opérations au lieu d'une, et le résultat sur dix millions de termes devient <strong>exact</strong> — écart nul, mesuré sur les trois tailles du tableau.</p>
+
+<p>Ce n'est pas de la magie, et la justification a un nom — mais pas celui qu'on cite le plus souvent. <code>(t - somme) - y</code> reconstitue exactement ce que l'addition vient de perdre <strong>à une condition</strong>&nbsp;: que la somme courante <em>domine</em> le terme ajouté, |somme| ≥ |<em>y</em>|. C'est le lemme de <strong>Fast2Sum</strong>, dû à Dekker. Sous cette hypothèse, les deux soustractions sont exactes et la compensation est le résidu réel.</p>
+
+<p>Cette hypothèse n'est pas un détail de démonstration&nbsp;: c'est précisément elle que le <strong>troisième exercice de cette leçon met en défaut</strong>, en faisant arriver un terme géant sur une petite somme. Kahan y rend alors une compensation nulle et redevient une addition naïve. Le lemme de <strong>Sterbenz</strong>, souvent invoqué ici à tort, dit autre chose&nbsp;: <em>x</em> − <em>y</em> est exact dès que <em>y</em>/2 ≤ <em>x</em> ≤ 2<em>y</em> — le programme ci-dessus le vérifie sur 20 000 couples tirés à graine fixe, <strong>9 942 sur 9 942</strong> tombant dans cet intervalle donnent une soustraction exacte. Les deux lemmes sont vrais&nbsp;; c'est le second qui fait marcher Kahan.</p>
+
+<p>Dans tous les cas, le principe tient&nbsp;: on ne récupère pas de l'information perdue, on l'empêche de se perdre.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Arrondir à chaque étape, avec <code>Number(x.toFixed(2))</code>.</strong> C'est la parade qu'on écrit spontanément, et elle ne résout pas le problème. Mesuré à l'exercice 2&nbsp;: sur 30 000 répartitions faites de cette façon, <strong>22 037 ne retombent pas sur le total</strong>, soit 73,5 %.</p><p><strong>Et voici ce que ce chiffre prouve, exactement.</strong> Le même programme refait les 30 000 répartitions en <em>centimes entiers</em>, donc sans le moindre flottant&nbsp;: il échoue <strong>22 037 fois aussi</strong>, sur les mêmes cas — précisément ceux où le total n'est pas divisible par le nombre de parts. Les trois colonnes coïncident <strong>30 000 fois sur 30 000</strong>. L'échec n'a donc <em>rien</em> d'un problème de virgule flottante&nbsp;: arrondir chaque part détruit le total, en flottants comme en décimal exact, et <code>BigDecimal</code> ne changerait rien.</p><p>La règle qui en découle n'en est que plus solide&nbsp;: <strong>on n'arrondit qu'une fois, au dernier moment</strong>, et quand un total doit être conservé, on ne l'arrondit pas du tout — on <strong>distribue le reste</strong>. Il faut se méfier des chiffres spectaculaires&nbsp;: celui-ci est juste, mais il ne démontrait pas ce qu'on lui faisait dire.</p></div></div>
+
+<h2>Le second visage&nbsp;: les grands entiers</h2>
+
+<p>Jusqu'ici on parlait de fractions. Le problème suivant n'a plus rien à voir avec la virgule, et il est plus grave, parce qu'il touche des données qu'on croit sûres&nbsp;: les <strong>identifiants</strong>.</p>
+
+@@CODE:entiers-surs.js@@
+
+@@SORTIE:entiers-surs.js@@
+
+<p>La ligne qui compte est celle du <code>JSON.parse</code>. Un service envoie <code>{"id": 9007199254740993}</code>&nbsp;; le navigateur le relit et obtient <strong>9007199254740992</strong>. <em>L'identifiant a changé avant qu'une seule ligne de code métier ne s'exécute.</em> Aucune erreur, aucun avertissement&nbsp;: c'est une commande qui pointe sur une autre commande.</p>
+
+<h3>Cas réel&nbsp;: l'identifiant qui change entre le serveur et le navigateur</h3>
+
+<p>Ce n'est pas une hypothèse d'école. Un identifiant de type «&nbsp;flocon de neige&nbsp;» (Twitter, Discord, et beaucoup de systèmes distribués) tient sur <strong>64 bits</strong>&nbsp;: onze de plus que ce que <code>Number</code> garantit. Un compteur auto-incrémenté de base de données déclaré en <code>BIGINT</code> aussi.</p>
+
+<p><code>BigInt</code> répare le calcul, mais impose ses règles&nbsp;: il refuse de se mélanger aux <code>Number</code> (<code>TypeError</code>), et <code>JSON.stringify</code> refuse de le sérialiser (<code>TypeError</code> également). <strong>La seule méthode qui tienne de bout en bout est de transporter ces identifiants en chaîne de caractères</strong> — ce que font, précisément, les interfaces de programmation qui ont déjà été mordues.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le contrôle qu'on ne peut pas écrire</p><p>La dernière fonction du programme repère un entier hors de la zone sûre&nbsp;: <code>true</code> sur 9007199254740992, <code>false</code> sur 42. Elle rend bien <code>true</code> sur <code>9007199254740993</code> écrit en clair — mais regarde la colonne de gauche&nbsp;: la page y affiche <strong>9007199254740992</strong>. <em>Le nombre a déjà changé avant d'arriver à la fonction</em>, qui signale donc la zone dangereuse sans pouvoir dire quelle valeur s'y trouvait. Un contrôle en aval ne rattrape jamais une donnée détruite en amont.</p><p>La dernière ligne du tableau est l'autre moitié de la leçon&nbsp;: la <em>chaîne</em> <code>'9007199254740993'</code> rend <code>false</code>, non parce qu'elle serait sûre, mais parce que ce n'est pas un nombre — et elle est arrivée <strong>intacte</strong>. C'est tout l'argument en faveur du transport en texte, et il faut agir au moment de la <em>lecture</em> du JSON, avec un analyseur qui garde les grands entiers sous forme de chaîne.</p></div></div>
+
+<h2>Et l'argent, alors&nbsp;?</h2>
+
+<p>C'est le domaine où l'approximation cesse d'être une gêne pour devenir un litige. La règle est connue — «&nbsp;jamais de flottants pour de l'argent&nbsp;» — mais ses raisons méritent d'être vues.</p>
+
+@@CODE:argent.js@@
+
+@@SORTIE:argent.js@@
+
+<p>La TVA de 19,99 € vaut <code>3.9979999999999998</code> et non 3,998. Sur une ligne, l'arrondi final rattrape tout&nbsp;; sur cent lignes, l'écart mesuré vaut 2,9 × 10<sup>−11</sup> centime — moins d'un dix-milliardième de centime, et les deux méthodes affichent la même chose. <strong>Le danger n'est donc pas là où on le croit</strong>&nbsp;: sur des montants ordinaires et un nombre raisonnable de lignes, les flottants tiennent le coup.</p>
+
+<p>Le vrai danger est dans l'arrondi lui-même, et le quatrième bloc le montre&nbsp;: <code>(1.005).toFixed(2)</code> rend <strong><code>1.00</code></strong>. Ce n'est pas un défaut de <code>toFixed</code>&nbsp;: la valeur stockée est <code>1.0049999999999998934</code>, donc l'arrondi au plus proche descend, à juste titre. <em>Le nombre 1,005 n'a jamais été dans la variable.</em></p>
+
+<p>La mesure qui suit chiffre l'ampleur&nbsp;: sur les 10 000 valeurs qu'on <em>écrit</em> «&nbsp;<code>x,xx5</code>&nbsp;», <strong>4 800 sont arrondies vers le bas</strong>, soit 48,0 %. Ce n'est ni aléatoire ni corrigible par une astuce d'affichage&nbsp;: cela dépend, pour chaque valeur, du côté où tombe l'approximation binaire.</p>
+
+<p>Un détail de méthode mérite d'être signalé, parce qu'il a fait bouger ce chiffre. La première version de ce relevé <em>calculait</em> <code>i / 100 + 0.005</code> au lieu d'<em>écrire</em> le littéral&nbsp;: deux arrondis de plus, et un flottant différent dans <strong>3 259 cas sur 10 000</strong>. Elle mesurait donc autre chose que ce qu'elle annonçait — 50,3 % au lieu de 48,0 %. Le programme écrit désormais la chaîne et la convertit, ce qui est exactement ce que fait un formulaire.</p>
+
+<p>D'où la règle, et sa justification chiffrée&nbsp;: <strong>stocker et calculer en unités entières indivisibles</strong>, et ne convertir qu'à l'affichage. Le budget disponible est confortable — 9 007 199 254 740 991 centimes, soit environ <strong>90 072 milliards d'euros</strong>, largement au-delà de toute comptabilité d'entreprise. C'est exactement ce que font les interfaces de paiement sérieuses&nbsp;: elles reçoivent et rendent des montants en centimes, jamais en euros décimaux.</p>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin&nbsp;: les autres solutions</p><p><strong>Les types décimaux</strong> — <code>DECIMAL</code> en SQL, <code>BigDecimal</code> en Java, <code>decimal.Decimal</code> en Python, <code>decimal</code> en C# — représentent les nombres en base 10 et n'ont donc pas ce défaut sur les fractions décimales. Ils sont plus lents, et ils ont leurs propres pièges (une précision finie, et des règles d'arrondi à choisir explicitement). <strong>Les rationnels exacts</strong> — un numérateur et un dénominateur entiers — sont exacts pour les quatre opérations, mais le dénominateur enfle vite. <strong>Les nombres à virgule fixe</strong> sont ce qu'on obtient en comptant en centimes&nbsp;: c'est la solution la plus simple, et de loin la plus employée. Enfin, la norme IEEE 754 définit depuis 2008 des <em>flottants décimaux</em>&nbsp;; presque aucun matériel courant ne les implémente.</p></div></div>
+
+<h2>Ce qu'il faut retenir</h2>
+
+<ul>
+<li><strong>0,1 n'est pas dans la variable.</strong> Elle contient 0,1000000000000000055511151231257827021181583404541015625, soit 7 205 759 403 792 794 × 2<sup>−56</sup>. <code>0.1 + 0.2 !== 0.3</code> est donc <em>arithmétiquement correct</em>&nbsp;: les deux résultats sont des flottants voisins immédiats.</li>
+<li>Sur 0,1 à 10,0 par pas de 0,1, <strong>20 valeurs sur 100 sont exactes</strong>&nbsp;: exactement les multiples de 0,5, c'est-à-dire celles dont le dénominateur réduit est une puissance de 2.</li>
+<li><strong>L'espacement des flottants n'est pas constant</strong>&nbsp;: 2,2 × 10<sup>−16</sup> autour de 1, <strong>2 autour de 2<sup>53</sup></strong>, <strong>16 384 autour de 10<sup>20</sup></strong>. <code>Number.EPSILON</code> ne vaut qu'au voisinage de 1 — à un million, l'écart réel est 524 288 fois plus grand.</li>
+<li><strong>La règle <code>|a-b| &lt; EPSILON</code> est fausse aux grandes échelles</strong>&nbsp;: à 10<sup>16</sup> elle répond «&nbsp;égaux&nbsp;» parce que l'écart mesuré vaut zéro, pas parce que les nombres sont proches. Employer une tolérance <em>relative</em>, et la choisir selon ce que le nombre mesure.</li>
+<li><strong>L'addition n'est pas associative</strong>&nbsp;: (10<sup>16</sup> + 1) + 1 rend 10<sup>16</sup>, alors que 10<sup>16</sup> + (1 + 1) rend 10<sup>16</sup> + 2. Trier avant de sommer change le total. La <strong>sommation de Kahan</strong> ramène l'écart à zéro sur dix millions de termes.</li>
+<li><strong>Au-delà de 2<sup>53</sup>, les entiers ne sont plus fiables.</strong> <code>JSON.parse</code> transforme l'identifiant 9007199254740993 en 9007199254740992, sans erreur. Les identifiants de 64 bits se transportent en <strong>chaîne de caractères</strong>.</li>
+<li><strong>L'argent se compte en centimes entiers.</strong> <code>(1.005).toFixed(2)</code> rend <code>1.00</code>, et <strong>4 800 des 10 000</strong> valeurs écrites au demi-centime sont arrondies vers le bas. 2<sup>53</sup> centimes, c'est environ 90 072 milliards d'euros&nbsp;: la place ne manque pas.</li>
+</ul>
+
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
+<li>Un collègue propose de remplacer partout <code>a === b</code> par <code>Math.abs(a - b) &lt; Number.EPSILON</code> «&nbsp;pour être tranquille&nbsp;». Quels deux cas cites-tu pour montrer que cela ne suffit pas&nbsp;?</li>
+<li>Un total de facture diffère de 0,01 € entre le rapport nocturne et l'écran. Quelles trois causes examines-tu, dans quel ordre&nbsp;?</li>
+<li>Une API renvoie <code>{"id": 7291736452811264009}</code> et l'application ne retrouve jamais la commande. Où se produit la perte, et à quel endroit précis faut-il corriger&nbsp;?</li>
+</ol></div>
+
+<h2>Glossaire</h2>
+<dl class="glossary">
+  <dt>Virgule flottante</dt><dd>Représentation d'un nombre sous la forme mantisse × 2<sup>exposant</sup>. Le pas de la grille est <em>relatif</em> à la taille du nombre, jamais absolu.</dd>
+  <dt>IEEE 754</dt><dd>Norme qui définit les flottants sur 32 et 64 bits, leurs arrondis et leurs valeurs spéciales. Le <code>number</code> de JavaScript est un flottant 64 bits de cette norme.</dd>
+  <dt>Mantisse</dt><dd>Les 52 bits stockés (53 avec le 1 implicite) qui portent les chiffres significatifs. C'est elle qui plafonne la précision à environ 15 à 17 chiffres décimaux.</dd>
+  <dt>Exposant</dt><dd>Les 11 bits qui donnent la puissance de 2. C'est lui qui décide de l'<em>échelle</em>, donc de l'espacement local entre deux flottants.</dd>
+  <dt>ULP</dt><dd><em>Unit in the last place</em>&nbsp;: l'écart entre un flottant et son voisin immédiat. Vaut 2,2 × 10<sup>−16</sup> autour de 1 et 16 384 autour de 10<sup>20</sup>.</dd>
+  <dt>Number.EPSILON</dt><dd>L'ULP au voisinage de 1, soit 2<sup>−52</sup>. <strong>Ce n'est pas</strong> «&nbsp;la précision des flottants&nbsp;»&nbsp;: hors du voisinage de 1, l'employer comme tolérance absolue donne un résultat faux.</dd>
+  <dt>Entier sûr</dt><dd>Entier dont la représentation flottante est unique, c'est-à-dire de valeur absolue inférieure à 2<sup>53</sup>. Au-delà, deux entiers voisins partagent un même flottant.</dd>
+  <dt>Erreur d'arrondi</dt><dd>Écart entre le résultat exact d'une opération et le flottant le plus proche. Une opération isolée est optimale&nbsp;; c'est leur accumulation qui pose problème.</dd>
+  <dt>Associativité</dt><dd>Propriété (<em>a</em>+<em>b</em>)+<em>c</em> = <em>a</em>+(<em>b</em>+<em>c</em>). <strong>Fausse</strong> en virgule flottante&nbsp;: mesuré, deux résultats différents sur les mêmes trois nombres.</dd>
+  <dt>Sommation de Kahan</dt><dd>Technique qui conserve à chaque pas l'erreur d'arrondi et la reporte au tour suivant. Ramène l'écart à zéro sur dix millions d'additions, pour trois opérations au lieu d'une.</dd>
+  <dt>Sommation de Neumaier</dt><dd>Variante de Kahan qui teste lequel des deux termes domine. Corrige le cas — mesuré dans l'exercice 3 — où Kahan redevient la somme naïve.</dd>
+  <dt>Virgule fixe</dt><dd>Représentation d'un montant par un entier d'unités indivisibles (des centimes). C'est la solution employée pour l'argent&nbsp;: exacte, rapide, et sans piège d'arrondi.</dd>
+  <dt>BigInt</dt><dd>Type d'entiers de taille arbitraire de JavaScript. Exact, mais ne se mélange pas aux <code>Number</code> et n'est pas sérialisable en JSON.</dd>
+</dl>
+
+<script type="application/json" data-quiz>
+[
+  {"q":"Que contient réellement une variable à laquelle on affecte 0.1 ?","a":["0.1000000000000000055511151231257827021181583404541015625, le flottant le plus proche de 0,1","0.1 exactement, l'écart n'apparaissant qu'au moment de l'addition","Une valeur qui change à chaque exécution selon l'arrondi du processeur","0.09999999999999999, le flottant immédiatement inférieur à 0,1"],"correct":0,"explain":"C'est 7 205 759 403 792 794 × 2^-56, avec 55 décimales exactes, et c'est LÉGÈREMENT AU-DESSUS de 0,1. La console affiche « 0.1 » parce que c'est la plus courte chaîne qui redonne ce flottant."},
+  {"q":"Que vaut Number.EPSILON, exactement ?","a":["L'écart entre 1 et le flottant suivant, et rien d'autre : au voisinage de 10^6, l'écart réel est 524 288 fois plus grand","La plus petite valeur strictement positive qu'un flottant sache représenter, soit 5 × 10^-324","La précision garantie de tout calcul en virgule flottante, quelle que soit l'échelle des nombres","L'erreur maximale que peut produire une addition de deux nombres à virgule quelconques"],"correct":0,"explain":"C'est un ULP au voisinage de 1. L'employer comme tolérance absolue est faux dès qu'on quitte cette échelle : à 10^16, la règle |a-b| < EPSILON répond « égaux » parce que l'écart mesuré vaut ZÉRO."},
+  {"q":"Pourquoi (10^16 + 1) + 1 et 10^16 + (1 + 1) donnent-ils des résultats différents ?","a":["Dans le premier cas chaque 1 est absorbé séparément ; dans le second les deux petits s'additionnent d'abord et pèsent assez pour compter","Parce que JavaScript évalue les parenthèses de droite à gauche","Parce que le moteur réordonne les additions pour paralléliser le calcul","Parce que l'addition de trois nombres passe par une conversion en chaîne"],"correct":0,"explain":"L'addition flottante n'est pas associative. Conséquence pratique mesurée : trier une liste avant de la sommer change le total, ce qui explique que deux moteurs puissent rendre des totaux différents sur les mêmes lignes."},
+  {"q":"Que devient l'identifiant 9007199254740993 après un JSON.parse en JavaScript ?","a":["9007199254740992 : il est modifié silencieusement, avant toute ligne de code métier","Il lève une RangeError, car il dépasse MAX_SAFE_INTEGER","Il est converti en BigInt automatiquement","Il est conservé exactement : JSON.parse lit les entiers en précision arbitraire"],"correct":0,"explain":"Au-delà de 2^53 l'écart entre deux flottants vaut 2 : l'identifiant tombe sur son voisin. La seule parade fiable est de transporter ces identifiants en CHAÎNE de caractères."},
+  {"q":"Pourquoi (1.005).toFixed(2) rend-il « 1.00 » ?","a":["Parce que la valeur stockée est 1.0049999999999998934, donc l'arrondi au plus proche descend","Parce que toFixed tronque au lieu d'arrondir","Parce que toFixed applique l'arrondi bancaire, qui va vers le pair","Parce que la méthode a un défaut connu, corrigé dans les versions récentes"],"correct":0,"explain":"toFixed arrondit correctement le nombre qu'il reçoit — mais 1,005 n'a jamais été dans la variable. Mesuré : 5 031 des 10 000 valeurs écrites au demi-centime descendent."},
+  {"q":"Quelle est la bonne façon de manipuler des montants monétaires ?","a":["Les stocker et les calculer en centimes entiers, et ne convertir qu'à l'affichage","Utiliser des flottants et appeler toFixed(2) après chaque opération","Utiliser des flottants et comparer avec Number.EPSILON","Utiliser des flottants pour les montants en euros, mais en BigInt pour les gros totaux"],"correct":0,"explain":"2^53 centimes représentent 90 071 milliards d'euros : la place ne manque pas. C'est ce que font les interfaces de paiement, qui reçoivent et rendent des montants en centimes."}
+]
+</script>
+
+<script type="application/json" data-exos>
+[
+  {"type":"code","run":{"expect":"10"},"placeholder":"un programme qui affiche, seul sur la dernière ligne, le nombre de tours que fait une boucle avançant de 0.1 depuis 0 jusqu'à atteindre 1 à une tolérance près","hints":["Ne compare pas avec !== : la boucle ne s'arrêterait jamais.","Une tolérance relative, par exemple 1e-9, suffit à conclure.","Compte les tours dans une variable entière, pas dans le flottant."],"link":{"href":"lecon-09.html","label":"Revoir « Ce que 0,1 vaut vraiment »"}},
+  {"type":"text","accept":["22037","22 037"],"placeholder":"nombre de répartitions, sur les 30 000 essayées, où la version en euros arrondis ne retombe pas sur le total : ____","hints":["Le programme de l'exercice l'affiche, avec son pourcentage.","C'est près de trois répartitions sur quatre.","Le programme de la solution l'affiche sur sa dernière ligne chiffrée."],"link":{"href":"lecon-09.html","label":"Revoir l'exercice 2"}},
+  {"type":"text","accept":["neumaier","sommation de neumaier","la sommation de neumaier"],"placeholder":"nom de la variante qui corrige le cas où Kahan redevient une somme naïve : ____","hints":["Elle teste lequel des deux termes domine avant de calculer la compensation.","Deux lignes de plus que Kahan.","C'est un nom propre, celui d'un mathématicien autrichien."],"link":{"href":"lecon-09.html","label":"Revoir l'exercice 3"}}
+]
+</script>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Écris une boucle <code>while (x !== 1)</code> qui avance de 0,1 depuis 0, avec un garde-fou à 100 tours. Observe ce qui se passe, puis corrige-la de deux façons différentes&nbsp;: en comptant des entiers, et en comparant avec une tolérance — cette dernière version affichant son nombre de tours <em>seul sur la dernière ligne</em>.</p>
+<details><summary>Voir une solution</summary>@@CODE:solution-7.js@@
+@@SORTIE:solution-7.js@@
+<p>La boucle ne s'arrête <strong>jamais</strong>&nbsp;: elle atteint le garde-fou à 100 tours, avec <em>x</em> à 9,99999999999998. Elle a franchi 1 au dixième tour sans l'égaler, et rien ne la fera revenir.</p>
+<p>La ligne la plus intéressante est la dernière du premier bloc&nbsp;: <code>0.1 * 10</code> vaut <strong>exactement 1</strong>, alors que dix additions successives de 0,1 valent 0,9999999999999999. <em>La multiplication tombe juste, l'accumulation non.</em> C'est le même phénomène qu'à la section sur l'accumulation&nbsp;: une opération isolée donne le flottant le plus proche du résultat exact&nbsp;; c'est leur enchaînement qui dérive.</p>
+<p>Enfin, le contrôle du bas oppose les deux comparaisons sur les onze étapes&nbsp;: <strong>0 écart</strong> avec une tolérance, mais <strong>4 étapes sur 11</strong> qui diffèrent en égalité stricte. Le compteur entier reste, lui, exact par construction — c'est pour cela qu'il faut compter des tours, pas des valeurs.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Répartis 100,00 € entre trois personnes sans perdre un centime. Puis vérifie ta méthode sur toutes les répartitions de 1 à 5 000 centimes en 2 à 7 parts, et compare avec ce que donne la même répartition faite en euros arrondis à deux décimales.</p>
+<details><summary>Voir une solution</summary>@@CODE:solution-8.js@@
+@@SORTIE:solution-8.js@@
+<p>La méthode juste ne cherche pas à «&nbsp;mieux arrondir&nbsp;»&nbsp;: elle prend le quotient entier, puis <strong>distribue le reste, un centime à la fois</strong>. Le total est exact par construction, et l'écart entre deux parts ne dépasse jamais un centime — les deux propriétés sont vérifiées sur les <strong>30 000</strong> répartitions.</p>
+<p>La comparaison finale est le chiffre à retenir&nbsp;: sur ces mêmes 30 000 répartitions, la version en euros arrondis se trompe <strong>22 037 fois</strong>, soit 73,5 %. Ce n'est pas un cas limite&nbsp;: c'est le cas courant.</p>
+<p>Une remarque de conception, enfin&nbsp;: la fonction donne le centime supplémentaire aux <em>premiers</em> de la liste. Ce choix est arbitraire et il doit être <strong>documenté</strong>, parce qu'il est visible — la première personne reçoit systématiquement un centime de plus. Selon le contexte, on préférera tourner d'une répartition à l'autre, ou l'attribuer au plus gros bénéficiaire. Ce qui n'est pas négociable, c'est que la somme retombe juste.</p></details></div>
+
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>La sommation de Kahan a une limite. Trouve une liste de nombres sur laquelle elle échoue, implémente la variante de Neumaier qui la corrige, et mesure les deux sur 200 listes tirées à graine fixe.</p>
+<details><summary>Voir une solution</summary>@@CODE:solution-9.js@@
+@@SORTIE:solution-9.js@@
+<p>Le cas qui met Kahan en défaut est <code>[1, 1e100, 1, -1e100]</code>, dont la somme exacte vaut 2. Kahan rend <strong>0</strong>, comme la somme naïve&nbsp;; Neumaier rend <strong>2</strong>.</p>
+<p>La raison tient à une hypothèse implicite&nbsp;: Kahan calcule sa compensation avec <code>(t - somme) - y</code>, ce qui suppose que la somme courante <em>domine</em> le terme ajouté. Quand c'est l'inverse — un terme énorme arrive sur une petite somme — la compensation vaut zéro, et l'algorithme redevient une addition naïve. Neumaier teste lequel des deux domine et choisit la formule en conséquence&nbsp;: deux lignes de plus, et le cas disparaît.</p>
+<p>Le banc d'essai chiffre la différence sur 200 listes&nbsp;: la somme naïve est fausse <strong>200 fois</strong>, Kahan <strong>199 fois</strong>, Neumaier <strong>0</strong>. Et la première ligne du relevé n'est pas décorative&nbsp;: elle vérifie que la valeur de référence est solide, en s'assurant que les trois méthodes coïncident déjà sur les 50 petites valeurs seules — <strong>0 référence douteuse</strong>. Sans ce contrôle, on jugerait Neumaier avec Neumaier, ce qui ne prouverait rien.</p></details></div>
