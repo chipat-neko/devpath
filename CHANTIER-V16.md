@@ -522,13 +522,25 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       C'est délibéré — ce serait 90 lignes rouges à chaque passe. La dette reste mesurée par
       `mesure-biais-qcm.js` et par l'avertissement non bloquant de `verif-contenu.js` ; elle se solde
       en B3 et B4, cours par cours, et chaque gain se verrouille avec `--ecrire`.
-- [ ] **B3 · Les six cours à 100 %** (`archi`, `equipe`, `iac`, `mobile`, `ux`, `zig`). Étoffer les
+- [x] **B3 · Les six cours à 100 %** (`archi`, `equipe`, `iac`, `mobile`, `ux`, `zig`). Étoffer les
       distracteurs. **Chaque distracteur réécrit doit rester FAUX** — c'est le piège de cette phase :
       en allongeant un mauvais choix, on le rend facilement vrai. Rejouer le QCM après correction.
 
-      **EN COURS — 5 cours sur 6 faits le 2026-09-03 : `iac` 100,0 % → 13,3 %, `archi` 100,0 % →
-      7,3 %, `ux` 100,0 % → 19,6 %, `equipe` 100,0 % → 30,1 %, `mobile` 100,0 % → 21,9 %.** La case
-      reste décochée parce qu'elle en porte six ; le protocole ci-dessous est établi et rejouable.
+      **FAIT — LES SIX COURS, le 2026-09-04.**
+
+      | cours | avant | après | questions | distracteurs |
+      |---|---:|---:|---:|---:|
+      | `iac` | 100,0 % | **13,3 %** | 45 | 135 |
+      | `archi` | 100,0 % | **7,3 %** | 48 | 144 |
+      | `ux` | 100,0 % | **19,6 %** | 56 | 168 |
+      | `equipe` | 100,0 % | **30,1 %** | 68 | 204 |
+      | `mobile` | 100,0 % | **21,9 %** | 73 | 219 |
+      | `zig` | 100,0 % | **23,9 %** | 71 | 213 |
+      | **total** | **100,0 %** | — | **361** | **1 083** |
+
+      **Global du site : 89,5 % → 84,8 %.** Aucune atteinte à l'intouchable sur les 361 questions
+      (énoncés, index `correct`, explications, bonnes réponses), vérifiée contre `git show HEAD:`
+      après chaque cours. **6 cours marqués `traite` dans le cliquet.**
 
       **Ce qui a été fait sur `iac`** (11 leçons, **45 questions**, 33 en QCM de leçon et 12 en QCM
       bilan) : **135 distracteurs sur 135 réécrits**, chacun tenu entre **70 % et 130 %** de la
@@ -585,7 +597,7 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       vert**, `verif-rendu` sur les pages touchées **0 erreur / 0 avertissement**, cliquet **vert**
       avec `iac` marqué `traite` et son épreuve **6/6**.
 
-      **LE PROTOCOLE, pour le dernier cours restant** (`zig` 71 questions, 213 distracteurs) : (1) un agent par lot de leçons, fichiers
+      **LE PROTOCOLE, tel qu'il s'est stabilisé — à rejouer tel quel en B4** : (1) un agent par lot de leçons, fichiers
       disjoints ; (2) interdiction absolue de toucher `q`, `correct`, `explain` et la bonne réponse —
       **contrôlé après coup contre `git show HEAD:`**, pas sur parole, par
       `tools/mesure-qcm-intouchable.js` ; (3) fourchette 70–130 % **et les DEUX sens du biais**
@@ -869,6 +881,80 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       **même dossier temporaire** et se sont écrasés mutuellement (sans dommage pour le site, les
       fichiers de `pages/` étant disjoints). **Imposer un dossier scratch par agent** est désormais
       dans la consigne.
+      ---
+
+      **`zig` — FAIT le 2026-09-04 : 100,0 % → 23,9 %.** 18 leçons, **71 questions**, **213
+      distracteurs sur 213 réécrits**, tous entre **0,70 et 1,29**.
+
+      | mesure | avant | après 1ʳᵉ passe | après contradiction |
+      |---|---:|---:|---:|
+      | « la plus longue » | **100,0 %** | **25,4 %** | **23,9 %** |
+      | « la plus COURTE » | 0,0 % | 25,4 % | 19,7 % |
+      | « la plus détaillée » | 81,3 % | 46,0 % | **45,7 %** |
+      | « le mot technique exclusif » | 63,7 % | 21,7 % | **21,0 %** |
+      | rangs de longueur | **71/0/0/0** | 18/24/11/18 | 17/21/20/13 |
+      | ponctuation, énumération, absolus (désignation unique) | — | **0,0 %** | **0,0 %** |
+
+      ✅ **Deuxième cours d'affilée sans aucun rattrapage de forme** : les quatre pièges mis en
+      consigne ont tenu du premier coup.
+
+      ⚠️⚠️ **L'OUTIL D'INTÉGRITÉ M'A PRIS EN DÉFAUT — ET C'EST LA MEILLEURE PREUVE QU'IL SERT.** En
+      suivant un relecteur qui proposait de retirer des capitales d'emphase, **j'ai modifié DEUX
+      BONNES RÉPONSES** (`lecon-16` q4, `lecon-17` q3). `mesure-qcm-intouchable` les a vues
+      immédiatement, avant/après à l'appui. Restaurées, et l'indice neutralisé **du bon côté** : en
+      AJOUTANT des capitales à un distracteur. **Un outil qui ne sert que quand on se trompe ne
+      prouve sa valeur que le jour où l'on se trompe.**
+
+      ⚠️⚠️ **ET MON PROPRE TRAVAIL A CRÉÉ UN ANGLE MORT DANS UNE ÉPREUVE PAR INJECTION.**
+      `verif-qcm-biais-mutations.js` employait **`zig` comme cours-témoin « 100 % de biais »** pour
+      son cas « cours neuf non conforme ». En ramenant `zig` à 23,9 %, **j'ai fait passer ce cas VERT
+      EN SILENCE** : l'épreuve ne prouvait plus rien. Témoin changé pour `stats` (99,3 %), avec un
+      commentaire qui dit pourquoi et demande de **revoir ce choix à chaque cours traité**. 6/6 de
+      nouveau. **C'est la même famille de faute que « un contenu qui mesure le site se périme en étant
+      publié » — ici, c'est une ÉPREUVE qui se périme en étant réussie.** À vérifier en B4 : quelles
+      autres épreuves par injection s'appuient sur un état du site qu'un chantier peut changer ?
+
+      ⚠️ **Une prise de relecteur RÉFUTÉE** : « `js/quiz-index.js` contient encore *Pour ralentir le
+      code* » — ce distracteur appartient au cours **`rust`**, pas à `zig`. Mais **sa prise de fond
+      était juste** : l'index n'avait pas été régénéré depuis `zig`. Fait, et vérifié dans l'index.
+
+      ⚠️ **Indices de forme rattrapés après mes corrections** : la parenthèse était passée à **9
+      questions où seule une FAUSSE réponse en porte contre 2 pour la bonne** — l'indice inversé, une
+      troisième fois — ramené à 6/8 ; le deux-points de 11/5 à **7/8**, mieux que `doc` (6/5).
+
+      **Défauts de FOND corrigés** — Zig est le cours où un distracteur approximatif devient le plus
+      vite exact : `ReleaseSafe` garde **réellement** ses vérifications en release ; un littéral de
+      chaîne **est** un pointeur vers un tableau terminé par zéro ; `arr[1..3]` à bornes comptime rend
+      un **pointeur**, pas un slice ; `else` fournit vraiment un repli d'optionnel ; une union **non
+      étiquetée** permet bien de voir un `f64` comme deux `u32` ; `@ptrCast` corrigeait l'alignement
+      avant que Zig ne scinde les conversions ; `std.Thread.Mutex` **panique** sur double
+      verrouillage en Debug ; `pthread_join` rend vraiment une valeur ; un dossier `tests/` câblé par
+      `b.addTest` est une organisation Zig réelle ; `zig cc -fsyntax-only` signale vraiment les écarts
+      à la norme ; et un paramètre de type `type` est **implicitement comptime depuis Zig 0.12**.
+
+      **Contrôles** : `mesure-qcm-intouchable` **0 atteinte** sur 71 questions ; `quiz-index` régénéré
+      deux fois (`doc/lecon-03` s'est repérimé une **5ᵉ** fois : 5 243 → **5 189**, 85,9 % →
+      **85,0 %**) ; `verif-normatif` **60/60** ; `verif.js --rapide` **26 étapes tout vert (77,9 s)** ;
+      `verif-html` **0** ; `verif-donnees` **0 erreur** ; cliquet refigé (**6 cours traités**),
+      épreuve **6/6** avec son témoin corrigé.
+
+      ---
+
+      **CE QUE B3 A APPRIS, ET QUI VAUT POUR B4 :**
+      1. **Un correctif de forme DÉPLACE le biais, il ne le supprime pas.** Longueur → longueur
+         inversée → ponctuation → énumération → absolus → ponctuation inversée. Cinq déplacements
+         mesurés en six cours. **Remesurer TOUS les indices après CHAQUE correction.**
+      2. **Une leçon écrite dans ce plan ne se repaie que si elle est remise EN CONSIGNE au tour
+         suivant.** Les quatre pièges ont coûté trois cours à découvrir, puis ont tenu du premier
+         coup sur les deux derniers.
+      3. **Un relecteur qui mesure sur son lot extrapole faux.** Trois indices annoncés à 36-43 %
+         mesuraient 25-29 % sur le cours entier. **Toujours remesurer sur le corpus complet.**
+      4. **La contradiction reste le seul usage d'agents qui paie** : ~20 à 30 défauts de fond par
+         cours, dont des distracteurs devenus littéralement vrais.
+      5. **Ce que le chantier n'a pas tranché** : la « plus détaillée » reste entre 42 et 52 % sur
+         les six cours, et deux indices (densité de ponctuation, vocabulaire du glossaire) sont
+         **généraux au site** — `doc`, écrit après le constat de B1, est à 45,0 % sur le premier.
+         **La question de B4 est là : est-ce un biais, ou la définition même d'une bonne réponse ?**
 
       **Contrôles** : `mesure-qcm-intouchable` **0 atteinte** sur 73 questions ; `quiz-index` régénéré
       deux fois (`doc/lecon-03` s'est repérimé une **4ᵉ** fois : 5 301 → **5 243**, 86,9 % →
