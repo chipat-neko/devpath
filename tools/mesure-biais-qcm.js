@@ -115,7 +115,7 @@ var SIGLES = /^(HTML|CSS|JS|JSON|DOM|API|URL|URI|HTTP|HTTPS|CORS|SQL|CLI|UI|UX|I
    deux mesures : (1) l'apostrophe etait acceptee comme lettre, si bien que « C'est »
    rendait le jeton « C' » et « L'option » le jeton « L' » — 880 des 2496 occurrences
    relevees sur le site, soit 35 % du signal, etaient des majuscules de DEBUT DE PHRASE
-   suivies d'une elision, et non des cris ; (2) la limite  de JavaScript est ASCII,
+   suivies d'une elision, et non des cris ; (2) la limite \b de JavaScript est ASCII,
    donc « DEJA » accentue etait coupe apres le J. On exige donc deux LETTRES capitales
    consecutives, sans lettre autour. */
 var CAPITALES = /(?<![\p{L}\p{N}])[\p{Lu}][\p{Lu}\p{N}]+(?![\p{L}])/gu;
