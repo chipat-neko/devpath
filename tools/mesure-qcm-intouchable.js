@@ -17,7 +17,7 @@ var fs = require("fs"), path = require("path"), cp = require("child_process");
 var cours = process.argv[2];
 var dir = path.join(__dirname, "..", "pages", cours);
 function extrait(src) {
-  var re = /<script type="application\/json" data-quiz(?:-bilan)?>([\s\S]*?)<\/script>/g, m, out = [];
+  var re = /<script[^>]*type="application\/json"[^>]*data-quiz(?:-bilan)?[^>]*>([\s\S]*?)<\/script>/g, m, out = [];
   while ((m = re.exec(src))) out.push(JSON.parse(m[1]));
   return out;
 }
