@@ -1503,6 +1503,57 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       avec les cinq stratégies exploitables** (`b4p-nocivite.js`) : la parenthèse ne change pas
       l'ordre, la longueur domine partout. **5 183 questions devinables sur 6 167 (84,0 %)**,
       **78 cours sur 90** encore au-dessus de 60 %.
+      ---
+
+      **`css` — EN COURS le 2026-09-04. 3ᵉ cours le plus nocif : 47 leçons, 171 questions,
+      513 distracteurs.**
+
+      ⚠️⚠️ **CE RÉVEIL A, LUI AUSSI, COMMENCÉ PAR TROUVER LE TRAVAIL DU PRÉCÉDENT EN RADE — pour
+      la deuxième fois du chantier, et la cause est cette fois NOMMÉE.** Le réveil de 06:30 a lancé
+      un workflow d'écriture des 285 distracteurs des leçons 01-25 et **a été terminé par le harnais
+      au bout de 600 s de tâches de fond** (« Background tasks still running after 600s;
+      terminating »), message présent tel quel dans `.autonomie/journal.log`. Il a rendu la main à
+      06:44 avec **six fichiers modifiés et rien de commité**, et **quatre brouillons complets
+      jamais posés** dans `scratchpad/b4c-{B,C,D,E}`. *Un travail non commité est un travail perdu.*
+
+      | ce qui a été récupéré | où il dormait | questions | distracteurs |
+      |---|---|---:|---:|
+      | leçons 01-05 et 25 | déjà écrites sur le disque, non commitées | 21 | 78 |
+      | leçons 06-10 | `b4c-B/overrides.js` | 15 | 45 |
+      | leçons 11-15 | `b4c-C/draft.js` | 15 | 45 |
+      | leçons 16-20 | `b4c-D/distracteurs.js` | 15 | 45 |
+      | leçons 21-24 | `b4c-E/distracteurs.json` | 20 | 57 |
+      | **total récupéré** | | **86** | **270** |
+
+      **Mesure du cours, avant toute écriture neuve de ce réveil : 91,9 % → 80,3 %** (récupération
+      des six fichiers) **→ 56,2 %** (pose des quatre brouillons). Global du site **80,2 % →
+      79,2 %**. Deux commits, un par étape, chacun portant sa mesure.
+
+      | indice, cours entier | départ | après récupération |
+      |---|---:|---:|
+      | la plus longue | 91,9 % | **56,2 %** |
+      | la plus détaillée | 68,9 % | **53,4 %** |
+      | l'incise entre parenthèses | 62,0 % | **48,0 %** |
+      | le mot technique exclusif | 60,2 % | **50,0 %** |
+      | l'écho de l'énoncé | 50,1 % | **38,6 %** |
+
+      ⚠️ **LE GARDE-FOU A ENCORE SERVI, ET C'EST LA TROISIÈME FOIS DU CHANTIER.** Le premier poseur
+      substituait le texte JSON de l'ancienne option, comme celui du lot A. Il a **refusé d'écrire**
+      sur `lecon-07` q1 : `"2em"` apparaît **deux fois** dans le fichier — une option de QCM est
+      aussi un morceau de code du corps de la leçon. *Un motif de remplacement trop large casse ce
+      qui était juste.* Réécrit pour remplacer **la LIGNE de la question**, avec un contrôle de
+      fidélité préalable : une question **non modifiée** doit se re-sérialiser exactement en sa
+      ligne d'origine, faute de quoi le script refuse d'écrire — sinon la mise en forme du bloc
+      partirait à la dérive sur 47 fichiers.
+
+      **Contrôles de la récupération** : `mesure-qcm-intouchable` **0 atteinte** sur les
+      171 questions (énoncés, index `correct`, explications et bonnes réponses identiques à
+      `git show HEAD:`) ; **19 blocs JSON** revalidés ; **0 BOM**, **0 caractère de contrôle** (le
+      piège du heredoc) ; `verif-html` **0 / 1 629** en 2,20 s.
+
+      **Ce qui reste sur `css`** : les leçons 26 à 47 (76 questions, 228 distracteurs, dont le QCM
+      bilan de 10 questions), la contradiction adversariale sur tout le cours, puis la régénération
+      de `quiz-index`, `doc/verif-normatif` et le cliquet. **La case B4 reste décochée.**
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
