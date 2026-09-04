@@ -246,7 +246,7 @@ def test_float_math() -&gt; None:
 <h2>Isoler les dépendances avec les mocks</h2>
 <p>Un test unitaire ne doit pas dépendre du réseau, de l'horloge ou du disque. <code>unittest.mock</code> fournit <code>Mock</code> / <code>MagicMock</code> (des objets qui enregistrent leurs appels) et <code>patch</code> (qui remplace temporairement un attribut). Règle d'or&nbsp;: on patche <strong>là où l'objet est utilisé</strong>, pas là où il est défini.</p>
 <figure class="diagram">
-  <svg viewBox="0 0 640 178" role="img" aria-label="Patcher là où l'objet est utilisé : weather garde sa propre référence à httpx.get, c'est elle qu'il faut remplacer">
+  <svg viewBox="0 0 640 178" role="img" aria-label="Patcher là où l'objet est utilisé : weather garde sa propre référence à get, c'est elle qu'il faut remplacer">
     <text class="d-label" x="320" y="22" text-anchor="middle" font-size="13">On patche là où l'objet est UTILISÉ</text>
     <rect class="d-box" x="24" y="52" width="210" height="60" rx="8" />
     <text class="d-mut" x="129" y="72" text-anchor="middle" font-size="10">module d'origine</text>
@@ -257,20 +257,20 @@ def test_float_math() -&gt; None:
     <line class="d-line" x1="398" y1="90" x2="406" y2="86" />
     <rect class="d-accent" x="406" y="52" width="210" height="60" rx="8" />
     <text class="d-mut" x="511" y="72" text-anchor="middle" font-size="10">ton module weather</text>
-    <text class="d-text" x="511" y="94" text-anchor="middle" font-size="12">appelle httpx.get</text>
-    <text class="d-text" x="511" y="140" text-anchor="middle" font-size="11">patch("weather.httpx.get") ✓</text>
+    <text class="d-text" x="511" y="94" text-anchor="middle" font-size="12">appelle get</text>
+    <text class="d-text" x="511" y="140" text-anchor="middle" font-size="11">patch("weather.get") ✓</text>
     <line class="d-line" x1="511" y1="128" x2="511" y2="114" />
     <line class="d-line" x1="507" y1="122" x2="511" y2="114" />
     <line class="d-line" x1="515" y1="122" x2="511" y2="114" />
     <text class="d-mut" x="129" y="140" text-anchor="middle" font-size="10">patch("httpx.get") ✗ sans effet ici</text>
   </svg>
-  <figcaption>Au moment de l'<code>import</code>, <code>weather</code> se lie sa <strong>propre</strong> référence à <code>httpx.get</code>. Pour la remplacer en test, on patche <code>"weather.httpx.get"</code> — l'endroit où elle est <em>appelée</em> — et non la définition d'origine.</figcaption>
+  <figcaption>Au moment de l'<code>import</code>, <code>weather</code> se lie sa <strong>propre</strong> référence à <code>get</code>. Pour la remplacer en test, on patche <code>"weather.get"</code> — l'endroit où elle est <em>appelée</em> — et non la définition d'origine.</figcaption>
 </figure>
-<figure class="code-block" data-file="weather.py"><pre><code class="language-python">import httpx  # dépendance réseau qu'on ne veut PAS appeler en test
+<figure class="code-block" data-file="weather.py"><pre><code class="language-python">from httpx import get  # dépendance réseau qu'on ne veut PAS appeler en test
 
 
 def current_temperature(city: str) -&gt; float:
-    response = httpx.get(f"https://api.example.com/temp/{city}")
+    response = get(f"https://api.example.com/temp/{city}")
     return response.json()["temp"]
 </code></pre></figure>
 <figure class="code-block" data-file="test_weather.py"><pre><code class="language-python">from unittest.mock import MagicMock, patch
@@ -282,8 +282,8 @@ def test_current_temperature() -&gt; None:
     fake_response = MagicMock()
     fake_response.json.return_value = {"temp": 21.5}
 
-    # On remplace httpx.get tel qu'il est vu DANS weather
-    with patch("weather.httpx.get", return_value=fake_response) as mock_get:
+    # On remplace get tel qu'il est vu DANS weather
+    with patch("weather.get", return_value=fake_response) as mock_get:
         assert weather.current_temperature("paris") == 21.5
 
     mock_get.assert_called_once_with("https://api.example.com/temp/paris")
@@ -388,13 +388,13 @@ Success: no issues found in 1 source file
 <li><code>unittest.mock</code> (<code>patch</code> là où c'est utilisé) isole les dépendances&nbsp;; doctest met des exemples testables dans les docstrings.</li>
 <li><code>coverage</code> mesure les lignes exécutées&nbsp;; <code>breakpoint()</code> ouvre pdb&nbsp;; <code>ruff</code>/<code>black</code>/<code>mypy</code> tiennent la qualité.</li>
 </ul>
-<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi <code>0.1 + 0.2 == pytest.approx(0.3)</code> plutôt qu'une égalité stricte&nbsp;?</li><li>Dans l'exemple weather, pourquoi patche-t-on <code>"weather.httpx.get"</code> et non <code>"httpx.get"</code>&nbsp;?</li><li>Quel risque concret crée une fixture <code>scope="session"</code> qui renvoie une liste modifiée par les tests&nbsp;?</li></ol></div>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi <code>0.1 + 0.2 == pytest.approx(0.3)</code> plutôt qu'une égalité stricte&nbsp;?</li><li>Dans l'exemple weather, pourquoi patche-t-on <code>"weather.get"</code> et non <code>"httpx.get"</code>&nbsp;?</li><li>Quel risque concret crée une fixture <code>scope="session"</code> qui renvoie une liste modifiée par les tests&nbsp;?</li></ol></div>
 
 <script type="application/json" data-quiz>
 [
   {"q":"Pourquoi 0.1 + 0.2 == pytest.approx(0.3) plutôt qu'une égalité stricte ?","a":["Parce que les flottants ont une imprécision binaire (0.1 + 0.2 vaut 0.30000000000000004) : l'égalité stricte échoue, tandis qu'approx compare avec une tolérance","Parce que l'opérateur == est désactivé dans les assertions pytest (la réécriture d'assert le remplace), ce qui impose approx pour toute comparaison numérique, jusque sur des entiers","Parce qu'approx arrondit ses deux opérandes au même nombre de décimales (ici une seule), de sorte que 0.30000000000000004 devient 0.3, avant la comparaison d'égalité","L'addition 0.1 + 0.2 rend un résultat différent à chaque exécution (au gré de l'ordre des registres), si bien qu'une constante écrite en dur, figée, ne saurait correspondre"],"correct":0,"explain":"La représentation binaire des flottants introduit de minuscules erreurs : 0.1 + 0.2 n'est pas exactement 0.3. Comparer avec une égalité stricte échoue ; pytest.approx admet un écart relatif/absolu, rendant le test fiable."},
-  {"q":"Dans l'exemple weather, pourquoi patche-t-on \"weather.httpx.get\" et non \"httpx.get\" ?","a":["Parce qu'on patche là où l'objet est utilisé : la référence importée dans le module weather. Patcher httpx.get ne remplacerait pas la référence déjà liée dans weather","Parce que patch rejette les chemins de moins de trois segments : la cible doit désigner un module et un attribut importés ensemble","Parce que le mock doit remplacer la fonction avant l'import de weather : patcher httpx.get agirait trop tard dans le déroulé du test","Le chemin weather.httpx.get vise l'objet response rendu par l'appel : patcher httpx.get remplacerait la requête sans contrôler sa valeur de retour"],"correct":0,"explain":"Le principe « patch where it's looked up » : weather a sa propre référence à get au moment de l'import. On remplace donc weather.httpx.get, là où la fonction est réellement appelée, et non la définition d'origine."},
-  {"q":"Quel risque concret crée une fixture scope=\"session\" qui renvoie une liste modifiée par les tests ?","a":["La même liste est partagée par tous les tests de la session : un test qui la modifie pollue les suivants, créant des dépendances à l'ordre et des résultats faussés","La fixture est reconstruite avant chaque test de la session, si bien que les ajouts d'un test disparaissent : la suite passe en local, puis échoue en intégration continue","pytest verrouille la liste en lecture, et toute écriture lève un TypeError dès le second test, avant même l'assertion","La liste est recopiée pour chaque module, ce qui casse le partage attendu : les tests d'un même fichier ne voient pas les données des autres"],"correct":0,"explain":"Une fixture de portée session est instanciée une seule fois et réutilisée partout. Si un test mute la liste partagée, l'état fuit vers les autres, brisant l'isolation : les tests deviennent fragiles et dépendants de leur ordre d'exécution."}
+  {"q":"Dans l'exemple weather, pourquoi patche-t-on \"weather.get\" et non \"httpx.get\" ?","a":["Parce qu'on patche là où l'objet est utilisé : le from httpx import get a lié une référence propre à weather, et remplacer httpx.get n'atteindrait pas cette référence-là","Parce que patch résout sa cible depuis le module de test : un chemin commençant par httpx y serait cherché en vain, faute d y être importé","Parce que le mock doit remplacer la fonction avant l'import de weather : patcher httpx.get agirait trop tard dans le déroulé du test","Le chemin weather.get vise l'objet response rendu par l'appel : patcher httpx.get remplacerait la requête sans contrôler sa valeur de retour"],"correct":0,"explain":"Le principe « patch where it's looked up » : le from httpx import get donne à weather sa propre référence, que remplacer httpx.get n'atteint pas (vérifié : le vrai appel passe). On remplace donc weather.get, là où la fonction est réellement appelée. Avec un simple import httpx, les deux chemins désigneraient au contraire le même objet."},
+  {"q":"Quel risque concret crée une fixture scope=\"session\" qui renvoie une liste modifiée par les tests ?","a":["La même liste est partagée par tous les tests de la session : un test qui la modifie pollue les suivants, créant des dépendances à l'ordre et des résultats faussés","La fixture est reconstruite avant chaque test de la session, si bien que les ajouts d'un test disparaissent : la suite passe en local, puis échoue en intégration continue","pytest verrouille la liste en lecture, et toute écriture lève un TypeError dès le second test, avant même l'assertion","La fixture de session est évaluée dès la collecte des tests : la liste porte alors l'état du lancement précédent, relu depuis le cache que pytest garde sur le disque"],"correct":0,"explain":"Une fixture de portée session est instanciée une seule fois et réutilisée partout. Si un test mute la liste partagée, l'état fuit vers les autres, brisant l'isolation : les tests deviennent fragiles et dépendants de leur ordre d'exécution."}
 ]
 </script>
 

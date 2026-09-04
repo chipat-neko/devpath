@@ -1337,6 +1337,173 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       6. `build-index --write`, puis `doc/verif-normatif`, puis `build-index --write` une seconde
          fois — **et `--fresh` si un ÉNONCÉ a changé**, sinon l'ancienne question survit dans l'index ;
       7. marquer le cours `traite` et refiger la référence.
+      ---
+
+      **`python` — FAIT le 2026-09-04. LE COURS EST CLOS : 91,6 % → 19,8 %, 2ᵉ cours le plus nocif
+      du site. 50 leçons, 173 questions, 519 distracteurs, tous réécrits.**
+
+      ⚠️⚠️ **CE RÉVEIL A COMMENCÉ PAR TROUVER LE TRAVAIL DU PRÉCÉDENT EN RADE, ET C'EST SON PREMIER
+      ENSEIGNEMENT.** Le réveil de 03 h 25 s'est arrêté **entre la remise des rapports de
+      contradiction et leur application**. Constat par horodatage, pas par intuition : leçons 01-28
+      écrites à **03:37-03:44**, quatre rapports rendus à **03:52-04:00**, aucun fichier retouché
+      après. Et les lots d'écriture des leçons 29-48 étaient sur le disque (**05:43-05:47**) sans
+      avoir jamais été posés : le cours affichait **48,4 %**, à moitié traité, rien de commité.
+      **Un travail non commité est un travail perdu.** Le premier commit de ce réveil a donc été
+      fait avant d'engager quoi que ce soit de neuf.
+
+      | mesure, cours entier | avant | après |
+      |---|---:|---:|
+      | la plus longue | **91,6 %** | **19,8 %** |
+      | meilleure stratégie exploitable | 91,6 % | **29,0 %** (l'incise) |
+      | l'incise « désigne la SEULE bonne réponse » | — | **1,2 %** |
+      | global du site | 82,2 % | **80,2 %** |
+
+      **DEUX BONNES RÉPONSES FAUSSES, toutes deux prouvées par exécution, toutes deux reproduites
+      par moi avant correction.** C'est le défaut qui fonde la chaîne, et il s'est présenté deux
+      fois dans le même cours.
+
+      1. **`python/lecon-38` q2 : la leçon enseignait « patch where it's looked up » sur un exemple
+         où la règle NE MORD PAS.** Son module `weather` fait `import httpx` puis `httpx.get(...)` :
+         `weather.httpx` **est** le module `httpx`, donc `patch("httpx.get")` et
+         `patch("weather.httpx.get")` désignent le même objet. Reproduit avec un faux `httpx` qui
+         lève si le vrai code est atteint :
+
+         | ce que fait le test | ce qui se passe RÉELLEMENT |
+         |---|---|
+         | `import httpx` + `patch("httpx.get")` | **le mock est appelé** (21.5), `weather.httpx is httpx` → True |
+         | `from httpx import get` + `patch("httpx.get")` | **sans effet** : le vrai `get` est atteint |
+         | `from httpx import get` + `patch("weather.get")` | le mock est appelé (21.5) |
+
+         La bonne réponse, l'explication, la légende du schéma **et le schéma lui-même** affirmaient
+         tous qu'un `patch("httpx.get")` serait « sans effet ici ». Correctif : l'exemple passe à
+         `from httpx import get`, le seul cas où la règle a un sens ; la cible devient
+         `"weather.get"` ; **12 remplacements**, dont l'énoncé, la bonne réponse et l'explication —
+         **exception déclarée d'avance**. ⚠️ **Et le changement a périmé un distracteur au passage** :
+         « patch rejette les chemins de moins de trois segments » se réfutait désormais contre son
+         propre énoncé, la cible neuve n'en ayant que deux. Corrigé dans la foulée.
+
+      2. **`python/lecon-41` q3 : la bonne réponse attribuait le groupe atomique `(?>...)` et le
+         quantificateur possessif `a++` au module tiers `regex`.** Ils sont dans `re` **standard
+         depuis Python 3.11** — et le corps de la même leçon l'écrit correctement (« Python 3.11+ »).
+         Vérifié sous 3.14.5 : `re.match(r"^(?>a+)+$", "a"*30+"b")` rend `False` en 6,1 × 10⁻⁵ s et
+         `^a++$` en 2,5 × 10⁻⁵ s, sans erreur. Corrigé en « dans re depuis Python 3.11 ».
+         ⚠️ **L'autre mention du module `regex` dans la même leçon a été vérifiée et laissée** : le
+         lookbehind de longueur variable est bien refusé par `re` (*look-behind requires fixed-width
+         pattern*).
+
+      **LE TROU DE CONTRADICTION, COMBLÉ.** Les leçons **06-17** étaient les seules du cours dont
+      aucun rapport de contradiction n'existait — la passe qui les avait écrites s'était arrêtée
+      avant. Deux relecteurs y ont été envoyés : **aucune bonne réponse fausse** (les 36 rejouées
+      sous 3.14.5), mais **un distracteur VRAI sous un mode documenté** — « le module standard passe
+      devant, le fichier local devient inatteignable » est exactement ce que font `python -P`
+      (3.11+) et `PYTHONSAFEPATH=1`, prouvé par trois exécutions.
+
+      **51 remplacements appliqués en tout, issus de 6 rapports de contradiction** : 26 des quatre
+      rapports en souffrance (leçons 01-05, 18-28), 10 des lots 29-48, 15 des lots 06-17. Trois
+      distracteurs étaient devenus littéralement **vrais** : `int(6 / 2)` rend réellement 3 (et
+      c'était le **seul** remède qui marchait des quatre options) ; le `.gitignore` que `venv` écrit
+      lui-même rend `git add -f` réellement nécessaire ; `groupby().sum()` trie son index par
+      défaut, donc « les ventes triées, ville par ville » **décrivait la sortie affichée par la
+      leçon**.
+
+      ⚠️ **DIX QUESTIONS TOMBAIENT À DEUX CHOIX, ET C'EST LE VRAI RÉSULTAT DE LA CONTRADICTION SUR
+      CE COURS.** Deux distracteurs qui portent la même fausseté s'éliminent ensemble : `for/else`
+      « ignorée sur un itérable vide » (deux options), `d.default`/`d.fetch` (deux noms inventés),
+      `ProcessPoolExecutor` « car le GIL est tenu pendant un appel réseau » (deux fois la même
+      réponse avec la même raison), py-spy qui « transformerait le programme » (deux fois),
+      `TaskGroup` qui « n'annule pas les sœurs » (deux fois), `send` qui « traverse yield from »
+      (deux fois), le même verdict « O(n) » rendu par deux options, un module qui « se recharge à
+      chaque import » (deux fois)… **Aucun de nos onze indicateurs ne voit ce défaut** : il ne se lit
+      qu'en comparant les distracteurs **entre eux**, et c'est exactement ce qu'un relecteur fait et
+      qu'un vérificateur ne fait pas.
+
+      ⚠️ **UN INDICE NEUF, MESURÉ : « écarter l'option qui NIE la prémisse de son propre énoncé ».**
+      Quand l'énoncé demande *quelle est la différence entre A et B*, il présuppose la différence ;
+      une option qui répond « il n'y en a pas » se réfute toute seule. **20 options du cours la
+      nient, ZÉRO bonne réponse** — et les leçons 06-11, qui pèsent 10,4 % des questions, en
+      concentraient **11 sur 20**, dont **4 questions où DEUX options la niaient ensemble**
+      (l'apprenant passe de 25 % à 50 % sans rien savoir). Le taux agrégé (31,9 %) reste dans la
+      bande de bruit et n'est **pas** revendiqué ; **le décompte 20/0, lui, n'est pas du bruit.**
+      Deux autres candidats du même tonneau, mesurés et non traités : « si bien que » (**24
+      distracteurs, 0 bonne réponse** sur les 173 questions) et « s'écrit » (3 occurrences, **toutes
+      les trois** dans les distracteurs d'une même question, qui devenait devinable à 100 %).
+
+      ⚠️ **LE PIÈGE DU CHANTIER S'EST REFERMÉ UNE SIXIÈME FOIS, ET DANS L'AUTRE SENS.** Mes
+      corrections de FOND sur les leçons 29-48 ont fait remonter « l'incise entre parenthèses » de
+      27,6 % à **32,2 %**, et la colonne qui compte — *désigne la SEULE bonne réponse* — de 3,3 % à
+      **10,0 %** (6 questions) : les textes des relecteurs n'en portaient pas. Rattrapé en
+      **ajoutant** une incise à un distracteur dans chacune : **28,1 %, colonne solo 1,7 %**.
+      ⚠️ Et **le cas résiduel est un artefact de mesure** : sur `lecon-41` q0, l'outil compte
+      `(?:...)` et `(?P<nom>...)` comme des incises — ce sont des motifs de code, qu'aucun apprenant
+      ne peut exploiter sans lire.
+
+      ⚠️ **DEUX CHIFFRES DE RELECTEUR PRIS EN DÉFAUT, TOUS DEUX ÉCRITS DE TÊTE**, et c'est la
+      cinquième fois du chantier : « `"__del__" in dir(C)` → **True** » (c'est **False** sur une
+      classe vide, remesuré — le remplacement tient quand même, `__del__` étant une méthode spéciale
+      réelle mais non héritée d'`object`), et un texte annoncé à **122 %** de la bonne réponse mais
+      mesuré à **135 %**, raccourci avant d'être posé. ⚠️ **Et un troisième défaut, neuf celui-là :
+      les six textes du lot 44-48 sont arrivés SANS ACCENTS** (« a charge », « declaree »,
+      « arret ») — réaccentués avant application. *Un relecteur qui écrit du contenu visible en
+      ASCII produit du texte impubliable, quelle que soit la qualité de sa prise.*
+
+      ⚠️ **`verif-controles.js`, entré dans la chaîne en phase A, a rattrapé le piège du heredoc sur
+      sa propre mise en garde** : `tools/mesure-biais-qcm.js` portait un vrai **U+0008** dans le
+      commentaire qui explique justement que « la limite \b de JavaScript est ASCII ». Troisième
+      occurrence du piège sur ce chantier, **première fois qu'un outil le voit avant un œil.**
+
+      🔵 **La question ouverte en B3 — « quelles épreuves par injection s'appuient sur un état du
+      site qu'un chantier peut changer ? » — est tranchée pour ce cours** : la seule qui cite
+      `python` est `verif-chaine-mutations.js`, et elle vise un bloc **`data-exos`** de `lecon-08`,
+      qu'une passe sur les distracteurs ne touche pas. Ancrage vérifié intact. Le cours-témoin
+      `stats` (99,3 %) n'a pas bougé.
+
+      **DETTES ÉCRITES, non traitées, chacune mesurée :**
+      - `lecon-29` q2 : la bonne réponse compte « deux niveaux » pour `@reessayer(3)` là où le corps
+        de la leçon écrit « **trois niveaux : fabrique → décorateur → wrapper** » à **sept endroits**.
+        Elle n'est pas fausse (elle compte la machinerie autrement), mais **aucune des quatre options
+        ne donne le compte que la leçon martèle** — et c'est un distracteur qui porte la formule
+        exacte du mémo. À trancher : aligner la leçon, ou l'énoncé.
+      - `lecon-46` q1 : la leçon annonce « ~40-50 % » d'économie mémoire avec `__slots__` ;
+        `tracemalloc` sur 300 000 instances en 3.14 mesure **31 %** — les dictionnaires à clés
+        partagées ont réduit l'écart. Fait daté, pas faux à l'époque.
+      - Les quatre défauts hors périmètre relevés en passe 2 de `js` restent ouverts.
+
+      **Contrôles finaux** : `verif.js --rapide` **26 étapes tout vert (69,2 s)** ; `verif-html`
+      **0 / 1 629** ; `verif-donnees` **0 erreur** ; `verif-normatif` **60/60** ; `verif-controles`
+      **0 accident** ; `mesure-qcm-intouchable` **exactement les 5 atteintes déclarées d'avance**
+      (l'énoncé, la bonne réponse et l'explication de `lecon-38` q2 ; la bonne réponse de `lecon-41`
+      q3 ; le message d'exception cité dans l'explication de `lecon-31` q4 — il manquait le mot
+      *value*), **et rien d'autre** ; index régénéré **avec `--fresh`** puisqu'un énoncé a changé,
+      puis deux fois ; cliquet refigé, **8 cours traités** (`archi`, `equipe`, `iac`, `js`,
+      `mobile`, **`python`**, `ux`, `zig`) ; épreuve par injection **7/7**.
+
+      ⚠️ **`doc/lecon-03` s'est périmé une 8ᵉ ET une 9ᵉ fois dans la même passe** : 5 024 → 4 903 →
+      **4 900** manquements, 82,3 % → **80,3 %**. La deuxième est instructive : elle a été déclenchée
+      par mes propres réécritures, entre deux mesures du même réveil. **Et une approximation verbale
+      a été corrigée avec** : « ignorée dans près de **neuf** cas sur dix » était juste à 87,6 %,
+      elle est fausse à 80,3 % — c'est « **huit** cas sur dix ».
+
+      ⚠️⚠️ **UN PIÈGE D'OUTILLAGE TROUVÉ EN ÉCRIVANT CE COMPTE RENDU LUI-MÊME, DE LA MÊME FAMILLE
+      QUE LE HEREDOC : `String.prototype.replace` INTERPRÈTE SA CHAÎNE DE REMPLACEMENT.** Ce texte
+      contient le code inline `^a++$` — un dollar suivi d'un accent grave —, et cette paire signifie
+      pour `replace` « réinsère ici **tout ce qui précède** le match ». Le plan a gonflé de
+      **1 492 lignes dupliquées** en un seul appel, sans la moindre erreur ni le moindre
+      avertissement ; `git diff --stat` l'a montré, rien d'autre ne l'aurait vu, un fichier de plan
+      n'étant contrôlé par aucun outil. **Écrire `s.split(ancre).join(bloc + ancre)`, jamais
+      `s.replace(ancre, bloc + ancre)`, dès que le texte inséré n'est pas sous contrôle.**
+      ⚠️ Et la tentative de consigner ce piège l'a doublé d'un second, tout aussi instructif : la
+      note a d'abord été écrite **par une commande shell**, dont les accents graves ont été pris pour
+      des substitutions de commande — le texte est arrivé amputé de six morceaux, dont le nom même
+      de la méthode en cause. **Le contenu français passe par l'outil d'écriture de fichier, pas par
+      le shell.** Troisième forme du même défaut sur ce chantier, après le heredoc et le U+0008.
+
+      **CE QUI RESTE À FAIRE SUR B4** : `css` (171 q, 91,9 %), `html` (160, 92,1 %), `maths`
+      (117, 82,8 %), `algo` (92, 96,2 %), `nodejs` (89, 95,5 %), `bdd` (86, 97,7 %), `projets-js`
+      (84, 98,8 %), `react` (86, 92,2 %), puis la longue traîne. **Classement de nocivité refait
+      avec les cinq stratégies exploitables** (`b4p-nocivite.js`) : la parenthèse ne change pas
+      l'ordre, la longueur domine partout. **5 183 questions devinables sur 6 167 (84,0 %)**,
+      **78 cours sur 90** encore au-dessus de 60 %.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
