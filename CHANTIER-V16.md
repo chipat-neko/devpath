@@ -1503,57 +1503,200 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       avec les cinq stratégies exploitables** (`b4p-nocivite.js`) : la parenthèse ne change pas
       l'ordre, la longueur domine partout. **5 183 questions devinables sur 6 167 (84,0 %)**,
       **78 cours sur 90** encore au-dessus de 60 %.
-      ---
+      ---
 
-      **`css` — EN COURS le 2026-09-04. 3ᵉ cours le plus nocif : 47 leçons, 171 questions,
-      513 distracteurs.**
+      **`css` — FAIT le 2026-09-04. LE COURS EST CLOS : 91,9 % → 21,7 %, 3ᵉ cours le plus nocif
+      du site. 47 leçons, 171 questions, 513 distracteurs.**
 
       ⚠️⚠️ **CE RÉVEIL A, LUI AUSSI, COMMENCÉ PAR TROUVER LE TRAVAIL DU PRÉCÉDENT EN RADE — pour
-      la deuxième fois du chantier, et la cause est cette fois NOMMÉE.** Le réveil de 06:30 a lancé
-      un workflow d'écriture des 285 distracteurs des leçons 01-25 et **a été terminé par le harnais
-      au bout de 600 s de tâches de fond** (« Background tasks still running after 600s;
-      terminating »), message présent tel quel dans `.autonomie/journal.log`. Il a rendu la main à
-      06:44 avec **six fichiers modifiés et rien de commité**, et **quatre brouillons complets
-      jamais posés** dans `scratchpad/b4c-{B,C,D,E}`. *Un travail non commité est un travail perdu.*
+      la deuxième fois du chantier, et la cause est cette fois NOMMÉE, pas devinée.** Le réveil de
+      06:30 a lancé un workflow d'écriture des 285 distracteurs des leçons 01-25 et **a été terminé
+      par le harnais au bout de 600 s de tâches de fond** (« Background tasks still running after
+      600s; terminating »), message présent tel quel dans `.autonomie/journal.log`. Il a rendu la
+      main à 06:44 avec **six fichiers modifiés et rien de commité**, et **quatre brouillons
+      complets jamais posés**. *Un travail non commité est un travail perdu* — et la parade tenue
+      cette fois : **un commit par lot, dès qu'un lot est mesuré**, treize au total.
 
       | ce qui a été récupéré | où il dormait | questions | distracteurs |
       |---|---|---:|---:|
-      | leçons 01-05 et 25 | déjà écrites sur le disque, non commitées | 21 | 78 |
+      | leçons 01-05 et 25 | écrites sur le disque, non commitées | 21 | 78 |
       | leçons 06-10 | `b4c-B/overrides.js` | 15 | 45 |
       | leçons 11-15 | `b4c-C/draft.js` | 15 | 45 |
       | leçons 16-20 | `b4c-D/distracteurs.js` | 15 | 45 |
       | leçons 21-24 | `b4c-E/distracteurs.json` | 20 | 57 |
       | **total récupéré** | | **86** | **270** |
 
-      **Mesure du cours, avant toute écriture neuve de ce réveil : 91,9 % → 80,3 %** (récupération
-      des six fichiers) **→ 56,2 %** (pose des quatre brouillons). Global du site **80,2 % →
-      79,2 %**. Deux commits, un par étape, chacun portant sa mesure.
+      **LE COURS ENTIER, avant → après. Aucune stratégie ne dépasse 29,5 %, le hasard vaut 25,0 %.**
 
-      | indice, cours entier | départ | après récupération |
+      | indice, 171 questions | avant | après |
       |---|---:|---:|
-      | la plus longue | 91,9 % | **56,2 %** |
-      | la plus détaillée | 68,9 % | **53,4 %** |
-      | l'incise entre parenthèses | 62,0 % | **48,0 %** |
-      | le mot technique exclusif | 60,2 % | **50,0 %** |
-      | l'écho de l'énoncé | 50,1 % | **38,6 %** |
+      | la plus longue | **91,9 %** | **21,7 %** |
+      | la plus détaillée | 68,9 % | **29,5 %** (meilleure stratégie restante) |
+      | l'incise entre parenthèses | 62,0 % | **29,5 %** |
+      | le mot technique exclusif | 60,2 % | **28,9 %** |
+      | l'écho de l'énoncé | 50,1 % | **23,5 %** |
+      | la MAJUSCULE d'emphase | 31,6 % | **26,7 %** |
 
-      ⚠️ **LE GARDE-FOU A ENCORE SERVI, ET C'EST LA TROISIÈME FOIS DU CHANTIER.** Le premier poseur
-      substituait le texte JSON de l'ancienne option, comme celui du lot A. Il a **refusé d'écrire**
-      sur `lecon-07` q1 : `"2em"` apparaît **deux fois** dans le fichier — une option de QCM est
-      aussi un morceau de code du corps de la leçon. *Un motif de remplacement trop large casse ce
-      qui était juste.* Réécrit pour remplacer **la LIGNE de la question**, avec un contrôle de
-      fidélité préalable : une question **non modifiée** doit se re-sérialiser exactement en sa
-      ligne d'origine, faute de quoi le script refuse d'écrire — sinon la mise en forme du bloc
-      partirait à la dérive sur 47 fichiers.
+      **Global du site : 80,2 % → 78,2 %. `css` est marqué `traite`, 9ᵉ cours verrouillé**
+      (`archi`, `equipe`, `iac`, `js`, `mobile`, `python`, `ux`, `zig`, **`css`**). Cliquet vert,
+      épreuve par injection **7/7**, cours-témoin `stats` (99,3 %) intact.
 
-      **Contrôles de la récupération** : `mesure-qcm-intouchable` **0 atteinte** sur les
-      171 questions (énoncés, index `correct`, explications et bonnes réponses identiques à
-      `git show HEAD:`) ; **19 blocs JSON** revalidés ; **0 BOM**, **0 caractère de contrôle** (le
-      piège du heredoc) ; `verif-html` **0 / 1 629** en 2,20 s.
+      **Les six lots d'écriture des leçons 26 à 47**, un écrivain par lot, fichiers disjoints,
+      aucun commit d'agent :
 
-      **Ce qui reste sur `css`** : les leçons 26 à 47 (76 questions, 228 distracteurs, dont le QCM
-      bilan de 10 questions), la contradiction adversariale sur tout le cours, puis la régénération
-      de `quiz-index`, `doc/verif-normatif` et le cliquet. **La case B4 reste décochée.**
+      | lot | leçons | questions | distracteurs | la plus longue | pire stratégie après |
+      |---|---|---:|---:|---:|---:|
+      | G1 | 26-29 | 12 | 35 / 36 | 95,8 % → 25,0 % | 29,9 % |
+      | G2 | 30-33 | 12 | 36 / 36 | 100,0 % → 25,0 % | 29,9 % |
+      | G3 | 34-37 | 12 | 36 / 36 | 100,0 % → 25,0 % | 34,0 % |
+      | G4 | 38-41 | 12 | 36 / 36 | 100,0 % → 25,0 % | 37,5 % |
+      | G5 | 42-45 | 12 | 34 / 36 | 91,7 % → 25,0 % | 27,1 % |
+      | G6 | 46-47 + **bilan** | 16 | 42 / 48 | 83,3 % → 25,0 % | 32,3 % |
+
+      **LA DÉCISION SUR LE QCM BILAN, prise et chiffrée plutôt que subie.** Ses 10 bonnes réponses
+      sont des **jetons de code de 9 à 36 signes** : la fourchette 70-130 % n'y protège rien.
+      L'écrivain n'en a rallongé aucun et a appliqué le critère d'**homogénéité de genre** —
+      les jetons inventés ou hors genre remplacés par des propriétés, règles et fonctions **réelles**
+      du CSS, chacune fausse pour une raison différente (`move` → `perspective`, `tween` →
+      `will-change`, `::dialog` → `::selection`, `@parent` → `@supports`, `fill` → `caret-color`,
+      `min(max)` → `min(min, idéal, max)`). C'est la même décision qu'en passe 2 de `js`, prise
+      pour la même raison, et elle se stabilise donc en règle.
+
+      ---
+
+      **LA CONTRADICTION ADVERSARIALE — trois relecteurs sur les leçons 01 à 25, 85 questions,
+      340 options, corps des 25 leçons lus en entier. 64 prises. Aucune bonne réponse FAUSSE.**
+
+      ⚠️⚠️ **UN RELECTEUR A MESURÉ DANS UN VRAI CHROME, ET C'EST CE QUI A RENDU LES TROIS PRISES
+      LES PLUS GRAVES.** Il a monté une sonde CDP (reprise de `tools/verif-clic.js`) et trois pages
+      de test en `file://`. Première fois du chantier qu'un contradicteur **exécute** pour prouver
+      — la règle fondatrice appliquée par un agent, pas seulement par moi :
+
+      1. **`lecon-06` q0 opt1 était VRAI.** « la générique complète les accents » : le repli d'une
+         pile `font-family` se fait **glyphe par glyphe**, pas police par police. Mesuré :
+         `@font-face { src: local("Courier New"); unicode-range: U+0041-005A }` puis
+         `font-family: SondeAZ, Arial` → le « A » fait **24 px** (Courier New), le « É » **27 px**
+         (Arial). Deux polices dans un seul mot, une seule déclaration. La leçon, elle, n'enseigne
+         que le repli global : **le distracteur devenait vrai dès qu'on en savait un peu plus
+         qu'elle.**
+      2. **`lecon-08` q1 opt2, défendable, mesuré.** Trois parents `static`, un enfant absolu
+         chacun : `opacity: .5` ne capture PAS l'enfant (il part en 0,0), `transform: translateZ(0)`
+         et `filter: blur(0px)` le capturent exactement. **Deux cas sur trois donnaient raison au
+         distracteur**, et la leçon nomme `transform` comme créateur de contexte d'empilement.
+      3. **`lecon-07` q0 opt2 se détruisait dans sa propre phrase** : elle citait `rgb()` et `hsl()`
+         comme exemples de ce que `background-color` refuserait. Mesuré : les deux sont acceptées
+         (`hsl` résolue en `rgb(64, 149, 191)`), seul `linear-gradient` est rejeté.
+
+      **ONZE DOUBLONS DE FAUSSETÉ, qui faisaient tomber onze questions à deux choix.** Deux options
+      centrant sur le mauvais **axe** (09 q1) ; deux « bloquées à 200px » (10 q1) ; deux « un
+      enfant » (10 q0) ; deux « éviter `opacity` » (12 q1) **alors que la leçon enseigne le
+      contraire** ; deux « dans `:hover` il n'y a que de la couleur » (12 q0) ; deux « compilé comme
+      en Sass » (13 q0 et q1) ; deux « préfixer bleu » (14 q0) ; deux « aucune des deux règles ne
+      gagne » (03 q1) ; deux qui niaient le pouvoir de `counter-reset` (17 q1) ; deux qui
+      proposaient de la couleur quand l'énoncé l'excluait (18 q2) ; deux « le barré est
+      transitoire » (20 q0). **Aucun de nos onze indicateurs ne voit ce défaut** : il ne se lit
+      qu'en comparant les distracteurs **entre eux**.
+
+      **LA PRISE LA PLUS GRAVE DU LOT B** — `lecon-11` q2 opt3 : « une grille dont le nombre de
+      colonnes change : l'unité `fr` retire une colonne dès que la place manque, ce qui remplace le
+      point de rupture ». **La situation décrite est exactement celle que le corps donne pour
+      réponse** (« avec `auto-fill` et `minmax()`, elle calcule seule le nombre de colonnes. Zéro
+      media query »), et le récap range `fr` parmi les unités fluides qui évitent les media queries.
+      L'apprenant qui avait lu la leçon cochait légitimement ce distracteur.
+
+      ⚠️ **TROIS EXCEPTIONS À L'INTOUCHABLE, déclarées d'avance, et `mesure-qcm-intouchable` rend
+      exactement ces trois-là et rien d'autre :**
+      - **`lecon-19` q2 : la bonne réponse prescrivait un remède que la leçon n'enseigne NULLE
+        PART.** Elle est exacte (`1fr` vaut `minmax(auto, 1fr)`), mais comptage sur le fichier,
+        corps contre bloc QCM : **`min-width: 0` = 11 fois dans le corps, 0 fois dans les
+        options** ; `minmax(0` = **0 fois dans le corps**, 2 fois dans le QCM. La leçon le martèle
+        dans son objectif d'apprentissage, dans son code commenté (« la ligne qui sauve la
+        grille »), dans son piège fréquent (« c'est la cause numéro un des grilles qui débordent »),
+        dans son antisèche, son glossaire et son récap. **L'apprenant diligent cherchait dans les
+        quatre choix ce que sa leçon lui avait appris onze fois, et ne le trouvait pas.** Bonne
+        réponse et explication alignées sur `min-width: 0`.
+      - **`lecon-24` q1 : l'explication commentait une option qui n'existe pas.** Elle disait
+        « `blackwhite()` n'existe pas » — mot absent de **toutes** les options du fichier, trace
+        d'une réécriture non répercutée — et ne disait rien de `monochrome(100%)` ni de
+        `sepia(100%)`, les deux options réellement présentes.
+      - **`lecon-10` q1 : l'explication renvoyait à `auto-fit`**, mot-clé absent du corps de la
+        leçon 10 (10 occurrences de `auto-fill`, 0 de `auto-fit` hors JSON), enseigné seulement en
+        leçon 19, et **au comportement différent**. Un mot changé.
+
+      **UN DISTRACTEUR QUI LIVRAIT LA CLÉ DE LA BONNE RÉPONSE** — `lecon-20` q1 opt1 écrivait « un
+      contour qui ne déplace jamais rien », c'est-à-dire le fait unique sur lequel repose la bonne
+      réponse. Et opt3 disait frontalement l'**inverse** d'opt1 : deux options sur quatre portaient
+      le même fait, une seule le niait, l'apprenant éliminait par majorité sans rien savoir.
+
+      **UNE CONTREVÉRITÉ DE SPÉCIFICATION PUBLIÉE** : `09` q1 opt2 écrivait « `vertical-align:
+      middle` (hérité) » — CSS 2.1 § 10.8.1 dit *Inherited: no*. **Un distracteur doit être faux sur
+      sa réponse, pas propager une fausseté que l'apprenant mémorise.**
+
+      **UN DÉFAUT D'ÉNONCÉ CORRIGÉ DU CÔTÉ DES DISTRACTEURS, sans toucher à l'intouchable** :
+      `lecon-06` q1 demande une valeur « **sans unité** », et deux distracteurs en portaient une
+      (`24px`, `100 %`) : ils s'éliminaient d'office et **la question tombait à deux choix**. Les
+      deux sont maintenant des valeurs sans unité, fausses par leur valeur *et* par leur raison.
+
+      **UNE FAUTE DE LANGUE PUBLIÉE** : `lecon-22` q3 opt1 écrivait « garder la barre d'adresse **en
+      cache** » pour « masquée ». L'apprenant éliminait l'option sur sa formulation, pas sur son
+      contenu.
+
+      **UN MOTIF MESURÉ SUR LE COURS ENTIER, pas sur un seul lot** (85 questions, 340 options) :
+      une option qui ouvre par « **Les deux…** », par « **Ni…** », ou qui contient « **quelle que
+      soit** » est fausse **17 fois sur 17, zéro bonne réponse**. Onze des dix-sept étaient dans les
+      leçons 01-08. ⚠️ **Et deux motifs soupçonnés ont été INNOCENTÉS par la mesure** : les
+      majuscules d'insistance (15 distracteurs / 5 bonnes réponses = le hasard) et « l'option qui
+      annonce une erreur » (11 / 3). *Un motif qu'on n'a pas compté n'est qu'une impression.*
+
+      **TROIS POINTS NON TRANCHÉS, dits plutôt qu'arrondis** : le motif `!important` (2 occurrences,
+      2 distracteurs, 0 bonne réponse — trop peu pour conclure) ; `lecon-22` q4 opt1, où
+      `min(90%, 1200px)` produit **réellement** une bascule à 1333,33 px, donc défendable ;
+      `lecon-23` q1 opt3 « `zoom(1.2)` », la propriété `zoom` existant bel et bien.
+
+      ---
+
+      **CINQ PIÈGES D'OUTILLAGE, DONT DEUX NEUFS — et c'est le second résultat de ce réveil.**
+      Tous relèvent de la même famille : *un outil modifie en silence ce qu'on ne lui a pas
+      demandé, et seul un contrôle explicite le voit.*
+
+      1. ⚠️ **NEUF — l'outil d'édition a converti `CHANTIER-V16.md` ENTIER en CRLF** au passage
+         d'une modification d'une ligne. `git diff --stat` rendait **1 623 insertions / 1 572
+         suppressions** pour un ajout de 51 lignes. Ramené en LF avant le commit : le diff retombe à
+         **51 insertions, 0 suppression**. Sans ce contrôle, l'historique du plan devenait illisible.
+      2. ⚠️ **NEUF — le shell a EXÉCUTÉ les mots entre accents graves d'un message de commit.** Le
+         message annonçait un cours marqué « » et un témoin « » : deux mots avalés, remplacés par
+         du vide, et le commit passé sans erreur. Réécrit par fichier (`git commit -F`). *Le texte
+         français passe par un FICHIER, jamais par la ligne de commande.*
+      3. **Le poseur de distracteurs a REFUSÉ d'écrire** sur `lecon-07` q1 : `"2em"` apparaît
+         **deux fois** dans le fichier — une option de QCM est aussi un morceau de code du corps de
+         la leçon. Réécrit pour remplacer **la LIGNE de la question**, avec un contrôle de fidélité
+         préalable : une question **non modifiée** doit se re-sérialiser exactement en sa ligne
+         d'origine, sinon le script refuse. Un écrivain a durci ce garde-fou pour son propre lot
+         (fidélité vérifiée sur **chaque** question, pas sur une témoin).
+      4. **Un écrivain a trouvé de vrais caractères de contrôle U+0000..U+001F dans le script qu'il
+         avait écrit pour CONTRÔLER l'absence de caractères de contrôle** — sa classe de regex les
+         portait à la place de la plage écrite en toutes lettres. Invisible à la lecture ; seul
+         « grep : Binary file » l'a montré. Aucune leçon touchée avant correction, le `--dry` ayant
+         servi de sas.
+      5. **Le heredoc a de nouveau avalé des antislashs doublés** (cinquième fois du chantier), chez
+         un autre écrivain. Les textes français, eux, n'ont jamais transité par un heredoc.
+      6. **`doc/lecon-03` s'est périmé une DIXIÈME fois**, et **le garde-fou a de nouveau refusé
+         d'écrire au premier essai** : j'avais déclaré 2 occurrences de « 4 900 », il y en a
+         **CINQ, dont deux sur la même ligne**. `grep -c` en comptait 4 (il compte des **lignes**)
+         et `grep -o` en montrait 4 (ses fenêtres de contexte se chevauchent). **Seul un
+         `split/join` compte juste.** 4 900 → **4 781** manquements, 80,3 % → **78,3 %**,
+         10 mentions corrigées, `verif-normatif` revenu à **60/60**.
+
+      **Contrôles finaux** : `verif.js --rapide` **tout vert (76,0 s)** ; `verif-html`
+      **0 / 1 629** ; `verif-donnees` **0 erreur** (I18 vert, 6 151 entrées, écart +0) ;
+      `verif-normatif` **60/60** ; `mesure-qcm-intouchable` **3 atteintes, exactement les 3
+      déclarées d'avance** ; index régénéré **deux fois** (pas de `--fresh` : **aucun énoncé n'a
+      changé** de tout le cours) ; cliquet refigé, **9 cours traités** ; épreuve par injection
+      **7/7**.
+
+      **CE QUI RESTE À FAIRE SUR B4** : `html` (160 q, 92,1 %), `maths` (117, 82,8 %), `algo`
+      (92, 96,2 %), `nodejs` (89, 95,5 %), `bdd` (86, 97,7 %), `projets-js` (84, 98,8 %), `react`
+      (86, 92,2 %), puis la longue traîne. **81 cours sur 90 restent au-dessus de 60 %.**
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
