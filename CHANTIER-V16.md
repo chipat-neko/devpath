@@ -1175,6 +1175,168 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       `react`. **Et une question neuve, ouverte par ce point** : les 84 cours non traités n'ont jamais
       été mesurés sur la parenthèse. À 59,2 % de moyenne, l'ordre de nocivité du cadrage — établi sur
       la seule longueur — **est peut-être à refaire**.
+
+      ---
+
+      **`js` PASSE 2 — FAIT le 2026-09-04, dans la même passe. LES 330 DISTRACTEURS DES LEÇONS 37 À
+      65, LES DEUX QCM BILAN COMPRIS. LE COURS `js` EST CLOS.**
+
+      | indice, sur les 110 questions | avant | après |
+      |---|---:|---:|
+      | la plus longue | **91,4 %** | **22,3 %** |
+      | la plus COURTE | 2,7 % | **23,2 %** |
+      | la plus détaillée | 80,3 % | **24,5 %** |
+      | le mot technique exclusif | 83,2 % | **22,7 %** |
+      | l'écho de l'énoncé | 62,2 % | **23,5 %** |
+      | l'incise entre parenthèses | 65,7 % | **26,8 %** |
+      | la MAJUSCULE d'emphase | 38,9 % | **25,5 %** |
+      | le point-virgule | 50,1 % | **26,4 %** |
+      | rangs de longueur | **101 / 3 / 3 / 3** | **26 / 22 / 37 / 25** |
+      | hors de 70-130 % | **311** | **9** (décision assumée, voir plus bas) |
+
+      **Les douze stratégies tiennent entre 22,3 % et 26,8 %** — le hasard vaut 25,0 % — et la colonne
+      « désigne la SEULE bonne réponse » est à **0,0 % sur les quatre indices de forme**, contre
+      54,5 %, 20,0 %, 32,7 % et 8,2 % au départ.
+
+      **LE COURS ENTIER : « la plus longue » 95,4 % → 20,8 %, et aucune stratégie au-dessus de
+      31,0 %.** La cible de B1 (≤ 40 % sur la longueur, ≤ 60 % sur toute stratégie exploitable) est
+      atteinte : **`js` est marqué `traite`, 7ᵉ cours verrouillé.** Global du site **84,8 % → 82,2 %**.
+      `js` était le cours le plus nocif du site : 218 questions, 208 devinables.
+
+      **LA CONSIGNE RÉÉCRITE A PAYÉ IMMÉDIATEMENT.** La passe 1 avait dû être reprise entièrement
+      parce que la parenthèse et la capitale n'étaient pas dans la consigne. Elles y étaient pour la
+      passe 2, **avec les huit indices dans un seul tableau** : dès la première vague d'écriture, les
+      douze stratégies sortaient entre 21,8 % et 26,5 %, colonne solo à 0,0 %. **Aucune reprise de
+      forme n'a été nécessaire ; la contradiction a pu porter entièrement sur le FOND.** C'est la
+      démonstration la plus nette de la leçon 2 de B3.
+
+      ⚠️⚠️ **LE DÉFAUT QUI FONDE TOUTE CETTE CHAÎNE S'EST PRÉSENTÉ EN PERSONNE : UNE BONNE RÉPONSE
+      ÉTAIT FAUSSE, ET LE DISTRACTEUR ÉTAIT VRAI.** `js/lecon-48` q3 demandait ce qui arrive quand on
+      lit `response.body` deux fois avec `for await`. La bonne réponse disait « la seconde échoue ».
+      Un relecteur l'a contredit **en exécutant le code sous Node et sous Chrome** ; je l'ai reproduit
+      moi-même (`scratchpad/b4-preuve-lecon48b.js`) :
+
+      | ce qu'on fait après la première boucle | ce qui se passe RÉELLEMENT |
+      |---|---|
+      | un second `for await` sur `response.body` | `bodyUsed=true`, `locked=false`, **0 morceau, AUCUNE erreur** |
+      | `await response.text()` | **TypeError « Body is unusable: Body has already been read »** |
+      | `response.clone()` | **TypeError « Body has already been consumed »** |
+      | `for await` pendant qu'un lecteur tient le verrou | **TypeError « ReadableStream is locked »** |
+
+      **Et la leçon se contredisait elle-même** : son corps enseigne, correctement, « une fois `done`,
+      le réitérer ne redonne rien » — c'est-à-dire *pas d'erreur*. Seul le QCM prétendait le contraire.
+      **Quatre vérificateurs verts, une leçon qui se dément à trois écrans d'intervalle, et aucun outil
+      qui exécute.** Correctif minimal, décidé et écrit avant d'être appliqué : l'énoncé déplace la
+      seconde lecture vers `response.text()`, qui lève réellement ; **la bonne réponse n'est pas
+      touchée d'un caractère** (vérifié contre `git show HEAD:`) ; l'explication publie la mesure
+      *et* la nuance ; les trois distracteurs sont reportés sur `text()`. La liste « Vérifie ta
+      compréhension » du corps, qui posait encore l'ancienne question, pose maintenant les deux cas.
+      `mesure-qcm-intouchable` rend **exactement 2 atteintes — l'énoncé et l'explication de cette
+      seule question**, celles que j'ai autorisées nommément à l'écrivain du lot, et rien d'autre.
+
+      ⚠️⚠️ **ET CHANGER CET ÉNONCÉ A PERIMÉ L'INDEX SANS RIEN CASSER D'APPARENT.** `build-index.js`
+      **conserve les entrées de l'ancien index** : la question d'origine y a survécu à côté de la
+      neuve — 6 151 → **6 152** entrées, et l'examen aurait servi **les deux versions**, dont la
+      fausse. Rien ne rougissait : ni `verif-html`, ni la chaîne, ni le cliquet. **Seul l'invariant
+      I18 de `verif-donnees` l'a vu**, en nommant la question périmée. Purgé par
+      `build-index.js --write --fresh` — 6 151 entrées, I18 vert. **À retenir : régénérer l'index ne
+      suffit pas quand on modifie un ÉNONCÉ, il faut le purger.**
+
+      **82 prises de contradiction (46 de FOND, 36 de FORME), toutes retenues sur le fond — mais
+      environ 45 textes de remplacement sur 82 ont été RÉÉCRITS par les correcteurs.** Le motif est
+      constant et instructif : *le relecteur vérifie son texte isolément et ne remesure jamais le
+      lot*. Appliqués tels quels, ses textes cassaient la forme qu'il venait de louer — sur le lot
+      43-48, la parenthèse remontait de 25,0 % à **34,7 %** et se remettait à désigner la seule bonne
+      réponse, parce que ses dépersonnalisations retiraient la parenthèse du seul distracteur qui en
+      portait une ; sur 49-54, **six** des treize indices sortaient de la bande. Deux correcteurs ont
+      pris l'habitude de **simuler leurs corrections en mémoire avant d'écrire** ; c'est ce qu'il faut
+      généraliser au lot suivant.
+
+      **TROIS INDICES QUE NOS DEUX OUTILS NE VOIENT TOUJOURS PAS, mesurés indépendamment par les
+      relecteurs et reproduits par les correcteurs :**
+      - **« l'option qui prête une intention au moteur est fausse »** — *le moteur décide*, *le
+        navigateur choisit* : **30,1 %**, trouvé sur deux lots séparément et reproduit au chiffre
+        près par un correcteur qui a réimplémenté la mesure. Ramené à 25,0-26,9 %.
+      - **les tics rhétoriques** (clause méta « c'est ceci qui sépare les deux », glose finale entre
+        parenthèses, « de son côté / , lui, », bourrage « seul / direct ») : **38,8 %** sur le lot
+        61-65, présents dans 15 distracteurs et **jamais** dans une bonne réponse. Ramenés à 26,4 %.
+      - **les absolus, que notre motif SOUS-ESTIME** : il compte « rien » et « n'existe pas », que
+        certaines bonnes réponses portent, ce qui masque le déséquilibre. Mesuré à **34,7 %** sur le
+        lot 55-60 par un motif restreint. **Ce sont trois candidats pour B5.**
+
+      ⚠️ **UNE DÉCISION ASSUMÉE, ET CHIFFRÉE : la fourchette 70-130 % cède quand la bonne réponse est
+      un JETON DE CODE.** Sur les QCM bilan, quatre bonnes réponses sont `null` (4 caractères),
+      `const` (5), `object` (6), `undefined` (9) : la fourchette n'autorise alors que 3 à 12
+      caractères, et il n'existe pas de troisième mot-clé de déclaration en JavaScript. Le correcteur
+      a mesuré que sur le bloc bilan seul, « la plus longue » rend **15,0 %** et « la plus courte »
+      **20,0 %**, toutes deux **sous** le hasard : la longueur n'y désigne rien, la fourchette n'a
+      plus rien à protéger. **Le critère opérant n'est pas le ratio, c'est l'HOMOGÉNÉITÉ DE GENRE** —
+      une phrase rédigée au milieu de trois jetons de code, ça, c'est une vraie fuite. D'où les
+      9 options hors bande, revendiquées. Et une correction dans l'autre sens : un écrivain avait
+      remplacé `une chaîne vide ""` et `une erreur est levée` par `false` et `NaN`, qui s'éliminent
+      par simple cohérence de type — **il avait rendu la question plus facile en croyant l'améliorer**.
+      Restauré.
+
+      **Quatre autres défauts trouvés PAR EXÉCUTION, hors périmètre, non corrigés — à trancher :**
+      1. l'énoncé de `js/lecon-39` q3 écrit `"élève".sort()` : `String.prototype.sort` **n'existe
+         pas** (`TypeError`, vérifié). La leçon, elle, écrit correctement `mots.slice().sort()` ;
+      2. l'explication de `js/lecon-53` q1 dit « espace **fine** insécable » ; la sortie mesurée de
+         `Intl.NumberFormat` est **U+00A0**, l'espace insécable ordinaire. La bonne réponse, elle, a
+         raison ;
+      3. « WeakMap n'accepte que des objets » est **daté depuis ES2023** : `new WeakMap().set(Symbol("x"), 1)`
+         passe, alors que `Symbol.for("…")` lève. Aucun distracteur n'en devient vrai ;
+      4. le corps de `js/lecon-53` dit « trivial en français (**deux** formes) » ;
+         `new Intl.PluralRules("fr").resolvedOptions().pluralCategories` rend **`["one","many","other"]`**.
+      **Les quatre sont dans l'intouchable ou dans le corps d'une leçon : ils relèvent d'un point à
+      part, pas d'une passe sur les distracteurs.**
+
+      ⚠️ **`doc/lecon-03` s'est périmé une 7ᵉ fois** : 5 101 → **5 024** manquements, 83,6 % →
+      **82,3 %**, 30 → **34 leçons parlant de « la spécification »**. 11 mentions, index régénéré deux
+      fois puis **purgé**, `verif-normatif` **60/60**. Le script à garde-fou a de nouveau exigé le
+      compte exact avant d'écrire.
+
+      **Contrôles finaux** : `verif.js --rapide` **26 étapes tout vert (79,0 s)** ; `verif-html`
+      **0 / 1 629** ; `verif-donnees` **0 erreur** (I18 revert au vert après la purge) ;
+      `verif-normatif` **60/60** ; cliquet **vert**, refigé, **7 cours traités** (`archi`, `equipe`,
+      `iac`, **`js`**, `mobile`, `ux`, `zig`) ; épreuve par injection **7/7**, témoin `stats`
+      (99,3 %) intact.
+
+      ---
+
+      **OÙ EN EST B4 — LA CASE RESTE DÉCOCHÉE, ET VOICI POURQUOI, CHIFFRÉ.**
+
+      | | |
+      |---|---:|
+      | Cours traités (B3 + B4) | **7 sur 90** |
+      | Questions traitées | **579 sur 6 167** |
+      | Global « la plus longue » | **89,5 % → 82,2 %** |
+      | Cours encore au-dessus de 60 % | **78 sur 90** |
+
+      `js` était le n° 1 de la liste de nocivité et il est clos. **Restent les neuf autres du
+      premier lot** : `python` (173 q, 91,6 %), `css` (171, 91,9 %), `html` (160, 92,1 %), `maths`
+      (117, 82,8 %), `algo` (92, 96,2 %), `nodejs` (89, 95,5 %), `bdd` (86, 97,7 %), `projets-js`
+      (84, 98,8 %), `react` (86, 92,2 %). ⚠️ **Le classement de nocivité reste établi sur la SEULE
+      longueur** : la parenthèse, découverte en passe 1 et mesurée à 58,1 % sur le site, n'y entre
+      pas. **À refaire avant d'attaquer le lot suivant** — c'est peu coûteux et l'ordre peut changer.
+
+      ⚠️⚠️ **CONTRAINTE POUR LE PROCHAIN RÉVEIL, à ne pas oublier : `stats` (99,3 %) reste le
+      cours-témoin de `verif-qcm-biais-mutations.js`.** Il n'est pas dans le premier lot, mais s'il
+      arrive dans un lot, **changer le témoin AVANT de le traiter**, jamais après. C'est la faute que
+      B3 a dû réparer sur `zig`.
+
+      **LE PROTOCOLE, tel qu'il se stabilise après huit cours — à rejouer tel quel :**
+      1. **une consigne d'écriture qui porte les HUIT indices dans un seul tableau**, dès la première
+         vague. La passe 1 de `js` a coûté une reprise complète pour en avoir oublié deux ;
+      2. un écrivain par lot de leçons, fichiers disjoints, aucun commit d'agent ;
+      3. **contradiction adversariale obligatoire** — 46 défauts de fond sur 110 questions en passe 2,
+         dont une bonne réponse fausse qu'aucun vérificateur ne voyait ;
+      4. **un correcteur qui JUGE et REMESURE** : la moitié des textes proposés par les relecteurs
+         cassent la forme, parce qu'un relecteur vérifie son texte isolément. **Simuler avant
+         d'écrire** ;
+      5. contrôler l'intouchable contre `git show HEAD:`, **et déclarer d'avance toute exception** ;
+      6. `build-index --write`, puis `doc/verif-normatif`, puis `build-index --write` une seconde
+         fois — **et `--fresh` si un ÉNONCÉ a changé**, sinon l'ancienne question survit dans l'index ;
+      7. marquer le cours `traite` et refiger la référence.
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
