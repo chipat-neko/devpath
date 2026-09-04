@@ -1,18 +1,18 @@
 ﻿# Etat de l'autonomie
 
-Releve du **2026-09-04 06:34**. Ce fichier est reecrit a chaque controle : s'il est vieux, c'est que le controle ne tourne plus.
+Releve du **2026-09-04 07:34**. Ce fichier est reecrit a chaque controle : s'il est vieux, c'est que le controle ne tourne plus.
 
 ## SAIN
 
-Rien a signaler.
+- arret VOLONTAIRE en place (.autonomie/arret-volontaire.txt) : aucune reparation.
 
 | | |
 |---|---|
-| tache | active |
+| tache | DESACTIVEE |
 | passe en cours | oui |
-| prochain reveil | 09/04/2026 08:29:59 |
-| derniere trace | 2026-09-04 06:30  (il y a 0.1 h) |
-| usage hebdomadaire | 70 % |
+| prochain reveil | 09/04/2026 08:49:02 |
+| derniere trace | 2026-09-04 06:49  (il y a 0.8 h) |
+| usage hebdomadaire | 77 % |
 | cases restantes | **14** |
 | plan courant | CHANTIER-V16.md |
 
@@ -24,4 +24,4 @@ Rien a signaler.
 | CHANTIER-V15.md | 32/32 | termine |
 | CHANTIER-V16.md | 8/22 | 14 |
 
-Derniere ligne du journal : `[2026-09-04 06:30:00] ===== reveil autonome =====`
+Derniere ligne du journal : `[2026-09-04 06:49:03] ===== reveil autonome =====`
