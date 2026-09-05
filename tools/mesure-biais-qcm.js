@@ -33,6 +33,29 @@
      node tools/mesure-biais-qcm.js --cours       # + le detail par cours
      node tools/mesure-biais-qcm.js --json        # meme mesure, en JSON
      node tools/mesure-biais-qcm.js --pire=20     # les N questions les plus devinables
+     node tools/mesure-biais-qcm.js --lots        # par FENETRE DE LECONS (voir ci-dessous)
+     node tools/mesure-biais-qcm.js --lots=4      # fenetre glissante de 4 lecons
+
+   ⚠️ POURQUOI `--lots` EXISTE, et c'est la lecon la plus chere de la phase B :
+   LES INDICES QUE LA CORRECTION FABRIQUE NE SE VOIENT PAS AU NIVEAU DU COURS.
+   Un cours est reecrit par lots de lecons confies a des agents differents, et chaque
+   agent laisse le TIC DE STYLE qui lui est propre sur SON lot. Mesure faite sur `react`
+   puis refaite sur `ruby` : un tel indice vaut 100 % sur le lot, ~38 % sur le cours et
+   ~25 % sur le site. La moyenne d'un cours le noie ; celle du site l'efface. Ce mode
+   balaie donc chaque cours par fenetres glissantes et signale toute fenetre ou une
+   strategie depasse le seuil, ou designe trop souvent la SEULE bonne reponse.
+
+   ⚠️ LA TAILLE DE LA FENETRE DOIT SUIVRE CELLE DES LOTS D'ECRITURE, et l'epreuve le
+   montre. Le defaut de `ruby` (les lecons 05-08, ecrites d'une main, glose finale sur
+   tous les distracteurs) a ete mesure dans un bac a sable sur l'etat d'avant correction,
+   l'outil y etant COPIE pour que `__dirname/..` ne pointe pas sur le vrai depot :
+     --lots=5  aucune fenetre au-dessus des seuils   <- AVEUGLE
+     --lots=4  ruby 5-8   56,9 %  designation unique 41,7 %
+     --lots=3  ruby 5-7   62,0 %  ·  6-8  59,3 %  ·  4-6  58,3 %
+   Une fenetre plus large que le lot dilue le tic jusqu'a le faire disparaitre. Le defaut
+   est donc de 4 — la taille des lots de ce chantier —, et il faut le baisser si l'on
+   ecrit par lots plus courts. En dessous de 3 lecons, la fenetre n'a plus assez de
+   questions et c'est le bruit du hasard qui declenche.
 
    CODE DE SORTIE : toujours 0 — c'est une mesure, pas un verdict. Le verdict est
    l'affaire de `tools/verif-qcm-biais.js` (point B2).
@@ -50,6 +73,14 @@ var PIRE = (function () {
   var a = process.argv.filter(function (x) { return x.indexOf("--pire=") === 0; })[0];
   return a ? Number(a.slice(7)) || 10 : 0;
 })();
+/* --lots[=N] : la mesure par FENETRE DE LECONS, ajoutee au point B4 (cours `ruby`). */
+var LOTS = (function () {
+  var a = process.argv.filter(function (x) { return x.indexOf("--lots") === 0; })[0];
+  if (!a) return 0;
+  return a.indexOf("=") !== -1 ? (Number(a.split("=")[1]) || 4) : 4;
+})();
+var SEUIL_LOT = 0.60;   /* une strategie au-dessus de ce taux sur une fenetre */
+var SEUIL_SOLO = 0.40;  /* ou qui designe la SEULE bonne reponse aussi souvent */
 
 /* ------------------------------------------------------------ le corpus, des SOURCES */
 /* On lit les blocs `data-quiz` et `data-quiz-bilan` des lecons, et non
@@ -283,6 +314,52 @@ var STRATEGIES = [
     },
   },
   {
+    /* AJOUTEE AU POINT B4 (cours `ruby`, 2026-09-05). Deux relecteurs adversariaux sur
+       six l'ont vue, chacun de son cote : la bonne reponse commence par un jeton de code
+       en minuscule (`sort renvoie...`, `super nu...`, `rescue => e capture...`) quand les
+       distracteurs, rediges comme des phrases francaises, prennent une majuscule.
+       LA CAUSE EST DANS CET OUTIL, a la ligne : `motAttaque()` fait un .toLowerCase()
+       AVANT toute comparaison, donc « l'attaque unique » compare les MOTS et jamais leur
+       CASSE. Une faute invisible a l'outil qui etait cense la voir.
+       Mesure du jour : sur `ruby`, la vague d'ecriture l'avait fait monter de 25,9 % a
+       30,4 % (39,6 % sur le lot des lecons 01-04, ou elle designait la SEULE bonne
+       reponse une question sur quatre) ; apres correction, 23,8 % et plus aucune
+       designation unique. Sur les 6 167 questions du site : 25,2 %, le hasard. */
+    nom: "la casse initiale rare",
+    quoi: "l'option dont le premier caractere est de casse differente des trois autres",
+    choisir: function (q) {
+      var min = q.a.map(function (t) {
+        var c = String(t).trim().replace(/^[«"'`\s]+/, "").charAt(0);
+        return c && c === c.toLowerCase() && c !== c.toUpperCase() ? 1 : 0;
+      });
+      var n = min.reduce(function (a, x) { return a + x; }, 0);
+      var rare = n === 1 ? 1 : (n === min.length - 1 ? 0 : null);
+      if (rare === null) return toutes(q);
+      return min.reduce(function (acc, x, i) { if (x === rare) acc.push(i); return acc; }, []);
+    },
+  },
+  {
+    /* AJOUTEE AU POINT B4 (cours `ruby`, 2026-09-05), meme famille que la precedente et
+       meme origine : la vague d'ecriture donne a chaque lot le TIC DE STYLE de son agent.
+       Ici, l'agent des lecons 05-08 a termine ses distracteurs par une glose entre
+       parentheses — « (qui poursuit) », « (une paire par element) » — que la bonne
+       reponse ne porte pas. Sur ce lot : 56,9 %, et la regle designait la SEULE bonne
+       reponse dans 41,7 % des questions. Le cours entier ne montait qu'a 28,6 %, et le
+       site est a 21,2 % : PAR COURS, l'indice etait invisible.
+       C'est le troisieme indice de suite fabrique par la correction, apres le mot
+       d'attaque (`projets-js`) et le point final (`react`). La regle generale tient :
+       toute regularite typographique qui separe les distracteurs d'un lot de leur bonne
+       reponse est un indice, et le bon niveau d'observation est le LOT, pas le cours. */
+    nom: "ecarter la glose finale",
+    quoi: "eliminer les options qui se terminent par une incise entre parentheses",
+    choisir: function (q) {
+      var f = q.a.map(function (t) { return /\([^()]{3,}\)[.!?]?$/.test(String(t).trim()) ? 1 : 0; });
+      var n = f.reduce(function (a, x) { return a + x; }, 0);
+      if (n === 0 || n === f.length) return toutes(q);
+      return f.reduce(function (acc, x, i) { if (!x) acc.push(i); return acc; }, []);
+    },
+  },
+  {
     nom: "COMBINE : tiret puis longueur",
     quoi: "le tiret d'abord, la longueur pour departager — la methode d'un tricheur",
     choisir: function (q) {
@@ -407,6 +484,77 @@ if (PAR_COURS) {
       "   " + ("       " + pct(c.longueur)).slice(-8) +
       "   " + pct(c.taux) + "  " + c.meilleure);
   });
+}
+
+if (LOTS) {
+  /* Fenetre GLISSANTE : les lots d'ecriture ne tombent pas sur des frontieres connues
+     d'avance, donc une decoupe fixe raterait un tic a cheval sur deux fenetres. On ne
+     mesure qu'une fenetre d'au moins 8 questions : en dessous, le bruit du hasard
+     depasse le seuil tout seul (a 8 questions, l'ecart-type du pur hasard est de 15
+     points). Une soustraction n'est pas une mesure, et une fenetre trop courte non plus. */
+  var MIN_Q = 8;
+  /* Sur quels cours ? Un cours NON traite est au-dessus du seuil dans toutes ses
+     fenetres — c'est son biais d'origine, pas un tic de lot, et l'afficher noierait le
+     signal (mesure : 4 038 alertes sur les 90 cours, contre une poignee sur les seuls
+     cours traites). Par defaut on ne regarde donc que les cours marques `traite` dans
+     tools/qcm-biais-reference.json ; `--cours=<nom>` force un cours precis. */
+  var UN = (process.argv.filter(function (x) { return x.indexOf("--cours=") === 0; })[0] || "").slice(8);
+  var traites = null;
+  if (!UN) {
+    try {
+      var ref = JSON.parse(fs.readFileSync(path.join(__dirname, "qcm-biais-reference.json"), "utf8"));
+      traites = Object.keys(ref.cours || {}).filter(function (c) { return ref.cours[c].traite; });
+    } catch (e) { traites = null; }
+  }
+  var parCoursLot = {};
+  corpus.forEach(function (q) {
+    if (UN && q.cours !== UN) return;
+    if (!UN && traites && traites.indexOf(q.cours) === -1) return;
+    var m = /^lecon-(\d+)\.html$/.exec(q.fichier); if (!m) return;
+    (parCoursLot[q.cours] = parCoursLot[q.cours] || []).push({ n: Number(m[1]), q: q });
+  });
+  var alertes = [], fenetres = 0;
+  Object.keys(parCoursLot).sort().forEach(function (c) {
+    var lot = parCoursLot[c];
+    var nums = lot.map(function (x) { return x.n; });
+    var lo = Math.min.apply(null, nums), hi = Math.max.apply(null, nums);
+    for (var d = lo; d + LOTS - 1 <= hi; d++) {
+      var f = d + LOTS - 1;
+      var qs = lot.filter(function (x) { return x.n >= d && x.n <= f; })
+        .map(function (x) { return x.q; });
+      if (qs.length < MIN_Q) continue;
+      fenetres++;
+      STRATEGIES.slice(1).forEach(function (s) {
+        var succes = 0, solo = 0;
+        qs.forEach(function (q) {
+          var choix = s.choisir(q); if (!choix.length) choix = toutes(q);
+          if (choix.indexOf(q.k) !== -1) { succes += 1 / choix.length; if (choix.length === 1) solo++; }
+        });
+        var t = succes / qs.length, so = solo / qs.length;
+        if (t >= SEUIL_LOT || so >= SEUIL_SOLO) {
+          alertes.push({ cours: c, de: d, a: f, questions: qs.length, nom: s.nom, taux: t, solo: so });
+        }
+      });
+    }
+  });
+  alertes.sort(function (a, b) { return b.taux - a.taux; });
+  console.log("\n  PAR FENETRE DE " + LOTS + " LECONS — " + fenetres + " fenetres d'au moins "
+    + MIN_Q + " questions sur " + Object.keys(parCoursLot).length + " cours "
+    + (UN ? "(--cours=" + UN + ")" : traites ? "(les cours marques `traite`)" : "(tous)")
+    + ", seuils " + pct(SEUIL_LOT) + " / " + pct(SEUIL_SOLO) + " en designation unique :\n");
+  if (!alertes.length) console.log("    aucune fenetre au-dessus des seuils.");
+  else {
+    console.log("    cours          lecons    q   strategie                       taux    seule bonne");
+    alertes.forEach(function (a) {
+      console.log("    " + (a.cours + "              ").slice(0, 14) +
+        " " + (a.de + "-" + a.a + "      ").slice(0, 8) +
+        " " + ("   " + a.questions).slice(-3) +
+        "   " + (a.nom + "                              ").slice(0, 30) +
+        "  " + ("      " + pct(a.taux)).slice(-7) + "   " + ("      " + pct(a.solo)).slice(-7));
+    });
+    console.log("\n    Une fenetre au-dessus du seuil ne prouve pas une faute : elle designe l'endroit");
+    console.log("    ou regarder. Un cours entier ecrit d'une seule main peut etre haut partout.");
+  }
 }
 
 if (PIRE) {
