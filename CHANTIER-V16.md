@@ -1823,6 +1823,121 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       **4 706 questions sur 6 167 restent devinables à la longueur**. La case reste **décochée** :
       dix cours sur les quarante que la cible de B1 demande.
 
+      **`maths` — FAIT le 2026-09-05. LE COURS EST CLOS : 82,8 % → 22,6 %, 5ᵉ cours le plus nocif
+      du site. 13 leçons, 117 questions, 351 distracteurs, deux QCM bilan.**
+
+      **LE COURS ENTIER, avant → après. Aucune stratégie ne dépasse 33,2 %, le hasard vaut 25,0 %.**
+
+      | indice, 117 questions | avant | après |
+      |---|---:|---:|
+      | la plus longue | **82,8 %** | **22,6 %** |
+      | la plus détaillée | 62,3 % | **33,2 %** (meilleure stratégie restante) |
+      | COMBINÉ : le tiret puis la longueur | 83,6 % | **20,9 %** |
+      | le mot technique exclusif | 27,2 % | **17,1 %** |
+      | l'écho de l'énoncé | 25,7 % | **18,7 %** |
+      | la plus COURTE (le biais inverse) | 5,1 % | **26,5 %** — il ne s'est PAS retourné |
+      | rangs de la bonne réponse | **98 / 11 / 3 / 5** | **27 / 32 / 28 / 30** |
+      | distracteurs hors de 70-130 % | **143** | **0** (0,72 à 1,29) |
+
+      **Global du site : 76,3 % → 75,2 %. `maths` est marqué `traite`, 11ᵉ cours verrouillé**
+      (`archi`, `css`, `equipe`, `html`, `iac`, `js`, `maths`, `mobile`, `python`, `ux`, `zig`).
+      Cliquet refigé, épreuve par injection **7/7**, cours-témoin `stats` (99,3 %) intact.
+
+      **Deux vagues d'écriture**, sept lots, fichiers disjoints, aucun commit d'agent : vague 1 =
+      leçons 01-10 (4 écrivains, 192 distracteurs, 83,8 % → 49,6 %) ; vague 2 = leçons 11 à 13
+      dont le bilan final (3 écrivains, 135 distracteurs). Puis **trois relecteurs adversariaux**
+      et **trois correcteurs**.
+
+      ---
+
+      ⚠️ **UN OUTIL DE LA PHASE B ÉTAIT AVEUGLE À 184 QUESTIONS, ET PERSONNE NE L'AVAIT VU EN
+      CINQ COURS.** `mesure-qcm-longueurs.js` — le contrôle de fourchette et de rangs du
+      protocole — exigeait `data-quiz-bilan>` et ratait donc **tout bloc portant un attribut
+      VALUÉ**, `data-quiz-bilan="Bilan du cours"`. **15 blocs du site sont dans ce cas.** Écart
+      relevé cours par cours contre `mesure-biais-qcm.js`, qui les voyait : `maths` **86 vues sur
+      117**, `doc` 40/64, `distribue` 48/69, `offensive` 48/69, `compilation` 52/72, `neurones`
+      48/65, `crypto` 58/68 — et **DIX questions manquantes dans chacun des quatre cours de B4
+      déjà clos** (`js` 208/218, `python` 163/173, `css` 161/171, `html` 150/160). Réparé, puis
+      **contre-épreuve** : les quatre cours clos restent conformes bilans compris (22,5 %,
+      20,8 %, 24,0 %, 18,8 %) — les écrivains avaient bien traité ces bilans, c'est le contrôle
+      secondaire qui ne les regardait pas. **La leçon : deux outils qui lisent le même corpus
+      doivent être confrontés l'un à l'autre, sinon le plus faible ment en silence.**
+
+      ⚠️⚠️ **LA CONTRADICTION A TROUVÉ DEUX EXPLICATIONS ET UNE BONNE RÉPONSE FAUSSES — et c'est
+      son résultat principal.** Trois relecteurs, 117 questions, 468 options, 43 corps de leçon et
+      programmes rejoués, une quarantaine de lots `node -e` : **34 prises de FOND, 19 de FORME**.
+      **J'en ai réfuté quatre après les avoir remesurées moi-même.**
+
+      1. **`lecon-13` bilan q7 : LA CLÉ ÉTAIT FAUSSE.** Elle attribuait les 73,5 % de répartitions
+         ratées à la non-représentabilité du dixième — **exactement le contresens que la leçon 09
+         construit un contre-exemple entier pour tuer** (« il ne démontrait pas ce qu'on lui
+         faisait dire »). REPRODUIT par moi sur un autre tirage de 30 000 répartitions :
+         flottants **24 321**, les MÊMES répartitions en centimes entiers **24 321**, totaux non
+         divisibles par le nombre de parts **24 321**, les trois colonnes coïncidant
+         **30 000 / 30 000**. La vraie raison, mesurée et mise à sa place : `0,1` vaut
+         `0,10000000000000000555`, et une somme de 200 lignes en euros flottants dérive du centime
+         dans **80,8 %** des cas — **0** en arrondissant une seule fois à la fin.
+      2. **`lecon-05` q3 : l'explication était fausse EN NOMBRE ET EN SENS.** « La bascule se situe
+         vers 10 caractères ; en dessous, enrichir l'alphabet gagne. » MESURÉ :
+         `ln(62²)/ln(95/62)` = **19,34**, et en deçà ce sont les **deux caractères de plus** qui
+         gagnent — `(95/62)^19` = 3 321 < 3 844 < 5 089 = `(95/62)^20`. Le « 10 » avait été
+         transplanté d'une AUTRE comparaison du corps (`26^L` contre `95⁸`, bascule 11,18). Le
+         même `explain` annonçait **396** là où `(95/62)^14` vaut **393,23**.
+      3. **Quatorze distracteurs étaient VRAIS ou défendables**, tous mesurés : la dichotomie
+         conclut bien l'absence en **17** comparaisons (et l'énoncé ne dit pas que le tableau
+         n'est pas trié) ; dix couches linéaires sont bien **11,3 fois plus lentes** que leur
+         matrice équivalente **à pouvoir égal**, ce que le corps écrit mot pour mot ; retrier
+         entre deux recherches coûte bien plus que toutes les recherches réunies ; la table des
+         exceptions de Fermat sous 2³² est un résultat publié ; **la version `slice` déborde la
+         pile PLUS TARD** que la version à indice (13 760 contre 11 264 étages, mesuré trois
+         fois) ; le tri quadratique fait bien **94,2 %** du travail à n = 4 096.
+      4. **Sept groupes de distracteurs faux POUR LA MÊME RAISON**, qui faisaient tomber leur
+         question à trois choix voire deux — trois « flottants » sur quatre options, deux « 64
+         cases c'est trop peu », deux « Oui » contre deux « Non ». **Troisième cours de suite où
+         ce défaut apparaît, et aucun de nos dix indicateurs ne le voit.**
+
+      ⚠️ **CE QU'IL FALLAIT RÉFUTER, et qui montre qu'un relecteur adversarial se trompe aussi.**
+      (a) « la clé du bilan q2 oublie la soustraction » — MESURÉ : normalisée, la soustraction
+      passe au reste **10 000 fois sur 10 000**, mais **brute en JavaScript elle échoue 49,6 % du
+      temps** à cause du signe de `%` ; la clé n'est pas fausse. (b) `lecon-02` q5, deux options
+      logiquement équivalentes (une réciproque et sa contraposée) : **c'est délibéré**,
+      l'explication l'enseigne — corriger aurait détruit le point pédagogique. (c) et (d) deux
+      prises où seul le détail était faux, le sens protégeant la question.
+
+      ⚠️ **UN INDICE CHASSE L'AUTRE, et cette fois c'est la DENSITÉ DE CHIFFRES.** Une fois la
+      longueur ramenée à 25 %, un relecteur a mesuré que « l'option qui contient le plus de
+      chiffres » réussissait encore **58,3 %** sur les leçons 12-13, et que **la majuscule
+      d'emphase tombait 3 fois sur 3 sur la bonne réponse**, aucun des 108 distracteurs n'en
+      portant. Traité par le même geste que sur `html` — **poser le chiffre ou la majuscule dans
+      un DISTRACTEUR, et sur sa partie FAUSSE, jamais les retirer de la bonne réponse** : la
+      densité chiffrée retombe à **30,3 %** et la majuscule à 3 clés sur 10 options porteuses.
+
+      ⚠️ **UN CONTENU QUI MESURE LE SITE SE PÉRIME EN ÉTANT PUBLIÉ — 6ᵉ fois pour la même page.**
+      `doc/lecon-03` publiait « **4 662** manquements à sa propre règle S3, **76,4 %** » →
+      **4 592** et **75,2 %**. **Dix mentions** reprises (5 du nombre, 5 du taux), dont une dans
+      l'explication d'un QCM, d'où une **seconde** régénération d'index avec `--fresh`.
+      `verif-normatif` est passé de **58/60 à 60/60**, `verif-doc` **36/36**. La parade tient :
+      c'est le vérificateur qui refuse la divergence qui a crié, pas moi.
+
+      ⚠️ **LE PIÈGE DES ACCENTS GRAVES DANS UN MESSAGE DE COMMIT s'est représenté** (déjà mesuré
+      sur `css`) : le shell a **exécuté** deux mots placés entre accents graves et les a **effacés
+      du message**, sans que le commit lui-même signale quoi que ce soit. Parade : passer le
+      message par un fichier (`git commit -F`).
+
+      **Contrôles finaux** : `verif.js --rapide` **52 contrôles verts (83,6 s)** ; `verif-html`
+      **0 / 1 629** ; `verif-donnees` **25 contrôles, 0 erreur** ; `verif-normatif` **60/60** ;
+      `verif-doc` **36/36** ; `mesure-qcm-intouchable` **3 atteintes, exactement les 3 déclarées**
+      (2 explications, 1 bonne réponse) ; index régénérés **deux fois avec `--fresh`**, avec
+      contrôle dans `quiz-index.js` lui-même (0 ancien distracteur, les trois textes neufs
+      présents) ; cliquet refigé, **11 cours traités** ; épreuve par injection **7/7**.
+
+      **CE QUI RESTE À FAIRE SUR B4, mesuré après `maths`** : `algo` (92 q, 96,2 %), `nodejs` (89,
+      95,5 %), `bdd` (86, 97,7 %), `projets-js` (84, 98,8 %), `react` (86, 92,2 %), `ruby` (84,
+      89,9 %), `sql` (82, 91,9 %), `git` (80, 93,8 %), puis la longue traîne. **74 cours sur 90
+      restent au-dessus de 60 %**, et **4 636 questions sur 6 167 restent devinables à la
+      longueur**. La case reste **décochée** : onze cours sur les quarante que la cible de B1
+      demande.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
