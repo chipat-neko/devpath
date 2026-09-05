@@ -2464,6 +2464,158 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       devinables à la longueur**. La case reste **décochée** : quatorze cours sur les quarante que
       la cible de B1 demande.
 
+      ---
+
+      **`projets-js` — FAIT le 2026-09-05. LE COURS EST CLOS : 98,8 % → 22,6 %, 9ᵉ cours le plus
+      nocif du cadrage. 24 leçons, 84 questions, 252 distracteurs, tous réécrits.**
+
+      | mesure, cours entier | avant | après |
+      |---|---:|---:|
+      | la plus longue | **98,8 %** | **22,6 %** |
+      | meilleure stratégie exploitable | 98,8 % | **30,7 %** (le mot technique exclusif) |
+      | la plus détaillée | 83,3 % | 25,2 % |
+      | le mot technique exclusif | 93,1 % | 22,0 % |
+      | l'incise entre parenthèses | 63,4 % | 25,8 % (**seule bonne réponse : 51,2 % → 1,2 %**) |
+      | le point-virgule | 51,2 % | 27,3 % |
+      | la plus COURTE (biais inverse) | 0,0 % | 26,2 % |
+      | rangs de longueur de la bonne réponse | **83 / 1 / 0 / 0** | **19 / 20 / 23 / 22** |
+      | distracteurs hors de 70-130 % | **247 sur 252** | **0** (0,71 à 1,30) |
+      | global du site | 72,0 % | **71,0 %** |
+
+      Toutes les stratégies mesurées tiennent dans la **bande de bruit du lot (15,5 à 34,5 %)**.
+
+      ⚠️⚠️ **LE RÉSULTAT PRINCIPAL EST UN INDICE QUE LA CORRECTION A FABRIQUÉ, ET QU'AUCUN OUTIL DE
+      LA CHAÎNE NE VOYAIT : LE MOT D'ATTAQUE.** Les six écrivains ont calqué « Parce que… » sur les
+      trois distracteurs de la même question en laissant la bonne réponse commencer autrement :
+      l'apprenant n'a plus qu'à repérer l'intrus. **Trois relecteurs sur six l'ont signalé sans se
+      concerter** (comme l'incise entre parenthèses sur `js`), et la mesure faite ensuite le
+      confirme :
+
+      | « l'option dont le mot d'attaque diffère des trois autres » | taux | quand la règle s'applique |
+      |---|---:|---:|
+      | avant la vague d'écriture | 25,9 % | 7/25 = 28,0 % |
+      | **après la vague d'écriture** | **29,8 %** | **10/24 = 41,7 %** |
+      | après la vague de correction | 22,0 % | 1/14 = 7,1 % |
+
+      Il est maintenant la **11ᵉ stratégie de `tools/mesure-biais-qcm.js`** — et la mesure sur le
+      site entier commande la conduite à tenir : **26,6 % sur les 6 167 questions, c'est-à-dire le
+      niveau du hasard.** Ce n'est donc **pas** un biais du site, c'est un biais **que la réécriture
+      fabrique**. Il n'entre **pas** dans les `EXPLOITABLES` de `verif-qcm-biais.js`, par la même
+      règle qui avait écarté « la MAJUSCULE d'emphase » (28,7 %) — mais il est désormais **mesuré à
+      chaque passe**, ce qui est tout l'objet. **Retenir : un indice à 26 % sur le site peut valoir
+      42 % sur le cours qu'on vient de réécrire. La mesure globale ment sur le travail local.**
+
+      ⚠️ **ET L'OUTIL QUI MESURAIT CET INDICE ÉTAIT LUI-MÊME CASSÉ — par le piège du heredoc, sur
+      MOI cette fois.** Le premier jet de `scratchpad/b4pjs/attaque.js` portait un **vrai caractère
+      U+0008** à la place de la séquence antislash-b de son expression régulière : la regex ne
+      matchait jamais, l'outil retombait en silence sur le seul premier mot, et **sous-estimait**
+      l'indice (37,8 % annoncés au lieu de 29,8 %, « parce que » compté séparément de « parce
+      qu' »). **C'est un correcteur qui l'a trouvé**, en refusant de croire un chiffre qu'il ne
+      reproduisait pas. Le piège consigné pour `python` a donc mordu le coordinateur qui le mettait
+      en consigne. Réparé, mesure refaite : les trois chiffres du tableau ci-dessus sont ceux de
+      l'outil réparé.
+
+      ⚠️⚠️ **TROIS BONNES RÉPONSES FAUSSES, chacune réfutée par exécution** (6 atteintes à
+      l'intouchable, toutes déclarées d'avance) :
+      1. **`lecon-01` q2** répondait « une erreur ou un message explicite (ex. « division par
+         zéro ») » à la question « que renvoie `calculer(5, "/", 0)` ? ». Le code rend **`null`** —
+         la leçon l'écrit cinq fois, dont deux en sortie commentée — et c'est `egal` qui traduit ce
+         `null` en `"Erreur"`. La bonne réponse décrivait la couche d'à côté.
+      2. **`lecon-09` q2** annonçait que trois cases vides « seraient déclarées gagnantes à tort »
+         sans le garde `plateau[a] &&`. Énumération exhaustive des grilles : **0 faux gagnant** (la
+         fonction rend `null`, une valeur fausse) et **304 vrais gagnants MANQUÉS** — elle sort au
+         premier triplet vide. Le « Piège fréquent » de la même leçon disait juste, et
+         **contredisait sa propre légende de code** douze lignes plus haut.
+      3. **`lecon-12` q1** annonçait qu'oublier `intervalle = null` « créerait un second intervalle
+         sans arrêter le premier, d'où des décomptes en double ». Mesuré : **0 tic en double** — la
+         garde `if (intervalle !== null) return;` bloque *tout* redémarrage et la bascule route
+         toujours vers `pause()`. La vraie panne est que **le bouton reste bloqué sur « Démarrer »**.
+
+      ⚠️⚠️ **LE DÉFAUT FONDATEUR DE LA CHAÎNE, RETROUVÉ QUATRE FOIS DANS LE MÊME COURS, ET VU
+      SEULEMENT PAR LE CLIC DANS UN VRAI CHROME :**
+      - **`lecon-24`** : trois blocs portant un bouton « ▶ Tester » annoncent une sortie en
+        commentaire et lèvent `ReferenceError: isoDate is not defined` (et `derniersJours`) — parce
+        que `js/runner.js` **n'exécute que le bloc cliqué**, sans les précédents. Rendus autonomes,
+        **boutons recliqués**, sorties conformes. ⚠️ `verif-exemples.js` est **structurellement
+        aveugle** à ces trois blocs : son garde `NON_DETERMINISTE` filtre sur `new Date` et les
+        classe « non vérifiés », donc il rendait « aucune divergence » pendant que l'apprenant
+        voyait une erreur rouge. **À porter au plan : un bloc non déterministe n'est pas un bloc
+        dispensé de s'exécuter.**
+      - **même leçon** : `new Date("2026-07-24")` est parsé en **UTC** alors qu'`isoDate` lit la
+        date **locale**. Mesuré dans 9 fuseaux : à Paris, UTC, Abidjan et Tokyo les sorties
+        annoncées sont exactes ; à **New York, Montréal, São Paulo et Honolulu** la leçon annonce
+        `2` et `29` là où le code rend **`1` et `14`**. Ironie : l'encadré « Piège fréquent » de la
+        page met en garde contre exactement cela. Corrigé, revérifié dans 5 fuseaux sous Chrome et
+        9 sous Node.
+      - **`lecon-16`** : le jeu décrit **ne tourne pas**. La leçon affirme que « c'est `avancer(etat)`
+        (leçon 15) qui lit `directionDemandee` » — or `avancer` ne lit jamais cette propriété
+        (écrite 2 fois, lue 0 fois dans tout `pages/`), et la boucle appelait `avancer` au lieu de
+        `jouerTour` : après 60 images, tête à **x = 10 sur une grille large de 10**, score 0,
+        longueur 3, statut « en cours ». Le serpent ne pouvait **ni tourner, ni manger, ni perdre**.
+        Corrigé, rejoué : virage pris, demi-tour refusé, score 1, statut « perdu » au mur. **Le
+        texte du schéma SVG portait la même faute** — le défaut fondateur, encore dans un diagramme.
+      - **`lecon-18`** : `audioCtx.resume(); console.log(audioCtx.state); //=> "running"`. Mesuré
+        dans Chrome avec activation utilisateur : l'état vaut encore **`suspended`** juste après
+        l'appel, et ne passe à `running` qu'après l'attente de la promesse. Bloc réécrit, les deux
+        sorties mesurées.
+
+      ⚠️ **UN COURS DE PROJETS DONT LES LEÇONS NE SE RACCORDENT PAS.** Écrivains et relecteurs ont
+      trouvé, indépendamment, cinq ruptures d'API entre leçons voisines qui se déclarent pourtant la
+      suite l'une de l'autre : `lecon-02` appelle `etatInitial()`, `appuyerChiffre`, `appuyerVirgule`
+      quand `lecon-01` livre `saisirChiffre`, `egal`, `effacer` ; `lecon-04` appelle `quiz.courante()`
+      et `quiz.total` quand `lecon-03` livre des **getters** et `questions.length` — et écrit
+      explicitement « on les appelle comme des propriétés, **pas** `quiz.courante()` » ; `lecon-08`
+      indexe un tableau par l'**objet** que rend `force()` ; `lecon-14` appelait `decrireTemps` et
+      `iconePour`, **absentes** de `lecon-13` qui ne livre que `codeVersLibelle` (13 références
+      fantômes, **toutes converties**, résidus 0) ; `lecon-12` publiait un `tic` annoncé « rapatrié
+      de la leçon 11 » avec `restant > 1` au lieu de `> 0`, ce qui **supprime le `00:00`** que la
+      leçon 11 présente comme le comportement attendu d'un minuteur. Les deux dernières sont
+      corrigées ; **les trois premières restent** — elles demandent de trancher quelle leçon fait
+      autorité, ce qui dépasse le mandat d'une passe de QCM. **C'est le point à reprendre sur ce
+      cours.**
+
+      ⚠️ **QUATRE CORRECTEURS SUR SIX ONT FABRIQUÉ UN INDICE EN CORRIGEANT, L'ONT MESURÉ, ET L'ONT
+      DÉFAIT** — la leçon de `bdd` se répète à l'identique : en retirant l'incise finale des
+      distracteurs, l'un a rendu la bonne réponse **seule porteuse d'une parenthèse** (0 → 6,7 %) ;
+      un autre a fait monter « le mot technique exclusif » de 25,6 % à **32,2 %** en appauvrissant
+      un distracteur ; un troisième a envoyé « la plus COURTE » à **41,7 %** en allongeant quatre
+      distracteurs, puis « la plus détaillée » à 32,6 % en corrigeant la première dérive. **Trois
+      vagues de rattrapage, toutes déclenchées par une remesure, aucune par une intuition.**
+
+      ⚠️ **DES PRISES DE RELECTEUR RÉFUTÉES PAR LES CORRECTEURS**, comme il se doit : deux textes de
+      remplacement proposés ont été **écartés** parce qu'ils reproduisaient le défaut dénoncé (l'un
+      dupliquait le mécanisme d'un autre distracteur, l'autre concédait le vrai avec un « aussi ») ;
+      un relecteur annonçait « 15 624 plateaux, 216 gagnants manqués » là où le correcteur, sur son
+      propre domaine, a mesuré **304 sur 19 683** — même conclusion, chiffres différents, et c'est
+      **le chiffre du correcteur qui est publié**. Un troisième annonçait la parenthèse finale à
+      48,9 % ; remesurée, 45,0 %.
+
+      **Contrôles** : `mesure-qcm-intouchable` = **6 atteintes, toutes déclarées d'avance** (les
+      trois bonnes réponses fausses et leurs explications), **252 distracteurs réécrits** ;
+      `verif.js --rapide` **26 étapes tout vert (82,9 s)** ; `verif-html` **0** ; `verif-donnees`
+      **0 erreur** ; `verif-doc` **36/36** ; `verif-normatif` **60/60** ; `verif-exemples`
+      **0 divergence** ; `verif-qcm-biais-mutations` **7/7** ; index régénérés **avec `--fresh`**
+      (sans lui, `quiz-index` et `pieges-data` reprenaient deux entrées périmées **en silence** —
+      `verif-donnees` I18 les a vues) ; cliquet refigé, `projets-js` marqué `traite` (**15 cours**).
+      ⚠️ **`doc/lecon-03` s'est repérimée une 6ᵉ fois** (72,0 % → **71,0 %**, 4 396 → **4 332**), et
+      **`doc/lecon-01` pour la première fois** (9 577 → 9 578 titres hors ASCII, 9 008 → 9 007
+      fragments) : corriger un corps de leçon périme les chiffres que le cours `doc` publie sur le
+      site lui-même.
+
+      ⚠️ **Un défaut de rendu PRÉEXISTANT, mesuré et laissé** : `lecon-16` déborde de **+11 px à
+      320 px** dans les deux thèmes. Vérifié contre un témoin (la version d'avant la passe, copiée
+      sous un nom temporaire puis retirée) : elle déborde **exactement pareil**, et les leçons
+      voisines non touchées ne débordent pas. Ce n'est donc pas notre fait — mais c'est un vrai
+      défaut, à reprendre hors B4.
+
+      **CE QUI RESTE À FAIRE SUR B4, mesuré après `projets-js`** : `react` (86 q, 92,2 %), `ruby`
+      (84, 89,9 %), `sql` (82, 91,9 %), `git` (80, 93,8 %), `rust` (76, 96,1 %), `java` (77,
+      94,2 %), puis la longue traîne. ⚠️ **`stats` (72 q, 99,3 %) reste le cours-témoin de
+      `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.**
+      **70 cours sur 90 restent au-dessus de 60 %**, et **4 377 questions sur 6 167 restent
+      devinables à la longueur**. La case reste **décochée** : quinze cours sur les quarante que la
+      cible de B1 demande.
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
