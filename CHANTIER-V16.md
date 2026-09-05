@@ -1698,6 +1698,131 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       (92, 96,2 %), `nodejs` (89, 95,5 %), `bdd` (86, 97,7 %), `projets-js` (84, 98,8 %), `react`
       (86, 92,2 %), puis la longue traîne. **81 cours sur 90 restent au-dessus de 60 %.**
 
+      ---
+
+      **`html` — FAIT le 2026-09-05. LE COURS EST CLOS : 92,1 % → 17,6 %, 4ᵉ cours le plus nocif
+      du site. 47 leçons, 160 questions, 480 distracteurs, deux QCM bilan.**
+
+      **LE COURS ENTIER, avant → après. Aucune stratégie ne dépasse 33,6 %, le hasard vaut 25,0 %.**
+
+      | indice, 160 questions | avant | après |
+      |---|---:|---:|
+      | la plus longue | **92,1 %** | **17,6 %** |
+      | l'incise entre parenthèses | 62,4 % | **33,6 %** (meilleure stratégie restante) |
+      | la plus détaillée | 71,3 % | **20,7 %** |
+      | le mot technique exclusif | 58,1 % | **24,2 %** |
+      | l'écho de l'énoncé | 47,5 % | **25,4 %** |
+      | la plus COURTE (le biais inverse) | 1,3 % | **24,4 %** — il ne s'est PAS retourné |
+      | rangs de la bonne réponse | **148 / 0 / 0 / 2** | **30 / 48 / 45 / 37** |
+      | distracteurs hors de 70-130 % | **439** | **17** (tous des jetons de code du bilan) |
+
+      **Global du site : 78,2 % → 76,3 %. `html` est marqué `traite`, 10ᵉ cours verrouillé**
+      (`archi`, `css`, `equipe`, `html`, `iac`, `js`, `mobile`, `python`, `ux`, `zig`). Cliquet
+      refigé, épreuve par injection **7/7**, cours-témoin `stats` (99,3 %) intact.
+
+      **Les neuf lots d'écriture**, un écrivain par lot, fichiers disjoints, aucun commit d'agent,
+      **un commit de l'orchestrateur par vague** — la parade au réveil de `css` qui avait perdu
+      quatre brouillons dans une terminaison à 600 s :
+
+      | vague | leçons | questions | la plus longue | hors fourchette |
+      |---|---|---:|---:|---:|
+      | 1 (5 lots) | 01-27 + bilan intermédiaire | 92 | 96,3 % → 25,1 % | 254 → 17 |
+      | 2 (4 lots) | 28-47 + bilan final | 68 | 100,0 % → 27,9 % | 203 → 0 |
+
+      ---
+
+      ⚠️⚠️ **CE POINT A TROUVÉ QUATRE BONNES RÉPONSES FAUSSES, ET C'EST SON RÉSULTAT PRINCIPAL —
+      pas le biais.** Les trois relecteurs adversariaux ont rendu **90 prises** sur 160 questions,
+      640 options et 47 corps de leçon lus en entier. **Les trois ont mesuré dans un vrai Chrome
+      152, chacun de son côté, sans que la consigne le leur impose autrement qu'en le
+      recommandant** — et j'ai REJOUÉ MOI-MÊME les quatre mesures décisives avant d'y toucher
+      (sondes CDP calquées sur `verif-clic.js`, dont une en HTTP avec contrôle négatif) :
+
+      1. **`lecon-26` q0 : la clé enseignait une panne qui n'existe pas.** « Un `<summary>` qui
+         n'est pas le premier enfant : le navigateur génère "Détails" et ton étiquette n'est plus
+         le déclencheur. » MESURÉ : `matches("details > summary:first-of-type")` = **true**,
+         `display: list-item`, le clic ouvre, le `<p>` qui précède est bien replié. Le libellé
+         « Détails » n'apparaît **que** si le `<details>` n'a AUCUN `<summary>`. C'est une
+         non-conformité que le validateur signale — **et rien ne casse à l'écran pour avertir**,
+         ce qui est exactement ce que la leçon aurait dû enseigner.
+      2. **`lecon-28` q1 : « un seul popover auto reste ouvert à la fois ».** MESURÉ : deux `auto`
+         **imbriqués** restent ouverts ensemble (`[true, true]`) ; un troisième, frère, les ferme
+         tous les deux. **Le CORPS de la leçon disait juste (« qui n'est pas un ancêtre ») et la
+         clé faux** : l'exception avait été perdue en passant du cours au QCM.
+      3. **`lecon-27` : la leçon affirmait SIX fois qu'Échap ne modifie pas `returnValue`.**
+         MESURÉ : `rv="confirmer"` avant, **`rv=""` après Échap**. Le standard a changé. Son
+         « Cas réel : la suppression fantôme » décrivait donc un bogue **devenu irreproductible** ;
+         il est maintenant daté, et le correctif d'hier présenté pour ce qu'il est devenu — la
+         ceinture qui protège les navigateurs anciens.
+      4. **`lecon-46` q2 : `setHTML()` donné comme équivalent assaini de `setHTMLUnsafe()`.**
+         MESURÉ : `setHTMLUnsafe` attache le shadow root (**true**), `setHTML` ne laisse qu'un
+         `<div>` vide et n'attache **rien** — son désinfectant retire les `<template>` et les
+         éléments personnalisés.
+      5. **`lecon-03` : une justification périmée, mesurée en HTTP avec contrôle négatif.** La
+         leçon enseignait « sans `noopener`, la page ouverte peut accéder à la tienne via
+         `window.opener` ». MESURÉ : une **ancre** `target="_blank"` SANS `rel` obtient déjà
+         `window.opener === null`, alors qu'un `window.open()` sans `noopener` **garde l'accès**
+         (le contrôle négatif est ce qui rend la mesure concluante : en `file://`, Chrome coupe
+         toute relation opener et le « null » n'aurait rien prouvé). `rel="noopener noreferrer"`
+         reste la bonne pratique, pour une **autre** raison : le `Referer` et les fenêtres
+         ouvertes par script.
+
+      **`mesure-qcm-intouchable` signale donc 8 ATTEINTES VOLONTAIRES ET DÉCLARÉES** (4 bonnes
+      réponses, 4 explications) — le seul cas où le protocole autorise à y toucher, et l'outil a
+      bien crié. **Corps de leçon repris : 26, 27 (six passages + le cas réel), 42, 46, 03.**
+      Dont, dans `lecon-42`, une phrase franchement fausse que personne n'avait relue depuis sa
+      publication : « `cache.put` rejette si le statut n'est pas 2xx (une réponse opaque **de type
+      `cors`**) ». MESURÉ : **404 et 500 passent sans broncher**, seul **206** est refusé, et une
+      réponse opaque a le `type` `"opaque"`, pas `"cors"`.
+
+      **Vingt distracteurs ont été écartés par les ÉCRIVAINS eux-mêmes** parce qu'ils devenaient
+      vrais en étant étoffés — dont trois qui étaient des **secondes bonnes réponses** : `::part()`
+      donné par la leçon 31 comme la porte de style ouverte, « `attributeChangedCallback` est
+      appelé avant `connectedCallback` » affirmé mot pour mot par la leçon 30, et « `innerHTML`
+      n'exécute pas un `<script>` inséré » — **exact**, alors que la leçon l'écrit en raccourci.
+      Et **onze paires de distracteurs faux pour la MÊME raison** faisaient tomber la question à
+      deux choix (`<label>`/`<legend>`, `<tr>`/`<thead>`, `type=text`/`type=tel`,
+      `<article>`/`<section>`, les deux « `cloneNode` ne copie pas », les trois inversions
+      canvas/SVG). **Aucun de nos dix indicateurs ne voit ce défaut** — confirmation de ce que
+      `css` avait trouvé.
+
+      ⚠️ **LES DEUX INDICES DE FORME QUI RESTAIENT, ET LE GESTE QUI LES TUE SANS RIEN CASSER.**
+      Une fois la longueur ramenée à 25,1 %, deux signaux dépassaient encore le hasard : **26
+      questions où SEULE la bonne réponse portait une incise entre parenthèses** (42,0 %) et **32
+      où elle portait seule le plus de virgules et de deux-points** (37,4 %). Deux écrivains, 53
+      questions, **un seul geste : poser l'incise dans un DISTRACTEUR, jamais la retirer de la
+      bonne réponse** — 0 atteinte à l'intouchable, et les deux listes tombent à **0**. La règle
+      qui évite d'y perdre : **greffer l'incise sur la partie FAUSSE de l'option**
+      (« (un appui du pointeur) » sur un `click` prétendument réservé à la souris), jamais sur ce
+      qu'elle a de juste — sinon on répare un indice en fabriquant un distracteur vrai.
+
+      ⚠️ **UN CONTENU QUI MESURE LE SITE SE PÉRIME EN ÉTANT PUBLIÉ — et cette fois DEUX pages
+      dans le même réveil.** `doc/lecon-03` (5ᵉ péremption) : 4 781 → **4 662** manquements à sa
+      propre règle S3, 78,3 % → **76,4 %**, « 34 leçons parlent de la spécification » → **37** ;
+      dix mentions reprises, dont une dans un QCM, d'où une **seconde** régénération de l'index.
+      Puis `doc/lecon-01`, que la chaîne complète a fait remonter : « 9 575 titres hors ASCII »
+      → **9 577**, « 9 006 fragments distincts » → **9 008**. **La leçon à en tirer est neuve :
+      la parade « exclure son propre cours du corpus » ne suffit pas, puisque c'est un AUTRE
+      cours qui déplace le chiffre. Ce qui protège, c'est le vérificateur qui refuse la
+      divergence — il a fonctionné les deux fois.**
+
+      ⚠️ **`build-index` reprend une entrée périmée EN SILENCE sans `--fresh`, et c'est
+      `verif-donnees` (I18) qui l'a vu** : les antisèches et l'index des pièges portaient encore
+      les trois encadrés « Piège fréquent » que la correction de contenu venait de réécrire.
+      Régénérer sans `--fresh` après avoir touché au CORPS d'une leçon ne suffit pas.
+
+      **Contrôles finaux** : `verif.js --rapide` **26 étapes tout vert (74,4 s)** ; `verif-html`
+      **0 / 1 629** ; `verif-donnees` **0 erreur** ; `verif-normatif` **60/60** ; `verif-doc`
+      **36/36** ; `mesure-qcm-intouchable` **8 atteintes, exactement les 8 déclarées** ; index
+      régénérés **trois fois** (dont deux avec `--fresh`) ; cliquet refigé, **10 cours traités** ;
+      épreuve par injection **7/7**.
+
+      **CE QUI RESTE À FAIRE SUR B4, mesuré après `html`** : `maths` (117 q, 82,8 %), `algo`
+      (92, 96,2 %), `nodejs` (89, 95,5 %), `bdd` (86, 97,7 %), `projets-js` (84, 98,8 %), `react`
+      (86, 92,2 %), puis la longue traîne. **75 cours sur 90 restent au-dessus de 60 %**, et
+      **4 706 questions sur 6 167 restent devinables à la longueur**. La case reste **décochée** :
+      dix cours sur les quarante que la cible de B1 demande.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
