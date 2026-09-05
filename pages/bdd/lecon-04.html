@@ -306,7 +306,7 @@ CREATE TABLE billet (
 <p>Assez de cas isolés&nbsp;: assemblons tout. Voici le diagramme entité-association de <strong>Rideau</strong> dans son ensemble. Il réunit les entités croisées depuis la leçon 1 — la salle et son découpage physique d'un côté, la programmation des spectacles de l'autre, et les ventes qui relient les deux. Prends le temps de suivre chaque trait&nbsp;: chacun se traduira, à l'instant, par une des quatre règles.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 420" role="img" aria-label="Diagramme entité-association complet de la billetterie Rideau. Neuf entités sont dessinées en boîtes réparties en trois zones. En haut à gauche, la zone de la salle : la boîte salle est reliée en un-à-plusieurs à la boîte zone (une salle a plusieurs zones), et la boîte zone est reliée en un-à-plusieurs à la boîte place (une zone contient plusieurs places) ; salle est aussi reliée directement à place. En haut à droite, la zone de la programmation : la boîte spectacle est reliée en un-à-plusieurs à la boîte representation (un spectacle est joué à plusieurs représentations), elle-même reliée en un-à-plusieurs à la salle. Au centre en bas, la zone des ventes : la boîte client est reliée en un-à-plusieurs à la boîte commande, la boîte commande est reliée en un-à-plusieurs à la boîte billet, et la boîte billet est le pivot d'une ancienne association plusieurs-à-plusieurs, reliée à la fois à representation et à place. Chaque trait porte les cardinalités un et N à ses extrémités.">
+  <svg viewBox="0 0 640 420" role="img" aria-label="Diagramme entité-association complet de la billetterie Rideau. Neuf entités sont dessinées en boîtes réparties en trois zones. En haut à gauche, la zone de la salle : la boîte salle est reliée en un-à-plusieurs à la boîte zone (une salle a plusieurs zones), et la boîte zone est reliée en un-à-plusieurs à la boîte place (une zone contient plusieurs places), une place n'atteignant sa salle qu'en passant par sa zone. En haut à droite, la zone de la programmation : la boîte spectacle est reliée en un-à-plusieurs à la boîte representation (un spectacle est joué à plusieurs représentations), elle-même reliée en un-à-plusieurs à la salle. Au centre en bas, la zone des ventes : la boîte client est reliée en un-à-plusieurs à la boîte commande, la boîte commande est reliée en un-à-plusieurs à la boîte billet, et la boîte billet est le pivot d'une ancienne association plusieurs-à-plusieurs, reliée à la fois à representation et à place. Chaque trait porte les cardinalités un et N à ses extrémités.">
     <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Rideau — le diagramme entité-association complet</text>
 
     <text class="d-mut" x="120" y="46" text-anchor="middle" font-size="8.5">— la salle —</text>
@@ -324,8 +324,6 @@ CREATE TABLE billet (
     <text class="d-mut" x="112" y="108" text-anchor="end" font-size="8">1</text><text class="d-mut" x="112" y="124" text-anchor="end" font-size="8">N</text>
     <line class="d-line" x1="120" y1="162" x2="120" y2="198" />
     <text class="d-mut" x="112" y="178" text-anchor="end" font-size="8">1</text><text class="d-mut" x="112" y="194" text-anchor="end" font-size="8">N</text>
-    <path class="d-line" d="M180 82 C214 96 214 200 180 214" fill="none" />
-    <text class="d-mut" x="205" y="150" text-anchor="middle" font-size="8">1 · N</text>
 
     <!-- spectacle / representation -->
     <rect class="d-box" x="460" y="58" width="120" height="34" rx="7" />
@@ -383,19 +381,18 @@ CREATE TABLE zone (
     categorie  TEXT NOT NULL          -- 'Orchestre' | 'Balcon' | 'Poulailler'
 );</code></pre></figure>
 
-<p>La <strong>place</strong> suit exactement le même schéma, mais elle est du côté « N » de <em>deux</em> associations à la fois — elle appartient à une salle et à une zone. Elle porte donc <em>deux</em> clés étrangères. Rien de spécial&nbsp;: on applique la règle 2 une fois par lien entrant.</p>
+<p>La <strong>place</strong> suit exactement le même schéma&nbsp;: elle est du côté « N » de l'association « une zone contient plusieurs places », et reçoit donc la clé étrangère <code>zone_id</code>. Sa salle, en revanche, n'a pas à être recopiée&nbsp;: la <code>zone</code> la connaît déjà, et une place atteint sa salle en passant par sa zone.</p>
 
-<figure class="code-block" data-file="rideau_place.sql"><pre><code class="language-sql">-- place est du côté N de deux liens : une salle a plusieurs places,
--- une zone a plusieurs places. Donc DEUX clés étrangères.
+<figure class="code-block" data-file="rideau_place.sql"><pre><code class="language-sql">-- place est du côté N de « une zone contient plusieurs places ».
+-- UNE seule FK : la salle se déduit de la zone, on ne la recopie pas.
 CREATE TABLE place (
     place_id  INTEGER PRIMARY KEY,
-    salle_id  INTEGER NOT NULL,   -- ← FK vers salle
-    zone_id   INTEGER NOT NULL,   -- ← FK vers zone
+    zone_id   INTEGER NOT NULL,   -- ← FK vers zone (qui porte déjà salle_id)
     rang      TEXT NOT NULL,      -- ex. rang 'D'
     numero    INTEGER NOT NULL    -- ex. siège 12
 );</code></pre></figure>
 
-<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Une entité peut porter plusieurs FK</p><p>Rien n'oblige une table à n'avoir qu'une seule clé étrangère. <code>place</code> en a deux (vers <code>salle</code> et <code>zone</code>), <code>billet</code> en aura trois (vers <code>representation</code>, <code>place</code> et <code>commande</code>). C'est normal&nbsp;: on applique la règle 2 <strong>autant de fois</strong> qu'il y a d'associations 1-N dont l'entité occupe le côté « N ». Compte les traits qui arrivent sur la boîte, du côté du « plusieurs »&nbsp;: c'est le nombre de FK à poser.</p></div></div>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Une entité peut porter plusieurs FK</p><p>Rien n'oblige une table à n'avoir qu'une seule clé étrangère&nbsp;: <code>billet</code> en aura trois (vers <code>representation</code>, <code>place</code> et <code>commande</code>). C'est normal&nbsp;: on applique la règle 2 <strong>autant de fois</strong> qu'il y a d'associations 1-N dont l'entité occupe le côté « N ». Compte les traits qui arrivent sur la boîte, du côté du « plusieurs »&nbsp;: c'est le nombre de FK à poser. Attention en revanche à ne pas poser une clé étrangère qui se <strong>déduit déjà</strong> d'une autre&nbsp;: une <code>place</code> connaît sa <code>zone</code>, et la zone connaît sa <code>salle</code> — lui ajouter <code>salle_id</code> recopierait un fait déjà écrit.</p></div></div>
 
 <h3>Zoom sur le N-N&nbsp;: du diagramme au <code>billet</code></h3>
 <p>Reprenons le cas le plus riche, celui qui mérite qu'on le suive de bout en bout. Sur le diagramme, le lien entre <strong>representation</strong> et <strong>place</strong> est un N-N&nbsp;: une représentation remplit toutes les places, une place resservira à d'autres soirs. On l'a dit&nbsp;: ce croisement <em>est</em> le billet. Voici la même idée montrée trois fois — telle qu'on la lit sur le diagramme, telle qu'on la raisonne, telle qu'on l'écrit en SQL.</p>
@@ -568,6 +565,12 @@ CREATE TABLE ecriture (
     auteur_id  INTEGER NOT NULL,   -- FK -> auteur
     livre_id   INTEGER NOT NULL,   -- FK -> livre
     PRIMARY KEY (auteur_id, livre_id)   -- un couple unique
+);
+
+-- adherent : entité simple (règle 1)
+CREATE TABLE adherent (
+    adherent_id  INTEGER PRIMARY KEY,
+    nom          TEXT NOT NULL
 );
 
 -- exemplaire : côté N de « un livre a plusieurs exemplaires » (règle 2)

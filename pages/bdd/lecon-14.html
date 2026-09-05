@@ -393,16 +393,30 @@ ALTER TABLE representation
 <h3>Scinder client.nom en nom + prenom (expand/contract)</h3>
 <p>Le cas délicat, car il <em>transforme</em> une donnée préexistante et lue par le code en production. On applique le motif <em>expand/contract</em> au fil de plusieurs migrations&nbsp;:</p>
 
-<figure class="code-block" data-file="scinder_nom.sql"><pre><code class="language-sql">-- 004_expand_prenom.sql : on AJOUTE, sans retirer nom_complet.
+<figure class="code-block" data-file="scinder_nom.sql"><pre><code class="language-sql">-- 004_expand_nom_prenom.sql : on AJOUTE les deux colonnes NEUVES, sans rien
+--   retirer. Après le RENAME du panorama, 'nom' n'existe plus : il naît ici,
+--   vide, à côté de prenom ; nom_complet reste l'ancien champ fourre-tout.
+ALTER TABLE client ADD COLUMN nom TEXT;
 ALTER TABLE client ADD COLUMN prenom TEXT;
--- (la colonne 'nom' existe déjà ; ici 'nom_complet' est l'ancien champ fourre-tout)
 
--- 005_migrer_noms.sql : remplir le nouveau depuis l'ancien.
---   règle simple d'exemple : tout avant le dernier espace = prénom.
+-- 005_migrer_noms.sql : remplir les deux neuves depuis le SEUL ancien champ.
+--   règle simple d'exemple : tout après le dernier espace = nom, ce qui
+--   précède = prénom. On repère ce dernier espace en cherchant le PREMIER
+--   espace de la chaîne retournée (strpos et reverse sont deux fonctions
+--   PostgreSQL ; strpos rend 0 quand le motif est absent).
 UPDATE client
-   SET prenom = trim(substr(nom_complet, 1, length(nom_complet) - length(nom))),
-       nom    = /* la partie nom, calculée */ nom
- WHERE prenom IS NULL;
+   SET nom    = substr(nom_complet,
+                       length(nom_complet) - strpos(reverse(nom_complet), ' ') + 2),
+       prenom = trim(substr(nom_complet,
+                       1, length(nom_complet) - strpos(reverse(nom_complet), ' ')))
+ WHERE nom IS NULL                     -- garde-fou sur nom, TOUJOURS rempli à
+   AND strpos(nom_complet, ' ') != 0;  -- l'arrivée : le rejeu est sans danger
+
+-- Un nom_complet sans espace part entier dans nom ; prenom reste vide.
+UPDATE client SET nom = nom_complet
+ WHERE nom IS NULL AND strpos(nom_complet, ' ') = 0;
+-- Rejouable : une ligne insérée entre-temps par l'ANCIEN code (nom_complet
+-- seul) est migrée au passage suivant, les lignes déjà faites ne bougent pas.
 -- Pendant cette phase, le NOUVEAU code écrit dans nom + prenom ET nom_complet.
 
 -- 006_contract_nom.sql : quand plus AUCUNE instance ne lit nom_complet,
@@ -474,7 +488,7 @@ ALTER TABLE client DROP COLUMN nom_complet;   -- destructif : irréversible de f
 [
   {"q":"Qu'est-ce qu'une migration de schéma, au sens professionnel du terme ?","a":["Un changement de schéma décrit par un script versionné (numéroté), rejouable à l'identique sur dev/test/prod et pensé pour ne pas perdre de données ni casser l'application","Un ALTER TABLE tapé directement sur la base de production dès que le besoin apparaît, puis reporté de mémoire sur la base de test et sur celle du développeur, quand on y pense","La sauvegarde complète prise juste avant un déploiement, que l'on restaure telle quelle si le schéma livré se révèle mauvais une fois en production","Le déplacement des données vers un serveur mieux dimensionné (mémoire, disques rapides), sans que la structure des tables ni les contraintes ne bougent"],"correct":0,"explain":"Une migration est un script versionné et rejouable, rangé dans le dépôt comme du code. Rejouer la même suite partout garantit le même schéma ; taper des ALTER à la main en prod est justement l'anti-pattern à éviter."},
   {"q":"Pourquoi ADD COLUMN statut TEXT NOT NULL échoue-t-il sur une table qui contient déjà des lignes ?","a":["Parce que les lignes existantes n'ont aucune valeur pour cette nouvelle colonne, or NOT NULL exige une valeur pour CHAQUE ligne, y compris les anciennes : la base refuse plutôt que de laisser des trous","Parce qu'une table déjà remplie n'accepte plus d'ALTER TABLE : on doit créer une table neuve portant la colonne voulue, y recopier les lignes une à une, puis la renommer à la place de la table d'origine","Parce que le type TEXT n'admet pas la contrainte NOT NULL tant qu'aucune longueur n'est déclarée, ce qui oblige à passer par un VARCHAR dimensionné, le seul type qui permet de la poser","Parce que la colonne visée n'est pas encore indexée : le moteur a besoin d'un index pour parcourir les lignes déjà présentes et vérifier qu'aucune d'entre elles n'est vide, AVANT même de pouvoir poser la contrainte"],"correct":0,"explain":"NOT NULL promet qu'aucune ligne n'est vide. Les lignes déjà présentes n'ont pas de valeur pour une colonne qui vient de naître : la promesse ne peut être tenue, la migration est rejetée. On corrige avec un DEFAULT ou en trois temps."},
-  {"q":"Aucun défaut universel n'a de sens pour la nouvelle colonne obligatoire. Quelle est la bonne marche à suivre ?","a":["En trois temps : 1) ajouter la colonne NULLABLE, 2) remplir les lignes existantes par UPDATE, 3) resserrer avec ALTER COLUMN ... SET NOT NULL","Désactiver la vérification des contraintes le temps de l'ALTER TABLE (le moteur cesse alors de contrôler), puis la réactiver une fois la colonne en place","Décharger la table dans un fichier, la recréer avec la colonne obligatoire, contrainte comprise, puis réimporter les lignes en leur inventant une valeur au chargement","Déclarer la colonne obligatoire dans le CREATE TABLE d'origine, puis rejouer TOUTES les migrations depuis la première sur la base de production"],"correct":0,"explain":"Quand aucun DEFAULT ne convient, on découpe : ajouter vide (accepté car nullable), remplir toutes les lignes, puis seulement passer NOT NULL — ce qui est désormais possible puisque plus aucune ligne n'est vide."},
+  {"q":"Aucun défaut universel n'a de sens pour la nouvelle colonne obligatoire. Quelle est la bonne marche à suivre ?","a":["En trois temps : 1) ajouter la colonne NULLABLE, 2) remplir les lignes existantes par UPDATE, 3) resserrer avec ALTER COLUMN ... SET NOT NULL","En deux temps : ajouter la colonne directement en NOT NULL, puis désactiver la vérification des contraintes le temps que l'UPDATE de remplissage passe, avant de la réactiver","Recréer la table avec la colonne obligatoire et y recopier les lignes existantes : la contrainte n'est vérifiée qu'à la fin de la copie, donc les lignes encore vides passent","Déclarer la colonne obligatoire dans le CREATE TABLE d'origine, puis rejouer TOUTES les migrations depuis la première sur la base de production"],"correct":0,"explain":"Quand aucun DEFAULT ne convient, on découpe : ajouter vide (accepté car nullable), remplir toutes les lignes, puis seulement passer NOT NULL — ce qui est désormais possible puisque plus aucune ligne n'est vide."},
   {"q":"En quoi consiste le motif expand / contract, et à quoi sert-il ?","a":["À migrer sans coupure : (1) expand, ajouter le nouveau sans retirer l'ancien ; (2) migrer les données et écrire dans les deux ; (3) contract, retirer l'ancien quand plus personne ne l'utilise","À exécuter contract avant expand : on retire d'abord l'ancienne colonne ; on crée ensuite la nouvelle, vide ; le code, une fois redéployé, la remplira","À monter une copie complète de la base le temps de la migration, à comparer les deux schémas obtenus, puis à basculer le trafic vers celle qui a réussi","À découper un remplissage massif en lots successifs, pour qu'un seul UPDATE ne garde pas la table verrouillée pendant de longues minutes d'affilée"],"correct":0,"explain":"expand/contract évite de passer directement de l'ancien au nouveau schéma. En gardant les deux formes coexistantes le temps de la bascule, aucune des deux versions du code (ancienne encore active, nouvelle qui démarre) ne se retrouve cassée : pas de coupure."},
   {"q":"Une migration a supprimé une colonne pleine (DROP COLUMN) par erreur. Son rollback recrée la colonne. Les données d'origine reviennent-elles ?","a":["Non : le rollback rend la STRUCTURE (la colonne réapparaît) mais pas les DONNÉES, qui ont été détruites par le DROP. Une suppression est irréversible de fait ; seule une sauvegarde prise avant aurait protégé","Oui : le moteur garde une copie de chaque colonne supprimée dans une zone de rebut interne (le fichier des pages libérées) ; le chemin retour de la migration l'y RELIT et remet CHAQUE valeur dans la colonne recréée","Oui, à condition de rejouer la migration up juste après son down : le couple des deux instructions ramène la colonne dans son état d'avant, valeurs comprises","Non, et c'est pourquoi le moteur refuse un DROP COLUMN sur une colonne encore pleine tant qu'une sauvegarde récente n'a pas été déclarée à l'administrateur"],"correct":0,"explain":"Réversible en structure n'est pas réversible en données. DROP COLUMN efface le contenu ; recréer la colonne ne le ressuscite pas. Le vrai filet contre une migration destructrice est la sauvegarde préalable et l'essai sur une copie, pas le rollback."}
 ]

@@ -133,7 +133,7 @@
 <div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Pointer, ce n'est pas recopier</p><p>Retiens la nuance qui traverse tout ce cours&nbsp;: une clé étrangère <strong>ne stocke qu'un identifiant</strong>, pas les données de l'autre table. <code>billet.commande_id = 500</code> ne contient ni le statut ni la date de la commande&nbsp;500&nbsp;; il dit seulement «&nbsp;va voir la ligne&nbsp;500 de <code>commande</code>&nbsp;». Le fait reste écrit à un seul endroit — c'est exactement ce qui tue la redondance.</p></div></div>
 
 <h2>L'intégrité référentielle&nbsp;: le lien ne ment jamais</h2>
-<p>Le service que rend vraiment une clé étrangère porte un nom&nbsp;: l'<strong>intégrité référentielle</strong>. C'est la garantie, tenue par la base elle-même, que <em>toute valeur de clé étrangère pointe toujours vers une ligne qui existe</em>. Il devient impossible de créer une <strong>ligne orpheline</strong> — un billet dont la commande a disparu, une commande dont le client est introuvable.</p>
+<p>Le service que rend vraiment une clé étrangère porte un nom&nbsp;: l'<strong>intégrité référentielle</strong>. C'est la garantie, tenue par la base elle-même, que <em>toute valeur renseignée de clé étrangère pointe toujours vers une ligne qui existe</em> (un <code>NULL</code>, lui, ne désigne personne et reste permis). Il devient impossible de créer une <strong>ligne orpheline</strong> — un billet dont la commande a disparu, une commande dont le client est introuvable.</p>
 <p>Le mot important, c'est <em>garantie</em>. Sans clé étrangère, on peut <strong>espérer</strong> que l'application ne créera jamais de billet orphelin, parce qu'on a écrit le code proprement. Avec une clé étrangère, on n'espère plus&nbsp;: c'est <strong>impossible</strong>. Le moteur rejette l'écriture avec une erreur, quel que soit le programme qui la tente — l'application web, un script d'import de minuit, une requête tapée à la main par un administrateur pressé. La règle vit dans le schéma, à un endroit unique, et personne ne peut la contourner.</p>
 
 <figure class="diagram">
@@ -214,7 +214,7 @@ CREATE TABLE billet (
   <figcaption>La référence va toujours du côté où elle est <strong>unique</strong>. Le billet ne connaît qu'une commande&nbsp;: <code>commande_id</code> y tient en une colonne. La relation se lit alors dans les deux sens, mais elle ne s'écrit qu'une fois, côté «&nbsp;N&nbsp;».</figcaption>
 </figure>
 
-<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note&nbsp;: la relation se lit dans les deux sens</p><p>Poser la FK côté «&nbsp;N&nbsp;» n'appauvrit rien. Depuis un billet, on remonte à sa commande par sa <code>commande_id</code>&nbsp;; depuis une commande, on retrouve tous ses billets en cherchant ceux dont <code>commande_id</code> vaut son identifiant. Une seule colonne, un lien navigable dans les deux directions — ce sera le rôle des <a href="lecon-04.html">jointures</a>. Le cas «&nbsp;N-N&nbsp;» (plusieurs vers plusieurs), lui, demandera une table intermédiaire portant <em>deux</em> clés étrangères&nbsp;; on l'a vu au moment de traduire le modèle.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Note&nbsp;: la relation se lit dans les deux sens</p><p>Poser la FK côté «&nbsp;N&nbsp;» n'appauvrit rien. Depuis un billet, on remonte à sa commande par sa <code>commande_id</code>&nbsp;; depuis une commande, on retrouve tous ses billets en cherchant ceux dont <code>commande_id</code> vaut son identifiant. Une seule colonne, un lien navigable dans les deux directions — c'est ce que les jointures exploiteront, et ce que la <a href="lecon-11.html">leçon 11</a> sur les index viendra accélérer. Le cas «&nbsp;N-N&nbsp;» (plusieurs vers plusieurs), lui, demandera une table intermédiaire portant <em>deux</em> clés étrangères&nbsp;; on l'a vu au moment de traduire le modèle.</p></div></div>
 
 <h2>Que faire quand la cible disparaît&nbsp;? Les actions référentielles</h2>
 <p>L'intégrité référentielle pose une question redoutable&nbsp;: si un billet pointe vers la commande&nbsp;500, que se passe-t-il quand on veut <strong>supprimer</strong> la commande&nbsp;500&nbsp;? Laisser faire créerait un billet orphelin — précisément ce que la règle interdit. La base ne peut donc pas rester muette&nbsp;: elle doit savoir <em>quoi faire des lignes qui pointaient vers celle qu'on efface</em>. C'est le rôle des <strong>actions référentielles</strong>, déclarées par <code>ON DELETE</code> (à la suppression de la cible) et <code>ON UPDATE</code> (si sa clé change de valeur).</p>
@@ -259,7 +259,22 @@ CREATE TABLE billet (
   <figcaption>Un seul <code>DELETE</code>, trois issues. <code>RESTRICT</code> protège en refusant&nbsp;; <code>CASCADE</code> emporte tout, y compris ce qu'on voulait peut-être garder&nbsp;; <code>SET NULL</code> détache et laisse des lignes flottantes. Choisir, c'est répondre à «&nbsp;que doit-il rester après&nbsp;?&nbsp;».</figcaption>
 </figure>
 
-<figure class="code-block" data-file="rideau_on_delete.sql"><pre><code class="language-sql">-- Rideau : billet -&gt; commande, en CASCADE.
+<figure class="code-block" data-file="rideau_on_delete.sql"><pre><code class="language-sql">-- Rideau : commande -&gt; client, en RESTRICT.
+-- On NE veut PAS qu'effacer un client fasse disparaître ses ventes.
+-- La base refuse tant qu'il reste des commandes : on décide à la main.
+-- (on déclare commande AVANT billet : une table ne peut référencer
+--  que ce qui existe déjà.)
+CREATE TABLE commande (
+    commande_id  INTEGER PRIMARY KEY,
+    client_id    INTEGER NOT NULL,
+    passee_le    TIMESTAMP NOT NULL,
+    statut       TEXT NOT NULL,
+    CONSTRAINT fk_commande_client
+        FOREIGN KEY (client_id) REFERENCES client(client_id)
+        ON DELETE RESTRICT     -- interdit d'effacer un client qui a commandé
+);
+
+-- Rideau : billet -&gt; commande, en CASCADE.
 -- Un billet n'a AUCUN sens sans sa commande : effacer la commande
 -- (par exemple un panier abandonné jamais payé) emporte ses billets.
 CREATE TABLE billet (
@@ -270,19 +285,6 @@ CREATE TABLE billet (
         FOREIGN KEY (commande_id) REFERENCES commande(commande_id)
         ON DELETE CASCADE      -- supprimer la commande supprime ses billets
         ON UPDATE CASCADE      -- si commande_id changeait, il suivrait
-);
-
--- Rideau : commande -&gt; client, en RESTRICT.
--- On NE veut PAS qu'effacer un client fasse disparaître ses ventes.
--- La base refuse tant qu'il reste des commandes : on décide à la main.
-CREATE TABLE commande (
-    commande_id  INTEGER PRIMARY KEY,
-    client_id    INTEGER NOT NULL,
-    passee_le    TIMESTAMP NOT NULL,
-    statut       TEXT NOT NULL,
-    CONSTRAINT fk_commande_client
-        FOREIGN KEY (client_id) REFERENCES client(client_id)
-        ON DELETE RESTRICT     -- interdit d'effacer un client qui a commandé
 );</code></pre></figure>
 
 <h2>Le vrai dilemme&nbsp;: supprimer un client de Rideau</h2>
@@ -359,8 +361,8 @@ CREATE TABLE commande (
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Qu'est-ce qu'une clé étrangère ?","a":["Une colonne dont les valeurs doivent correspondre à la clé primaire d'une autre table, ce qui matérialise une relation sans recopier les données","Une colonne qui identifie de façon unique chaque ligne de sa propre table, comme le commande_id de la table commande","Une copie de la ligne visée, rangée dans la table enfant pour épargner la jointure, et rafraîchie par le moteur à chaque mise à jour de la ligne parente","Un lien déclaré au moment de la requête, dans la clause JOIN : la définition de la table, elle, ignore complètement la relation entre les deux tables"],"correct":0,"explain":"La clé étrangère ne stocke qu'un identifiant qui doit exister comme clé primaire ailleurs. Elle relie deux tables sans dupliquer les données : le billet retient commande_id, pas la commande entière."},
-  {"q":"Que garantit l'intégrité référentielle ?","a":["Que toute valeur de clé étrangère pointe toujours vers une ligne existante : aucune ligne orpheline n'est possible","Que chaque ligne possède un identifiant unique et non nul, aucune table n'étant admise dans le schéma sans clé primaire","Qu'aucune colonne d'une table liée ne contienne de valeur NULL, la base refusant systématiquement une insertion incomplète","Que les jointures soient toujours plus rapides, la base n'ayant jamais à vérifier l'existence de la ligne visée au passage"],"correct":0,"explain":"L'intégrité référentielle est la garantie, tenue par la base, qu'une clé étrangère ne mène jamais dans le vide. Insérer un billet vers une commande inexistante est refusé par le moteur."},
+  {"q":"Qu'est-ce qu'une clé étrangère ?","a":["Une colonne dont les valeurs doivent correspondre à une colonne unique d'une autre table, ce qui matérialise une relation sans recopier les données","Une colonne qui identifie de façon unique chaque ligne de sa propre table, comme le commande_id de la table commande","Une copie de la ligne visée, rangée dans la table enfant pour épargner la jointure, et rafraîchie par le moteur à chaque mise à jour de la ligne parente","Un lien déclaré au moment de la requête, dans la clause JOIN : la définition de la table, elle, ignore complètement la relation entre les deux tables"],"correct":0,"explain":"La clé étrangère ne stocke qu'un identifiant qui doit exister comme clé primaire ailleurs. Elle relie deux tables sans dupliquer les données : le billet retient commande_id, pas la commande entière."},
+  {"q":"Que garantit l'intégrité référentielle ?","a":["Que toute clé étrangère renseignée désigne une ligne réellement existante : aucune ligne orpheline n'est possible","Que chaque ligne possède un identifiant unique et non nul, aucune table n'étant admise dans le schéma sans clé primaire","Qu'aucune colonne d'une table liée ne contienne de valeur NULL, la base refusant systématiquement une insertion incomplète","Que les jointures soient toujours plus rapides, la base n'ayant jamais à vérifier l'existence de la ligne visée au passage"],"correct":0,"explain":"L'intégrité référentielle est la garantie, tenue par la base, qu'une clé étrangère renseignée ne mène jamais dans le vide ; un NULL, lui, ne désigne personne et reste accepté. Insérer un billet vers une commande inexistante est refusé par le moteur."},
   {"q":"Dans la relation 1-N « une commande a plusieurs billets », où se pose la clé étrangère ?","a":["Sur le billet (côté « N ») : c'est billet.commande_id qui pointe vers commande, car chaque billet a exactement une commande","Sur la commande (côté « 1 ») : elle y range la liste des identifiants de ses billets, séparés par des virgules","Sur les deux tables, chacune déclarant REFERENCES vers l'autre pour que le lien se lise dans les deux sens","Dans une table de liaison dédiée, seul endroit où une relation 1-N se matérialise proprement"],"correct":0,"explain":"La FK va du côté où la référence est unique : un billet n'a qu'une commande, donc une colonne suffit. Une commande a un nombre variable de billets, on ne pourrait pas y loger la référence."},
   {"q":"On veut supprimer un client qui a passé des commandes payées, réglées et transformées en billets. Pourquoi ON DELETE CASCADE est-il presque toujours un mauvais choix sur commande.client_id ?","a":["Parce qu'il effacerait en cascade les commandes puis les billets, c'est-à-dire l'historique de vente qu'on doit conserver ; RESTRICT ou l'anonymisation valent mieux","Parce que CASCADE bloque la suppression du parent tant que des commandes le référencent : chaque DELETE sur le client renverrait une erreur de contrainte et le compte resterait figé","Parce que CASCADE ne se déclare que sur ON UPDATE : à la suppression, RESTRICT s'applique d'office et le client reste attaché à ses commandes","Parce qu'un DELETE en cascade recopie d'abord les lignes filles dans une table d'archive ; le volume de la base s'en trouve doublé"],"correct":0,"explain":"CASCADE emporterait tout l'historique de vente lié au client. On préfère RESTRICT (refuser et décider à la main) ou l'anonymisation (vider les données personnelles en gardant les commandes)."},
   {"q":"Laquelle de ces situations empêche la création d'une clé étrangère, ou la rend incorrecte ?","a":["Faire pointer la clé étrangère vers une colonne non unique de la table cible (par exemple commande.statut), car une référence doit désigner une seule ligne","Donner un nom à la contrainte : le moteur numérote lui-même ses règles et rejette la forme CONSTRAINT fk_billet_commande","Déclarer la clé étrangère sur une colonne qui accepte NULL : une référence facultative (billet sans commande) est rejetée dès le CREATE TABLE, car le moteur exige une valeur","Référencer la clé primaire d'une table qui contient déjà des lignes : la contrainte ne se pose que sur une table encore vide, avant tout chargement de données"],"correct":0,"explain":"Une clé étrangère doit référencer une colonne unique (clé primaire ou UNIQUE), sinon le lien serait ambigu et le moteur refuse la contrainte. Nommer la contrainte, la poser côté N et autoriser NULL pour SET NULL sont au contraire de bonnes pratiques."}

@@ -233,18 +233,20 @@ CREATE TABLE representation (
 -- Ce qui dépendait de place_id seul -> table place.
 CREATE TABLE place (
     place_id  INTEGER PRIMARY KEY,
-    salle_id  INTEGER NOT NULL REFERENCES salle(salle_id),
-    zone_id   INTEGER NOT NULL REFERENCES zone(zone_id),
-    rang      INTEGER NOT NULL,
-    numero    INTEGER NOT NULL
+    zone_id   INTEGER NOT NULL REFERENCES zone(zone_id),  -- la salle s'atteint
+    rang      INTEGER NOT NULL,                           -- PAR la zone : pas
+    numero    INTEGER NOT NULL                            -- de salle_id ici.
 );
 
--- Ne reste dans la table à clé composite que ce qui dépend des DEUX.
+-- Ne reste avec la représentation que ce qui dépend d'elle ET de la zone tarifaire.
+-- Le prix se fixe par zone, pas place par place : c'est la zone, et non la
+-- place, qui forme avec la représentation le couple dont dépend le tarif.
 CREATE TABLE tarif (
     tarif_id          INTEGER PRIMARY KEY,
     representation_id INTEGER NOT NULL REFERENCES representation(representation_id),
     zone_id           INTEGER NOT NULL REFERENCES zone(zone_id),
-    prix              NUMERIC NOT NULL       -- le prix d'une zone pour une séance
+    prix              NUMERIC NOT NULL,      -- le prix d'une zone pour une séance
+    UNIQUE (representation_id, zone_id)      -- le couple dont dépend vraiment le prix
 );</code></pre></figure>
 
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — le réflexe 2NF</p><p>Dès que tu écris une clé primaire à <strong>plusieurs colonnes</strong>, arrête-toi et passe chaque autre colonne en revue&nbsp;: «&nbsp;ai-je besoin des deux morceaux de la clé pour déterminer cette valeur, ou d'un seul&nbsp;?&nbsp;». Toute colonne qui se contente d'<em>un</em> morceau est une dépendance partielle&nbsp;: elle décrit en réalité l'entité désignée par ce morceau, et doit vivre dans la table de cette entité. C'est le seul contrôle qu'exige la 2NF.</p></div></div>
@@ -339,7 +341,7 @@ CREATE TABLE reservations (
 <p><strong>Étape 1NF (rappel de la leçon 8).</strong> On s'assure que chaque cellule est atomique — pas de «&nbsp;rang 4, siège 12&nbsp;» fourré dans une colonne <code>place</code>, mais un rang et un numéro distincts — et qu'une clé identifie chaque ligne. Ici <code>billet_id</code> fait l'affaire. La table est en 1NF, mais toujours pleine de redondance.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 300" role="img" aria-label="La décomposition complète de la table à plat de Rideau. En haut, une grande boîte représente la table reservations qui contient tout, marquée comme redondante. Des flèches descendent vers six boîtes séparées disposées sur deux rangées. Première rangée : la table client avec nom, email et ville ; la table spectacle avec titre et genre ; la table salle avec nom et ville. Deuxième rangée : la table place avec rang et numéro ; la table representation avec la date de début ; la table billet au centre, qui garde uniquement les liens vers client, représentation et place plus le prix payé. Des traits relient la table billet centrale aux cinq autres tables pour montrer qu'elle les référence sans recopier leurs colonnes.">
+  <svg viewBox="0 0 640 300" role="img" aria-label="La décomposition complète de la table à plat de Rideau. En haut, une grande boîte représente la table reservations qui contient tout, marquée comme redondante. Des flèches descendent vers six boîtes séparées disposées sur deux rangées. Première rangée : la table client avec nom, email et ville ; la table spectacle avec titre et genre ; la table salle avec nom et ville. Deuxième rangée : la table place avec rang et numéro ; la table representation avec la date de début ; la table billet au centre, qui garde uniquement les liens vers la commande, la représentation et la place, plus le prix payé. Deux traits relient la table billet centrale à la place et à la représentation, les seules tables du schéma qu'elle référence directement : le spectacle, la salle et le client s'atteignent de proche en proche, sans lien direct depuis le billet.">
     <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">De la table à plat aux tables propres — une entité, une table</text>
 
     <rect class="d-frame" x="180" y="34" width="280" height="40" rx="8" />
@@ -362,7 +364,7 @@ CREATE TABLE reservations (
 
     <rect class="d-box" x="238" y="196" width="164" height="56" rx="9" />
     <text class="d-tag" x="320" y="216" text-anchor="middle" font-size="9">billet</text>
-    <text class="d-mut" x="320" y="231" text-anchor="middle" font-size="7.5">→ client → représ. → place</text>
+    <text class="d-mut" x="320" y="231" text-anchor="middle" font-size="7.5">→ commande → représ. → place</text>
     <text class="d-mut" x="320" y="244" text-anchor="middle" font-size="7.5">+ prix_paye · rien d'autre</text>
 
     <rect class="d-accent" x="24" y="200" width="172" height="48" rx="8" />
@@ -374,11 +376,9 @@ CREATE TABLE reservations (
     <text class="d-mut" x="530" y="236" text-anchor="middle" font-size="8">debut · → spectacle</text>
 
     <path class="d-line" d="M238 224 L196 224" fill="none" /><path class="d-line" d="M402 224 L444 224" fill="none" />
-    <path class="d-line" d="M290 196 C250 175 180 168 110 162" fill="none" /><path class="d-line" d="M350 196 C390 175 460 168 530 162" fill="none" />
-    <path class="d-line" d="M320 196 L320 162" fill="none" />
     <text class="d-mut" x="320" y="272" text-anchor="middle" font-size="8.5">Chaque fait est écrit UNE fois ; le billet ne garde que des liens.</text>
   </svg>
-  <figcaption>L'aboutissement&nbsp;: la table à plat éclate en tables mono-sujet. Le client, le spectacle, la salle, la place, la représentation vivent chacun dans leur table&nbsp;; le <code>billet</code> ne conserve que des <em>liens</em> vers eux, plus le prix réellement payé. C'est le schéma de référence de Rideau.</figcaption>
+  <figcaption>L'aboutissement&nbsp;: la table à plat éclate en tables mono-sujet. Le client, le spectacle, la salle, la place, la représentation vivent chacun dans leur table&nbsp;; le <code>billet</code> ne conserve que des <em>liens</em> — vers la place, la représentation et la commande — plus le prix réellement payé&nbsp;: le spectacle, la salle et le client s'atteignent de proche en proche, sans lien direct depuis le billet. C'est le schéma de référence de Rideau.</figcaption>
 </figure>
 
 <p><strong>Étape 2NF.</strong> On cherche les clés composites et les dépendances partielles. Dans la version à plat, on aurait pu identifier un billet par le couple <code>(representation_id, place_id)</code> (rappel de la <a href="lecon-07.html">leçon 7</a>&nbsp;: une place n'est vendue qu'une fois par représentation). Sous cette clé, <code>spectacle_titre</code> et <code>representation_debut</code> ne dépendent que de <code>representation_id</code>&nbsp;; <code>categorie</code> et le rang de la place ne dépendent que de <code>place_id</code>. On sort donc ce qui suit la représentation vers <code>representation</code>, ce qui suit la place vers <code>place</code> et <code>zone</code>.</p>
@@ -483,7 +483,7 @@ CREATE TABLE billet (
 [
   {"q":"Qu'affirme la dépendance fonctionnelle spectacle_id → titre ?","a":["Connaître l'identifiant du spectacle suffit à déterminer son titre, à coup sûr et sans exception","Le titre du spectacle suffit à retrouver son identifiant, sans ambiguïté possible","Les deux colonnes varient toujours ensemble, aucune ne pouvant changer seule","Aucun spectacle ne peut porter le même titre qu'un autre dans la table"],"correct":0,"explain":"A → B se lit « connaître A suffit à connaître B ». Ici, l'identifiant du spectacle détermine son titre. L'inverse (titre → identifiant) n'est pas garanti, car deux spectacles pourraient porter le même titre."},
   {"q":"Quand faut-il se soucier de la 2e forme normale (2NF) ?","a":["Seulement quand la clé primaire est composite (plusieurs colonnes) : sans clé composite, aucune dépendance partielle n'est possible","Quand une colonne non-clé en détermine une autre : c'est cette dépendance de proche en proche que la 2NF interdit, même sur une clé d'une seule colonne","Sur toutes les tables sans exception, car la 2NF porte sur les colonnes de la clé (et sur elles seules), pour vérifier qu'aucune n'est redondante avec une autre","Uniquement sur les tables à clé simple : une clé composite est déjà la clé entière, donc aucun attribut ne peut n'en dépendre que partiellement"],"correct":0,"explain":"La 2NF traque les dépendances partielles, c'est-à-dire un attribut qui ne dépend que d'une partie de la clé. Cela n'a de sens que si la clé a plusieurs parties. Une table à clé simple est en 2NF d'office."},
-  {"q":"Dans une table de clé (representation_id, place_id), la colonne spectacle_titre ne dépend que de representation_id. Comment nomme-t-on ce défaut ?","a":["Une dépendance partielle : l'attribut dépend d'une partie seulement de la clé composite (violation de la 2NF)","Une dépendance transitive : la clé atteint le titre via representation_id, une colonne qui n'appartient pas à la clé (violation de la 3NF)","Une clé primaire mal choisie : place_id devrait en sortir, puisque le titre n'en dépend pas","Une dépendance multivaluée : une même représentation porte plusieurs places, donc plusieurs titres"],"correct":0,"explain":"Le titre ne dépend que de representation_id, pas du couple entier : c'est une dépendance partielle. Elle viole la 2NF. On sort le titre (et ce qui suit la représentation) dans la table representation / spectacle."},
+  {"q":"Dans une table de clé (representation_id, place_id), la colonne spectacle_titre ne dépend que de representation_id. Comment nomme-t-on ce défaut ?","a":["Une dépendance partielle : l'attribut dépend d'une partie seulement de la clé composite (violation de la 2NF)","Une dépendance transitive : un attribut qui ne suit qu'un morceau de la clé n'est atteint qu'indirectement, ce que la 3NF interdit","Une clé primaire mal choisie : place_id devrait en sortir, puisque le titre n'en dépend pas","Une dépendance multivaluée : une même représentation porte plusieurs places, donc plusieurs titres"],"correct":0,"explain":"Le titre ne dépend que de representation_id, pas du couple entier : c'est une dépendance partielle. Elle viole la 2NF. On sort le titre (et ce qui suit la représentation) dans la table representation / spectacle."},
   {"q":"Dans billet(billet_id, spectacle_titre, spectacle_genre), le genre dépend du titre, qui dépend du billet. De quel défaut s'agit-il ?","a":["Une dépendance transitive (billet_id → spectacle_titre → spectacle_genre) : le genre dépend d'un autre attribut non-clé, ce qui viole la 3NF","Une dépendance partielle (billet_id vers spectacle_genre) : le genre dépend d'une partie de la clé du billet (celle qui désigne le spectacle), pas de la clé entière","Un simple doublon de colonnes : le titre et le genre portent la même information, et supprimer spectacle_titre suffit à remettre la table en 3NF","Une violation de la 1NF : deux colonnes y décrivent le même objet, le spectacle, alors qu'une ligne ne doit parler que d'une chose"],"correct":0,"explain":"Le genre ne dépend pas directement de la clé du billet, mais du titre (un attribut non-clé). C'est une dépendance transitive, interdite par la 3NF. On isole spectacle(titre, genre) dans sa table."},
   {"q":"Que résume la formule « la clé, toute la clé, et rien que la clé » ?","a":["Que chaque attribut non-clé doit dépendre de la clé (1NF), de toute la clé (2NF) et de rien d'autre que la clé (3NF)","Que la clé primaire doit rassembler toutes les colonnes dont dépendent les attributs non-clés","Que les trois premières formes normales portent sur les colonnes de la clé, jamais sur les autres","Qu'une table doit gravir toute l'échelle des formes normales, sans rien s'interdire au-delà de la 3NF"],"correct":0,"explain":"C'est le moyen mnémotechnique des trois premières formes normales : dépendre de la clé, de toute la clé (pas d'une partie : 2NF), et de rien que la clé (pas d'un autre attribut : 3NF). La 3NF suffit dans la plupart des cas."}
 ]

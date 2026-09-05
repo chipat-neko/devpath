@@ -262,7 +262,7 @@ CREATE TABLE reservations (
 <p>Ce petit monde suffit à croiser tout le programme&nbsp;: des <a href="lecon-03.html">relations</a> de toutes formes, des <a href="lecon-06.html">redondances</a> à éliminer, le fameux «&nbsp;dernier billet&nbsp;» que deux clients veulent au même instant (les <a href="lecon-13.html">transactions</a>), et jusqu'à la question de savoir s'il faut une base relationnelle ou <a href="lecon-15.html">documentaire</a>. Voici un tout petit avant-goût de ce vers quoi on va&nbsp;: deux des tables propres de Rideau, reliées comme il faut.</p>
 
 <figure class="code-block" data-file="rideau_avant_gout.sql"><pre><code class="language-sql">-- Un aperçu (on justifiera CHAQUE choix dans les leçons suivantes).
--- Le client existe UNE fois ; le billet pointe vers lui, sans le recopier.
+-- Le client existe UNE fois ; la commande pointe vers lui, sans le recopier.
 CREATE TABLE client (
     client_id  INTEGER PRIMARY KEY,     -- identifie une personne, une seule
     email      TEXT NOT NULL UNIQUE,    -- deux clients ne partagent pas un e-mail
@@ -270,13 +270,11 @@ CREATE TABLE client (
     ville      TEXT
 );
 
-CREATE TABLE billet (
-    billet_id         INTEGER PRIMARY KEY,
-    client_id         INTEGER NOT NULL REFERENCES client(client_id),  -- le lien
-    representation_id INTEGER NOT NULL,
-    place_id          INTEGER NOT NULL,
-    prix_paye         NUMERIC NOT NULL
-    -- à venir : une place ne peut être vendue qu'une fois par représentation
+CREATE TABLE commande (
+    commande_id  INTEGER PRIMARY KEY,
+    client_id    INTEGER NOT NULL REFERENCES client(client_id),  -- le lien
+    passee_le    TIMESTAMP NOT NULL
+    -- à venir : les billets de la commande, un par place vendue
 );</code></pre></figure>
 
 <p>Ne t'attarde pas sur les détails&nbsp;: chaque mot-clé (<code>PRIMARY KEY</code>, <code>REFERENCES</code>, <code>UNIQUE</code>) a sa leçon. Retiens seulement la <em>silhouette</em>&nbsp;: deux tables séparées, un lien entre elles plutôt qu'une recopie. C'est l'exact opposé de la table fourre-tout du début — et c'est là que le cours nous mène.</p>
@@ -368,7 +366,7 @@ CREATE TABLE billet (
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Quelle est la différence entre utiliser une base de données et la concevoir ?","a":["Utiliser, c'est lire et écrire dans une structure existante (SELECT, INSERT) ; concevoir, c'est décider de cette structure (tables, clés, relations) avant qu'aucune donnée n'entre","Utiliser recouvre l'écriture des requêtes qui lisent la base (SELECT, JOIN) ; concevoir se limite au choix des types de données (TEXT, NUMERIC) et des index (la couche physique)","Concevoir, c'est établir les droits, les sauvegardes, les quotas et la supervision de la base ; utiliser, c'est y écrire des requêtes, des vues et des rapports","La conception démarre une fois la base déjà en service : on la retouche par une migration, sans jamais revenir sur les entités du départ"],"correct":0,"explain":"Utiliser suppose une structure déjà là et manipule des données ; concevoir décide de la structure elle-même. Ce cours porte sur la conception, la décision la plus durable de la vie d'une base."},
+  {"q":"Quelle est la différence entre utiliser une base de données et la concevoir ?","a":["Utiliser, c'est lire et écrire dans une structure existante (SELECT, INSERT) ; concevoir, c'est décider de cette structure (tables, clés, relations) avant qu'aucune donnée n'entre","Utiliser, c'est retoucher la structure existante (ajouter une colonne) ou l'accélérer (poser un index) ; concevoir, c'est écrire les requêtes (SELECT, INSERT) du quotidien","Concevoir, c'est établir les droits, les sauvegardes, les quotas et la supervision de la base ; utiliser, c'est y écrire des requêtes, des vues et des rapports","La conception démarre une fois la base déjà en service : on la retouche par une migration, sans jamais revenir sur les entités du départ"],"correct":0,"explain":"Utiliser suppose une structure déjà là et manipule des données ; concevoir décide de la structure elle-même. Ce cours porte sur la conception, la décision la plus durable de la vie d'une base."},
   {"q":"Pourquoi la redondance (recopier un même fait sur plusieurs lignes) est-elle dangereuse, au-delà du gaspillage de place ?","a":["Parce que plusieurs copies d'un fait peuvent diverger : corriger un e-mail sur une ligne et l'oublier sur une autre crée deux valeurs contradictoires pour la même personne","Parce que le moteur doit alors maintenir un index de plus sur chaque colonne recopiée ; le plan d'exécution de la moindre lecture s'allonge, et le journal des écritures grossit d'autant","La redondance interdit de poser une contrainte de clé étrangère sur la table concernée (le lien devient invérifiable), et le moteur perd toute intégrité référentielle","Recopier un même fait sur plusieurs lignes ajoute une jointure pour retrouver la valeur d'origine, ce qui allonge chaque lecture"],"correct":0,"explain":"Le vrai risque de la redondance est l'incohérence : une information écrite en plusieurs endroits peut se contredire. Une donnée écrite une seule fois ne peut pas diverger d'elle-même."},
   {"q":"Dans une table fourre-tout, on ne peut pas enregistrer un nouveau spectacle tant qu'aucun billet n'a été vendu pour lui. De quelle anomalie s'agit-il ?","a":["Une anomalie d'insertion : on ne peut pas enregistrer un fait (le spectacle) sans en connaître un autre, sans rapport (un billet vendu)","Une anomalie de mise à jour (le titre est recopié partout) : on ne peut enregistrer ce spectacle sans corriger chaque billet déjà vendu (au risque d'en oublier un)","Une anomalie de suppression : pour inscrire « Nocturne » au catalogue, il faudrait d'abord effacer les billets déjà vendus, puis les ressaisir un à un","Un défaut de première forme normale ; la colonne du titre porte plusieurs valeurs sur une même ligne"],"correct":0,"explain":"L'anomalie d'insertion empêche d'enregistrer une information de façon autonome. Ici le catalogue des spectacles dépend des ventes, ce qui n'a pas de sens : le spectacle devrait exister indépendamment."},
   {"q":"Quels sont les trois niveaux de conception, du plus abstrait au plus concret ?","a":["Conceptuel (entités et relations) → logique (tables, colonnes, clés) → physique (le SQL réel, types et index)","Physique (les types, les index, les contraintes) → logique (les tables, les colonnes, les clés) → conceptuel (les entités et relations)","Logique (les tables et leurs colonnes) → conceptuel (les entités et le domaine) → physique (le dialecte du moteur finalement retenu)","Analyse (le recueil du besoin) → conception (le dessin des tables) → exploitation (les requêtes de tous les jours)"],"correct":0,"explain":"On descend du sens vers la technique : le conceptuel dit de quoi on parle, le logique le traduit en tables et clés, le physique l'écrit pour un moteur donné. Mélanger ces niveaux est une source d'erreurs."},

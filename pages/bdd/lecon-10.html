@@ -111,7 +111,8 @@ SELECT s.nom,
        COUNT(p.place_id) - COUNT(b.billet_id)  AS places_restantes
 FROM   representation r
 JOIN   salle s  ON s.salle_id = r.salle_id
-JOIN   place p  ON p.salle_id = s.salle_id
+JOIN   zone  z  ON z.salle_id = s.salle_id   -- place n'a pas de salle_id :
+JOIN   place p  ON p.zone_id  = z.zone_id     -- on passe par sa zone (L9)
 LEFT   JOIN billet b
        ON  b.place_id = p.place_id
        AND b.representation_id = r.representation_id
@@ -303,10 +304,10 @@ WHERE  representation_id IN (SELECT representation_id FROM representation
 <p>Qu'est-ce qui peut mal tourner avec une <em>vraie</em> dénormalisation (un compteur, un total, une colonne recopiée)&nbsp;? Un seul mot, mais il fait très mal&nbsp;: la <strong>divergence</strong>. La donnée dupliquée cesse de correspondre à la réalité qu'elle est censée résumer. Le compteur <code>places_restantes</code> affiche 12 alors que 15 places sont réellement libres&nbsp;; le <code>total</code> de la commande indique 96&nbsp;€ alors que la somme des billets fait 128&nbsp;€. La base se contredit — exactement l'anomalie de mise à jour de la <a href="lecon-01.html">leçon&nbsp;1</a>, sauf qu'ici on l'a <em>invitée</em> en connaissance de cause.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 260" role="img" aria-label="Illustration d'une divergence d'un compteur dénormalisé. En haut, la vérité : la table billet contient 15 lignes de billets vendus pour la représentation numéro 42, donc 15 places occupées. En dessous, deux scénarios. Scénario du haut, tout va bien : à chaque vente le compteur places_restantes a été décrémenté, si bien qu'il vaut exactement ce qu'il devrait, le compteur et le décompte réel coïncident, coche verte. Scénario du bas, la divergence : lors d'une annulation de billet, on a bien supprimé la ligne de billet mais on a oublié de ré-incrémenter le compteur ; du coup le compteur affiche 12 places restantes alors qu'il devrait en afficher 15 ; le compteur ment, croix rouge. Message : une seule écriture qui oublie de maintenir la copie suffit à rendre le compteur faux, et rien ne lève d'erreur.">
+  <svg viewBox="0 0 640 260" role="img" aria-label="Illustration d'une divergence d'un compteur dénormalisé. En haut, la vérité : la capacité de la salle moins les billets vendus pour la représentation numéro 42 donne 15 places réellement libres. En dessous, deux scénarios. Scénario du haut, tout va bien : à chaque vente le compteur places_restantes a été décrémenté, si bien qu'il vaut exactement ce qu'il devrait, le compteur et le décompte réel coïncident, coche verte. Scénario du bas, la divergence : lors d'une annulation de billet, on a bien supprimé la ligne de billet mais on a oublié de ré-incrémenter le compteur ; du coup le compteur affiche 12 places restantes alors qu'il devrait en afficher 15 ; le compteur ment, croix rouge. Message : une seule écriture qui oublie de maintenir la copie suffit à rendre le compteur faux, et rien ne lève d'erreur.">
     <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Un compteur oublié une seule fois — et il ment</text>
 
-    <rect class="d-frame" x="220" y="38" width="200" height="34" rx="6" /><text class="d-text" x="320" y="56" text-anchor="middle" font-size="9">VÉRITÉ&nbsp;: 15 billets en base</text><text class="d-mut" x="320" y="68" text-anchor="middle" font-size="8">(COUNT sur billet pour la repr. 42)</text>
+    <rect class="d-frame" x="220" y="38" width="200" height="34" rx="6" /><text class="d-text" x="320" y="56" text-anchor="middle" font-size="9">VÉRITÉ&nbsp;: 15 places libres</text><text class="d-mut" x="320" y="68" text-anchor="middle" font-size="8">(capacité moins les billets vendus, repr. 42)</text>
 
     <rect class="d-box" x="26" y="96" width="290" height="140" rx="10" />
     <text class="d-tag" x="171" y="120" text-anchor="middle" font-size="10" fill="var(--ok)">Compteur maintenu — OK</text>
@@ -333,10 +334,11 @@ UPDATE representation AS r
 SET    places_restantes = (
          SELECT COUNT(p.place_id) - COUNT(b.billet_id)
          FROM   place p
+         JOIN   zone z ON z.zone_id = p.zone_id   -- la salle s'atteint par la zone
          LEFT   JOIN billet b
                 ON  b.place_id = p.place_id
                 AND b.representation_id = r.representation_id
-         WHERE  p.salle_id = r.salle_id
+         WHERE  z.salle_id = r.salle_id
        );
 -- La copie a pu diverger ; la source (place + billet) reste la référence.</code></pre></figure>
 
@@ -427,8 +429,8 @@ SET    places_restantes = (
 <script type="application/json" data-exos>
 [
   {"type":"text","accept":["denormalisation","la denormalisation","denormaliser"],"placeholder":"réintroduire volontairement de la redondance pour accélérer la lecture, c'est de la d______________","hints":["C'est le mouvement inverse de la normalisation.","On le fait en dernier recours, sur un problème mesuré.","Le mot commence par « dé » et finit par « ...isation »."],"link":{"href":"lecon-10.html","label":"Revoir « Le compromis fondamental »"}},
-  {"type":"text","accept":["snapshot","un snapshot","valeur figee","une valeur figee","instantane"],"placeholder":"prix_paye garde le prix au moment de l'achat : c'est un s________ historique, pas une copie à synchroniser","hints":["Terme anglais pour « instantané », une valeur figée à un moment.","Elle ne doit PAS changer si le tarif évolue ensuite.","On peut aussi dire « valeur figée »."],"link":{"href":"lecon-10.html","label":"Revoir « snapshot n'est pas dénormalisation »"}},
-  {"type":"text","accept":["divergence","la divergence","diverger"],"placeholder":"un compteur dénormalisé qu'on a oublié de maintenir finit par mentir : c'est une d________","hints":["La copie ne correspond plus à la réalité qu'elle résume.","Elle est silencieuse : aucune erreur SQL n'est levée.","Même racine que « diverger » : les deux valeurs s'écartent."],"link":{"href":"lecon-10.html","label":"Revoir « Le risque à assumer »"}},
+  {"type":"text","accept":["snapshot","un snapshot","valeur figee","une valeur figee","instantane"],"placeholder":"prix_paye garde le prix au moment de l'achat : c'est un s_______ historique, pas une copie à synchroniser","hints":["Terme anglais pour « instantané », une valeur figée à un moment.","Elle ne doit PAS changer si le tarif évolue ensuite.","On peut aussi dire « valeur figée »."],"link":{"href":"lecon-10.html","label":"Revoir « snapshot n'est pas dénormalisation »"}},
+  {"type":"text","accept":["divergence","la divergence","diverger"],"placeholder":"un compteur dénormalisé qu'on a oublié de maintenir finit par mentir : c'est une d_________","hints":["La copie ne correspond plus à la réalité qu'elle résume.","Elle est silencieuse : aucune erreur SQL n'est levée.","Même racine que « diverger » : les deux valeurs s'écartent."],"link":{"href":"lecon-10.html","label":"Revoir « Le risque à assumer »"}},
   {"type":"sql","schema":"CREATE TABLE commande (commande_id INTEGER PRIMARY KEY, client_id INTEGER, total NUMERIC);\nCREATE TABLE billet (billet_id INTEGER PRIMARY KEY, commande_id INTEGER, prix_paye NUMERIC);\nINSERT INTO commande VALUES (1,10,50),(2,11,40),(3,12,0),(4,13,15);\nINSERT INTO billet VALUES (1,1,20),(2,1,30),(3,2,25);","attendu":{"colonnes":["commande_id","stocke","reel"],"lignes":[[2,40,25],[4,15,0]]},"ordre":true,"ref":"SELECT c.commande_id, c.total AS stocke, COALESCE(SUM(b.prix_paye), 0) AS reel FROM commande c LEFT JOIN billet b ON b.commande_id = c.commande_id GROUP BY c.commande_id, c.total HAVING c.total <> COALESCE(SUM(b.prix_paye), 0) ORDER BY c.commande_id;","contre":["SELECT c.commande_id, c.total AS stocke, SUM(b.prix_paye) AS reel FROM commande c JOIN billet b ON b.commande_id = c.commande_id GROUP BY c.commande_id, c.total HAVING c.total <> SUM(b.prix_paye) ORDER BY c.commande_id;","SELECT c.commande_id, c.total AS stocke, SUM(b.prix_paye) AS reel FROM commande c LEFT JOIN billet b ON b.commande_id = c.commande_id GROUP BY c.commande_id, c.total HAVING c.total <> SUM(b.prix_paye) ORDER BY c.commande_id;","SELECT c.commande_id, c.total AS stocke, COALESCE(SUM(b.prix_paye), 0) AS reel FROM commande c LEFT JOIN billet b ON b.commande_id = c.commande_id GROUP BY c.commande_id, c.total ORDER BY c.commande_id;"],"accept":["SELECT c.commande_id, c.total AS stocke, COALESCE(SUM(b.prix_paye), 0) AS reel FROM commande c LEFT JOIN billet b ON b.commande_id = c.commande_id GROUP BY c.commande_id, c.total HAVING c.total <> COALESCE(SUM(b.prix_paye), 0) ORDER BY c.commande_id;"],"placeholder":"les commandes dont le total stocké diffère de la somme réelle des billets","hints":["Il faut voir TOUTES les commandes, y compris celles qui n'ont aucun billet : LEFT JOIN.","SUM d'un ensemble vide vaut NULL, pas 0 — et NULL <> 15 ne vaut pas « vrai », il vaut « inconnu ».","COALESCE(SUM(...), 0) règle les deux problèmes d'un coup : dans le SELECT et dans le HAVING."],"link":{"href":"lecon-10.html","label":"Revoir « Dénormaliser à bon escient »"}}
 ]
 </script>

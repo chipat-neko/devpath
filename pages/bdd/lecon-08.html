@@ -141,7 +141,7 @@
 <p>Une table est en <strong>première forme normale</strong> — 1NF — lorsqu'elle respecte quatre exigences simples. Elles se résument en une phrase&nbsp;: <em>chaque cellule contient une seule valeur indivisible, et chaque ligne est identifiable</em>. Détaillons.</p>
 <ul>
 <li><strong>Valeur atomique</strong> — chaque cellule contient <em>une</em> valeur <strong>indivisible</strong> pour le domaine. Pas «&nbsp;A1, A2, A3&nbsp;» dans une case, pas «&nbsp;06&nbsp;12… ; 04&nbsp;78…&nbsp;»&nbsp;: une valeur, une case.</li>
-<li><strong>Pas de groupe répété</strong> — on n'imite pas une liste en dupliquant des colonnes&nbsp;: <code>place1</code>, <code>place2</code>, <code>place3</code> est interdit, tout comme une colonne dont le contenu est une énumération.</li>
+<li><strong>Pas de groupe répété</strong> — on n'imite pas une liste en dupliquant des colonnes&nbsp;: <code>place1</code>, <code>place2</code>, <code>place3</code> est interdit&nbsp;; une colonne dont le contenu est une énumération relève, elle, de l'exigence d'atomicité ci-dessus.</li>
 <li><strong>Une clé</strong> — chaque ligne est <strong>identifiable</strong> de façon unique&nbsp;; il existe une clé (naturelle ou <a href="lecon-05.html">substitut</a>) qui distingue chaque ligne des autres.</li>
 <li><strong>Ordre non signifiant</strong> — l'ordre des lignes et celui des colonnes ne <strong>portent aucune information</strong>&nbsp;: trier autrement la table ne doit rien changer à son sens.</li>
 </ul>
@@ -207,7 +207,8 @@ FROM billet_multivalue;
 
 -- « La place A2 est-elle vendue ? » -> LIKE approximatif et PIÉGEUX :
 SELECT * FROM billet_multivalue WHERE places LIKE '%A2%';
--- ...ramène aussi « A21 », « ZA2 » : faux positifs. Ingérable.
+-- ...ramènerait aussi « A21 » ou « ZA2 » s'ils existaient : faux positifs.
+-- Ingérable.
 
 -- Et surtout : IMPOSSIBLE d'imposer qu'une place ne soit vendue qu'une fois.
 -- Aucune contrainte UNIQUE ne peut regarder À L'INTÉRIEUR de la chaîne.</code></pre></figure>
@@ -362,6 +363,7 @@ INSERT INTO reservations_liste VALUES
 
 <figure class="code-block" data-file="reservations_1nf.sql"><pre><code class="language-sql">-- Remis en 1NF : une ligne par place, chaque valeur atomique.
 CREATE TABLE reservations (
+    billet_id            INTEGER PRIMARY KEY,   -- la clé qui identifie la ligne
     commande_id          INTEGER,
     client_email         TEXT,
     spectacle_titre      TEXT,
@@ -371,8 +373,8 @@ CREATE TABLE reservations (
 );
 
 INSERT INTO reservations VALUES
- (10, 'chloe.meyer@exemple.fr', 'Nocturne', '2026-03-14 20:30', 4, 12),
- (10, 'chloe.meyer@exemple.fr', 'Nocturne', '2026-03-14 20:30', 4, 13);
+ (1, 10, 'chloe.meyer@exemple.fr', 'Nocturne', '2026-03-14 20:30', 4, 12),
+ (2, 10, 'chloe.meyer@exemple.fr', 'Nocturne', '2026-03-14 20:30', 4, 13);
 -- Chaque place occupe SA ligne : comptable, filtrable, contraignable.</code></pre></figure>
 
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg><div class="callout__body"><p class="callout__title">1NF n'est que la première marche</p><p>Regarde bien la table <code>reservations</code> ci-dessus&nbsp;: elle est maintenant en 1NF — plus aucune liste, plus aucun groupe répété — et pourtant elle reste <strong>franchement mauvaise</strong>. L'e-mail de Chloé, le titre du spectacle, l'heure de la représentation sont encore recopiés sur les deux lignes. La 1NF a réglé l'<em>atomicité</em>, pas la <em>redondance entre lignes</em>. Éliminer ces répétitions-là exige les formes suivantes et la notion de <em>dépendance fonctionnelle</em> — c'est tout le sujet de la <a href="lecon-09.html">leçon&nbsp;9</a>. Une chose à la fois.</p></div></div>
@@ -467,7 +469,7 @@ INSERT INTO reservations VALUES
   {"q":"Une table est en première forme normale (1NF) lorsque…","a":["chaque cellule contient une valeur atomique, il n'y a pas de groupe répété, chaque ligne est identifiable par une clé, et l'ordre des lignes/colonnes ne porte pas d'information","chacune de ses colonnes porte un type déclaré, aucune cellule n'y reste vide, et une contrainte NOT NULL couvre toutes les colonnes, y compris celles qui ne servent qu'aux jointures avec les autres tables","ses lignes sont rangées dans l'ordre de la clé primaire et ses colonnes déclarées dans l'ordre du schéma (celui du CREATE TABLE), si bien qu'une lecture séquentielle restitue toujours la même suite d'enregistrements","aucune de ses colonnes ne recopie une information déjà écrite dans une autre table, et chaque fait n'y figure donc qu'une seule fois"],"correct":0,"explain":"La 1NF pose quatre exigences : atomicité des cellules, absence de groupe répété, présence d'une clé identifiant chaque ligne, et ordre non signifiant. Les clés étrangères et les index relèvent d'autres notions."},
   {"q":"La colonne places d'une table billet contient la valeur 'A1,A2,A3'. Que peut-on dire ?","a":["C'est une colonne multivaluée qui viole la 1NF ; il faut une ligne par place, avec une valeur atomique par cellule","C'est un attribut composé, comme une adresse : cette colonne se garde telle quelle tant qu'on n'a pas besoin d'en interroger chaque valeur à part","C'est un groupe répété, que l'on corrige en créant les colonnes place1, place2 et place3, une par valeur trouvée dans la chaîne","C'est atomique au sens de la 1NF : la cellule ne contient qu'une chaîne de caractères, et l'atomicité se juge sur le TYPE"],"correct":0,"explain":"Plusieurs valeurs séparées par une virgule dans une cellule = colonne « liste » multivaluée, non atomique. La 1NF impose de l'éclater en une ligne par place. Ajouter place1/place2/place3 remplacerait un anti-patron par un autre."},
   {"q":"Pourquoi des colonnes place1, place2, place3 (un groupe répété) posent-elles problème ?","a":["Elles imposent un plafond arbitraire au nombre de places, laissent des cellules NULL, et rendent toute question sur « les places » répétitive (place1 OR place2 OR place3)","Elles obligent le moteur à maintenir trois index distincts (un par colonne) au lieu d'un seul, ce qui triple le coût d'une insertion (et celui d'une mise à jour) ; le schéma, lui, reste correct","Elles interdisent de déclarer une clé primaire, car place2 et place3 acceptent la valeur NULL et aucune clé ne tolère de colonnes vides sur la même table","Elles violent la 1NF parce que trois colonnes portent le même nom de base, et il suffit de les renommer « place_a », « place_b » et « place_c »"],"correct":0,"explain":"Le groupe répété fige dans le schéma une limite qui appartient aux données (et le client qui veut une 4e place ?), multiplie les NULL, et oblige à répéter la condition sur chaque colonne. La 1NF le corrige en passant les colonnes en lignes."},
-  {"q":"Pourquoi la 1NF est-elle considérée comme le socle du modèle relationnel ?","a":["Parce que tant qu'une cellule contient une liste, on ne peut ni contraindre (UNIQUE), ni indexer, ni joindre correctement","Parce qu'elle garantit à elle seule qu'aucun fait n'est écrit deux fois, ce qui rend les formes normales suivantes facultatives","Parce qu'elle fixe le type de chaque colonne (TEXT, INTEGER, NUMERIC) et laisse le moteur choisir la bonne taille de stockage","Parce que le moteur SQL refuse de créer une table dont une colonne n'est pas atomique, et impose donc la 1NF"],"correct":0,"explain":"Contraintes, index et jointures supposent tous une valeur atomique par ligne. Une colonne liste les rend impossibles. La 1NF est donc le prix d'entrée — mais pas la fin du chemin : la redondance entre lignes relève des 2NF/3NF (leçon 9)."}
+  {"q":"Pourquoi la 1NF est-elle considérée comme le socle du modèle relationnel ?","a":["Parce qu'aucune contrainte, aucun index et aucune jointure ne sait viser les valeurs cachées à l'intérieur d'une cellule liste","Parce qu'elle garantit à elle seule qu'aucun fait n'est écrit deux fois, ce qui rend les formes normales suivantes facultatives","Parce qu'elle fixe le type de chaque colonne (TEXT, INTEGER, NUMERIC) et laisse le moteur choisir la bonne taille de stockage","Parce que le moteur SQL refuse de créer une table dont une colonne n'est pas atomique, et impose donc la 1NF"],"correct":0,"explain":"Contraintes, index et jointures supposent tous une valeur atomique par ligne. Une colonne liste ne les interdit pas au moteur, elle les rend aveugles : ils portent sur la chaîne entière, jamais sur les valeurs qu'elle cache. La 1NF est donc le prix d'entrée — mais pas la fin du chemin : la redondance entre lignes relève des 2NF/3NF (leçon 9)."}
 ]
 </script>
 
