@@ -27,7 +27,11 @@ function questionsDe(cours) {
   fs.readdirSync(dir).filter(function (f) { return /^lecon-\d+\.html$/.test(f); }).sort()
     .forEach(function (f) {
       var s = fs.readFileSync(path.join(dir, f), "utf8");
-      var re = /<script type="application\/json" data-quiz(?:-bilan)?>([\s\S]*?)<\/script>/g, m;
+      /* Le regex doit accepter un attribut VALUE : `data-quiz-bilan="Bilan du cours"`.
+         Mesure du 2026-09-05 : la version qui exigeait `data-quiz-bilan>` laissait
+         184 questions hors du controle sur 11 cours, dont 10 dans chacun des quatre
+         cours de B4 deja clos (js, python, css, html) et 31 sur `maths`. */
+      var re = /<script[^>]*type="application\/json"[^>]*data-quiz(?:-bilan)?[^>]*>([\s\S]*?)<\/script>/g, m;
       while ((m = re.exec(s))) {
         var lot;
         try { lot = JSON.parse(m[1]); } catch (e) { continue; }
