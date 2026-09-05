@@ -171,29 +171,37 @@ function dessiner(etat) {
 <h2>La boucle de jeu&nbsp;: requestAnimationFrame</h2>
 <p>Un jeu, c'est une boucle qui tourne en continu&nbsp;: «&nbsp;mets à jour, dessine, recommence&nbsp;». Pour synchroniser cette boucle avec l'écran, on utilise <code>requestAnimationFrame</code> (rAF)&nbsp;: le navigateur appelle notre fonction juste avant chaque rafraîchissement, environ 60&nbsp;fois par seconde, et nous donne l'horodatage de l'image.</p>
 <p>Problème&nbsp;: 60&nbsp;fois par seconde, le serpent filerait beaucoup trop vite. On veut qu'il avance toutes les <code>150&nbsp;ms</code>, par exemple. La solution propre est le <strong>pas de temps fixe</strong>&nbsp;: à chaque image, on accumule le temps écoulé&nbsp;; tant que l'accumulateur dépasse le pas voulu, on fait avancer la logique d'un cran. On dessine à chaque image, mais on ne <em>met à jour</em> qu'au bon rythme.</p>
-<figure class="code-block" data-file="jeu.js"><pre><code class="language-javascript">const PAS_MS = 150;     // le serpent avance toutes les 150 ms
-let accumulateur = 0;   // temps accumulé depuis le dernier avancement
-let dernierTemps = 0;   // horodatage de l'image précédente
+<figure class="code-block" data-file="jeu.js"><pre><code class="language-javascript">const PAS_MS = 150;      // le serpent avance toutes les 150 ms
+let accumulateur = 0;    // temps accumulé depuis le dernier avancement
+let dernierTemps = null; // horodatage de l'image précédente (null = aucune)
 let etat = etatInitial(); // vient de la leçon 15
 
 function boucle(temps) {
   // temps est fourni par le navigateur, en millisecondes.
+  // 1re image : on cale l'horloge. Sinon delta vaudrait tout le temps
+  // écoulé depuis le chargement et le serpent sauterait plusieurs cases.
+  if (dernierTemps === null) dernierTemps = temps;
   const delta = temps - dernierTemps; // durée de cette image
   dernierTemps = temps;
   accumulateur += delta;
 
   // On consomme l'accumulateur par paliers fixes de PAS_MS.
   while (accumulateur &gt;= PAS_MS) {
-    etat = avancer(etat);   // UN cran de logique (leçon 15)
     accumulateur -= PAS_MS;
+    if (etat.statut === &quot;perdu&quot;) continue; // partie finie : rien à jouer
+    // La flèche notée par le clavier est appliquée ICI, avant le pas.
+    if (etat.directionDemandee) {
+      etat = changerDirection(etat, etat.directionDemandee); // demi-tour refusé
+    }
+    etat = jouerTour(etat); // UN cran de logique complet (leçon 15)
   }
 
   dessiner(etat);                       // on dessine à chaque image
   requestAnimationFrame(boucle);        // on redemande l'image suivante
 }
 requestAnimationFrame(boucle); // démarre la boucle
-// Effet : le serpent avance d'une case toutes les 150 ms, quel que soit
-// le nombre d'images par seconde de l'écran.</code></pre></figure>
+// Effet : le serpent avance d'une case toutes les 150 ms, mange, grandit
+// et perd, quel que soit le nombre d'images par seconde de l'écran.</code></pre></figure>
 <p class="code-caption">La boucle <code>while</code> rattrape même un éventuel retard (onglet ralenti)&nbsp;: le jeu reste à la bonne vitesse.</p>
 
 <figure class="diagram">
@@ -208,7 +216,7 @@ requestAnimationFrame(boucle); // démarre la boucle
     <line class="d-line" x1="320" y1="142" x2="320" y2="158" /><path class="d-line" d="M314 150 L320 160 L326 150" fill="none" />
     <rect class="d-accent" x="130" y="160" width="380" height="50" rx="9" />
     <text class="d-text" x="320" y="182" text-anchor="middle">while (accumulateur ≥ PAS_MS) :</text>
-    <text class="d-mut" x="320" y="202" text-anchor="middle">etat = avancer(etat) · accumulateur −= PAS_MS</text>
+    <text class="d-mut" x="320" y="202" text-anchor="middle">etat = jouerTour(etat) · accumulateur −= PAS_MS</text>
     <text class="d-mut" x="556" y="150" text-anchor="middle">rattrape</text>
     <line class="d-line" x1="320" y1="210" x2="320" y2="226" /><path class="d-line" d="M314 218 L320 228 L326 218" fill="none" />
     <rect class="d-box" x="130" y="228" width="380" height="38" rx="9" />
@@ -237,10 +245,10 @@ window.addEventListener(&quot;keydown&quot;, (e) =&gt; {
 });
 // Effet : appuyer sur une flèche enregistre la direction voulue,
 // sans bouger le serpent immédiatement.</code></pre></figure>
-<p class="code-caption">C'est <code>avancer(etat)</code> (leçon 15) qui, au pas suivant, lit <code>directionDemandee</code> et décide si elle est valide&nbsp;— notamment pour interdire le demi-tour.</p>
+<p class="code-caption">C'est la <strong>boucle</strong> qui, au pas suivant, lit <code>directionDemandee</code> et la passe à <code>changerDirection</code> (leçon 15)&nbsp;: cette fonction décide si la demande est valide — notamment pour interdire le demi-tour.</p>
 
 <h2>Rendu = lire l'état, puis le dessiner</h2>
-<p>Prends un peu de recul sur l'architecture. Tu as maintenant deux mondes nettement séparés. D'un côté, la <strong>logique</strong>&nbsp;: <code>etatInitial()</code> et <code>avancer(etat)</code>, des fonctions qui transforment un état en un autre, sans toucher au DOM. De l'autre, le <strong>rendu</strong>&nbsp;: <code>dessiner(etat)</code> et la boucle, qui lisent l'état et le projettent sur le canvas.</p>
+<p>Prends un peu de recul sur l'architecture. Tu as maintenant deux mondes nettement séparés. D'un côté, la <strong>logique</strong>&nbsp;: <code>etatInitial()</code>, <code>changerDirection</code> et <code>jouerTour(etat)</code>, des fonctions qui transforment un état en un autre, sans toucher au DOM. De l'autre, le <strong>rendu</strong>&nbsp;: <code>dessiner(etat)</code> et la boucle, qui lisent l'état et le projettent sur le canvas.</p>
 <p>Le sens de circulation est toujours le même&nbsp;: clavier → on note l'intention dans l'état → la boucle fait avancer la logique → la logique produit un nouvel état → on dessine cet état. Ce flux à sens unique est exactement ce qui rend le jeu débogable&nbsp;: si quelque chose cloche, tu sais si le bug est dans la logique (testable seule) ou dans le rendu (visuel).</p>
 
 <h2>Les écrans&nbsp;: démarrage, partie, game over</h2>
@@ -268,7 +276,7 @@ window.addEventListener(&quot;keydown&quot;, (e) =&gt; {
   }
 });
 // Effet : un cycle accueil → jeu → game over → rejouer, piloté par etat.phase.</code></pre></figure>
-<p class="code-caption">Dans la boucle, on n'appelle <code>avancer(etat)</code> que si <code>etat.phase === &quot;jeu&quot;</code>&nbsp;: sur l'accueil ou le game over, le serpent reste figé.</p>
+<p class="code-caption">Dans la boucle, on n'appelle <code>jouerTour(etat)</code> que si <code>etat.phase === &quot;jeu&quot;</code>&nbsp;: sur l'accueil ou le game over, le serpent reste figé.</p>
 
 <h2>Finitions</h2>
 <p>Quelques touches qui font la différence entre un prototype et un petit jeu agréable. Le <strong>focus clavier</strong>&nbsp;: en écoutant sur <code>window</code>, les flèches marchent sans clic préalable. Les <strong>instructions</strong> à l'écran d'accueil évitent au joueur de deviner les touches. Des <strong>couleurs</strong> contrastées (fond sombre, serpent vert, pomme rouge) rendent le jeu lisible. Enfin, pour un rendu net sur tous les écrans, mieux vaut garder une taille de canvas fixe et l'adapter en CSS plutôt qu'en changeant <code>width</code>/<code>height</code> en continu.</p>
@@ -285,7 +293,7 @@ window.addEventListener(&quot;keydown&quot;, (e) =&gt; {
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — «&nbsp;Fix Your Timestep&nbsp;», la boucle de tous les moteurs</p><p>La boucle que tu viens d'écrire — accumulateur plus pas de temps fixe — n'est pas un truc d'école&nbsp;: c'est le cœur de tous les moteurs de jeu professionnels (Unity, Unreal, Godot). Le principe est si central qu'un article fondateur de Glenn Fiedler, «&nbsp;Fix Your Timestep!&nbsp;», est relu par des générations de développeurs de jeux. La raison&nbsp;: sans pas fixe, la physique et la logique dépendent de la vitesse de la machine — un jeu tournerait deux fois plus vite sur un écran 120&nbsp;Hz que sur un 60&nbsp;Hz. En fixant le pas de simulation (souvent 60&nbsp;fois par seconde) et en dessinant, lui, au rythme de l'écran, on garantit un comportement identique partout. Ton serpent utilise exactement cette technique éprouvée.</p></div></div>
 
 <h2>Pièges fréquents</h2>
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Faire avancer le jeu à chaque image.</strong> Si tu appelles <code>avancer(etat)</code> directement dans la boucle rAF, le serpent file à 60&nbsp;cases par seconde&nbsp;: injouable. Il <em>faut</em> le pas de temps fixe avec accumulateur.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Faire avancer le jeu à chaque image.</strong> Si tu appelles <code>jouerTour(etat)</code> directement dans la boucle rAF, le serpent file à 60&nbsp;cases par seconde&nbsp;: injouable. Il <em>faut</em> le pas de temps fixe avec accumulateur.</p></div></div>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Oublier d'effacer le canvas.</strong> Sans le <code>fillRect</code> de fond (ou <code>clearRect</code>) au début de <code>dessiner</code>, les anciennes positions du serpent restent peintes&nbsp;: tu obtiens des traînées. Efface toujours <em>avant</em> de redessiner.</p></div></div>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Oublier <code>preventDefault()</code> sur les flèches</strong> fait défiler la page à chaque coup&nbsp;; et <strong>mélanger logique et rendu</strong> (modifier le serpent dans <code>dessiner</code>, ou dessiner dans <code>avancer</code>) casse la séparation et rend les bugs introuvables. Enfin, <strong>redessiner alors que rien n'a changé</strong> n'est pas faux ici (on redessine à chaque image), mais sur des scènes lourdes, ne repeins que si l'état a bougé.</p></div></div>
 
@@ -349,7 +357,7 @@ window.addEventListener(&quot;keydown&quot;, (e) =&gt; {
 <script type="application/json" data-quiz>
 [
   {"q":"Pourquoi dessine-t-on à chaque image mais ne fait-on avancer la logique que toutes les PAS_MS ? Que se passerait-il sans l'accumulateur de temps ?","a":["Le rendu tourne à la fréquence de l'écran (~60 fps), mais le jeu doit avancer à un rythme fixe, indépendant de la machine ; sans accumulateur, le serpent irait à la vitesse du rafraîchissement (variable)","Parce que requestAnimationFrame n'accepte qu'un seul rappel par image (un plafond du navigateur) et refuse les appels imbriqués : l'accumulateur contourne cette limite, et sans lui, la boucle serait abandonnée au bout de quelques images (une seconde)","L'horodatage fourni par requestAnimationFrame repart de zéro à toute nouvelle image ; l'accumulateur reconstitue la durée écoulée depuis le départ ; sans lui delta vaudrait zéro, donc le serpent resterait immobile sur sa case","La logique du serpent est trop lourde pour tenir dans une image de 16 ms : l'accumulateur l'espace pour tenir la charge, sinon la machine perdrait des images"],"correct":0,"explain":"On découple l'affichage (fluide, à chaque frame) de la simulation (pas de temps constant). L'accumulateur déclenche un tour de logique tous les PAS_MS, pour une vitesse de jeu identique quel que soit le taux de rafraîchissement."},
-  {"q":"Tu observes des traînées vertes derrière le serpent. Quelle ligne manque dans dessiner, et pourquoi ?","a":["L'effacement du canvas en début de frame (clearRect ou remplissage du fond) ; sans lui, les positions précédentes restent peintes","L'appel à ctx.restore() en fin de dessin (la remise à zéro du pinceau) ; sans lui le contexte garde le vert et le réapplique","La remise à 1 de ctx.globalAlpha : laissée plus bas, elle empile des serpents translucides d'une image sur l'autre","Le pop() de la queue dans dessiner : tant qu'il manque, le tableau garde ses anciennes cases et les repeint"],"correct":0,"explain":"Le canvas conserve ce qui a été dessiné. Sans effacer à chaque image, les anciennes positions du serpent s'accumulent, créant des traînées. On nettoie le canvas avant de redessiner."},
+  {"q":"Tu observes des traînées vertes derrière le serpent. Quelle ligne manque dans dessiner, et pourquoi ?","a":["L'effacement du canvas en début de frame (clearRect ou remplissage du fond) ; sans lui, les positions précédentes restent peintes","L'appel à ctx.restore() en fin de dessin (la remise à zéro du pinceau) ; sans lui le contexte garde le vert et le réapplique","Le retour à la couleur de fond après le serpent : le vert reste armé sur ctx.fillStyle, et le décor de l'image suivante est peint en vert au lieu du bleu sombre","Le tri du tableau serpent avant le forEach : sans lui, les cases partent dans le désordre et la tête finit peinte sous le corps au lieu de le surmonter"],"correct":0,"explain":"Le canvas conserve ce qui a été dessiné. Sans effacer à chaque image, les anciennes positions du serpent s'accumulent, créant des traînées. On nettoie le canvas avant de redessiner."},
   {"q":"Sur le canvas, la case (3, 5) se trouve à quelles coordonnées en pixels, et où est l'origine ?","a":["À (3 × TAILLE, 5 × TAILLE) ; l'origine (0, 0) est en haut à gauche","À (5 × TAILLE, 3 × TAILLE) ; l'origine (0, 0) occupe le centre du canvas","À (3 + TAILLE, 5 + TAILLE) ; l'origine (0, 0) est en bas","À (3, 5) : le contexte 2D convertit les cases pour nous"],"correct":0,"explain":"On convertit une position en grille vers des pixels en multipliant par la taille d'une case : x = colonne × TAILLE, y = ligne × TAILLE. Le repère du canvas a son origine en haut à gauche, l'axe y descendant."}
 ]
 </script>
@@ -388,29 +396,33 @@ function dessiner(etat) {
 </details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div>
-<p>Écris une boucle <code>requestAnimationFrame</code> qui fait avancer le jeu toutes les <code>120&nbsp;ms</code> grâce à un accumulateur, en dessinant à chaque image. Utilise <code>avancer</code> et <code>dessiner</code> des exercices précédents. Commente l'effet.</p>
+<p>Écris une boucle <code>requestAnimationFrame</code> qui fait avancer le jeu toutes les <code>120&nbsp;ms</code> grâce à un accumulateur, en dessinant à chaque image. Utilise <code>jouerTour</code> (leçon 15) et <code>dessiner</code> de l'exercice précédent. Commente l'effet.</p>
 <details><summary>Voir une solution</summary>
 <figure class="code-block" data-file="solution-2.js"><pre><code class="language-javascript">// Interface : boucle d'animation à pas de temps fixe.
 const PAS_MS = 120;
 let accumulateur = 0;
-let dernierTemps = 0;
+let dernierTemps = null; // pas encore d'image : on calera sur la première
 let etat = etatInitial();
 
 function boucle(temps) {
+  // Sans ce calage, la 1re image apporterait tout le temps écoulé
+  // depuis le chargement de la page : le serpent sauterait des cases.
+  if (dernierTemps === null) dernierTemps = temps;
   accumulateur += temps - dernierTemps; // temps écoulé cette image
   dernierTemps = temps;
 
-  // On consomme par paliers fixes : 1 avancement = 1 case.
+  // On consomme par paliers fixes : 1 tour de logique = 1 case.
   while (accumulateur &gt;= PAS_MS) {
-    etat = avancer(etat);
     accumulateur -= PAS_MS;
+    if (etat.statut === &quot;perdu&quot;) continue; // la partie est finie
+    etat = jouerTour(etat); // avance, teste la collision, mange
   }
 
   dessiner(etat);                  // dessin à chaque image
   requestAnimationFrame(boucle);   // image suivante
 }
 requestAnimationFrame(boucle);
-// Effet : le serpent avance d'une case toutes les 120 ms,
+// Effet : le serpent avance d'une case toutes les 120 ms, mange et perd,
 // quel que soit le taux de rafraîchissement de l'écran.</code></pre></figure>
 </details></div>
 

@@ -183,7 +183,16 @@ function ajouterHabitude(nom) {
 
 <p>C'est le cœur testable. Trois fonctions, aucune ne touche au DOM. La liste des <strong>7 derniers jours</strong>, le <strong>basculement</strong> d'un jour, et les deux statistiques dérivées.</p>
 
-<figure class="code-block" data-file="logique.js"><pre><code class="language-javascript">// Les n derniers jours, du plus ancien au plus récent.
+<figure class="code-block" data-file="logique.js"><pre><code class="language-javascript">// Rappel — chaque bloc « ▶ Tester » s'exécute SEUL, sans les blocs
+// précédents : on redonne donc isoDate, définie plus haut dans modele.js.
+function isoDate(d) {
+  const a = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const j = String(d.getDate()).padStart(2, "0");
+  return a + "-" + m + "-" + j;
+}
+
+// Les n derniers jours, du plus ancien au plus récent.
 function derniersJours(n, aujourdhui) {
   const jours = [];
   for (let i = n - 1; i &gt;= 0; i--) {
@@ -204,12 +213,32 @@ function basculerJour(habitude, jourISO) {
 const h = { nom: "Lire", jours: {} };
 basculerJour(h, "2026-07-24");
 console.log(h.jours);                          //=&gt; { "2026-07-24": true }
-console.log(derniersJours(3, new Date("2026-07-24")));
+// Date construite en LOCAL (mois 6 = juillet). new Date("2026-07-24") serait
+// lu en UTC et décalerait d'un jour à l'ouest de Greenwich.
+console.log(derniersJours(3, new Date(2026, 6, 24)));
 //=&gt; ["2026-07-22", "2026-07-23", "2026-07-24"]</code></pre></figure>
 
 <p>La <strong>série</strong> (ou «&nbsp;streak&nbsp;») est le nombre de jours consécutifs réalisés en remontant depuis aujourd'hui. Tant que le jour est coché, on compte et on recule d'un jour&nbsp;; au premier trou, on s'arrête.</p>
 
-<figure class="code-block" data-file="serie.js"><pre><code class="language-javascript">// Jours consécutifs cochés, en partant d'aujourd'hui vers le passé.
+<figure class="code-block" data-file="serie.js"><pre><code class="language-javascript">// Rappel — le bloc s'exécute SEUL : on redonne isoDate et derniersJours,
+// définies plus haut dans modele.js et logique.js.
+function isoDate(d) {
+  const a = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const j = String(d.getDate()).padStart(2, "0");
+  return a + "-" + m + "-" + j;
+}
+function derniersJours(n, aujourdhui) {
+  const jours = [];
+  for (let i = n - 1; i &gt;= 0; i--) {
+    const d = new Date(aujourdhui);
+    d.setDate(d.getDate() - i);
+    jours.push(isoDate(d));
+  }
+  return jours;
+}
+
+// Jours consécutifs cochés, en partant d'aujourd'hui vers le passé.
 function serie(habitude, aujourdhui) {
   let n = 0;
   const jour = new Date(aujourdhui);
@@ -226,10 +255,10 @@ function taux(habitude, jours) {
   return Math.round((faits / jours.length) * 100);
 }
 
-// DÉMO
+// DÉMO — dates construites en LOCAL, jamais depuis une chaîne (piège du fuseau).
 const h = { nom: "Courir", jours: { "2026-07-23": true, "2026-07-24": true } };
-console.log(serie(h, new Date("2026-07-24"))); //=&gt; 2
-console.log(taux(h, derniersJours(7, new Date("2026-07-24")))); //=&gt; 29</code></pre></figure>
+console.log(serie(h, new Date(2026, 6, 24))); //=&gt; 2
+console.log(taux(h, derniersJours(7, new Date(2026, 6, 24)))); //=&gt; 29</code></pre></figure>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 182" role="img" aria-label="Calcul de la série. Une ligne de sept jours du 18 au 24 juillet. Les 18 et 19 sont manqués, le 20 est manqué, les 22, 23 et 24 sont cochés. On part d'aujourd'hui le 24 et on remonte tant que le jour est coché : 24 coché, 23 coché, 22 coché, puis 21 manqué : on s'arrête. La série vaut trois.">
@@ -406,7 +435,7 @@ rendre(); // démarrage</code></pre></figure>
 [
   {"q":"Pourquoi ne stocke-t-on pas la série (streak) directement dans le modèle d'une habitude ?","a":["Parce que c'est une valeur dérivée : la recalculer depuis les jours cochés évite toute désynchronisation entre la donnée et son résumé","Parce que JSON.stringify refuse les propriétés numériques et rendrait le tableau des habitudes illisible pour localStorage au moment de la sauvegarde","Parce qu'une valeur écrite dans le modèle est perdue au rechargement, contrairement à une statistique recalculée au rendu, qui survit toujours à la fermeture de l'onglet","Parce que le rendu construit la grille avant de lire l'état : une série mémorisée ne serait jamais relue ensuite"],"correct":0,"explain":"La série se déduit des jours cochés. La stocker en double obligerait à la maintenir à la main, source de bugs. On la recalcule au rendu."},
   {"q":"Dans le modèle, que signifie la présence de la clé \"2026-07-24\" dans l'objet jours d'une habitude ?","a":["Que l'habitude a été réalisée ce jour-là ; une clé absente signifie un jour manqué","Que l'habitude a été créée ce jour-là et que la série repart à zéro","Que la date du dernier envoi vers localStorage est notée là","Que ce jour est en cours ; il sera validé au prochain rendu"],"correct":0,"explain":"On indexe les jours réalisés par leur date. Basculer un jour ajoute ou retire sa clé."},
-  {"q":"Quel est le bon ordre de la méthode pour bâtir un projet ?","a":["Cahier des charges, puis modèle de données, puis logique pure, puis interface, puis persistance","Interface d'abord pour voir l'écran tout de suite puis logique puis modèle de données puis cahier des charges","Persistance d'abord : on fige le format enregistré dans localStorage puis on dessine l'écran et la logique vient en dernier","Modèle de données d'abord puis interface puis cahier des charges écrit une fois le travail terminé"],"correct":0,"explain":"On part du besoin et on descend vers l'écran. La logique pure, testable, se place avant l'interface."}
+  {"q":"Quel est le bon ordre de la méthode pour bâtir un projet ?","a":["Cahier des charges, puis modèle de données, puis logique pure, puis interface, puis persistance","On commence par l'interface pour voir l'écran tout de suite, la logique et le modèle viennent ensuite","Persistance d'abord : on fige le format enregistré dans localStorage puis on dessine l'écran et la logique vient en dernier","Le modèle de données ouvre le travail, l'interface suit, le cahier des charges se rédige à la fin"],"correct":0,"explain":"On part du besoin et on descend vers l'écran. La logique pure, testable, se place avant l'interface."}
 ]
 </script>
 
@@ -417,7 +446,7 @@ rendre(); // démarrage</code></pre></figure>
   {"type":"text","accept":["serie","série","serie()","la série","streak"],"placeholder":"le nom de la statistique = nombre de jours consécutifs réalisés","hints":["On l'obtient en remontant le calendrier tant que le jour est coché.","En anglais : « streak ».","On cherche à « ne pas casser la … »."],"link":{"href":"lecon-24.html","label":"Revoir « La série (streak) »"}},
   {"type":"text","accept":["derives","dérivées","dérivée","derivees","valeurs dérivées","valeur dérivée"],"placeholder":"comment appelle-t-on la série et le taux, qu'on recalcule au lieu de stocker","hints":["Elles se déduisent de l'état.","Adjectif féminin pluriel, de « dériver ».","On oppose « stockées » à « … »."],"link":{"href":"lecon-24.html","label":"Revoir « La logique pure »"}},
   {"type":"text","accept":["preventDefault","preventDefault()","event.preventDefault","event.preventDefault()"],"placeholder":"l'appel qui empêche le formulaire d'ajout de recharger la page","hints":["On l'appelle sur l'objet event.","event.???().","Vu au pendu, à la To-Do…"],"link":{"href":"lecon-24.html","label":"Revoir « Ajouter une habitude »"}},
-  {"type":"code","run":{"expect":"3"},"placeholder":"écris serie(jours) (jours du plus récent au plus ancien), puis affiche serie([true, true, true, false, true])","hints":["On s'arrête au PREMIER jour manqué : un break, pas un continue.","Le dernier true du tableau ne compte pas : la série est déjà rompue.","Trois jours d'affilée."],"link":{"href":"lecon-24.html","label":"Revoir « Un suivi d'habitudes »"}}
+  {"type":"code","run":{"expect":"3"},"placeholder":"écris serieDepuisListe(jours) (jours du plus récent au plus ancien), puis affiche serieDepuisListe([true, true, true, false, true])","hints":["On s'arrête au PREMIER jour manqué : un break, pas un continue.","Le dernier true du tableau ne compte pas : la série est déjà rompue.","Trois jours d'affilée."],"link":{"href":"lecon-24.html","label":"Revoir « Un suivi d'habitudes »"}}
 ]
 </script>
 
@@ -435,7 +464,25 @@ console.log(totalJours(h)); //=&gt; 2</code></pre></figure></details></div>
 }
 // À brancher sur un bouton « ✕ » ajouté dans chaque ligne du rendu.</code></pre></figure></details></div>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris <code>meilleureSerie(habitude, jusqua)</code> qui renvoie la plus longue série jamais réalisée sur les 60 derniers jours (pas seulement celle en cours). Parcours les jours du plus ancien au plus récent en comptant les suites de jours cochés.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">function meilleureSerie(habitude, jusqua) {
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris <code>meilleureSerie(habitude, jusqua)</code> qui renvoie la plus longue série jamais réalisée sur les 60 derniers jours (pas seulement celle en cours). Parcours les jours du plus ancien au plus récent en comptant les suites de jours cochés.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// Rappel — le bloc s'exécute SEUL : on redonne isoDate et derniersJours,
+// définies plus haut dans modele.js et logique.js.
+function isoDate(d) {
+  const a = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const j = String(d.getDate()).padStart(2, "0");
+  return a + "-" + m + "-" + j;
+}
+function derniersJours(n, aujourdhui) {
+  const jours = [];
+  for (let i = n - 1; i &gt;= 0; i--) {
+    const d = new Date(aujourdhui);
+    d.setDate(d.getDate() - i);
+    jours.push(isoDate(d));
+  }
+  return jours;
+}
+
+function meilleureSerie(habitude, jusqua) {
   const jours = derniersJours(60, jusqua); // du plus ancien au plus récent
   let record = 0;
   let courante = 0;
@@ -451,7 +498,7 @@ console.log(totalJours(h)); //=&gt; 2</code></pre></figure></details></div>
 }
 
 const h = { jours: { "2026-07-20": true, "2026-07-21": true, "2026-07-24": true } };
-console.log(meilleureSerie(h, new Date("2026-07-24"))); //=&gt; 2</code></pre></figure></details></div>
+console.log(meilleureSerie(h, new Date(2026, 6, 24))); //=&gt; 2</code></pre></figure></details></div>
 
 <h2>Quiz bilan du cours</h2>
 
@@ -459,22 +506,22 @@ console.log(meilleureSerie(h, new Date("2026-07-24"))); //=&gt; 2</code></pre></
 
 <script type="application/json" data-quiz-bilan>
 [
-  {"q":"Comment sélectionne-t-on un élément du DOM ?","a":["document.querySelector(\".classe\")","document.getElementByClass(\".classe\")","document.getElement(\".classe\")","getElementsByName(\".classe\")"],"correct":0,"explain":"querySelector renvoie le premier élément correspondant ; querySelectorAll les renvoie tous."},
+  {"q":"Comment sélectionne-t-on un élément du DOM ?","a":["document.querySelector(\".classe\")","document.getElementByClass(\".classe\")","document.body.find(\".classe\")","getElementsByName(\".classe\")"],"correct":0,"explain":"querySelector renvoie le premier élément correspondant ; querySelectorAll les renvoie tous."},
   {"q":"Comment réagit-on à un clic ?","a":["element.addEventListener(\"click\", fn)","element.attachEvent(\"onclick\", fn, false)","element.onclick(\"click\", fn, document)","window.bind(\"click\", element, fn, true)"],"correct":0,"explain":"addEventListener permet plusieurs écouteurs sur le même élément."},
   {"q":"Comment crée-t-on un nouvel élément ?","a":["document.createElement(\"li\")","document.newElement(\"li\")","new HTMLElement(\"li\")","document.append(\"li\")"],"correct":0,"explain":"On l'ajoute ensuite au DOM avec appendChild ou append."},
   {"q":"Comment sauvegarder des données DANS le navigateur ?","a":["localStorage.setItem(cle, valeur)","storage.removeItem(cle, valeur)","fs.writeFile(cle, valeur, options)","document.save(cle, valeur, true)"],"correct":0,"explain":"localStorage persiste entre les sessions, sous forme de texte."},
   {"q":"Comment stocker un objet (localStorage ne garde que du texte) ?","a":["JSON.stringify(obj) avant de stocker","localStorage.setObject(obj)","String(obj) puis JSON.parse pour relire","obj directement dans setItem"],"correct":0,"explain":"On sérialise avec JSON.stringify, et on relit avec JSON.parse."},
   {"q":"Comment empêcher le rechargement à l'envoi d'un formulaire ?","a":["event.preventDefault()","event.stopPropagation()","form.removeEventListener()","document.stopReload(form)"],"correct":0,"explain":"Dans le gestionnaire de l'événement submit, en première ligne."},
   {"q":"Comment modifier le texte d'un élément SANS risque d'injection ?","a":["element.textContent = …","element.insertAdjacentHTML(…)","element.outerHTML = …","document.write(… + texte)"],"correct":0,"explain":"textContent n'interprète pas le HTML : sûr par défaut."},
-  {"q":"Quelle est la bonne architecture pour une petite appli ?","a":["Séparer l'état (la logique) du rendu (le DOM)","Confier l'état (les calculs) au DOM lui-même","Placer toute la logique dans les écouteurs","Recopier les calculs dans la fonction rendre"],"correct":0,"explain":"L'état change, puis une fonction rendre() redessine l'interface."},
+  {"q":"Quelle est la bonne architecture pour une petite appli ?","a":["Séparer l'état (la logique) du rendu (le DOM)","Confier l'état (les calculs) au DOM lui-même","Placer toute la logique dans les écouteurs","Redessiner l'écran sans jamais relire l'état"],"correct":0,"explain":"L'état change, puis une fonction rendre() redessine l'interface."},
   {"q":"Comment mélanger un tableau de façon non biaisée (jeu de Memory) ?","a":["Avec Fisher-Yates : échanger chaque case avec une case tirée au hasard, de la fin vers le début","Avec un tri dont le comparateur renvoie une valeur tirée au hasard à chaque comparaison de deux cases","En triant les cases puis en inversant l'ordre obtenu avec reverse à chaque partie","En tirant un seul nombre au hasard puis en décalant toutes les cases d'autant"],"correct":0,"explain":"Le tri par comparateur aléatoire est biaisé ; Fisher-Yates rend toutes les permutations équiprobables."},
-  {"q":"Un filtre « actifs / terminés » dans une liste de tâches, c'est…","a":["Une vue dérivée calculée avec filter, sans jamais supprimer de données","Une suppression des tâches non concernées, que l'ajout suivant remettra en place","Un tri du tableau qui remonte les tâches actives en tête et repousse les terminées","Une remise à zéro de l'état, suivie d'un rechargement complet depuis localStorage"],"correct":0,"explain":"On garde toutes les données et on calcule le sous-ensemble à afficher selon le filtre courant."},
-  {"q":"Pour retrouver un élément à modifier ou supprimer de façon fiable, on l'identifie par…","a":["Son identifiant stable (id), pas sa position dans le tableau","Son rang dans le tableau, revu dès qu'une ligne part ou arrive","Sa position à l'écran lue depuis le numéro de ligne du tableau HTML","Son texte affiché qui sert de clé dans l'état"],"correct":0,"explain":"Les positions se décalent après une suppression ; l'id reste stable et désigne toujours la bonne donnée."},
+  {"q":"Un filtre « actifs / terminés » dans une liste de tâches, c'est…","a":["Une vue dérivée calculée avec filter, sans jamais supprimer de données","Une suppression des tâches non concernées, que l'ajout suivant remettra en place","Une remontée des tâches actives en tête, les terminées repoussées en fin de liste","Une remise à zéro de l'état, suivie d'un rechargement complet depuis localStorage"],"correct":0,"explain":"On garde toutes les données et on calcule le sous-ensemble à afficher selon le filtre courant."},
+  {"q":"Pour retrouver un élément à modifier ou supprimer de façon fiable, on l'identifie par…","a":["Son identifiant stable (id), pas sa position dans le tableau","Son rang mémorisé au premier rendu (son indice), jamais revu ensuite","Son emplacement à l'écran, lu depuis le numéro de ligne du tableau HTML","Son texte affiché qui sert de clé dans l'état"],"correct":0,"explain":"Les positions se décalent après une suppression ; l'id reste stable et désigne toujours la bonne donnée."},
   {"q":"Une statistique comme la série de jours ou un total doit être…","a":["Recalculée depuis l'état (valeur dérivée), pas stockée en double","Sauvegardée dans le modèle (à la main) à chaque clic","Écrite dans le HTML, au premier rendu, puis laissée en l'état","Lue depuis localStorage à chaque rendu de la grille"],"correct":0,"explain":"Les valeurs dérivées se recalculent au rendu : une seule source de vérité, aucune désynchronisation."}
 ]
 </script>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 4</span><span class="exercise__level">Au clavier</span></div><p>La série en cours est ce qui motive un suivi d'habitudes. Écris <code>serie(jours)</code> qui reçoit les jours du plus récent au plus ancien (<code>true</code> = fait) et rend le nombre de <code>true</code> consécutifs depuis le début, puis affiche <code>serie([true, true, true, false, true])</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">function serie(jours) {
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 4</span><span class="exercise__level">Au clavier</span></div><p>La série en cours est ce qui motive un suivi d'habitudes. Écris <code>serieDepuisListe(jours)</code> qui reçoit les jours du plus récent au plus ancien (<code>true</code> = fait) et rend le nombre de <code>true</code> consécutifs depuis le début, puis affiche <code>serieDepuisListe([true, true, true, false, true])</code>. Nom différent de <code>serie(habitude, aujourdhui)</code> vu plus haut&nbsp;: les deux fonctions ne prennent pas les mêmes arguments.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">function serieDepuisListe(jours) {
   let compte = 0;
   for (const jour of jours) {
     if (!jour) break;
@@ -483,7 +530,7 @@ console.log(meilleureSerie(h, new Date("2026-07-24"))); //=&gt; 2</code></pre></
   return compte;
 }
 
-console.log(serie([true, true, true, false, true]));</code></pre></figure></details></div>
+console.log(serieDepuisListe([true, true, true, false, true])); //=&gt; 3</code></pre></figure></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>

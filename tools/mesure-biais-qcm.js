@@ -120,6 +120,18 @@ var SIGLES = /^(HTML|CSS|JS|JSON|DOM|API|URL|URI|HTTP|HTTPS|CORS|SQL|CLI|UI|UX|I
    consecutives, sans lettre autour. */
 var CAPITALES = /(?<![\p{L}\p{N}])[\p{Lu}][\p{Lu}\p{N}]+(?![\p{L}])/gu;
 
+/* Le MOT D'ATTAQUE d'une option : son premier mot, les locutions conjonctives
+   comptant pour un seul jeton. Voir la strategie « l'attaque unique » plus bas. */
+var LOCUTIONS = ["parce que", "parce qu'", "pour que", "afin de", "afin d'",
+                 "des que", "des qu'", "tant que", "tant qu'", "alors que", "alors qu'",
+                 "si bien que", "au lieu de", "en effet", "c'est"];
+function motAttaque(t) {
+  var m = String(t).trim().toLowerCase().replace(/^[«"'`\s]+/, "");
+  for (var i = 0; i < LOCUTIONS.length; i++) if (m.indexOf(LOCUTIONS[i]) === 0) return LOCUTIONS[i];
+  var mm = /^[\wà-ÿ']+/.exec(m);
+  return mm ? mm[0] : m.split(/\s+/)[0];
+}
+
 var STRATEGIES = [
   {
     nom: "hasard (etalon)",
@@ -220,6 +232,28 @@ var STRATEGIES = [
         });
         return n;
       }));
+    },
+  },
+  {
+    /* AJOUTE EN B4 (2026-09-05, cours `projets-js`). TROISIEME angle mort de B1,
+       et le premier qui soit FABRIQUE PAR LA CORRECTION elle-meme : en reecrivant
+       les distracteurs, trois lots sur six ont calque « Parce que… » sur tous les
+       distracteurs d'une question en laissant la bonne reponse commencer
+       autrement. L'apprenant n'a alors qu'a reperer l'intrus. Mesure sur le cours
+       traite : 25,9 % avant la vague d'ecriture, 29,8 % apres (41,7 % quand la
+       regle se declenche), 22,0 % apres correction. Trois relecteurs adversariaux
+       l'ont signale sans se concerter, et AUCUNE des dix strategies precedentes ne
+       le voyait — pas plus que sur le cours `nodejs`, ou le meme defaut avait deja
+       ete trouve a la main.
+       Les locutions comptent pour UN mot : separer « parce que » de « parce qu' »
+       sous-estimerait l'indice (defaut mesure sur la premiere version de l'outil). */
+    nom: "l'attaque unique",
+    quoi: "l'option dont le mot d'attaque differe de celui des trois autres",
+    choisir: function (q) {
+      var at = q.a.map(motAttaque), cnt = {};
+      at.forEach(function (a) { cnt[a] = (cnt[a] || 0) + 1; });
+      var s = at.reduce(function (acc, a, i) { if (cnt[a] === 1) acc.push(i); return acc; }, []);
+      return s.length === 1 ? s : toutes(q);
     },
   },
   {

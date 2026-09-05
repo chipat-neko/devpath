@@ -109,9 +109,13 @@
 let taches = [];
 let filtre = "tous"; // "tous" | "actifs" | "termines"
 
-// Un identifiant simple et unique, basé sur l'horloge.
+// Un identifiant VRAIMENT unique. L'horloge seule ne suffit pas : deux tâches
+// ajoutées dans la même milliseconde recevraient le même id, et supprimer
+// l'une effacerait les deux. On lui adjoint donc un compteur, qui ne repasse
+// jamais deux fois par la même valeur.
+let seq = 0;
 function nouvelId() {
-  return Date.now() + "-" + Math.floor(Math.random() * 1000);
+  return Date.now() + "-" + (++seq);
 }
 
 function ajouterTache(texte) {
@@ -127,6 +131,8 @@ console.log(taches.length);  //=&gt; 1
 console.log(taches[0].texte); //=&gt; "Réviser la leçon 23" (espaces retirés)</code></pre></figure>
 
 <p>Le <code>trim()</code> retire les espaces en trop et le garde-fou <code>if (propre === "")</code> refuse une tâche vide&nbsp;: deux réflexes qui évitent des lignes fantômes dans la liste.</p>
+
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Attention</p><p>Un identifiant tiré de la seule horloge n'est pas unique&nbsp;: <code>Date.now()</code> rend la même valeur pour toutes les tâches créées dans la même milliseconde, et lui accoler un nombre au hasard entre 0 et 999 ne fait que réduire le risque — sur dix tâches ajoutées d'un coup, environ 4&nbsp;% des lots contiennent encore un doublon. Comme <code>supprimer(id)</code> est un <code>filter</code>, un doublon fait disparaître <strong>deux</strong> tâches d'un seul clic. Le compteur ci-dessus lève l'ambiguïté&nbsp;; dans un navigateur, <code>crypto.randomUUID()</code> fait le même travail (voir la leçon 5).</p></div></div>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 210" role="img" aria-label="L'état est la source unique de vérité. À gauche, un tableau de trois tâches avec leur drapeau faite. Une flèche nommée rendre() part de l'état vers la droite, où s'affiche la liste dans la page. Le flux est à sens unique : on modifie l'état, puis rendre reconstruit l'affichage ; jamais l'inverse.">
@@ -398,7 +404,7 @@ rendre(); // démarrage</code></pre></figure>
 [
   {"q":"Pourquoi implémente-t-on les filtres « actifs / terminés » sans retirer de tâches du tableau ?","a":["Parce qu'un filtre est une vue dérivée : on garde toutes les données et on calcule le sous-ensemble affiché, sinon on perdrait les tâches masquées","Parce que filter modifie le tableau qu'il parcourt : masquer une tâche l'effacerait aussi de localStorage","Parce que le tableau taches est scellé dès le premier rendu : toute suppression y lèverait une erreur, aussitôt remontée à la console","Parce que le compteur de tâches restantes ne compte que les lignes affichées et tomberait à zéro dès qu'une ligne est masquée"],"correct":0,"explain":"On conserve l'état complet et tachesVisibles() renvoie la vue voulue. Supprimer pour cacher effacerait pour de bon les tâches filtrées."},
   {"q":"À quoi sert event.preventDefault() dans le gestionnaire submit du formulaire ?","a":["À empêcher le rechargement par défaut de la page, qui ferait repartir l'application de zéro à chaque ajout","À bloquer la remontée de l'événement submit vers les gestionnaires posés sur les éléments parents du formulaire","À déclencher la validation native des champs requis, que le navigateur laisse passer sans cet appel","À remplir l'objet event, sinon dépourvu de sa propriété target et de sa méthode stopPropagation"],"correct":0,"explain":"Un formulaire recharge la page par défaut. On l'annule pour gérer l'ajout en JavaScript et conserver l'état."},
-  {"q":"Pourquoi repérer une tâche par son id plutôt que par sa position dans le tableau ?","a":["Parce que la position change quand on supprime des tâches, alors que l'id reste stable et désigne toujours la bonne tâche","Parce que splice décale les indices de toutes les tâches, y compris celles placées avant la ligne retirée : aucune position ne reste valable ensuite","Parce que rendre reconstruit toujours le tableau taches dans un ordre différent à chaque appel, la vue filtrée n'ayant jamais la même longueur","Parce que deux tâches ajoutées à la même milliseconde occupent toujours la même position sur la liste"],"correct":0,"explain":"Après une suppression, les indices se décalent : agir par indice viserait la mauvaise ligne. L'id est une clé fiable."}
+  {"q":"Pourquoi repérer une tâche par son id plutôt que par sa position dans le tableau ?","a":["Parce que la position change quand on supprime des tâches, alors que l'id reste stable et désigne toujours la bonne tâche","Parce que splice renumérote les tâches situées avant la ligne retirée, laissant intactes celles qui la suivent : aucune position de tête ne reste juste","Parce que rendre reconstruit toujours le tableau taches dans un ordre différent à chaque appel, la vue filtrée n'ayant jamais la même longueur","Parce que basculer remonte toujours les tâches cochées en tête de liste : leur indice change donc aussi"],"correct":0,"explain":"Après une suppression, les indices se décalent : agir par indice viserait la mauvaise ligne. L'id est une clé fiable."}
 ]
 </script>
 
