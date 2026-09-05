@@ -95,8 +95,13 @@ if (-not $volontaire) {
     $anomalies += "la tache est DESACTIVEE alors qu il reste $restant cases a faire"
     if ($enCours -gt 0) { $anomalies += 'une passe travaille encore, mais rien ne repartira apres elle' }
   }
-  if ($activee -eq $true -and $enCours -eq 0 -and $silenceH -ge 4) {
-    $anomalies += "aucune trace depuis $silenceH h alors que la tache est active"
+  # Le silence n'est une anomalie que si RIEN n'est prevu. Sans cette condition, une
+  # relance declenche un faux positif immediat : la tache vient d'etre reactivee, son
+  # reveil est dans trois minutes, et la derniere trace date d'avant l'arret -- constate
+  # le 2026-09-05. Un controle qui crie apres une action normale finit par etre ignore.
+  $reveilProche = ($prochain -ne $null -and $prochain -le (Get-Date).AddHours(1))
+  if ($activee -eq $true -and $enCours -eq 0 -and $silenceH -ge 4 -and -not $reveilProche) {
+    $anomalies += "aucune trace depuis $silenceH h alors que la tache est active et qu aucun reveil n est proche"
   }
   if ($etatTache -eq 'INTROUVABLE') { $anomalies += 'la tache planifiee a disparu' }
   if ($chaineIllisible) { $anomalies += 'la liste $CHAINE est illisible dans autonomie.ps1 : le controle travaille a l aveugle' }
