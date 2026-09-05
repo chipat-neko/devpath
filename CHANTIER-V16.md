@@ -1938,6 +1938,143 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       longueur**. La case reste **décochée** : onze cours sur les quarante que la cible de B1
       demande.
 
+      **`algo` — FAIT le 2026-09-05. LE COURS EST CLOS : 96,2 % → 20,2 %, 6ᵉ cours le plus nocif du
+      site. 28 leçons, 92 questions, 276 distracteurs, un QCM bilan.**
+
+      **LE COURS ENTIER, avant → après. Aucune stratégie ne dépasse 35,1 %, le hasard vaut 25,0 %.**
+
+      | indice, 92 questions | avant | après |
+      |---|---:|---:|
+      | la plus longue | **96,2 %** | **20,2 %** |
+      | COMBINÉ : le tiret puis la longueur | 96,2 % | **19,1 %** |
+      | la plus détaillée | 83,2 % | **28,6 %** |
+      | le mot technique exclusif | 76,7 % | **24,5 %** |
+      | **l'incise entre parenthèses** | 73,9 % | **35,1 %** (meilleure stratégie restante) |
+      | l'écho de l'énoncé | 62,2 % | **28,3 %** |
+      | la MAJUSCULE d'emphase | 31,3 % | **26,0 %** |
+      | la plus COURTE (le biais inverse) | 0,0 % | **29,3 %** — il ne s'est PAS retourné |
+      | rangs de longueur de la bonne réponse | **89 / 3 / 0 / 0** | **21 / 22 / 27 / 22** |
+      | distracteurs hors de 70-130 % | **266 sur 276** | **0** (0,71 à 1,30) |
+
+      **Global du site : 75,2 % → 74,0 %. `algo` est marqué `traite`, 12ᵉ cours verrouillé**
+      (`algo`, `archi`, `css`, `equipe`, `html`, `iac`, `js`, `maths`, `mobile`, `python`, `ux`,
+      `zig`). Cliquet refigé, épreuve par injection **7/7**, cours-témoin `stats` (99,3 %) intact.
+
+      **275 distracteurs sur 276 réécrits.** Le 276ᵉ est resté : `lecon-14` q3, dont la bonne réponse
+      fait **5 caractères** (`O(n³)`) — la fourchette 70-130 % y vaut 3,5 à 6,5 caractères, et aucune
+      autre notation de cette taille n'était plus crédible que `O(n²)`. Les quatre options y font
+      désormais 5 caractères exactement : **aucun signal de longueur**.
+
+      **Six écrivains** sur lots de leçons disjoints (01-05, 06-10, 11-15, 16-20, 21-25, 26-28), puis
+      **quatre relecteurs adversariaux**, puis correction par un seul écrivain (moi). Aucun commit
+      d'agent, un seul écrivain par fichier à tout instant.
+
+      ---
+
+      ⚠️⚠️ **LA CONTRADICTION A TROUVÉ LE DÉFAUT FONDATEUR DE LA CHAÎNE, DANS UN CORPS DE LEÇON, ET
+      C'EST SON RÉSULTAT PRINCIPAL.** Le schéma ASCII de `lecon-16` (« Pourquoi Dijkstra échoue avec
+      des poids négatifs ») annonçait « **résultat FAUX (2 au lieu de 1)** ». **REPRODUIT par moi en
+      extrayant le code Dijkstra de la leçon elle-même et en le faisant tourner sur le graphe exact du
+      schéma : il rend `dist(B) = 1`, pas 2.** La raison, mesurée : la variante à *lazy deletion* du
+      cours écrit `dist` à chaque relâchement réussi, **même pour un sommet déjà visité** ; seule la
+      ré-expansion est bloquée. La distance affichée est donc corrigée — ce qui casse vraiment, c'est
+      la **propagation en aval**, et il faut un successeur pour la voir. Schéma corrigé (arête
+      `B → D` de poids 1) et **prouvé par exécution** : Dijkstra rend `D = 3`, Bellman-Ford rend
+      `D = 2`. **Une sortie annoncée fausse, dans un exemple, que quatre vérificateurs verts ne
+      voyaient pas : exactement ce qui a fondé cette chaîne, et le fan-out adversarial reste le seul
+      outil qui l'attrape.**
+
+      ⚠️ **UN DISTRACTEUR DÉCRIVAIT UNE IMPLÉMENTATION QUI MARCHE.** `lecon-18` q2 opt2 :
+      « décrémenter la longueur du chemin ET recopier `utilise` dans un tableau neuf à chaque appel ».
+      Le relecteur l'a **codé** et comparé au code de la leçon : **sorties identiques**, permutations
+      comprises (`n = 3` et `n = 4`, 6 et 24 permutations). Sa seconde moitié est vraie aussi : sans
+      recopie ni remise à `false`, le tableau partagé bloque bien les branches (0 permutation rendue).
+      Les deux propositions étaient exactes ; seul le cadrage la séparait de la bonne réponse.
+
+      ⚠️ **HUIT DISTRACTEURS ÉTAIENT VRAIS À LEUR MOITIÉ LA PLUS LUE**, tous prouvés par exécution :
+      « la sélection effectue ses n-1 échanges même sur une entrée déjà ordonnée » — **c'est la
+      formulation canonique du tri par sélection**, et elle n'est fausse que parce que le code de
+      *cette* leçon porte un `if (indexMin !== i)` (mesuré : **0 échange** sur une entrée triée) ;
+      « n = coût du découpage, qui recopie l'ensemble des éléments une fois par niveau » —
+      **littéralement vrai** du `triFusion` de la leçon, qui découpe au `slice` (compteur instrumenté :
+      **16 éléments recopiés à chacun des 4 niveaux pour n = 16**) ; « l'insertion n'en fait plus que
+      n-1 quand tout est déjà en ordre » — **exact**, et le reste de l'option ne s'écartait de la clé
+      que par le mot « exactement » (balayage des **720 permutations de 1..6** : le tri fusion fait de
+      **7 à 11** comparaisons selon l'entrée) ; « lève une RangeError quand on l'appelle sur 0 ou
+      sur 1 » — la trace réelle de `fib` privé de son cas de base ; « le débranchement ne coûte qu'une
+      affectation en O(1) » — **la phrase même du corps de la leçon** ; « les compteurs d'ouverture
+      doivent tous revenir à zéro » — **condition nécessaire vraie**, l'option n'était fausse que par
+      ce qu'elle omettait ; « Prim et Kruskal rendent le même arbre » — **vrai dès que les poids sont
+      distincts**, mesuré sur un graphe dense V=8 E=28 (coûts 806 et 806) ; « la NP-complétude ne vise
+      que la version décision » — **vrai, et la leçon l'écrit**, seule la clause finale était fausse.
+
+      ⚠️ **DEUX QUESTIONS TOMBAIENT SOUS QUATRE CHOIX, et aucun de nos dix indicateurs ne le voit —
+      quatrième cours de suite.** `lecon-24` q3 : deux distracteurs sur trois énuméraient **les
+      avantages du Fenwick** (« sommes de préfixes », « un seul tableau de n+1 cases ») — une seule
+      intuition les élimine ensemble. `lecon-28` bilan q5 : la question demande **LIFO** et une option
+      répondait « **La file (FIFO)** », s'éliminant sur quatre lettres, tout en doublant « la file de
+      priorité ». Même défaut sur `lecon-13` q3, où un distracteur **se réfutait par sa propre
+      arithmétique** (il proposait `4+3` pour rendre **6**) et rendait le même verdict qu'un autre.
+
+      ⚠️ **J'AI REFUSÉ ONZE PRISES, ET LA MOITIÉ PARCE QU'ELLES VISAIENT L'INTOUCHABLE.** Trois
+      demandaient de réécrire une **bonne réponse** portant un chevron (`<=` dans `lecon-03`, `"10" <
+      "100"` dans `lecon-04`, `n > 0` dans `lecon-20`) : vérifié dans `js/lecon.js` que `buildQuiz`
+      passe tout par `escapeHTML`, et `verif-html` rend **0 sur 1 629 fichiers** — le chevron ne crée
+      aucune balise, et la bonne réponse ne se touche pas pour un marqueur présent sur 3 questions
+      sur 92. Cinq autres demandaient de retirer un marqueur de forme d'une bonne réponse
+      (parenthèses, capitale d'emphase, guillemets) : **traitées par le geste inverse du protocole**,
+      poser le marqueur dans un distracteur. Et **quatre prises ont été écartées sur la recommandation
+      de leur propre auteur**, qui avait mesuré puis conclu « ne rien changer » — dont la convention
+      d'indexation d'un tas (l'option annonce elle-même « racine posée à l'index 1 » quand l'énoncé
+      stipule « indices à partir de 0 » : c'est le piège que la leçon enseigne).
+
+      ⚠️ **UN INDICE CHASSE L'AUTRE, TROIS FOIS DE SUITE SUR CE COURS, ET IL A FALLU TROIS PASSES
+      MESURÉES.** (1) Une fois les 276 distracteurs étoffés, la longueur tombait à 24,5 % mais
+      **l'incise entre parenthèses tenait 51,4 %** : la bonne réponse menait seule le compte
+      d'incises dans **26 questions sur 92**. Traité par le geste du protocole — poser l'incise dans
+      un distracteur, sur sa partie fausse — sur **14 distracteurs** : **0 tête strictement gagnante**,
+      la stratégie tombe à **34,8 %**. (2) Cette passe a **retourné le biais de longueur** : la bonne
+      réponse n'était plus la plus longue que **14 fois sur 92** (15,2 %, contre 25 % au hasard) et
+      les rangs valaient 14/29/27/22. Sept distracteurs raccourcis de 2 à 22 caractères ont replaté la
+      distribution à **21/22/27/22**. (3) L'écho de l'énoncé montait alors à **35,9 %**, le plus haut
+      des douze cours traités — la clé d'`algo` reprend systématiquement le vocabulaire technique de
+      sa question, et elle est intouchable. **12 distracteurs ont reçu les mots de l'énoncé** : les
+      têtes strictement gagnantes passent de **20 à 8**, la stratégie de 35,9 % à **28,3 %**.
+      **Chaque passe a été mesurée avant et après ; aucune n'a été décidée de tête.**
+
+      ⚠️ **LE GARDE-FOU « OCCURRENCE NON UNIQUE » A EMPÊCHÉ D'ÉCRASER UNE BONNE RÉPONSE, et c'est la
+      règle du plan qui s'est vérifiée en direct.** Remplacer le distracteur « La table de hachage »
+      de `lecon-28` bilan q6 par une recherche-remplacement de texte aurait **aussi** réécrit la
+      **bonne réponse de la question suivante**, qui est exactement la même chaîne. Le contrôle
+      « la cible doit apparaître une seule fois dans le fichier » a refusé l'écriture ; le
+      remplacement a été refait à la main, borné au tableau `a` de la seule question visée.
+      *Un motif de remplacement trop large casse ce qui était juste — mesuré, pas supposé.*
+
+      ⚠️ **UN CONTENU QUI MESURE LE SITE SE PÉRIME EN ÉTANT PUBLIÉ — 7ᵉ fois pour la même page.**
+      `doc/lecon-03` publiait « **4 592** manquements à sa propre règle S3, **75,2 %** » → **4 521**
+      et **74,1 %**. **Dix mentions** reprises (5 du nombre, 5 du taux), dont **deux dans des blocs
+      QCM**, d'où une **seconde** régénération d'index avec `--fresh`. `verif-normatif` est repassé de
+      **58/60 à 60/60**, `verif-doc` **36/36**.
+
+      **Contrôles finaux** : `verif.js --rapide` **52 contrôles verts (78,4 s)** ; `verif-html`
+      **0 / 1 629** ; `verif-donnees` **25 contrôles, 0 erreur** ; `verif-normatif` **60/60** ;
+      `verif-doc` **36/36** ; `verif-rendu` sur les 3 pages touchées (`algo/lecon-16`, `algo/lecon-28`,
+      `doc/lecon-03`) à 320 et 1280 px, clair et sombre, réseau coupé : **0 erreur, 0 avertissement** ;
+      `mesure-qcm-intouchable` **1 atteinte, exactement la seule déclarée** (l'explication de
+      `lecon-01` q1 écrivait « n'changent », élision fautive antérieure à cette passe) ; 0 BOM, 0 CRLF,
+      0 mojibake, 0 chevron dans un distracteur, 0 doublon d'option, JSON valide sur les 29 blocs ;
+      index régénérés **deux fois avec `--fresh`**, avec contrôle dans `quiz-index.js` lui-même
+      (0 ancien distracteur, les textes neufs présents).
+
+      **CE QUI RESTE À FAIRE SUR B4, mesuré après `algo`** : `nodejs` (89 q, 95,5 %), `bdd` (86,
+      97,7 %), `react` (86, 92,2 %), `projets-js` (84, 98,8 %), `ruby` (84, 89,9 %), `sql` (82,
+      91,9 %), `git` (80, 93,8 %), puis la longue traîne. ⚠️ **`stats` (72 q, 99,3 %) reste le
+      cours-témoin de `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.**
+      **74 cours sur 90 restent au-dessus de 60 %**, et **4 573 questions sur 6 167 restent devinables
+      à la longueur**. La case reste **décochée** : douze cours sur les quarante que la cible de B1
+      demande.
+
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
