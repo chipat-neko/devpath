@@ -2721,6 +2721,145 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       devinables à la longueur**. La case reste **décochée** : seize cours sur les quarante que la
       cible de B1 demande.
 
+      ---
+
+      **`ruby` — FAIT le 2026-09-05. LE COURS EST CLOS : 89,9 % → 25,3 %.** 22 leçons,
+      **84 questions**, **252 distracteurs**, **249 réécrits**, tous entre **0,71 et 1,30**.
+      **C'est le meilleur résultat des dix-sept cours détordus** : aucune stratégie ne dépasse
+      **28,0 %**, et la désignation unique de la bonne réponse tombe à **0,0 % ou 1,2 %** partout.
+
+      | stratégie, sur les 84 questions | avant | après |
+      |---|---:|---:|
+      | la plus longue | **89,9 %** | **25,3 %** |
+      | le mot technique exclusif | 74,5 % | **24,3 %** |
+      | la plus détaillée | 66,3 % | **25,9 %** |
+      | l'incise entre parenthèses | 63,3 % | **28,0 %** (SEULE bonne réponse 50,0 % → **1,2 %**) |
+      | l'écho de la question | 59,2 % | **24,1 %** |
+      | le point-virgule | 55,4 % | **26,2 %** (SEULE bonne réponse 40,5 % → **1,2 %**) |
+      | **MEILLEURE STRATÉGIE** | **89,9 %** | **28,0 %** |
+      | rangs de longueur | **76/4/4/0** | **22/22/20/20** |
+      | fourchette distracteur / bonne réponse | 0,04–5,00 (227 hors) | **0,71–1,30 (0 hors)** |
+
+      Site « la plus longue » : **69,9 % → 69,0 %**. **17 cours marqués `traite`.**
+
+      ⚠️⚠️ **DEUX INDICES DE PLUS FABRIQUÉS PAR LA VAGUE D'ÉCRITURE — le 13ᵉ et le 14ᵉ — et
+      chacun n'a été vu que par UN relecteur sur six.** Les deux ont été **remesurés par moi avant
+      d'être crus** : les taux annoncés par les agents (59,0 % et 58,3 %) n'étaient pas ceux de la
+      convention du chantier, et l'écart n'était pas anodin — l'un des deux était en réalité plus
+      grave que dit, l'autre moins.
+
+      1. **LA CASSE INITIALE.** La bonne réponse commence par un jeton de code en minuscule
+         (`sort renvoie…`, `super nu…`, `rescue => e capture…`) quand les distracteurs, rédigés
+         comme des phrases françaises, prennent une majuscule. **LA CAUSE EST DANS L'OUTIL, à la
+         ligne** : `motAttaque()` de `mesure-biais-qcm.js` fait un `.toLowerCase()` **avant** toute
+         comparaison — « l'attaque unique » compare les *mots* et jamais leur *casse*.
+         Lot 01-04 **39,6 %** ; cours **25,9 % → 30,4 %** : *la vague d'écriture l'a aggravé*.
+         Après correction : cours **23,8 %**, désignation unique **8,3 % → 0,0 %**.
+      2. **LA GLOSE FINALE entre parenthèses**, tic de l'agent des leçons 05-08 : ses distracteurs
+         finissent par « (qui poursuit) », « (une paire par élément) », que la bonne réponse ne
+         porte pas. Lot 05-08 **56,9 %**, désignant la **SEULE** bonne réponse dans **41,7 %** des
+         questions du lot. Cours **20,4 % → 28,6 %** : l'indice était **inversé** avant la passe,
+         elle l'a *retourné*. Après correction : **25,6 %**, désignation unique **0,0 %**.
+
+      Les deux sont ajoutées à `tools/mesure-biais-qcm.js`. Sur les 6 167 questions du site elles
+      valent **25,1 %** et **21,2 %** — le hasard : elles n'entrent donc **pas** dans `EXPLOITABLES`
+      du cliquet, dont la règle d'admission reste celle écrite pour `react`.
+
+      ✅ **`--lots` : LA MESURE PAR FENÊTRE DE LEÇONS, que `react` avait laissée ouverte, est
+      faite.** `node tools/mesure-biais-qcm.js --lots[=N] [--cours=X]` balaie chaque cours par
+      fenêtres glissantes et signale toute fenêtre au-dessus de 60 %, ou qui désigne la seule bonne
+      réponse plus de 40 % du temps. **Épreuve dans un bac à sable** monté sur l'état d'*avant*
+      correction, l'outil y étant **copié** pour que `__dirname/..` ne pointe pas sur le vrai dépôt
+      (le piège qui avait vidé de sens la première preuve de `react`) :
+
+      | fenêtre | ce que l'outil voit sur `ruby` avant correction |
+      |---|---|
+      | `--lots=5` | **aucune alerte — AVEUGLE** |
+      | `--lots=4` | `ruby 5-8` · glose finale **56,9 %** · seule bonne **41,7 %** |
+      | `--lots=3` | `5-7` **62,0 %** · `6-8` **59,3 %** · `4-6` **58,3 %** |
+
+      ⚠️ **LA LEÇON, et elle est mécanique : une fenêtre plus large que le lot d'écriture dilue le
+      tic jusqu'à le faire disparaître.** Le défaut est donc ramené à **4**, la taille des lots de
+      ce chantier ; en dessous de 3 leçons, c'est le bruit du hasard qui déclenche (une fenêtre de
+      moins de 8 questions n'est pas mesurable). Par défaut le mode ne regarde que les cours marqués
+      `traite` — un cours non corrigé est au-dessus du seuil dans *toutes* ses fenêtres, et les
+      afficher noierait le signal : **4 038 alertes sur 90 cours, contre 375 fenêtres sur les 16
+      cours traités.** Sur ces derniers, il sort ce que la mesure par cours cachait : **`mobile`
+      8-11 à 71,9 %**, **`react` 01-04 à 66,7 %**, **`zig` 4-7 à 65,3 %**, **`iac` 2-6 à 61,7 %**.
+      **`ruby` ne déclenche à aucune fenêtre, ni à 3, ni à 4, ni à 5 leçons.**
+
+      ⚠️⚠️ **LE DÉFAUT FONDATEUR RETROUVÉ DANS UN `<svg>`.** Le diagramme de `gsub` de `lecon-18`
+      montre le bloc `{ |n| n*2 }` et annonce la sortie `"prix : 20, 40, 60"`. Le paramètre du bloc
+      de `gsub` est une **String** : `"10" * 2` vaut `"1010"`. Le bloc de code de la **même leçon,
+      trois lignes plus haut**, écrit `{ |n| (n.to_i * 2).to_s }` — l'auteur du code savait, celui
+      du diagramme a perdu le `to_i`. **Aucun outil qui extrait les `<pre><code>` ne peut voir cette
+      faute** : elle vit dans un `<text>` de `<svg>`. C'est la troisième fois que le défaut fondateur
+      se déplace vers un endroit que la chaîne ne regarde pas (après les `<script>` des QCM et les
+      corps de leçon), et c'est le manque le plus net que ce point laisse derrière lui.
+
+      **Les dix autres corrections de fond**, toutes prouvées par contradiction interne :
+      un **VERT inatteignable** (le test du cycle 1 TDD de `lecon-14` ne chargeait jamais
+      `lib/fizzbuzz.rb`, alors que le premier exemple de la même leçon écrit bien son
+      `require_relative`) ; une sortie de `errors.full_messages` (`lecon-17`) qui **oublie l'erreur
+      que le modèle de la ligne du dessus produit** ; un exercice de `lecon-05` qui comptait **JUSTE
+      `Hash.new`**, que sa propre leçon déclare fautif (« il essaierait de calculer `nil + 1` ») ;
+      « `ArgumentError`, ce n'est ni `TypeError` ni `StandardError` » (`lecon-13`), **auto-réfuté par
+      le `rescue => e` du bloc qu'il commente** ; « Ruby lèvera une `SyntaxError` » sur `elseif`
+      (`lecon-03`), qui n'est pas un mot-clé — Ruby lit la ligne comme un appel de méthode, et le
+      comportement réel est **pire** que l'erreur annoncée puisqu'il peut être silencieux ; un
+      échappement `\u` **mangé à l'écriture** qui rendait une phrase sur JSON auto-contradictoire
+      (`lecon-22` : les trois `<code>` contenaient la même chaîne) ; « le test booléen `in` ne lie
+      rien » (`lecon-20`), faux — c'est le motif choisi qui ne nomme aucune variable ; un `each`
+      annoté `# =>` comme s'il renvoyait ses éléments (`lecon-06`), la confusion même que teste la
+      q1 de `lecon-08` ; et deux doublons qui ramenaient une question à deux choix (`lecon-12` q2,
+      `lecon-22` bilan q7 où « guillemets simples » et « apostrophes » sont le même caractère).
+
+      **Deux exceptions déclarées à l'intouchable**, et `mesure-qcm-intouchable` ne voit que
+      celles-là : `lecon-12` q2 (la bonne réponse rangeait **`SystemExit` parmi les signaux système**
+      alors qu'elle est levée par `exit` — et c'est le **seul endroit du site** où l'élève rencontre
+      cette classe) et `lecon-22` bilan q7 (l'explication affirmait que **seuls** les guillemets
+      doubles interpolent, quand `lecon-18` montre un heredoc qui interpole).
+
+      ⚠️ **RUBY N'EST PAS INSTALLÉ SUR CETTE MACHINE** (`ruby -v` → *command not found*). Aucune
+      exécution n'a été possible : chaque prise est classée **PROUVÉE ICI** (par le corps de la
+      leçon, une leçon voisine, ou une contradiction interne montrée) ou **NON PROUVABLE HORS
+      LIGNE**. Les six relecteurs ont rendu une trentaine d'affirmations du second type, chacune
+      accompagnée de la commande qui trancherait. **Aucune bonne réponse fausse n'a été trouvée
+      dans les 84 questions** — c'est le premier cours du chantier dans ce cas, et il faut le lire
+      avec la réserve qui précède.
+
+      ⚠️ **`doc/lecon-03` s'est repérimée une 8ᵉ fois** : elle **publie** le taux de manquement du
+      site, 4 266 → **4 212** manquements, 69,9 % → **69,0 %**. **9 occurrences relues une par une**
+      (5 du nombre, 4 du taux) : toutes parlaient bien du même manquement à S3, dont une dans un
+      `explain` de QCM — d'où la seconde passe de `build-index`. `verif-normatif` **58/60 → 60/60**.
+
+      **Contrôles** : `mesure-qcm-intouchable` **2 atteintes, les 2 déclarées** ; index `quiz` et
+      `search` régénérés **et prouvés porteurs des textes neufs** (un distracteur neuf est dans le
+      nouvel index et absent de celui de HEAD) ; `verif.js --rapide` **26 étapes tout vert (86,4 s)** ;
+      `verif-html` **0** ; `verif-donnees` **0 erreur** ; `verif-qcm-biais-mutations` **8/8**, témoin
+      `stats` à 99,3 % toujours valide ; **0 URL de CDN introduite** (les 5 du dépôt sont dans deux
+      leçons `html`, identiques à HEAD).
+
+      **CE QUI N'A PAS ÉTÉ FAIT, et c'est volontaire** : les six rapports de contradiction
+      (`scratchpad/b4rby/ctr1.md` à `ctr6.md`, ~150 Ko) portent une **quarantaine de prises
+      mineures** non traitées — distracteurs « défendables à moitié », motifs d'élimination faibles
+      (« l'option qui dit que c'est pareil », **28,6 % sur le cours contre 26,3 % sur le site** :
+      c'est **structurel au site**, pas propre à `ruby`), incohérences de vocabulaire entre leçons
+      (`lecon-05` dit « hachage », `lecon-07` dit « hash » ; deux formats de `Hash#inspect`
+      incompatibles entre Ruby 3.4 et ≤ 3.3), 8 étiquettes « Revoir « … » » qui pointent vers des
+      sections inexistantes, et `lecon-22` seule des 22 à avoir 5 blocs `.exercise` pour 4 entrées
+      `data-exos`. **Ces trois derniers points ne relèvent pas de B4 mais d'un vérificateur qui
+      n'existe pas** : rien ne contrôle qu'une étiquette de révision désigne un titre réel, ni que
+      les compteurs d'exercices concordent. À porter en phase F.
+
+      **CE QUI RESTE À FAIRE SUR B4, mesuré après `ruby`** : `sql` (82 q, 91,9 %), `git` (80,
+      93,8 %), `rust` (76, 96,1 %), `java` (77, 94,2 %), `csharp` (77, 93,5 %), `cpp` (77, 92,9 %),
+      `php` (78, 88,9 %), puis la longue traîne. ⚠️ **`stats` (72 q, 99,3 %) reste le cours-témoin
+      de `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.**
+      **69 cours sur 90 restent au-dessus de 60 %**, et **4 257 questions sur 6 167 restent
+      devinables à la longueur**. La case reste **décochée** : dix-sept cours sur les quarante que
+      la cible de B1 demande.
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
