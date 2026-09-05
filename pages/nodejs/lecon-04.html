@@ -225,7 +225,7 @@ readFile('./data.txt', 'utf8', (err, data) =&gt; {
 
 <p>La règle d'or&nbsp;: <strong>teste <code>err</code> avant de toucher à <code>data</code></strong>. Si <code>err</code> n'est pas <code>null</code>, le second argument est généralement <code>undefined</code> et n'a aucun sens. Le <code>return</code> après la gestion de l'erreur évite de continuer avec des données absentes.</p>
 
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier le premier argument <code>err</code>. Si tu écris <code>(data) =&gt; …</code> au lieu de <code>(err, data) =&gt; …</code>, ta variable <code>data</code> contient en réalité l'erreur, et la vraie donnée disparaît. Une erreur silencieuse qui plante plus loin sans explication.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Oublier le premier argument <code>err</code>. Si tu écris <code>(data) =&gt; …</code> au lieu de <code>(err, data) =&gt; …</code>, ta variable reçoit le <strong>premier</strong> argument : <code>null</code> quand tout va bien, l'objet <code>Error</code> quand ça échoue. La vraie donnée n'arrive jamais, et le premier <code>data.length</code> casse sur <code>null</code>.</p></div></div>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 182" role="img" aria-label="Le déroulé d'un callback error-first de Node. Le callback reçoit deux arguments dans l'ordre : err puis data. La première chose à faire est de tester err. Si err n'est pas null, on gère l'erreur et on sort par un return, car data n'est pas exploitable. Si err est null, alors data est valide et on peut l'utiliser en toute sécurité.">
@@ -284,12 +284,13 @@ process.nextTick(() =&gt; console.log('nextTick'));
 
 console.log('synchrone : fin');
 
-// affiche (ordre typique) :
+// affiche :
 // synchrone : début
 // synchrone : fin
 // nextTick        ← avant tout le reste de l'asynchrone
-// setTimeout      ← l'ordre timeout/immediate peut varier au top-level
-// setImmediate
+// puis setTimeout et setImmediate dans un ordre NON GARANTI ici :
+//   mesuré sur 40 exécutions, setImmediate sort en premier 38 fois sur 40.
+//   À l'intérieur d'un callback d'E/S, en revanche, setImmediate passe TOUJOURS d'abord.
 </code></pre></figure>
 
 <p>Retiens surtout deux choses&nbsp;: <strong>tout le code synchrone s'exécute d'abord</strong>, puis l'asynchrone&nbsp;; et <code>process.nextTick</code> passe avant les autres callbacks. Abuser de <code>nextTick</code> peut d'ailleurs «&nbsp;affamer&nbsp;» la boucle et empêcher les E/S de progresser.</p>

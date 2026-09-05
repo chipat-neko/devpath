@@ -212,8 +212,14 @@ export function liveness(req, res) {
   res.status(200).json({ status: 'ok' });
 }
 
+// L'étape 1 de l'arrêt propre : la readiness doit répondre 503 AVANT le drain,
+// sinon le load balancer continue d'envoyer du trafic pendant la fermeture.
+export let shuttingDown = false;
+export function marquerArret() { shuttingDown = true; }
+
 // Readiness : vérifie les dépendances critiques.
 export async function readiness(req, res) {
+  if (shuttingDown) return res.status(503).json({ status: 'shutting-down' });
   try {
     await pool.query('SELECT 1');
     res.status(200).json({ status: 'ready' });
@@ -247,11 +253,11 @@ import { logger } from './logger.js';
 
 const server = app.listen(3000, () =&gt; logger.info('listening on 3000'));
 
-let shuttingDown = false;
+import { shuttingDown, marquerArret } from './health.js';
 
 async function shutdown(signal) {
   if (shuttingDown) return; // ignore un second signal
-  shuttingDown = true;
+  marquerArret();           // 1. la readiness répond 503 : le LB se retire
   logger.info({ signal }, 'arrêt en cours');
   // 1. Stoppe l'acceptation de nouvelles connexions, draine les requêtes en vol.
   server.close(async () =&gt; {
@@ -268,7 +274,8 @@ async function shutdown(signal) {
   setTimeout(() =&gt; {
     logger.error('arrêt forcé (timeout)');
     process.exit(1);
-  }, 10_000).unref();
+  }, 10_000);   // PAS de .unref() : sans lui, Node vide la boucle et sort en 0
+                 // sans rien dire dès que pool.end() ne répond plus (mesuré).
 }
 
 process.on('SIGTERM', () =&gt; shutdown('SIGTERM'));
@@ -424,7 +431,7 @@ async function fetchJSON(url, { retries = 2 } = {}) {
 <script type="application/json" data-quiz>
 [
   {"q":"Pourquoi la sonde de liveness ne doit-elle pas interroger la base de données, contrairement à la readiness ?","a":["La liveness teste si le processus est vivant (à redémarrer s'il est bloqué) : le lier à la BD le ferait redémarrer à tort lors d'un souci passager. La readiness, elle, teste si l'app est prête à recevoir du trafic (dépendances incluses)","La liveness est appelée toutes les secondes par l'orchestrateur (la sonde périodique) quand la readiness l'est une fois au démarrage : interroger la base de données à cette cadence saturerait le pool (ses connexions)","La liveness s'exécute dans le conteneur par un appel à kubectl exec et n'atteint donc pas le réseau de la base de données, quand la readiness passe par une requête HTTP sur le port applicatif","La liveness doit répondre 503, sonde après sonde, quand la base de données hoquette pour que le répartiteur retire l'instance du trafic, alors que la readiness sert de témoin de démarrage"],"correct":0,"explain":"Liveness = « le process tourne-t-il ? » ; un échec entraîne un redémarrage. Y mêler la BD provoquerait des redémarrages inutiles quand la base hoquette. Readiness = « puis-je servir des requêtes ? » : là, vérifier la BD a du sens (on retire l'instance du trafic sans la tuer)."},
-  {"q":"Que se passe-t-il pour les requêtes en cours si tu ne gères pas SIGTERM lors d'un déploiement ?","a":["Elles sont coupées brutalement (connexions fermées), provoquant des erreurs côté clients. Un arrêt propre les laisse se terminer d'abord","Node ignore SIGTERM par défaut et laisse le processus tourner : les requêtes en cours aboutissent, et c'est l'orchestrateur qui envoie ensuite SIGKILL au bout du délai de grâce","Les requêtes en cours sont replacées dans la file d'attente du noyau, puis rejouées par le nouveau conteneur","Les requêtes en cours se terminent (sans coupure), mais leur réponse porte l'en-tête Connection close (fermeture), lue comme une erreur"],"correct":0,"explain":"Sans gestion de SIGTERM, le process s'arrête immédiatement et les traitements en vol échouent. Un graceful shutdown attend la fin des requêtes en cours avant de quitter, évitant des réponses interrompues."},
+  {"q":"Que se passe-t-il pour les requêtes en cours si tu ne gères pas SIGTERM lors d'un déploiement ?","a":["Elles sont coupées brutalement (connexions fermées), provoquant des erreurs côté clients. Un arrêt propre les laisse se terminer d'abord","Node ignore SIGTERM par défaut et laisse le processus tourner : les requêtes en cours aboutissent, et c'est l'orchestrateur qui envoie ensuite SIGKILL au bout du délai de grâce","Les requêtes en cours sont replacées dans la file d'attente du noyau, puis rejouées par le nouveau conteneur","Le noyau bascule les sockets en lecture seule : les requêtes en cours partent avec un corps vide, mais un statut 200 qui masque l'incident"],"correct":0,"explain":"Sans gestion de SIGTERM, le process s'arrête immédiatement et les traitements en vol échouent. Un graceful shutdown attend la fin des requêtes en cours avant de quitter, évitant des réponses interrompues."},
   {"q":"Cite deux raisons d'utiliser un Dockerfile multi-stage plutôt qu'une seule étape.","a":["Une image finale plus petite (on n'embarque pas les outils de build ni les devDependencies) et une séparation build/runtime (moins de surface d'attaque en production)","Un cache de couches désactivé à chaque étage, donc un build reproductible d'un jour à l'autre, et la garantie que chaque étage déclaré produit sa propre image publiée dans le registre","Une image finale plus rapide au démarrage parce que Node précompile son bytecode dans l'étage de build, et un Dockerfile plus court puisque chaque étage hérite des instructions du précédent","Un chiffrement des secrets copiés pendant le build (ils restent dans l'étage jetable) et une compression automatique des couches finales (gzip natif)"],"correct":0,"explain":"Le multi-stage compile dans une étape (avec tous les outils) puis ne copie que le résultat nécessaire dans une image d'exécution légère. On obtient une image plus compacte et plus sûre, sans dépendances de développement."}
 ]
 </script>

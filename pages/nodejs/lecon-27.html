@@ -163,11 +163,16 @@
 <figure class="code-block" data-file="arret-propre.js"><pre><code class="language-javascript">const serveur = app.listen(process.env.PORT || 3000);
 
 // À l'arrêt (déploiement, conteneur stoppé), on ne coupe pas au milieu d'une requête.
-process.on("SIGTERM", async () =&gt; {
-  serveur.close();          // n'accepte plus de nouvelles requêtes
-  await prisma.$disconnect();
-  await file.close();       // laisse les jobs en cours se terminer
-  process.exit(0);
+process.on("SIGTERM", () =&gt; {
+  // close() cesse d'accepter, et son RAPPEL n'arrive qu'APRÈS la dernière réponse.
+  // Sans ce rappel, process.exit(0) coupe les requêtes en vol (mesuré : ECONNRESET).
+  serveur.close(async () =&gt; {
+    await prisma.$disconnect();
+    await file.close();     // ferme Redis côté producteur ; les jobs finissent
+                            // dans le worker, qui reçoit son propre SIGTERM
+    process.exit(0);
+  });
+  setTimeout(() =&gt; process.exit(1), 10_000);   // filet : on n'attend pas indéfiniment
 });</code></pre></figure>
 
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège — la logique métier collée aux routes</p><p>La faute la plus fréquente est d'écrire tout le traitement <em>dans</em> le gestionnaire de route&nbsp;: requêtes SQL, règles métier et réponse HTTP mêlées. Ça marche… jusqu'à ce qu'il faille tester, réutiliser depuis un CLI, ou changer d'ORM. Garde les routes <strong>maigres</strong> (valider, appeler un service, formater la réponse) et mets la substance dans des services indépendants. Le jour où tu remplaces Express par Fastify, seule la fine couche HTTP change.</p></div></div>
@@ -215,8 +220,8 @@ process.on("SIGTERM", async () =&gt; {
 <div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi un service ne devrait-il pas dépendre d'Express&nbsp;?</li><li>Cite trois points de la checklist «&nbsp;prêt pour la production&nbsp;».</li><li>Où délègue-t-on l'envoi d'un courriel dans ce parcours&nbsp;?</li></ol></div>
 <script type="application/json" data-quiz>
 [
-  {"q":"Pourquoi garder la logique métier dans des services indépendants d'Express ?","a":["Pour la tester sans serveur, la réutiliser (CLI, worker) et pouvoir changer de framework HTTP sans la réécrire","Parce qu'Express refuse, depuis sa version 5, qu'une route ouvre elle-même la base","Parce qu'une fonction sortie du gestionnaire de route bascule dans un fil du pool libuv (elle traite alors plusieurs requêtes)","Parce que Zod exige un schéma déclaré hors du fichier de routes (sinon parse rejette l'objet)"],"correct":0,"explain":"Les routes restent une fine traduction ; la substance, testable et réutilisable, vit dans les services."},
-  {"q":"L'observabilité (journaux, métriques) est dessinée comme une bande verticale à côté des couches, et non dans l'une d'elles. Pourquoi ?","a":["C'est une préoccupation transverse : elle concerne toutes les couches à la fois, du HTTP à la base, pas une seule","Parce qu'elle s'exécute une fois pour toutes avant la couche HTTP, comme un middleware d'entrée placé en tête de pile","Parce que le schéma range à part ce qui reste optionnel : sans base de données, un service se passe de journaux, de traces, de métriques","Parce que les journaux structurés sont produits par le conteneur Docker, et non par le code des couches du service"],"correct":0,"explain":"Les journaux et les métriques n'appartiennent pas à un seul niveau : chaque couche, du HTTP à la base, produit des traces. Comme la file de travail asynchrone, l'observabilité est une préoccupation transverse — on la dessine à côté de l'empilement pour rappeler qu'elle le traverse entièrement, au lieu de la ranger dans une couche unique."},
+  {"q":"Pourquoi garder la logique métier dans des services indépendants d'Express ?","a":["Pour la tester sans serveur, la réutiliser (CLI, worker) et pouvoir changer de framework HTTP sans la réécrire","Express refuse, depuis sa version 5, qu'une route ouvre elle-même une connexion à la base","Parce qu'une fonction sortie du gestionnaire de route bascule dans un fil du pool libuv (elle traite alors plusieurs requêtes)","Parce que Zod exige un schéma déclaré hors du fichier de routes (sinon parse rejette l'objet)"],"correct":0,"explain":"Les routes restent une fine traduction ; la substance, testable et réutilisable, vit dans les services."},
+  {"q":"L'observabilité (journaux, métriques) est dessinée comme une bande verticale à côté des couches, et non dans l'une d'elles. Pourquoi ?","a":["C'est une préoccupation transverse : elle concerne toutes les couches à la fois, du HTTP à la base, pas une seule","Parce qu'elle s'exécute une fois pour toutes avant la couche HTTP, comme un middleware d'entrée placé en tête de pile","Parce que le schéma range à part ce qui reste optionnel : sans base de données, un service se passe de journaux, de traces, de métriques","Les journaux structurés sont produits par le conteneur Docker, et non par le code des couches du service"],"correct":0,"explain":"Les journaux et les métriques n'appartiennent pas à un seul niveau : chaque couche, du HTTP à la base, produit des traces. Comme la file de travail asynchrone, l'observabilité est une préoccupation transverse — on la dessine à côté de l'empilement pour rappeler qu'elle le traverse entièrement, au lieu de la ranger dans une couche unique."},
   {"q":"Dans le parcours d'une requête, où place-t-on l'envoi d'un courriel de notification ?","a":["On dépose un job dans une file depuis le service, pour ne pas faire attendre la réponse","Dans le middleware d'authentification, juste après la lecture du jeton","Dans la couche données, car seul l'ORM connaît l'adresse du destinataire","Dans le contrôleur, juste avant d'appeler le service métier concerné"],"correct":0,"explain":"Le travail long est délégué à la file ; la réponse HTTP part sans l'attendre."}
 ]
 </script>
@@ -231,10 +236,13 @@ process.on("SIGTERM", async () =&gt; {
 </script>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Classe ces éléments dans la bonne couche&nbsp;: <code>app.post("/taches", …)</code>, <code>TacheSchema.parse(body)</code>, <code>creerTache(data)</code>, <code>prisma.tache.create(...)</code>.</p><details><summary>Voir une solution</summary><p><strong>HTTP</strong>&nbsp;: <code>app.post("/taches", …)</code> (route/middleware). <strong>Validation</strong>&nbsp;: <code>TacheSchema.parse(body)</code> (Zod). <strong>Service</strong>&nbsp;: <code>creerTache(data)</code> (logique métier). <strong>Données</strong>&nbsp;: <code>prisma.tache.create(...)</code> (ORM). L'appel descend HTTP → validation → service → données.</p></details></div>
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un gestionnaire <code>SIGTERM</code> qui ferme le serveur HTTP puis se déconnecte de la base avant de quitter.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="arret.js"><pre><code class="language-javascript">process.on("SIGTERM", async () =&gt; {
-  serveur.close();               // stoppe l'acceptation de nouvelles requêtes
-  await prisma.$disconnect();     // ferme proprement la base
-  process.exit(0);
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris un gestionnaire <code>SIGTERM</code> qui ferme le serveur HTTP puis se déconnecte de la base avant de quitter.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="arret.js"><pre><code class="language-javascript">process.on("SIGTERM", () =&gt; {
+  // le rappel de close() n'arrive qu'après la dernière réponse : c'est LUI qui
+  // garantit qu'aucune requête en vol n'est coupée.
+  serveur.close(async () =&gt; {
+    await prisma.$disconnect();   // ferme proprement la base
+    process.exit(0);
+  });
 });</code></pre></figure></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un collègue met tout le code d'une fonctionnalité dans le gestionnaire de route. Donne deux problèmes concrets que cela pose et la correction.</p><details><summary>Voir une solution</summary><p><strong>Problème 1 — non testable&nbsp;:</strong> pour tester la logique, il faut lancer un vrai serveur et simuler <code>req</code>/<code>res</code>, ce qui est lourd et lent&nbsp;; avec un service pur, un simple <code>node --test</code> suffit. <strong>Problème 2 — non réutilisable et couplé&nbsp;:</strong> impossible d'appeler la même logique depuis un CLI ou un worker, et changer d'ORM ou de framework HTTP oblige à tout rouvrir. <strong>Correction&nbsp;:</strong> extraire la logique dans un <strong>service</strong> (fonction qui reçoit des données validées et renvoie un résultat, sans toucher à <code>req</code>/<code>res</code>). La route se réduit à&nbsp;: valider (Zod), appeler le service, formater la réponse. Le code devient testable, réutilisable et découplé du transport.</p></details></div>
 
@@ -271,7 +279,7 @@ serveur.listen(3000, () =&gt; {
 
 <script type="application/json" data-quiz-bilan>
 [
-  {"q":"Que permet Node.js ?","a":["Exécuter du JavaScript côté serveur (hors navigateur)","Manipuler le DOM d'une page hors du navigateur (document et window)","Stocker des données et exécuter des requêtes SQL (un moteur de base)","Programmer le GPU avec des shaders (le langage GLSL)"],"correct":0,"explain":"Même langage côté front et back."},
+  {"q":"Que permet Node.js ?","a":["Exécuter du JavaScript côté serveur (hors navigateur)","Manipuler le DOM d'une page hors du navigateur (document et window)","Compiler le JavaScript en C++ avant l'exécution (via un transpileur)","Programmer le GPU avec des shaders (le langage GLSL)"],"correct":0,"explain":"Même langage côté front et back."},
   {"q":"Quel moteur JavaScript Node utilise-t-il ?","a":["V8 (celui de Chrome)","SpiderMonkey (Mozilla)","Chakra (IE et Edge)","Rhino (dans la JVM)"],"correct":0,"explain":"V8 compile le JS en code natif."},
   {"q":"Quel est le gestionnaire de paquets de l'écosystème Node ?","a":["npm","pip","npx","nvm"],"correct":0,"explain":"npm install ajoute des dépendances."},
   {"q":"Comment importe-t-on un module intégré ?","a":["require(\"node:fs\") ou import","npm install fs puis require(\"fs\")","include \"node:fs\" en haut du fichier","new Module(\"node:fs\")"],"correct":0,"explain":"Le préfixe node: désigne les modules du cœur."},
