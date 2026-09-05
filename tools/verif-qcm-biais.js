@@ -65,9 +65,31 @@ var ECRIRE = process.argv.indexOf("--ecrire") !== -1;
    NON retenue, et il faut dire pourquoi : « la MAJUSCULE d'emphase » vaut 31,2 %
    sur le site, soit le niveau exact de « la plus prudente » (30,1 %) que B1 avait
    ecartee. La meme regle doit valoir pour les deux. Elle reste MESUREE par
-   mesure-biais-qcm.js, parce qu'elle monte a 44,9 % sur certains cours. */
+   mesure-biais-qcm.js, parce qu'elle monte a 44,9 % sur certains cours.
+
+   AJOUT B4 (2026-09-05) : « la ponctuation finale unique », et son cas OBLIGE A
+   CHANGER LA REGLE D'ADMISSION. Les cinq strategies ci-dessus sont entrees ici
+   parce qu'elles depassaient nettement le hasard SUR TOUT LE SITE. Celle-ci vaut
+   25,1 % sur les 6 167 questions -- le hasard exactement. Elle entre quand meme,
+   parce que sur `react` la vague de reecriture des distracteurs a termine par un
+   POINT les 45 distracteurs des lecons 16 a 20 en laissant leur bonne reponse
+   sans ponctuation finale : sur ce LOT, l'indice designait la bonne reponse 15
+   fois sur 15. Un indice fabrique par une passe d'ecriture nait a 100 % sur un
+   LOT et se dilue a 38 % sur le cours, puis a 25,1 % sur le site : la moyenne du
+   site est donc exactement le mauvais endroit pour decider de l'admission.
+   NOUVELLE REGLE : une strategie entre ici si elle depasse nettement le hasard
+   sur le site, OU si on l'a vue atteindre 100 % sur un lot de lecons.
+   Verifie avant de l'inscrire, comme pour la parenthese : le cours le plus
+   expose est `erlang` a 27,8 %, les 15 cours marques `traite` sont entre 24,7 %
+   et 25,0 %, donc l'ajouter ne fait rougir personne aujourd'hui.
+   ⚠️ CE QUE CET AJOUT NE REGLE PAS, et qu'il faut savoir : le cliquet mesure PAR
+   COURS alors que l'ecriture se fait PAR LOT DE LECONS. Le defaut de `react`
+   plafonnait a 38,1 % au niveau du cours, sous la cible de 60 % : meme inscrite
+   ici, cette strategie ne l'aurait pas fait rougir. Seule une mesure par FENETRE
+   DE LECONS le verrait. C'est le manque le plus net laisse par B4. */
 var EXPLOITABLES = ["la plus longue", "la plus detaillee", "le mot technique exclusif",
-                    "l'echo de la question", "l'incise entre parentheses"];
+                    "l'echo de la question", "l'incise entre parentheses",
+                    "la ponctuation finale unique"];
 var CLEF_LONGUEUR = "la plus longue";
 
 /* ------------------------------------------------------------------- la mesure */

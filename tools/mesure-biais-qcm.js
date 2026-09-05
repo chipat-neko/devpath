@@ -257,6 +257,32 @@ var STRATEGIES = [
     },
   },
   {
+    /* AJOUTEE AU POINT B4 (cours `react`, 2026-09-05), et elle vient d'une faute
+       QUE CET OUTIL NE VOYAIT PAS. La vague de reecriture des distracteurs de
+       `react` a termine chaque nouveau distracteur des lecons 16 a 20 par un
+       POINT, en laissant la bonne reponse sans ponctuation finale : sur ces cinq
+       lecons, l'option a la fin unique etait la bonne 15 fois sur 15. Aucune des
+       onze strategies precedentes ne le voyait — ni la longueur, ni la
+       ponctuation interne, qui ne regardent pas le DERNIER caractere.
+       C'est la meme famille que « l'attaque unique » : un lot d'ecriture confie a
+       un agent prend un tic de style, et ce tic designe l'intrus. La regle
+       generale a retenir : TOUTE REGULARITE TYPOGRAPHIQUE QUI SEPARE LES
+       DISTRACTEURS D'UN LOT DE LEUR BONNE REPONSE EST UN INDICE.
+       Mesure du jour, apres correction : 25 questions designees sur 6 167 pour
+       tout le site, 44,0 % de reussite quand la regle se declenche, 25,1 % sur
+       l'ensemble — donc l'indice n'existe PAS ailleurs sur le site, il avait ete
+       fabrique par la passe. */
+    nom: "la ponctuation finale unique",
+    quoi: "l'option dont le dernier caractere (point ou non) differe des trois autres",
+    choisir: function (q) {
+      var fins = q.a.map(function (t) { return /[.!?]$/.test(String(t).trim()) ? 1 : 0; });
+      var avec = fins.reduce(function (n, x) { return n + x; }, 0);
+      var rare = avec === 1 ? 1 : (avec === fins.length - 1 ? 0 : null);
+      if (rare === null) return toutes(q);
+      return fins.reduce(function (acc, x, i) { if (x === rare) acc.push(i); return acc; }, []);
+    },
+  },
+  {
     nom: "COMBINE : tiret puis longueur",
     quoi: "le tiret d'abord, la longueur pour departager — la methode d'un tricheur",
     choisir: function (q) {
@@ -365,7 +391,10 @@ var repartition = { "0-2": 0, "3-4": 0, "5+": 0 };
 pires.forEach(function (p) {
   if (p.n >= 5) repartition["5+"]++; else if (p.n >= 3) repartition["3-4"]++; else repartition["0-2"]++;
 });
-console.log("\n  Nombre d'indices qui trahissent une meme question (sur 8 strategies) :");
+/* Le nombre d'indices se COMPTE, il ne se recopie pas : il valait « 8 » en dur
+   alors que la table en portait deja onze — corrige au point B4. */
+console.log("\n  Nombre d'indices qui trahissent une meme question (sur " +
+  (STRATEGIES.length - 1) + " strategies) :");
 console.log("    0 a 2 indices : " + repartition["0-2"] + "   3 ou 4 : " + repartition["3-4"] +
   "   5 et plus : " + repartition["5+"] + " (" + pct(repartition["5+"] / corpus.length) + ")");
 

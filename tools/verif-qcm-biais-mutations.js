@@ -119,6 +119,33 @@ function questionsParenthesees(n) {
   }
   return out;
 }
+/* Devinables PAR LA SEULE PONCTUATION FINALE. Ajoutees en B4 (2026-09-05) avec
+   l'indice « la ponctuation finale unique », et la faute qui l'a fait naitre est
+   une faute DU CHANTIER lui-meme : la vague de reecriture des distracteurs de
+   `react` a termine par un POINT chacun des 45 distracteurs des lecons 16 a 20,
+   en laissant leur bonne reponse sans ponctuation finale. Sur ces cinq lecons,
+   l'option a la fin unique etait la bonne 15 fois sur 15 -- et aucune des onze
+   strategies d'alors ne regardait le DERNIER caractere.
+   Les quatre options sont ici de longueur voisine, de meme vocabulaire, de meme
+   mot d'attaque et de meme ponctuation interne : SEULE la bonne reponse n'a pas
+   de point final. Le verdict attendu doit nommer la PONCTUATION FINALE. */
+function questionsPointees(n) {
+  var out = [];
+  for (var i = 0; i < n; i++) {
+    out.push({
+      q: 'Question pointee n° ' + (i + 1) + ' — quel enonce decrit le comportement ?',
+      a: [
+        'Le tampon est vide avant la lecture, si bien que la valeur rendue reste nulle.',
+        'Le tampon est vide apres la lecture, si bien que la valeur rendue est doublee.',
+        'Le tampon est copie avant la lecture, si bien que la valeur rendue vient du double.',
+        'Le tampon est lu avant la remise a zero, si bien que la valeur rendue reste juste',
+      ],
+      correct: 3,
+      explain: 'Question injectee par une epreuve de mutation : elle ne doit jamais rester dans le depot.',
+    });
+  }
+  return out;
+}
 function pageAvec(questions) {
   var bloc = '<script type="application/json" data-quiz>' + JSON.stringify(questions) + '</script>\n  ';
   return pageOrig.replace('</body>', bloc + '</body>');
@@ -164,6 +191,16 @@ var MUTATIONS = [
       fs.writeFileSync(REF, refAvec(function (j) { j.cours.doc.traite = true; }));
     },
     1, /incise entre parentheses/],
+
+  /* B4 : le biais de PONCTUATION FINALE, sans biais de longueur ni de parenthese.
+     Le motif attendu nomme la ponctuation finale : si le verdict tombait sur une
+     autre strategie, le cas ne prouverait pas la branche neuve. */
+  ['60 questions devinables A LA SEULE PONCTUATION FINALE, et doc marqué « traité »',
+    function () {
+      fs.writeFileSync(PAGE, pageAvec(questionsPointees(60)));
+      fs.writeFileSync(REF, refAvec(function (j) { j.cours.doc.traite = true; }));
+    },
+    1, /ponctuation finale unique/],
 
   ['un cours qui n’existe pas ajouté à la référence',
     function () {
