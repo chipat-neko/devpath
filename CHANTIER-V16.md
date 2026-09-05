@@ -2074,6 +2074,244 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       à la longueur**. La case reste **décochée** : douze cours sur les quarante que la cible de B1
       demande.
 
+      ---
+
+      **`nodejs` — FAIT le 2026-09-05. LE COURS EST CLOS : 95,5 % → 25,0 %, 7ᵉ cours le plus nocif
+      du site. 27 leçons, 89 questions, 267 distracteurs, un QCM bilan.**
+
+      **LE COURS ENTIER, avant → après. Aucune stratégie ne dépasse 29,0 %, le hasard vaut 25,0 %.**
+
+      | indice, 89 questions | avant | après |
+      |---|---:|---:|
+      | la plus longue | **95,5 %** | **25,0 %** |
+      | COMBINÉ : le tiret puis la longueur | 95,5 % | **25,6 %** |
+      | la plus détaillée | 86,6 % | **26,8 %** |
+      | le mot technique exclusif | 74,1 % | **27,4 %** |
+      | **l'incise entre parenthèses** | 73,4 % | **29,0 %** (meilleure stratégie restante) |
+      | l'écho de l'énoncé | 60,8 % | **21,3 %** |
+      | la plus prudente | 32,3 % | 25,3 % |
+      | la MAJUSCULE d'emphase | 28,9 % | 23,0 % |
+      | la plus COURTE (le biais inverse) | 1,7 % | **19,9 %** — il ne s'est PAS retourné |
+      | rangs de longueur de la bonne réponse | **86 / 0 / 2 / 1** | **24 / 23 / 25 / 17** |
+      | distracteurs hors de 70-130 % | **254 sur 267** | **0** (0,72 à 1,30) |
+
+      **Global du site : 74,0 % → 73,0 %. `nodejs` est marqué `traite`, 13ᵉ cours verrouillé**
+      (`algo`, `archi`, `css`, `equipe`, `html`, `iac`, `js`, `maths`, `mobile`, `nodejs`, `python`,
+      `ux`, `zig`). Cliquet refigé, épreuve par injection **7/7**, cours-témoin `stats` (99,3 %)
+      intact. **265 distracteurs sur 267 réécrits** — les 2 restants sont `npm`/`npx`/`nvm`/`pip` du
+      bilan, où la bonne réponse fait **3 caractères** : les quatre options en font 3, aucun signal
+      de longueur n'est possible.
+
+      **Six écrivains** sur lots disjoints (01-05, 06-10, 11-15, 16-20, 21-26, 27), puis **cinq
+      relecteurs adversariaux** (41 prises), puis correction par un seul écrivain (moi). Aucun commit
+      d'agent, un seul écrivain par fichier à tout instant.
+
+      ---
+
+      ⚠️⚠️ **DEUX BONNES RÉPONSES ÉTAIENT FAUSSES, ET ELLES SE CONTREDISAIENT L'UNE L'AUTRE À
+      TRAVERS LE COURS.** Les deux sont **prouvées par exécution avant** d'être touchées, et les deux
+      atteintes sont déclarées.
+      - `lecon-17` q2 : « envoyer à une connexion fermée ou en cours de fermeture **lève une
+        erreur** ». **Mesuré sur un serveur WebSocket écrit à la main** (poignée de main RFC 6455,
+        aucune dépendance) : `send()` sur un socket **CLOSING ne lève RIEN**, n'émet **aucun**
+        événement `'error'`, et le message est **perdu en silence** — c'est-à-dire le contraire du
+        danger annoncé, et un danger pire, puisque rien ne le signale. La faute était **recopiée à
+        trois endroits du corps** de la même leçon (piège fréquent, liste des pièges, glossaire), et
+        **l'explication du QCM** la répétait : les quatre sont corrigées.
+      - `lecon-19` q2 : « un worker thread est un fil dans le même processus, **partageant la
+        mémoire** ». **Mesuré** : le worker ne voit pas le `globalThis` du principal, `workerData`
+        arrive **par copie**, les deux tas sont distincts (6,5 Mo contre 11,5 Mo). Seul « même
+        processus » était vrai (pid identique, `threadId` 0 et 1). **Et la bonne réponse de
+        `lecon-24` q2, dans le même cours, dit l'inverse — et elle a raison.** Deux bonnes réponses
+        d'un même cours en contradiction frontale : aucun de nos indicateurs ne voit ça.
+
+      ⚠️ **UN DISTRACTEUR ÉTAIT VRAI DANS LE QCM BILAN — le bloc le plus vu du cours.** « Stocker des
+      données et exécuter des requêtes SQL (un moteur de base) » était donné comme ce que Node **ne
+      permet pas**. Mesuré : `require("node:sqlite")` crée une table, l'écrit sur disque et la relit,
+      **sans installation, sans drapeau, sans le moindre `ExperimentalWarning`** en v24.16.0
+      (`process.versions.sqlite = 3.53.0`, au même titre que V8). **Et `lecon-15` du même cours
+      l'écrit noir sur blanc** : l'apprenant qui a lu la leçon 15 était marqué faux au bilan. Au
+      passage, `lecon-15` annonçait le module « expérimental » : il ne l'est plus, corrigé.
+
+      ---
+
+      ⚠️⚠️ **UN INDICE DE FORME NEUF — ET C'EST LA VAGUE 1 QUI L'A CRÉÉ. C'est le résultat de
+      méthode de ce cours.** Le relecteur du dernier lot a vu ce qu'aucun de nos dix indicateurs ne
+      regarde : **le mot d'attaque**. Sur une question en « Pourquoi… ? », les **trois** distracteurs
+      ouvrent par « Parce que » et la bonne réponse — **intouchable, donc jamais réécrite** — ouvre
+      par « Pour » ou sans connecteur. L'option isolée est la bonne.
+
+      **Et la mesure avant/après est accablante pour le protocole lui-même :**
+
+      | la discordance de connecteur causal | avant la vague 1 | après la vague 1 | après correction |
+      |---|---:|---:|---:|
+      | le motif se déclenche | 7 questions | 9 | **0** |
+      | l'option isolée est la bonne | **1 / 7 = 14,3 %** | **9 / 9 = 100 %** | — |
+      | réussite de la stratégie sur le cours | 24,2 % | **32,6 %** | **25,0 %** |
+
+      **Les écrivains ont fabriqué l'indice en appliquant la consigne** : on leur demandait de
+      reprendre les mots de l'énoncé dans les distracteurs, ils ont repris le « Pourquoi » sous forme
+      de « Parce que » — que la bonne réponse, qu'ils n'avaient pas le droit de toucher, ne portait
+      pas. *Corriger un indice en crée un autre* : cette fois l'indice neuf naît **de la correction
+      elle-même**, pas d'un déplacement. Réparé par le geste du protocole — aligner un distracteur
+      sur la forme de la bonne réponse, jamais l'inverse — sur **9 distracteurs**, avec compensation
+      de longueur pour rester dans la fourchette.
+
+      ⚠️ **ET IL A FALLU REMESURER AVANT DE CROIRE LE RELECTEUR — quatrième fois de suite.** Il
+      annonçait « **9/10 = 90,0 %** ». C'est un taux de **déclenchement**, pas une réussite : la
+      stratégie ne se déclenche que sur 10 % des questions et rend **32,6 %** sur le cours. Surtout,
+      il proposait d'en faire un indicateur permanent : **mesuré sur les 6 167 questions du site, il
+      se déclenche sur 334 questions et rend 25,8 %, soit l'étalon du hasard.** Ce n'est donc **pas**
+      un indice de site comme l'incise entre parenthèses (59,2 %) — c'est un artefact local, à 100 %
+      sur `js`, `algo`, `css`, `mobile` et `stats`, mais **nul sur `python` et `offensive` (0/7 et
+      0/3)**. L'inscrire dans `mesure-biais-qcm.js` aurait ajouté une ligne qui ne mesure rien.
+      *Ce qu'un relecteur VOIT reste juste ; ce qu'il CHIFFRE ne l'est presque jamais.*
+
+      ---
+
+      ⚠️⚠️ **DIX-NEUF CORRECTIONS DANS DES CORPS DE LEÇON, TOUTES PROUVÉES PAR EXÉCUTION — le défaut
+      fondateur de la chaîne, à une densité jamais atteinte.** `nodejs` est le premier cours où les
+      agents pouvaient **exécuter le sujet lui-même** : Node est sur la machine. Rien de ce qui suit
+      n'aurait été trouvé par une relecture.
+      - **`lecon-24` : le bloc de code phare de la leçon ne démarre pas.** `require()` et un `await`
+        de haut niveau dans le même fichier → `ERR_AMBIGUOUS_MODULE_SYNTAX`, code 1, avant la
+        première ligne. L'apprenant qui recopie l'exemple obtient une erreur.
+      - **`lecon-27` : l'arrêt propre COUPE les requêtes qu'il promet de terminer.** `serveur.close()`
+        est asynchrone ; le code appelait `process.exit(0)` juste après. Mesuré sur deux processus :
+        **`ECONNRESET` côté client**. Avec le rappel de `close()`, la même requête sort en **200**.
+        Le glossaire de la page définissait pourtant l'arrêt propre comme « on **termine** celles en
+        cours ». Corrigé aussi dans la solution de l'exercice 2, qui portait la même faute.
+      - **`lecon-20` : le filet de sécurité ne tire pas.** `setTimeout(…, 10_000).unref()` retire le
+        minuteur du compte des handles : dès que `pool.end()` ne répond plus, Node **vide la boucle
+        et sort avec le code 0** — mesuré : **0 ms, code 0**, en annonçant un arrêt propre. Le schéma
+        promettait « exit 1 si le drain traîne ».
+      - **`lecon-20` : l'étape 1 du schéma n'existait pas dans le code.** Le schéma numérote
+        « 1 · readiness 503 — le LB se retire », mais `shuttingDown` ne servait qu'à ignorer un second
+        signal ; la sonde `readiness` ne le lisait pas et répondait 200 pendant tout le drain.
+        `health.js` exporte désormais le drapeau et `marquerArret()`.
+      - **`lecon-19` et `lecon-24` : « le système d'exploitation répartit les connexions », 8 fois.**
+        Faux partout sauf sous Windows. **Source du cœur de Node à l'appui** (`internal/cluster/primary` :
+        `SCHED_NONE` seulement `if (process.platform === 'win32')`, sinon `SCHED_RR`), et mesuré : en
+        `SCHED_RR`, 9 requêtes sur 3 workers en tourniquet strict ; en `SCHED_NONE`, **les
+        9 connexions au même worker**. Les leçons visent Docker et Kubernetes : elles enseignaient
+        l'exception comme la règle. Corps, légendes, glossaires et `aria-label` repris.
+      - **`lecon-19` : `monitorEventLoopDelay`, un diagnostic à l'envers.** `mean` inclut la
+        résolution : au repos, `resolution: 20` affiche **31,4 ms**, soit « des dizaines de ms »,
+        c'est-à-dire selon la leçon un event loop « qui souffre ». Un gel réel de 500 ms ressort en
+        `max = 500,17`. La leçon envoyait diagnostiquer une panne sur un serveur sain.
+      - **`lecon-13` : la sortie de `node --test` n'existe pas sous cette forme.** Le rapporteur
+        n'écrit jamais `describe > test` : il ouvre par `▶`, indente, referme la suite, et compte
+        `suites 1`. Recopiée de l'exécution réelle.
+      - **`lecon-13` : `util.inspect` rend trois lignes, pas une** (règle `compact: 3`).
+      - **`lecon-05` : le terminal n'affiche jamais « UnhandledPromiseRejection ».** Node ne le
+        produit que si la raison **n'est pas** une `Error` ; celle de la leçon en est une.
+      - **`lecon-06` : « Uncaught Error » est du vocabulaire de navigateur.** Node imprime `Error: …`
+        puis `Emitted 'error' event at:` — justement la ligne la plus utile au diagnostic.
+      - **`lecon-06` : la cause donnée pour l'oubli de `super()` était fausse** — on n'atteint jamais
+        `emit`/`on`, le constructeur lève une `ReferenceError` dès le premier `this`.
+      - **`lecon-04` : « ta variable `data` contient en réalité l'erreur »** — dans le cas nominal,
+        le seul que le lecteur reproduira, elle contient `null`, et la panne est immédiate, pas
+        « plus loin ».
+      - **`lecon-04` : « l'ordre typique » était l'ordre minoritaire.** Mesuré sur 40 exécutions du
+        fichier de la leçon : `setImmediate` sort avant `setTimeout` **38 fois sur 40**.
+      - **`lecon-22` : la leçon recommandait l'outil qui produit le contraire de la valeur envoyée.**
+        « Idem pour les booléens (`z.coerce.boolean()`) ». **Mesuré avec Zod 4.4.3** (trouvé dans un
+        `node_modules` global, donc mesuré et non supposé) : `?actif=false` → **`true`**, `?actif=0`
+        → **`true`** ; seule la chaîne vide donne `false`.
+      - **`lecon-10` : un `500` là où les leçons 11 et 12 enseignent `400`.** Un corps JSON malformé
+        est une faute du client ; `lecon-11` liste « une erreur client renvoyée en 500 » dans ses
+        pièges fréquents. Le seul exemple exécutable du cours sur ce point enseignait l'inverse de sa
+        propre suite.
+      - **`lecon-16` : le `curl` annonçait un `email` que l'API ne peut pas renvoyer** — absent du
+        payload du jeton comme de la route ; la section Exercices de la même page donnait, elle, la
+        bonne sortie.
+      - **`lecon-18` : le middleware d'erreur ne journalisait RIEN.** `req.log?.error(…)` — `req.log`
+        n'est posé par aucun middleware de la leçon : l'optional chaining faisait de la journalisation
+        un **no-op silencieux**, et le bug était masqué au client **comme au serveur**. Mesuré : les
+        trois routes de démonstration, dont un vrai `TypeError`, ne laissent **aucune trace**.
+      - **`lecon-21` : le schéma qui enseigne le paramétrage montrait une concaténation**
+        (`WHERE nom LIKE '%Ada%'` en dur) pendant que sa légende annonçait « le paramétrage évite
+        l'injection ». Remplacé par `LIKE $1` et la valeur du paramètre à part.
+      - **`lecon-02` : « CommonJS reste le format par défaut » est faux depuis Node 22.7.** Un `.js`
+        contenant `import`, sans aucun `package.json`, **tourne en ES Module** (mesuré). Note ajoutée.
+
+      ⚠️ **ET LE MÊME FAIT A RENDU TROIS DISTRACTEURS OBSERVABLEMENT VRAIS**, dans `lecon-02` q1 :
+      `"module": true`, `"esm": true`, la directive `"use module"` et le champ `"exports"` laissent
+      tous `"type"` absent — **donc la détection de syntaxe opère et le fichier tourne**. L'apprenant
+      qui teste voit la « mauvaise » réponse fonctionner. Les trois sont remplacés par des actions qui
+      **échouent durement**, chacune mesurée : `.es6` → `ERR_UNKNOWN_FILE_EXTENSION`, `nodemodule` →
+      commande inconnue, `--esm` → *bad option*, `--input-type=module` sur un fichier →
+      `ERR_INPUT_TYPE_NOT_ALLOWED`, `require.esm` → `undefined`.
+
+      ⚠️ **DEUX AUTRES DISTRACTEURS ÉTAIENT VRAIS À LEUR MOITIÉ LA PLUS LUE**, mesurés tous les deux :
+      « `exec` s'impose pour une commande longue **car il rend la main avant la fin** » — exact (3 ms
+      pour une commande de 400 ms), la clause fausse étant rejetée en fin de phrase sur `spawn` ; et
+      « `node --test-coverage` … **échoue dès que la couverture descend sous 80 %** » — seul le **nom**
+      du drapeau était faux, `--test-coverage-lines=80` fait exactement cela.
+
+      ⚠️ **HUIT QUESTIONS TOMBAIENT SOUS QUATRE CHOIX, et aucun de nos indicateurs ne le voit —
+      cinquième cours de suite.** Trois paires de distracteurs **jumeaux**, qui s'éliminaient ensemble
+      sur un seul mot : `lecon-06` q1 (deux fois l'inversion `on`/`once`), `lecon-19` q2 (deux fois
+      l'inversion fil/processus), `lecon-20` q2 (deux fois « les requêtes en vol aboutissent »). Trois
+      options qui **niaient la prémisse de leur propre énoncé** : `lecon-24` q1 (« pourquoi ça
+      bloque ? » → « ça ne bloque pas »), `lecon-26` q3 (« pourquoi l'idempotence ? » → « la livraison
+      est exactly-once »), `lecon-12` q2 (« comment Express identifie ce maillon ? » → « Express
+      l'écarte »). Plus `lecon-11` q3, dont la prémisse détruisait sa propre conclusion, et `lecon-11`
+      q1, seule option à ne pas répondre à la seconde moitié de l'énoncé — donc éliminable **sur la
+      forme**, sans rien savoir d'Express.
+
+      ⚠️ **J'AI REFUSÉ UNE PRISE, ET LA MESURE M'A DONNÉ TORT CONTRE UN RELECTEUR SUR UNE AUTRE.**
+      *Refusée* : `lecon-25` q3, où la bonne réponse dit « sans vrai réseau ni vraie horloge » pour
+      `mock.fn`. Vérifié moi-même : `mock.fn` ne touche pas l'horloge (c'est `mock.timers`), mais
+      `mock.method(obj, 'maintenant', …)` **rend bien 1234** — remplacer une dépendance qui lit
+      l'horloge est exactement ce que la phrase décrit. **La bonne réponse est défendable, on n'y
+      touche pas.** *Partiellement réfutée* : le relecteur affirmait que le `// affiche:` de
+      `lecon-08` mentait sur l'ordre de `readdir`. **Il avait mesuré sur `D:`, j'ai mesuré sur `C:` —
+      même machine, même Node, même code : `[ 'exports', 'a.txt', 'b.txt' ]` d'un côté,
+      `[ 'a.txt', 'b.txt', 'exports' ]` de l'autre.** Le commentaire n'était donc pas faux, il était
+      **invérifiable** : la leçon annonçait comme une sortie ce qui dépend du volume. Corrigé en
+      publiant **les deux** ordres mesurés et le conseil qui va avec (`entrees.sort()`).
+
+      ⚠️ **UN PIÈGE D'OUTILLAGE NEUF, ET IL A FAILLI PASSER : `git stash` A CONVERTI TOUT L'ARBRE DE
+      TRAVAIL EN CRLF.** Le dépôt est en `core.autocrlf=true` ; un aller-retour `stash`/`stash pop`
+      — fait pour comparer une mesure de rendu avant/après — a réécrit **31 fichiers** en CRLF, dont
+      les 23 leçons du cours et cinq fichiers `js/` que je n'avais jamais ouverts. **Ni `verif-html`,
+      ni `verif-donnees`, ni la mesure de biais ne le voient** : seul le contrôle de forme dédié l'a
+      pris. Même famille que « l'outil d'édition écrit en CRLF » du cours `css`, mais **par une
+      commande qu'on croit en lecture seule**. Reconverti en LF, et les cinq fichiers non modifiés
+      restaurés depuis `HEAD` après comparaison octet à octet.
+
+      ⚠️ **UN CONTENU QUI MESURE LE SITE SE PÉRIME EN ÉTANT PUBLIÉ — 8ᵉ fois pour la même page.**
+      `doc/lecon-03` publiait **4 521** manquements à sa propre règle S3 et **74,1 %** → **4 458** et
+      **73,0 %**. **Dix mentions**, dont dans un bloc QCM, d'où une **seconde** régénération d'index
+      avec `--fresh`. `verif-normatif` repassé de **58/60 à 60/60**.
+
+      **Contrôles finaux** : `verif.js --rapide` **52 contrôles verts (84,8 s)** ; `verif-html`
+      **0 / 1 629** ; `verif-donnees` **25 contrôles, 0 erreur** ; `verif-normatif` **60/60** ;
+      `verif-rendu` sur les **6 pages à structure modifiée** (`lecon-02`, `19`, `20`, `21`, `24`,
+      `doc/lecon-03`), 3 largeurs × 2 thèmes, réseau coupé : **0 erreur, 0 avertissement** ;
+      `mesure-qcm-intouchable` **3 atteintes, exactement les 3 déclarées** ; 0 BOM, 0 CRLF,
+      0 mojibake, 0 chevron dans un distracteur, 0 doublon d'option, JSON valide sur les 28 blocs ;
+      index régénérés **deux fois avec `--fresh`** — dont `pieges`, **oublié au premier passage et
+      rattrapé par `verif-donnees`** : toute retouche de prose dans un encadré d'erreur le périme.
+
+      ⚠️ **UN DÉFAUT TROUVÉ ET LAISSÉ, DÉLIBÉRÉMENT — hors du périmètre de B4, mais à ne pas
+      perdre.** `verif-rendu` avertit que `nodejs/lecon-27` déclare « 3 exercices pour 4 blocs
+      `.exercise` ». Le 4ᵉ bloc est le **capstone « Projet »**, qui n'a légitimement pas de champ de
+      réponse. Mesuré sur tout le site : **39 leçons sur 1 540** dans ce cas, toutes des fins de
+      cours. C'est donc un **faux positif systématique** de l'heuristique, pas un trou de contenu —
+      et un avertissement qui crie 39 fois est un avertissement qu'on cesse de lire, exactement le
+      défaut que B2 décrivait. **À traiter en phase F** : compter les `.exercise` en excluant le
+      capstone.
+
+      **CE QUI RESTE À FAIRE SUR B4, mesuré après `nodejs`** : `bdd` (86 q, 97,7 %), `react` (86,
+      92,2 %), `projets-js` (84, 98,8 %), `ruby` (84, 89,9 %), `sql` (82, 91,9 %), `git` (80,
+      93,8 %), puis la longue traîne. ⚠️ **`stats` (72 q, 99,3 %) reste le cours-témoin de
+      `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.**
+      **72 cours sur 90 restent au-dessus de 60 %**, et **4 503 questions sur 6 167 restent
+      devinables à la longueur**. La case reste **décochée** : treize cours sur les quarante que la
+      cible de B1 demande.
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
