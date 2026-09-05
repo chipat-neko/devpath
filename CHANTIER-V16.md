@@ -2616,6 +2616,111 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       devinables à la longueur**. La case reste **décochée** : quinze cours sur les quarante que la
       cible de B1 demande.
 
+      ---
+
+      **`react` — FAIT le 2026-09-05. LE COURS EST CLOS : 92,2 % → 16,0 %.** 26 leçons,
+      **86 questions**, **258 distracteurs**, **255 réécrits**, tous entre **0,71 et 1,27**.
+      ⚠️ **La première passe d'écriture avait été TUÉE avant son commit** : l'arbre de travail
+      portait 26 leçons modifiées et non validées. Elles ont été mesurées avant d'être reprises
+      (93,0 % → 27,9 %, `mesure-qcm-intouchable` 0 atteinte) plutôt que jetées.
+
+      | stratégie, sur les 86 questions | avant | après |
+      |---|---:|---:|
+      | la plus longue | **92,2 %** | **16,0 %** |
+      | la plus détaillée | 89,8 % | **30,5 %** |
+      | le mot technique exclusif | 73,7 % | **30,9 %** |
+      | l'incise entre parenthèses | 71,9 % | **30,4 %** |
+      | l'écho de la question | 62,0 % | **22,5 %** |
+      | **MEILLEURE STRATÉGIE** | **92,2 %** | **30,9 %** |
+      | rangs de longueur | **80/4/1/1** | 16/28/25/17 |
+      | fourchette distracteur / bonne réponse | 0,07–6,33 (244 hors) | **0,71–1,27 (0 hors)** |
+
+      Site « la plus longue » : **71,0 % → 69,9 %**. **16 cours marqués `traite`.**
+
+      ⚠️⚠️ **UN 12ᵉ INDICE, NÉ DE LA VAGUE D'ÉCRITURE, ET VU PAR UN SEUL RELECTEUR SUR SIX.** La
+      réécriture a terminé par un **POINT** chacun des 45 distracteurs des leçons 16 à 20, en
+      laissant leur bonne réponse sans ponctuation finale : sur ce lot, **choisir l'option à la fin
+      unique donnait la bonne 15 fois sur 15**. Aucune des onze stratégies de `mesure-biais-qcm.js`
+      ne regardait le **dernier** caractère — ni la longueur, ni la ponctuation interne.
+      **C'est le troisième indice de suite que la CORRECTION fabrique** (après le mot d'attaque de
+      `projets-js` et la parenthèse inversée de `zig`), et le premier qu'un seul relecteur ait vu.
+      **LA RÈGLE GÉNÉRALE, à remettre en consigne au tour suivant : un fan-out d'écriture donne à
+      chaque lot le TIC DE STYLE de son agent, et ce tic désigne l'intrus. Toute régularité
+      typographique qui sépare les distracteurs d'un lot de leur bonne réponse est un indice.**
+
+      ⚠️⚠️ **ET IL A FALLU CHANGER LA RÈGLE D'ADMISSION DU CLIQUET POUR LE VOIR.** Les cinq
+      stratégies `EXPLOITABLES` de `verif-qcm-biais.js` y étaient entrées parce qu'elles dépassaient
+      nettement le hasard **sur tout le site**. Celle-ci vaut **25,1 % sur les 6 167 questions —
+      le hasard exactement**. Mesuré : **un indice fabriqué par un lot naît à 100 % sur le LOT, se
+      dilue à 38,1 % sur le COURS, puis à 25,1 % sur le SITE.** La moyenne du site est donc le
+      mauvais endroit pour décider d'une admission. Nouvelle règle écrite dans l'outil : *au-dessus
+      du hasard sur le site, **OU** vue à 100 % sur un lot*. Vérifié avant l'ajout : cours le plus
+      exposé `erlang` **27,8 %**, les 16 cours traités entre **24,7 % et 25,0 %** — personne ne
+      rougit. Épreuve par injection : **8ᵉ cas ajouté, 8/8 vus**, contre-épreuve restée verte.
+      ⚠️ **Le premier jet de la preuve par injection NE PROUVAIT RIEN** : il lançait l'outil depuis
+      la racine du dépôt, donc `__dirname/..` pointait sur le VRAI dépôt et non sur la copie mutée
+      — l'injection de 45 points n'a d'abord rien fait bouger, et c'est ce zéro suspect qui l'a
+      trahi. L'outil est désormais copié dans le bac à sable. *Même famille que « une soustraction
+      n'est pas une mesure ».*
+
+      ⚠️⚠️ **CE QUE CET AJOUT NE RÈGLE PAS, et c'est le manque le plus net laissé par ce point :
+      le cliquet mesure PAR COURS quand l'écriture se fait PAR LOT DE LEÇONS.** Le défaut de `react`
+      plafonnait à **38,1 %** au niveau du cours, sous la cible de 60 % : **même inscrite dans
+      `EXPLOITABLES`, la stratégie ne l'aurait pas fait rougir.** Seule une mesure par **fenêtre de
+      leçons** (5 leçons glissantes) le verrait. À décider en F3 ou hors chantier — c'est une
+      modification de la structure de `qcm-biais-reference.json`, qui est indexée par cours.
+
+      **Défauts de FOND corrigés** (6 relecteurs adversariaux, lots disjoints, un seul écrivain par
+      fichier, aucun commit d'agent) — ~80 distracteurs repris en 2ᵉ passe. Devenus **littéralement
+      vrais** : une ref partagée que l'enfant mute (`l-03`), la perte d'état par réordonnancement
+      (`l-04`), un effet sans tableau qui rejoue à chaque rendu (`l-09`), la restauration d'un champ
+      contrôlé sans `onChange` (`l-08`), `useSearchParams` qui rend bien un tuple (`l-15`), **Pug**
+      qui mêle bien balisage et JS (bilan), **useSignal** qui existe bien en Preact/Qwik (bilan),
+      une SPA dont le HTML initial n'offre aucun lien à explorer (`l-20`), « aucun style ne peut
+      animer un composant démonté » (`l-25`), « la liaison avec l'étiquette reste à écrire à la
+      main » — `useId` ne relie rien (`l-24`).
+
+      ⚠️ **TROIS BONNES RÉPONSES SIGNALÉES, NON PROUVABLES HORS LIGNE, LAISSÉES EN L'ÉTAT** :
+      - `lecon-02` q1 — « le JSX se transforme en `React.createElement` », alors que la
+        transformation automatique de React 17+ rend `_jsx()`. **Prise RÉFUTÉE comme faute** : le
+        corps de la leçon le dit **déjà**, et le dit **sous une marque de fraîcheur** posée en E2.
+        *La convention de datation a fait exactement le travail pour lequel elle a été écrite.*
+      - `lecon-10` q3 — « (avertissement / bug) » sur un `setState` après démontage : cet
+        avertissement a été **retiré de React en 18**. Le fond de l'option reste juste.
+      - `lecon-17` q1 — « ne capte pas les erreurs du rendu serveur » : le SSR **en streaming** de
+        React 18 fait bien intervenir les frontières d'erreur.
+
+      **Aucun React n'est installable dans ce dépôt 100 % `file://`** : ces trois-là demandent une
+      exécution, pas une opinion, et la règle absolue du chantier interdit de trancher de tête.
+      **Portées en C1/C3**, où la fraîcheur des cours périssables est le sujet.
+
+      ⚠️ **`doc/lecon-03` s'est repérimée une 7ᵉ fois** en corrigeant `react` — elle **publie** le
+      taux de manquement du site : 4 332 → **4 266** manquements, 71,0 % → **69,9 %**.
+      **9 occurrences relues une par une** (5 du nombre, 4 du taux) : aucune ne parlait d'autre
+      chose, sans quoi le remplacement global aurait cassé ce qui était juste.
+      `verif-normatif` **58/60 → 60/60**.
+
+      ✅ **RÉPONSE À LA QUESTION QUE B3 AVAIT LAISSÉE OUVERTE** (« la plus détaillée : un biais, ou
+      la définition même d'une bonne réponse ? ») : **c'est un biais, et le protocole de B4 le
+      ferme.** Les 6 cours de B3 sont en moyenne à **43,7 %** dessus (33,0 à 51,9), les 10 cours de
+      B4 à **28,2 %** (20,7 à 33,2). La différence tient à la fourchette 70–130 % appliquée dès
+      l'écriture, pas à la relecture.
+
+      **Contrôles** : `mesure-qcm-intouchable` **0 atteinte** sur 86 questions ; index `quiz` et
+      `search` régénérés **et prouvés porteurs des textes neufs** (un distracteur pris au hasard est
+      dans le nouvel index et absent de celui de HEAD) ; `verif-normatif` **60/60** ;
+      `verif.js --rapide` **26 étapes tout vert (85,1 s)** ; `verif-html` **0** ; `verif-donnees`
+      **0 erreur** ; `verif-qcm-biais-mutations` **8/8**, témoin `stats` à 99,3 % toujours valide ;
+      **0 URL de CDN interdit** introduite.
+
+      **CE QUI RESTE À FAIRE SUR B4, mesuré après `react`** : `ruby` (84 q, 89,9 %), `sql` (82,
+      91,9 %), `git` (80, 93,8 %), `rust` (76, 96,1 %), `java` (77, 94,2 %), `csharp` (77, 93,5 %),
+      `cpp` (77, 92,9 %), puis la longue traîne. ⚠️ **`stats` (72 q, 99,3 %) reste le cours-témoin
+      de `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.**
+      **69 cours sur 90 restent au-dessus de 60 %**, et **4 319 questions sur 6 167 restent
+      devinables à la longueur**. La case reste **décochée** : seize cours sur les quarante que la
+      cible de B1 demande.
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
