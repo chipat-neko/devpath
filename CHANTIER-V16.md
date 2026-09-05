@@ -2311,6 +2311,158 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       **72 cours sur 90 restent au-dessus de 60 %**, et **4 503 questions sur 6 167 restent
       devinables à la longueur**. La case reste **décochée** : treize cours sur les quarante que la
       cible de B1 demande.
+      ---
+
+      **`bdd` — FAIT le 2026-09-05. LE COURS EST CLOS : 97,7 % → 25,6 %, 8ᵉ cours le plus nocif du
+      site au cadrage. 15 leçons, 86 questions, 258 distracteurs, tous réécrits.**
+
+      | mesure, cours entier | avant | après |
+      |---|---:|---:|
+      | la plus longue | **97,7 %** | **25,6 %** |
+      | meilleure stratégie exploitable | 97,7 % | **33,6 %** (le mot technique exclusif) |
+      | la plus détaillée | 86,7 % | 27,3 % |
+      | l'incise entre parenthèses | 65,4 % | 29,7 % |
+      | la plus COURTE (biais inverse) | 0,0 % | 18,6 % |
+      | rangs de longueur de la bonne réponse | **84 / 2 / 0 / 0** | **22 / 27 / 21 / 16** |
+      | distracteurs hors de 70-130 % | **251 sur 258** | **0** (0,71 à 1,27) |
+      | global du site | 73,0 % | **72,0 %** |
+
+      ⚠️⚠️ **UN SEUL DÉFAUT DE FOND EXPLIQUE LA MOITIÉ DES PRISES, ET IL TRAVERSE CINQ LEÇONS :
+      `billet` n'a PAS de `client_id`.** Le schéma canonique, identique dans six leçons, est
+      `billet(billet_id, commande_id, representation_id, place_id, prix_paye)` avec
+      `UNIQUE(representation_id, place_id)` — un client atteint sa représentation par la chaîne
+      `client → commande → billet`. **Cinq endroits du cours disaient l'inverse, dont DEUX BONNES
+      RÉPONSES** :
+      1. **`lecon-03` q2** annonçait « une ligne par **couple client-représentation** ». Faux, et
+         **sa propre explication disait juste** (« une ligne par association réelle ») : trois places
+         pour la même séance font **trois** lignes pour un seul couple. Prouvé par exécution :
+         `GROUP BY (client, representation)` → `[[42, 7, 3]]`.
+      2. **`lecon-15` bilan q4** faisait porter à `billet` « les deux clés étrangères » d'un N-N
+         `client × representation`, et rangeait `place_id` parmi les **attributs propres** — alors
+         que c'est une clé étrangère, et que `lecon-04` q3 dit le contraire. **Deux bonnes réponses
+         du même cours se contredisaient**, comme sur `nodejs`.
+      3. le **diagramme** de `lecon-03` (boîte `billet` : `client_id`), à douze lignes d'un
+         `CREATE TABLE` qui déclare `commande_id` — le défaut fondateur de la chaîne, encore ;
+      4. le bloc d'ouverture de `lecon-01`, qui promet « on justifiera CHAQUE choix » pour un choix
+         que `lecon-06` contredit mot pour mot ;
+      5. **`place.salle_id` en `lecon-04` et `lecon-09`** : une dépendance transitive
+         `place → zone → salle` **dans la leçon même qui enseigne la 3NF**, que le schéma final de
+         `lecon-15` avait supprimée sans le dire.
+
+      ⚠️ **UNE TROISIÈME BONNE RÉPONSE FAUSSE, réfutée par exécution** : `lecon-08` q5 disait qu'une
+      colonne liste ne se laisse « ni contraindre (`UNIQUE`), ni indexer ». Les deux sont **acceptés
+      ET utilisés** (plan `SEARCH … USING COVERING INDEX`) ; ce qu'ils ne savent pas faire, c'est
+      regarder **à l'intérieur** de la chaîne — ce que le corps de la leçon écrivait correctement.
+      Son explication portait la même absolue et a été corrigée aussi.
+
+      ⚠️⚠️ **LE DÉFAUT LE PLUS GRAVE EST DANS UN CORPS DE LEÇON : la migration de `lecon-14` était
+      CIRCULAIRE.** Le calcul du prénom **lisait `nom`**, c'est-à-dire la valeur que la migration
+      doit produire, et `nom = /* la partie nom, calculée */ nom` était une affectation à elle-même.
+      Rejouée dans les trois états possibles :
+
+      | état de départ | ce qui se passe RÉELLEMENT |
+      |---|---|
+      | **A** — `nom` = l'ancien fourre-tout (ce que dit la prose) | `prenom` reçoit la **chaîne vide** : `prenom IS NULL` devient faux, le garde-fou est grillé, **le rejeu ne rattrape rien** — corruption silencieuse, sans une erreur |
+      | **B** — `nom` colonne neuve et vide (ce que dit le schéma) | strict **no-op**, le `SET NOT NULL` du temps 3 échouerait toujours |
+      | **C** — `nom` contient déjà le nom isolé | ça marche : c'est-à-dire quand le travail à faire est **déjà fait** |
+
+      Aggravations : la règle annoncée (« tout avant le dernier espace ») n'était pas celle que le
+      code appliquait ; et sous PostgreSQL une longueur négative lève `negative substring length not
+      allowed` là où SQLite rend `''` — **la migration était fausse différemment selon le moteur**.
+      Remplacée par une migration prouvée **idempotente** et qui **traite une ligne arrivée après
+      coup**, les deux propriétés vérifiées sur le bloc **ré-extrait du fichier publié**, pas sur le
+      brouillon. Le schéma et le commentaire du code se contredisaient aussi sur l'état de `nom`
+      (« nouveau, vide » contre « existe déjà ») — **c'était la variable dont dépendait tout le
+      résultat**.
+
+      ⚠️ **UNE MESURE A RENVERSÉ UNE EXPLICATION** : `lecon-11` q4 affirmait que `WHERE place_id = 12`
+      « **ne peut pas exploiter** » un index sur `(representation_id, place_id)`. Sur 90 000 billets
+      (300 × 300) après `ANALYZE`, le plan est
+      `SEARCH billet USING COVERING INDEX (ANY(representation_id) AND place_id=?)` et la requête
+      passe de **2,18 ms à 0,27 ms — 8 fois plus vite grâce à l'index déclaré inutilisable**. La
+      règle du préfixe gauche interdit d'**entrer** par la gauche, pas de s'en servir (MySQL 8.0.13
+      a le *skip scan*, et la documentation PostgreSQL dit qu'un B-tree multicolonne sert
+      n'importe quel sous-ensemble de ses colonnes). Énoncé et explication **bornés** plutôt que
+      retournés — le témoin le justifie : un index qui *commence* par `place_id` rend 0,093 ms, donc
+      le composite reste un pis-aller. **Les six autres occurrences de l'absolue** ont été corrigées
+      dans le corps, le SVG, l'`aria-label`, la solution de l'exercice 2, le tableau mémo et le récap.
+
+      ⚠️⚠️ **PUIS LA CORRECTION A CASSÉ TROIS BLOCS SQL, ET C'EST LA LEÇON DE MÉTHODE DE CETTE
+      PASSE.** Retirer `place.salle_id` en `lecon-04` et `lecon-09` a rendu **inexécutables** deux
+      requêtes de `lecon-10` et une de `lecon-13`, restées sur `p.salle_id` — *le défaut fondateur
+      reparu par la bande*, dans des fichiers hors des lots corrigés, à cause d'une correction juste.
+      Trouvé parce qu'un correcteur a **signalé au-delà de son mandat** au lieu de s'arrêter à son
+      lot ; vérifié par exécution (`no such column: p.salle_id`) ; réparé en passant par la zone.
+      Les trois requêtes rendent **15**, exactement le chiffre que la prose de `lecon-10` annonce.
+      **Retenir : une correction de schéma se propage à tout le cours, jamais au seul fichier
+      corrigé — chercher le nom de la colonne retirée dans les quinze leçons, pas dans les deux.**
+
+      **LE PREMIER MOTEUR SQL DE LA CHAÎNE.** `scratchpad/b4b-sql.js` donne **SQLite 3.49.1** sous
+      Node, sans réseau : c'est le `sql.js` embarqué du site (V14), chargé depuis son base64 avec
+      `wasmBinary` — le `.wasm` n'existe pas sur le disque. Une centaine d'exécutions sur les trois
+      vagues. **Ce que ça a rapporté** : `PRAGMA foreign_keys` OFF par défaut, `UNIQUE` contre index
+      ordinaire, les quatre `ON DELETE`, le préfixe gauche, la non-sargabilité de `lower(email)`,
+      `ADD COLUMN NOT NULL` sans `DEFAULT`, un compteur dénormalisé qui diverge en silence (97
+      contre 98), un `TEXT PRIMARY KEY` qui accepte **deux** lignes de clé `NULL`, et un identifiant
+      supprimé **réattribué** sans `AUTOINCREMENT` — les deux derniers contredisant le corps de
+      `lecon-05`, qui nomme SQLite trois fois.
+      ⚠️ **Et ce qu'il ne prouve PAS** : toute la `lecon-13` (isolation, `SELECT … FOR UPDATE`,
+      `READ COMMITTED`) est refusée jusqu'à la syntaxe. Le relecteur l'a dit explicitement au lieu
+      de deviner, et c'est la bonne conduite.
+
+      **41 prises rendues par 6 relecteurs, 30 retenues, 5 refusées après mesure, 6 arbitrées.**
+      Les refus comptent autant que les prises :
+      - **`lecon-09` q2, la portée de la 2NF** (« seulement quand la clé primaire est composite ») :
+        techniquement fondé — la 2NF se définit sur *toutes* les clés candidates — mais **refusé**,
+        parce que le corps de la leçon dit la même chose à **cinq endroits** dont la charnière d'un
+        corrigé d'exercice, que c'est la définition des manuels, et qu'**aucun distracteur ne devient
+        vrai**. Corriger le seul QCM aurait fabriqué la contradiction qu'on chasse. ⚠️ Le prix est
+        réel et consigné : la table phare `billet` a une clé primaire simple **plus** une clé
+        candidate composite, donc `spectacle_titre` y est aussi une dépendance *partielle*.
+      - **`lecon-11` q5** (index peu sélectif) : le relecteur a **refait la mesure et réfuté**
+        l'inquiétude de l'écrivain — SQLite choisit l'index même à 95 % de sélectivité, mais aucune
+        option n'affirme rien sur le choix de l'optimiseur, et la bonne réponse (« l'index n'évite
+        presque aucune lecture ») est même **en dessous** de la vérité mesurée (14,0 ms sans index
+        contre 15,9 ms avec).
+      - **`lecon-14` q2** : le relecteur affirmait « SQLite refuse même sur une table vide ». **Le
+        correcteur l'a mesuré et l'a réfuté** : en 3.49.1 c'est accepté sur table vide et refusé dès
+        la première ligne. Le seul moteur exécutable *confirmait* donc la bonne réponse. **Une prise
+        de relecteur réfutée par le correcteur : la contradiction doit elle-même être contredite.**
+
+      ⚠️ **TROIS CORRECTEURS SUR QUATRE ONT FABRIQUÉ UN INDICE DE FORME EN APPLIQUANT MON PROPRE
+      TEXTE, L'ONT MESURÉ, ET L'ONT DÉFAIT.** Les textes que j'avais dictés supprimaient sans y
+      penser la seule incise, les seuls guillemets ou la seule parenthèse hors bonne réponse : sur
+      trois lots, « désigne la SEULE bonne réponse » remontait de 0,0 % à 3,8-6,7 %. **C'est la
+      preuve que le contrôle par la mesure doit être remis en consigne à CHAQUE étage, y compris
+      quand c'est le coordinateur qui écrit le texte.** Le jugement n'est pas exempt de la mesure.
+
+      ⚠️ **UN PIÈGE D'OUTILLAGE NEUF, trouvé par deux correcteurs indépendamment** :
+      `grep -c $'\r' fichier` sous Git Bash rend **le nombre total de lignes**, pas le nombre de
+      lignes contenant un CR. Deux correcteurs ont cru l'arbre en CRLF et ont construit leurs ancres
+      en `\r\n` — zéro occurrence trouvée. **Compter les octets 13 avec Node est la seule mesure
+      fiable.** (Famille de `git stash` convertit l'arbre en CRLF, trouvé sur `nodejs`.)
+
+      **Contrôles** : `mesure-qcm-intouchable` = **11 atteintes, toutes déclarées d'avance dans le
+      jugement et aucune de plus** ; `verif.js --rapide` **26 étapes tout vert (85,2 s)** ;
+      `verif-html` **0** ; `verif-donnees` **0 erreur** ; `verif-normatif` **60/60** ;
+      `verif-qcm-biais-mutations` **7/7** ; `verif-rendu` **42 mesures (7 pages × 3 largeurs ×
+      2 thèmes), 0 erreur, réseau coupé** ; cliquet refigé, `bdd` marqué `traite` (**14 cours**).
+
+      ⚠️ **`doc/lecon-03` s'est repérimée une 5ᵉ fois** (73,0 % → **72,0 %**, 4 458 → **4 396**) —
+      et cette fois le repérage a montré mieux : **son QCM chiffrait le taux à DEUX endroits que
+      `verif-normatif` ne garde pas**, dont une **bonne réponse** qui disait « huit cas sur dix »
+      pour un taux mesuré à 72,0 %, et qui deviendra franchement fausse à mesure que B4 avance. Le
+      chiffre en a été retiré ; il ne reste qu'aux trois endroits surveillés. **La leçon D1 se
+      complète : injecter un chiffre par marqueur ne suffit pas, il faut que TOUTES ses occurrences
+      soient sous le vérificateur — celles qui ne le sont pas pourrissent en silence.**
+
+      **CE QUI RESTE À FAIRE SUR B4, mesuré après `bdd`** : `projets-js` (84 q, 98,8 %), `react`
+      (86, 92,3 %), `git` (80, 93,8 %), `ruby` (84, 89,9 %), `sql` (82, 91,9 %), `java` (77,
+      94,2 %), puis la longue traîne. ⚠️ **`stats` (72 q, 99,3 %) reste le cours-témoin de
+      `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.**
+      **71 cours sur 90 restent au-dessus de 60 %**, et **4 441 questions sur 6 167 restent
+      devinables à la longueur**. La case reste **décochée** : quatorze cours sur les quarante que
+      la cible de B1 demande.
 
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
