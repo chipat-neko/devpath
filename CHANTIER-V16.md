@@ -3857,6 +3857,167 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       porter la leçon de cette passe : **traiter la longueur, l'incise ET le point-virgule dans
       la même vague**, sinon il en faut deux.
 
+      ---
+
+      **`cpp` — FAIT le 2026-09-06. LE COURS EST CLOS : 92,9 % → 25,3 %.** 23 leçons,
+      **77 questions** (69 en QCM de leçon, 8 en bilan), **212 distracteurs réécrits sur 231**.
+      Six écrivains sur lots disjoints, **UNE SEULE VAGUE**, puis quatre contradicteurs.
+
+      | indice, sur les 77 questions | avant | après |
+      |---|---:|---:|
+      | la plus longue | **92,9 %** | **25,3 %** |
+      | rangs de longueur | **72 / 4 / 0 / 1** | **20 / 19 / 19 / 19** (la cible, à l'unité) |
+      | la plus détaillée (rendement) | 81,5 % (95,0 %) | **17,6 % (0,0 %)** |
+      | le mot technique exclusif | 73,1 % | **20,6 %** |
+      | l'incise entre parenthèses (rendement) | 72,4 % (**98,0 %**) | **29,5 % (0,0 %)** |
+      | l'écho de la question | 69,4 % | **21,4 %** |
+      | le point-virgule (rendement) | 50,3 % (**100,0 %**, 26 questions) | **25,6 % (50,0 %, 2 questions)** |
+      | pire stratégie du cours | **92,9 %** | **31,5 %** (cible ≤ 60 %) |
+      | manquements à la clause S3 | 219 hors 70-130 % | **0** (8 questions exemptées, bonne réponse < 20 car.) |
+
+      **Global du site : 65,8 % → 65,0 %.** `mesure-qcm-intouchable` : **3 atteintes, toutes
+      déclarées d'avance** (voir ci-dessous), aucune autre sur les 77 questions.
+
+      ⚠️⚠️ **CE QUE CETTE PASSE PROUVE, ET C'EST LA LEÇON DU TOUR PRÉCÉDENT QUI SE PAIE :
+      UNE SEULE VAGUE A SUFFI.** `java` avait exigé **deux** vagues d'écriture parce que sa
+      consigne disait « pas la SEULE à porter une incise » au lieu de « autant d'incises que la
+      bonne réponse ». La consigne de `cpp` (`scratchpad/CONSIGNE-CPP.md`) portait dès le
+      premier lot la formulation corrigée **et** le point-virgule, dans le même tableau de sept
+      indices. Résultat mesuré : longueur, incise, ponctuation, point-virgule, mot technique et
+      écho fermés **en une passe**, sans reprise. C'est la vérification directe de la règle
+      n° 2 de B3 — *une leçon écrite dans ce plan ne se repaie que si elle est remise EN
+      CONSIGNE au tour suivant*. Trois écrivains sur six sont même allés au-delà de la consigne
+      en portant les **quatre** options au même nombre d'incises (le cas neutre), ce qui
+      explique le 0,0 % de rendement plutôt qu'un 50 %.
+
+      **LA PRISE QUI VAUT LE DÉPLACEMENT : UNE BONNE RÉPONSE FAUSSE, ET LA MÊME DOCTRINE FAUSSE
+      RÉPÉTÉE EN DIX ENDROITS DE LA MÊME LEÇON.** `lecon-23` enseignait — dans son code, son
+      callout « Piège fréquent », son antisèche, deux entrées de glossaire, son récapitulatif,
+      sa question de compréhension **et la bonne réponse de son QCM** — que passer un
+      `std::error_code&` à `recursive_directory_iterator` fait sauter les dossiers illisibles.
+      C'est faux, et la preuve est normative, pas expérimentale (⚠️ **aucun compilateur C++
+      n'est installé ici** : `g++`, `gcc`, `cl` absents) :
+
+      1. l'`error_code` n'est passé qu'au **constructeur** — il ne couvre que l'ouverture de la
+         racine ;
+      2. la boucle `range-for` avance par `operator++()`, qui **n'a pas** d'argument
+         `error_code` et relève donc de [fs.err.report] : *les fonctions sans argument
+         `error_code` signalent les erreurs en levant*. La surcharge non lançante s'appelle
+         `increment(error_code&)` et n'est jamais employée ici ;
+      3. le vrai remède est `directory_options::skip_permission_denied` — **absent des 23
+         leçons du cours** ;
+      4. la leçon 21 du même cours énonce pourtant la règle juste (« la version qui prend un
+         `std::error_code&` ne lève rien ») pour une **opération** ; la leçon 23 l'étend
+         abusivement à un **itérateur**, dont chaque incrément est une opération distincte.
+
+      **Exception déclarée d'avance** : énoncé, bonne réponse et explication de `lecon-23` q3
+      réécrits — les 3 seules atteintes à l'intouchable de toute la passe. Rang de la question
+      **inchangé (3)**, fourchette tenue (107 % / 113 % / 117 %). Corrigés dans la foulée : le
+      code des deux blocs (l'option de parcours ajoutée, `analyser` rend l'`ec` à l'appelant),
+      l'`error_code` **qui n'était jamais testé** — le programme aurait affiché « 0 fichiers,
+      0 octets » sur une racine illisible, exactement le défaut que la leçon 19 dénonce — et la
+      mention des « boucles de liens symboliques », impossibles tant qu'on ne demande pas
+      `follow_directory_symlink`.
+
+      **DEUX DISTRACTEURS VRAIS DANS LE QCM BILAN, tous deux antérieurs à cette passe.**
+      (a) q7 « Quel outil écrit du code générique sur le type ? » proposait **`auto`** comme
+      leurre : c'en est un vrai depuis la lambda générique (C++14) et le template abrégé
+      (C++20), et `lecon-16` du même cours l'enseigne (`void f(std::integral auto x)`) sept
+      leçons plus tôt — remplacé par `typedef`, rang 0 conservé. (b) q2 « Comment afficher sur
+      la sortie standard ? » proposait **« printf seul »** : `std::printf` affiche bel et bien
+      sur la sortie standard — remplacé par `std::cerr << x` (sortie d'**erreur**), qui a le
+      mérite d'être faux *et* pédagogique.
+
+      **DIX-SEPT DÉFAUTS DE CORPS DE LEÇON, tous prouvés par calcul, par citation normative ou
+      par contradiction interne citée des deux côtés.** Les cinq qui comptent :
+      - **`lecon-20` : un `long` qui déborde de 2 328 306 fois.** `for (long i = 0; i <
+        100'000'000; ++i) s += i` somme **4 999 999 950 000 000**, contre 2 147 483 647 pour un
+        `long` 32 bits — c'est-à-dire **tout Windows** (modèle LLP64), la machine même où ce
+        site est développé. Débordement signé = comportement indéfini, et le programme
+        **affiche** la valeur. Passé en `long long`.
+      - **`lecon-11` : le programme des ranges ne compile pas.** `std::ranges::sort` est
+        déclaré dans `<algorithm>` ([algorithm.syn]), jamais dans `<ranges>` — et la même leçon
+        écrit la règle deux écrans plus bas (« Oublier l'en-tête : `<algorithm>` pour
+        `sort`/`find` »), puis la viole. Sortie annoncée pour un programme qui n'atteint pas
+        l'édition de liens.
+      - **`lecon-10` : le schéma du `vector` illustrait la réallocation avec le seul cas où
+        elle n'a PAS lieu.** `size = 3`, `capacity = 4`, un `push_back` → 4 éléments :
+        [vector.modifiers] réalloue *si new size > old capacity*, or 4 n'est pas > 4. Le bloc
+        ne bouge pas, les itérateurs restent valides. Le SVG montre désormais **cinq** éléments
+        et deux `push_back`.
+      - **`lecon-17` : ~2 millions de copies au lieu de ~1.** Sous le doublement que le
+        commentaire pose lui-même, le cumul vaut 1+2+4+…+524 288 = **2²⁰ − 1 = 1 048 575** :
+        avec un facteur de croissance 2, le total est toujours *inférieur* à n, jamais 2n.
+      - **`lecon-16` : 8,5 présenté comme une « approximation » de 4**, soit +112,5 % d'erreur.
+        `x/2 + 1/2` n'est un pas de Newton correct qu'au voisinage de 1 : la valeur de
+        démonstration passe de 16.0 à 2.0 (**1.5** contre **1.41421**, erreur +6 %).
+
+      Les douze autres : `lecon-12` (le `return` annoté « FUITE » est **inatteignable** —
+      `new int[n]` avec `n < 0` lève `bad_array_new_length` **avant** le `if`, et rien n'a été
+      alloué) ; `lecon-15` (le commentaire « les jthread se joignent ici » désignait la sortie
+      du bloc, alors que c'est `threads.clear()` qui joint — sans quoi la sortie annoncée
+      `400000` ne serait pas garantie) ; `lecon-14` (« Cette leçon clôt le parcours » : le cours
+      compte **23** leçons, neuf la suivent, et son « Pour aller plus loin » renvoie vers des
+      sujets traités trois et quatre leçons plus loin) ; `lecon-18` (« Contrairement à Rust ou
+      Java » : le JDK n'a **aucun** framework de test, et `pages/java/lecon-14.html` du même
+      site montre JUnit en **dépendance Maven**) ; `lecon-03` (le callout enseignait *l'inverse*
+      du vrai piège : sans surcharge `bool` il n'y a aucune ambiguïté, `const char*` n'étant
+      convertible ni en `int` ni en `double` ; et **avec** une surcharge `bool`, la conversion
+      standard bat la conversion définie par l'utilisateur [over.ics.rank] — donc `bool` gagne
+      **silencieusement**, ce qui est bien plus dangereux qu'une erreur) ; `lecon-03` encore
+      (`~12.566` : `std::cout` affiche 6 chiffres significatifs, donc **12.5664**, comme
+      `lecon-06` l'écrit trois fois pour le même calcul) ; `lecon-06` (l'indice
+      `std::?????_ptr` donnait **5** points d'interrogation pour les **6** lettres d'`unique` —
+      la convention du cours est un `?` par lettre, `lecon-01` donne `std::c???` pour `cout`) ;
+      `lecon-08` (avec un retour par référence, `std::move` ne peut pas fabriquer de copie : au
+      mieux une erreur de compilation, au pire une référence pendante — le vrai cas est la
+      locale déclarée `const`, dont `const T&&` retombe sur le constructeur de copie) ; plus la
+      solution de l'exercice 1 de `lecon-23`, qui **cassait le `std::sort` du programme dont
+      elle est le correctif** (`ParExt` n'a ni `operator>` ni `operator<=>`, et la solution
+      sautait précisément le comparateur).
+
+      ⚠️ **CE QUE J'AI REFUSÉ AUX CONTRADICTEURS.** Cinq prises sérieuses, écartées parce
+      qu'une bonne réponse et un énoncé sont **intouchables** dans ce protocole : `lecon-04`
+      (« la liste d'initialisation est obligatoire pour les membres `const` » — faux depuis les
+      initialiseurs de membre par défaut de C++11, mais c'est une simplification pédagogique
+      assumée) ; `lecon-06` q2 (« seul `~Base` est appelé » sous un comportement **indéfini**,
+      où rien n'est garanti — la réponse commence toutefois par « Comportement indéfini : ») ;
+      `lecon-15` q2 (« acquisition ordonnée » : `std::lock` n'ordonne rien,
+      [thread.lock.algorithm] ne spécifie pas l'ordre — imprécision réelle, à reprendre dans
+      une passe de fond) ; `lecon-03` q2 et q3 (deux énoncés dont trois options sur quatre
+      satisfont le critère écrit). Écartée aussi la prise sur le SVG de `lecon-07`
+      (`operator[]` rangé « par référence » alors que sa version `const` rend par valeur) : le
+      corps de la même leçon décrit correctement les deux surcharges. **22 soupçons non
+      prouvés** ont été rendus et laissés tels quels, faute de compilateur — dont les drapeaux
+      de modules de GCC et la dévirtualisation à `-O2`.
+
+      **UN OUTIL NEUF, né d'un angle mort du protocole** : `mesure-biais-qcm.js --seul=<cours>`
+      rend les **19 stratégies avec leur colonne RENDEMENT sur UN seul cours**. Sans lui, le
+      point-virgule de `cpp` était **invisible** : `--cours` ne rend que la longueur et la
+      meilleure stratégie, et `--lots=23 --cours=cpp` n'affiche que ce qui dépasse 60 % de
+      réussite — or le point-virgule plafonnait à 50,3 % de réussite pour **100,0 % de
+      rendement** sur les 26 questions qu'il tranchait. Le même piège que le cours `doc` avait
+      révélé sur la colonne « réussite », mais à l'échelle du cours.
+
+      **Contrôles** : `mesure-qcm-intouchable` **3 atteintes déclarées, 0 autre** ; **24 blocs
+      JSON valides**, 462 chaînes sans caractère de contrôle, sans U+00A0, sans `&nbsp;` ;
+      `verif-html` **0 problème sur 1 629 fichiers** ; `verif-donnees` **0 erreur** (2
+      avertissements préexistants) ; `verif-qcm-biais` OK, référence refigée, **`cpp` marqué
+      `traite` — 23 cours traités** ; `verif-qcm-biais-mutations` **8/8**, fichiers restaurés ;
+      `verif.js --rapide` **51,9 s, 26 étapes tout vert** ; index `quiz`/`search`/`searchlite`/
+      `flashcards`/`antiseches` régénérés `--fresh` **deux fois** ; **0 BOM, 0 CRLF, 0 URL CDN**.
+      ⚠️ **`doc/lecon-03` s'est repérimé une 6ᵉ fois** : **56,7 % → 55,6 %**, **3 460 → 3 391**
+      manquements à S3, **10 mentions** (dont l'énoncé d'un exercice et l'explication d'un QCM),
+      et le nombre s'écrit avec une **espace insécable U+00A0 littérale** — le piège de la passe
+      `java` s'est représenté à l'identique, et c'est le vérificateur qui l'a fait voir.
+
+      **CE QUI RESTE** : **67 cours non traités**, dont les plus nocifs par questions devinables
+      sont `csharp` (77 q, 93,5 %), `stats` (72 q, 99,3 %), `data-eng` (70 q, 98,6 %), `php`
+      (78 q, 88,9 %) et `nosql` (99,1 %). ⚠️ **`stats` reste le cours-témoin de
+      `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.** `csharp` est le
+      dernier des sept cours à **100 % sur le point-virgule** encore intact — sa consigne doit
+      porter le tableau des sept indices tel qu'il vient d'être validé sur `cpp`.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
