@@ -148,7 +148,7 @@
 <li><strong>Typer</strong> — les dates deviennent de vrais <code>TIMESTAMP</code>, les nombres de vrais nombres. On calcule aussi les colonnes dérivées utiles, comme la <strong>durée en minutes</strong>.</li>
 <li><strong>Normaliser</strong> — on uniformise les valeurs&nbsp;: <code>type</code> ramené à <code>electrique</code> / <code>mecanique</code> même si la source a écrit «&nbsp;Électrique&nbsp;» ou «&nbsp;ELEC&nbsp;».</li>
 <li><strong>Dédoublonner</strong> — on ne garde qu'<strong>une</strong> ligne par <code>trip_id</code>, car la source émet parfois le même trajet deux fois.</li>
-<li><strong>Écarter l'invalide</strong> — les lignes à durée négative ou à champ manquant ne sont pas simplement effacées&nbsp;: on les envoie en <strong>quarantaine</strong> (voir plus bas).</li>
+<li><strong>Écarter l'invalide</strong> — les lignes à durée négative, à champ manquant ou à date illisible ne sont pas simplement effacées&nbsp;: on les envoie en <strong>quarantaine</strong> (voir plus bas), avec leur motif.</li>
 </ul>
 <p>On ajoute souvent une <strong>jointure de conformité</strong>&nbsp;: rattacher chaque trajet à sa station de départ pour récupérer son <code>quartier</code> depuis le référentiel. «&nbsp;Conformité&nbsp;» au sens d'aligner les données sur un référentiel commun, pas encore d'agréger. Voici un silver plus riche que celui de la leçon 3&nbsp;: il normalise <code>type</code>, calcule la durée, et <strong>marque</strong> les lignes rejetées plutôt que de les jeter en silence.</p>
 
@@ -158,8 +158,12 @@ CREATE TABLE trajets_nettoyes AS
 WITH type_calc AS (
   SELECT
     trip_id,
-    CAST(start AS TIMESTAMP)                              AS debut,
-    CAST("end" AS TIMESTAMP)                              AS fin,
+    start                                                 AS start_brut,
+    "end"                                                 AS fin_brute,
+    -- TRY_CAST rend NULL au lieu d'échouer : un format invalide devient VISIBLE
+    -- au lieu de faire planter la requête (ou de disparaître sans bruit).
+    TRY_CAST(start AS TIMESTAMP)                          AS debut,
+    TRY_CAST("end" AS TIMESTAMP)                          AS fin,
     station_start,
     station_end,
     bike,
@@ -178,8 +182,9 @@ avec_duree AS (
     DATE_DIFF('minute', debut, fin)                      AS duree_min,
     -- on MARQUE la validité au lieu de filtrer en silence
     CASE
-      WHEN debut IS NULL OR fin IS NULL THEN 'champ_manquant'
-      WHEN fin &lt;= debut                THEN 'duree_negative'
+      WHEN start_brut IS NULL OR fin_brute IS NULL THEN 'champ_manquant'
+      WHEN debut IS NULL OR fin IS NULL            THEN 'format_invalide'
+      WHEN fin &lt;= debut                            THEN 'duree_negative'
       ELSE 'ok'
     END                                                  AS statut
   FROM type_calc
@@ -191,22 +196,31 @@ QUALIFY ROW_NUMBER() OVER (            -- et une seule ligne par trip_id (dédou
     PARTITION BY trip_id ORDER BY debut
 ) = 1;</code></pre></figure>
 
-<p>Le détail qui compte&nbsp;: les lignes <code>statut &lt;&gt; 'ok'</code> ne disparaissent pas dans le néant. On les écrit dans une table de <strong>quarantaine</strong>, pour pouvoir compter, expliquer et surveiller ce qu'on rejette. Une donnée écartée en silence est une donnée qu'on ne saura jamais expliquer.</p>
+<p>Le détail qui compte&nbsp;: les lignes <code>statut &lt;&gt; 'ok'</code> ne disparaissent pas dans le néant. On les écrit dans une table de <strong>quarantaine</strong>, pour pouvoir compter, expliquer et surveiller ce qu'on rejette. Une donnée écartée en silence est une donnée qu'on ne saura jamais expliquer. D'où une exigence facile à oublier&nbsp;: la quarantaine doit tester <em>exactement</em> les mêmes expressions que le silver. Si le silver juge sur la valeur <em>castée</em> et la quarantaine sur la colonne <em>brute</em>, une date au format impossible (<code>31/04/2026</code>) échappe aux deux — et s'évapore.</p>
 
 <figure class="code-block" data-file="silver_quarantaine.sql"><pre><code class="language-sql">-- QUARANTAINE : on GARDE les lignes rejetées, avec la raison du rejet.
--- Elles ne polluent pas le silver, mais restent visibles et dénombrables.
+-- Elle teste EXACTEMENT les mêmes expressions que le silver (mêmes TRY_CAST) :
+-- une ligne ne peut donc pas manquer aux DEUX tables à la fois.
 CREATE TABLE trajets_quarantaine AS
+WITH castee AS (
+  SELECT
+    trip_id, start, "end", station_start, station_end,
+    TRY_CAST(start AS TIMESTAMP) AS debut,
+    TRY_CAST("end" AS TIMESTAMP) AS fin
+  FROM bronze_trajets
+)
 SELECT
     trip_id,
     start, "end", station_start, station_end,
     CASE
       WHEN start IS NULL OR "end" IS NULL THEN 'champ_manquant'
-      WHEN CAST("end" AS TIMESTAMP) &lt;= CAST(start AS TIMESTAMP) THEN 'duree_negative'
+      WHEN debut IS NULL OR fin IS NULL   THEN 'format_invalide'
+      ELSE 'duree_negative'
     END AS raison_rejet
-FROM bronze_trajets
-WHERE start IS NULL
-   OR "end" IS NULL
-   OR CAST("end" AS TIMESTAMP) &lt;= CAST(start AS TIMESTAMP);</code></pre></figure>
+FROM castee
+WHERE start IS NULL OR "end" IS NULL      -- champ manquant
+   OR debut IS NULL OR fin IS NULL        -- ex. start = '31/04/2026' : date qui n'existe pas
+   OR fin &lt;= debut;                       -- durée nulle ou négative</code></pre></figure>
 
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Surveille le <strong>taux de quarantaine</strong> comme un signal de santé. Si Vélociti rejette d'habitude 0,3&nbsp;% de ses trajets et qu'un matin le chiffre grimpe à 12&nbsp;%, ce n'est pas ton silver qui a un bug&nbsp;: c'est la <em>source</em> qui a changé (nouveau format de date, colonne renommée). La quarantaine transforme un problème invisible en un chiffre qu'une alerte peut attraper. On en reparle en <a href="lecon-10.html">leçon 10</a>.</p></div></div>
 
@@ -215,7 +229,7 @@ WHERE start IS NULL
 <p>Chez Vélociti, deux golds nourrissent le tableau de bord municipal&nbsp;:</p>
 <ul>
 <li><code>frequentation_station_jour</code> — le nombre de trajets <strong>par station et par jour</strong>. Granularité&nbsp;: une ligne = (station, jour). Répond à «&nbsp;quelles stations sont les plus fréquentées&nbsp;?&nbsp;».</li>
-<li><code>rotation_velos</code> — la <strong>rotation</strong> de chaque vélo&nbsp;: combien de trajets il enchaîne, quelle distance dans le temps. Granularité&nbsp;: une ligne = un vélo (sur une période). Répond à «&nbsp;quels vélos tournent le plus&nbsp;? lesquels dorment&nbsp;?&nbsp;».</li>
+<li><code>rotation_velos</code> — la <strong>rotation</strong> de chaque vélo&nbsp;: combien de trajets il enchaîne sur une <strong>fenêtre datée</strong> (ici le mois de mai). Granularité&nbsp;: une ligne = un vélo, pour cette fenêtre. Répond à «&nbsp;quels vélos tournent le plus&nbsp;? lesquels dorment&nbsp;?&nbsp;» — à condition de diviser par les jours de la fenêtre, pas par les jours où le vélo a roulé.</li>
 </ul>
 <p>Deux questions différentes, deux granularités différentes, donc <strong>deux tables</strong> — pas une seule qu'on tordrait dans tous les sens.</p>
 
@@ -229,15 +243,20 @@ SELECT
 FROM trajets_nettoyes                  -- on part du SILVER, jamais du bronze
 GROUP BY station_start, CAST(debut AS DATE);
 
--- GOLD n°2 : rotation des vélos (une ligne = un vélo).
+-- GOLD n°2 : rotation des vélos sur une FENÊTRE datée (une ligne = un vélo).
+-- On divise par les 31 jours de la fenêtre, PAS par le nombre de jours où le
+-- vélo a roulé : sinon un vélo vu une seule fois afficherait 1,00 trajet/jour,
+-- autant qu'un vélo qui roule tous les jours — et la colonne ne dirait plus
+-- « lesquels dorment ? ». Un vélo à 0,03 dort ; un vélo à 4,20 tourne.
 CREATE TABLE rotation_velos AS
 SELECT
     bike                               AS velo,
     COUNT(*)                           AS nb_trajets,
-    ROUND(COUNT(*) * 1.0
-          / COUNT(DISTINCT CAST(debut AS DATE)), 2) AS trajets_par_jour,
+    ROUND(COUNT(*) * 1.0 / 31, 2)      AS trajets_par_jour,
     MAX(debut)                         AS dernier_trajet
 FROM trajets_nettoyes
+WHERE debut &gt;= DATE '2026-05-01'       -- fenêtre EXPLICITE : le mois de mai
+  AND debut &lt;  DATE '2026-06-01'       -- (31 jours), bornes du dénominateur
 GROUP BY bike;</code></pre></figure>
 
 <p>Note que les deux requêtes partent de <code>trajets_nettoyes</code> — <strong>jamais</strong> du bronze. Le gold fait <em>confiance</em> au silver&nbsp;: il n'a pas à re-typer ni à re-dédoublonner, ce travail est déjà fait une bonne fois. C'est tout l'intérêt d'un silver propre&nbsp;: il devient le socle commun de tous les golds. Voici le DAG complet de Vélociti, vu par couches.</p>
@@ -289,35 +308,40 @@ GROUP BY bike;</code></pre></figure>
 <li><strong>Tester entre les couches</strong> — vérifier à la frontière bronze→silver (le silver a-t-il moins de doublons&nbsp;?) et silver→gold (les totaux se recoupent-ils&nbsp;?). Les tests sont le filet du pipeline&nbsp;; la <a href="lecon-10.html">leçon 10</a> y est consacrée.</li>
 <li><strong>Ne jamais écraser le brut</strong> — le bronze est append-only&nbsp;; toutes les autres couches se <em>recalculent</em> à partir de lui, jamais l'inverse.</li>
 </ul>
-<p>«&nbsp;Tester entre les couches&nbsp;» est le principe le plus vite oublié. Un test simple, décisif, tient en une soustraction&nbsp;: le nombre de lignes du <strong>bronze</strong> doit se <strong>répartir</strong> exactement entre le silver (les valides gardées) et la quarantaine (les rejetées) — aucune ligne ne doit s'évaporer en silence. Voici ce contrôle de conservation, en quelques lignes de Python que l'orchestrateur peut lancer après chaque construction du silver.</p>
+<p>«&nbsp;Tester entre les couches&nbsp;» est le principe le plus vite oublié. Un test simple, décisif, tient en une addition&nbsp;: le nombre de lignes du <strong>bronze</strong> doit se <strong>répartir</strong> exactement entre le silver (les valides gardées), la quarantaine (les rejetées) et les doublons retirés au dédoublonnage — aucune ligne ne doit s'évaporer en silence. Le nombre de doublons doit être <em>mesuré</em> par la requête silver, jamais déduit de la soustraction&nbsp;: sinon n'importe quelle perte se déguise en doublon. Voici ce contrôle de conservation, en quelques lignes de Python que l'orchestrateur peut lancer après chaque construction du silver.</p>
 
 <figure class="code-block" data-file="controle_entre_couches.py"><pre><code class="language-python">"""Contrôle de conservation bronze -&gt; silver : rien ne disparaît sans trace.
 Renvoie un rapport ; lève une alerte si le compte ne tombe pas juste."""
 
-def controler_conservation(n_bronze: int, n_silver: int, n_quarantaine: int) -&gt; dict:
-    # après dédoublonnage, silver + quarantaine peut être INFÉRIEUR au bronze
-    # (les doublons retirés), mais JAMAIS supérieur : on ne crée pas de lignes.
-    fuite = n_bronze - (n_silver + n_quarantaine)   # doublons retirés attendus &gt;= 0
+def controler_conservation(n_bronze: int, n_silver: int, n_quarantaine: int,
+                           n_doublons: int) -&gt; dict:
+    # Le compte doit tomber EXACTEMENT :
+    #   bronze = silver + quarantaine + doublons retirés au dédoublonnage.
+    # n_doublons est MESURÉ par la requête silver, pas déduit de la
+    # soustraction : sinon la moindre perte se déguiserait en « doublon ».
+    fuite = n_bronze - (n_silver + n_quarantaine + n_doublons)
     taux_rejet = n_quarantaine / n_bronze if n_bronze else 0.0
     rapport = {
         "bronze": n_bronze,
         "silver": n_silver,
         "quarantaine": n_quarantaine,
-        "doublons_retires": fuite,
+        "doublons_retires": n_doublons,
+        "fuite": fuite,
         "taux_rejet": round(taux_rejet, 4),
     }
-    # garde-fous : on n'invente pas de lignes, et le rejet reste sous un seuil
-    if fuite &lt; 0:
-        raise ValueError("silver + quarantaine &gt; bronze : des lignes ont été inventées !")
+    # garde-fous : le compte tombe juste, et le rejet reste sous un seuil
+    if fuite != 0:
+        raise ValueError(f"conservation rompue : {fuite} ligne(s) inexpliquée(s) !")
     if taux_rejet &gt; 0.05:
         raise ValueError(f"taux de rejet anormal : {taux_rejet:.1%} (source cassée ?)")
     return rapport
 
 # Exemple d'un jour sain chez Vélociti (~150 000 trajets bruts) :
-print(controler_conservation(n_bronze=150000, n_silver=149100, n_quarantaine=450))
-# -&gt; doublons_retires = 450, taux_rejet = 0.003 : tout est expliqué.
+print(controler_conservation(n_bronze=150000, n_silver=149100,
+                             n_quarantaine=450, n_doublons=450))
+# -&gt; fuite = 0, taux_rejet = 0.003 : tout est expliqué.
 </code></pre></figure>
-<p>Ce test attrape deux pannes d'un coup&nbsp;: une transformation boguée qui <em>duplique</em> des lignes (le compte dépasse le bronze), et une source qui se dégrade (le taux de rejet explose). On développera cette idée de vérification systématique en <a href="lecon-10.html">leçon 10</a>.</p>
+<p>Ce test attrape deux pannes d'un coup&nbsp;: une transformation boguée qui <em>duplique</em> ou <em>perd</em> des lignes (le compte ne tombe plus juste, dans un sens ou dans l'autre), et une source qui se dégrade (le taux de rejet explose). On développera cette idée de vérification systématique en <a href="lecon-10.html">leçon 10</a>.</p>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 232" role="img" aria-label="Une même ligne de trajet suivie à travers les trois couches, de gauche à droite. À gauche, en bronze : une ligne brute, trip T-91, start 08:15, end vide, type ELEC. Au milieu, en silver : la même ligne rejetée en quarantaine car la fin est manquante, tandis qu'une autre ligne T-90 valide passe, typée et avec durée 12 minutes. À droite, en gold : la ligne valide T-90 est comptée dans un agrégat, station A, jour, nb_trajets plus un. Des flèches relient les étapes.">
@@ -454,10 +478,10 @@ print(controler_conservation(n_bronze=150000, n_silver=149100, n_quarantaine=450
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Quelle couche conserve une copie conforme de la source, append-only et sans aucune logique métier ?","a":["Le bronze : il enregistre le brut tel quel (doublons et erreurs compris) et sert de point de reprise","Le silver : c'est là qu'on type et qu'on dédoublonne (une ligne par trip_id)","Le gold : il stocke les agrégats prêts pour les tableaux de bord municipaux","La quarantaine : elle garde les lignes rejetées avec leur motif de rejet"],"correct":0,"explain":"Le bronze est une copie fidèle de la source, append-only, sans filtre ni calcul. C'est ce qui permet de rejouer, d'auditer et de prouver ce que la source a envoyé."},
-  {"q":"Dans la couche silver, que fait-on des trajets à durée négative ou à champ manquant ?","a":["On les écarte du silver mais on les garde en quarantaine, avec leur motif de rejet, pour pouvoir les compter et les expliquer","On les corrige automatiquement en devinant les valeurs manquantes, puis on les fait entrer dans le silver comme si elles étaient valides, sans trace","On les laisse dans le silver mais on les marque d'un drapeau rouge, à charge pour chaque tableau de bord de les exclure lui-même","On les renvoie dans le bronze pour ré-ingestion, quitte à réécrire la journée déjà chargée"],"correct":0,"explain":"Les lignes invalides ne polluent pas le silver, mais ne disparaissent pas non plus : elles vont en quarantaine avec la raison du rejet, ce qui rend le taux de rejet surveillable."},
-  {"q":"Pourquoi Vélociti a-t-il DEUX tables gold (frequentation_station_jour et rotation_velos) plutôt qu'une seule ?","a":["Parce qu'elles répondent à deux questions à des granularités différentes (station-jour vs vélo) : une table par usage, toutes dérivées du même silver","Parce qu'une table SQL ne peut pas dépasser un certain nombre de colonnes (la limite du moteur), ce qui oblige à couper tout agrégat gold en deux tables","Parce que le gold interdit les agrégats dans une même table, chaque comptage devant être écrit à part avant d'être joint au tableau de bord municipal final","Parce que le bronze impose de dupliquer chaque table à l'identique dans le gold, une par source ingérée, sans jamais changer la granularité des lignes reçues"],"correct":0,"explain":"Le principe du gold est « une table par question ». Deux questions, deux granularités, donc deux tables — toutes construites à partir du même silver propre, sans refaire le nettoyage."},
-  {"q":"Quel est le risque si on agrège directement depuis le bronze en sautant le silver ?","a":["On agrège des données non typées, avec doublons et durées négatives : le gold est faux sans qu'on le voie","Rien : sauter le silver rend le pipeline plus rapide, les agrégats du gold corrigeant d'eux-mêmes les doublons du bronze","Le bronze est effacé au passage, puisque le gold consomme ses lignes une à une","Le gold ne peut plus être interrogé en SQL, faute d'un silver déclaré en amont"],"correct":0,"explain":"Le silver est le palier qui rend les golds fiables. Agréger sur du bronze non nettoyé (doublons, mauvais types) produit des chiffres qui semblent propres mais sont faux."}
+  {"q":"Quelle couche conserve une copie conforme de la source, append-only et sans aucune logique métier ?","a":["Le bronze : il enregistre le brut tel quel (doublons et erreurs compris) et sert de point de reprise","Le silver : c'est là qu'on type et qu'on dédoublonne (une ligne par trip_id)","Le gold : il stocke les agrégats prêts pour les tableaux de bord municipaux","La quarantaine : elle garde les lignes rejetées (motif de rejet compris) hors du silver"],"correct":0,"explain":"Le bronze est une copie fidèle de la source, append-only, sans filtre ni calcul. C'est ce qui permet de rejouer, d'auditer et de prouver ce que la source a envoyé."},
+  {"q":"Dans la couche silver, que fait-on des trajets à durée négative ou à champ manquant ?","a":["On les écarte du silver mais on les garde en quarantaine, avec leur motif de rejet, pour pouvoir les compter et les expliquer","On les corrige automatiquement en devinant les valeurs manquantes, puis on les fait entrer dans le silver comme si elles étaient valides","On les laisse dans le silver mais on les marque d'un drapeau rouge, et chaque tableau de bord reste chargé de les exclure lui-même","On les renvoie dans le bronze pour ré-ingestion, et l'on réécrit la journée déjà chargée par-dessus"],"correct":0,"explain":"Les lignes invalides ne polluent pas le silver, mais ne disparaissent pas non plus : elles vont en quarantaine avec la raison du rejet, ce qui rend le taux de rejet surveillable."},
+  {"q":"Pourquoi Vélociti a-t-il DEUX tables gold (frequentation_station_jour et rotation_velos) plutôt qu'une seule ?","a":["Parce qu'elles répondent à deux questions à des granularités différentes (station-jour vs vélo) : une table par usage, toutes dérivées du même silver","Parce qu'une table SQL ne peut pas dépasser un certain nombre de colonnes (la limite du moteur) : tout agrégat gold doit alors être coupé en deux tables","Parce que le gold interdit les agrégats dans une même table : chaque comptage doit être écrit à part (une table par comptage) avant d'être joint au tableau de bord","Parce que le bronze impose de dupliquer chaque table à l'identique dans le gold, une par source ingérée, avec la même granularité que celle des lignes reçues"],"correct":0,"explain":"Le principe du gold est « une table par question ». Deux questions, deux granularités, donc deux tables — toutes construites à partir du même silver propre, sans refaire le nettoyage."},
+  {"q":"Quel est le risque si on agrège directement depuis le bronze en sautant le silver ?","a":["On agrège des données non typées, avec doublons et durées négatives : le gold est faux sans qu'on le voie","Rien : sauter le silver rend le pipeline plus rapide, les agrégats du gold corrigeant d'eux-mêmes les doublons du bronze","Le bronze est effacé au passage : le gold consomme ses lignes une à une, puis les jette","Le gold ne peut plus être interrogé en SQL, faute d'un silver déclaré en amont"],"correct":0,"explain":"Le silver est le palier qui rend les golds fiables. Agréger sur du bronze non nettoyé (doublons, mauvais types) produit des chiffres qui semblent propres mais sont faux."}
 ]
 </script>
 

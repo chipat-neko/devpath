@@ -83,7 +83,7 @@
               <div class="objectives">
                 <p class="objectives__title">À la fin de cette leçon, tu sauras</p>
                 <ul>
-                  <li>décomposer le coût d'un pipeline en <strong>stockage</strong>, <strong>calcul</strong> et <strong>transfert</strong>, et repérer le poste qui surprend le plus&nbsp;;</li>
+                  <li>décomposer le coût d'un pipeline en quatre postes — <strong>scan</strong>, <strong>stockage</strong>, <strong>calcul</strong>, <strong>transfert</strong> — et repérer celui qui surprend le plus&nbsp;;</li>
                   <li>réduire le <strong>volume scanné</strong> par une requête grâce au trio pruning + colonnes + prédicats sélectifs&nbsp;;</li>
                   <li>estimer la <strong>croissance</strong> d'un jeu de données et poser une politique de <strong>rétention</strong> et d'<strong>archivage</strong> chaud/froid&nbsp;;</li>
                   <li>débusquer les <strong>coûts cachés</strong> (petits fichiers, SELECT * de dashboards, re-scans) et les nommer pour les arbitrer.</li>
@@ -98,7 +98,7 @@
 
             <article class="prose">
 <p>À petite échelle, la donnée est presque gratuite. Quelques milliers de lignes tiennent dans un fichier, une requête s'exécute en un clin d'œil, et personne ne reçoit de facture. Mais un pipeline qui grandit change de nature&nbsp;: chaque choix — un format, un filtre oublié, une politique de conservation — finit par avoir un <strong>prix</strong>. À l'échelle, l'ingénierie de données devient aussi une affaire d'argent.</p>
-<p>Cette leçon met le coût au centre. On va décomposer la facture d'un pipeline en <strong>stockage + calcul + transfert</strong>, puis découvrir le poste qui surprend le plus les débutants&nbsp;: le <strong>volume scanné</strong> par les requêtes. On verra comment le réduire, comment estimer la croissance d'un jeu de données dans le temps, où couper (rétention, archivage), et quels coûts restent invisibles jusqu'à la première facture salée. Le fil rouge <strong>Vélociti</strong> — ses ~150&nbsp;000 trajets et ses 5&nbsp;millions d'événements de capteurs par jour — nous donnera des ordres de grandeur concrets.</p>
+<p>Cette leçon met le coût au centre. On va décomposer la facture d'un pipeline en quatre postes — <strong>scan + stockage + calcul + transfert</strong> — puis s'arrêter sur celui qui surprend le plus les débutants&nbsp;: le <strong>volume scanné</strong> par les requêtes. On verra comment le réduire, comment estimer la croissance d'un jeu de données dans le temps, où couper (rétention, archivage), et quels coûts restent invisibles jusqu'à la première facture salée. Le fil rouge <strong>Vélociti</strong> — ses ~150&nbsp;000 trajets et ses 5&nbsp;millions d'événements de capteurs par jour — nous donnera des ordres de grandeur concrets.</p>
 
 <h2>Ce qui coûte vraiment</h2>
 <p>La facture d'un pipeline analytique se décompose en quatre postes. Les connaître, c'est déjà savoir où regarder quand le budget dérape.</p>
@@ -141,13 +141,13 @@
 <li>Le <strong>stockage colonne</strong> (Parquet, <a href="lecon-04.html">leçon 4</a>)&nbsp;: sélectionner deux colonnes ne lit que ces deux colonnes sur le disque, pas les vingt autres. On paie les colonnes demandées, pas la table.</li>
 <li>Les <strong>prédicats sélectifs</strong>&nbsp;: une clause <code>WHERE</code> précise, alignée sur le partitionnement, restreint encore ce qui est réellement ouvert et lu.</li>
 </ul>
-<p>Comparons deux requêtes qui répondent à la <em>même</em> question métier — «&nbsp;combien de trajets électriques le 1<sup>er</sup> mai&nbsp;?&nbsp;» — sur une table <code>trajets</code> partitionnée par date et stockée en Parquet. La première est écrite naïvement&nbsp;; la seconde est «&nbsp;bien rangée&nbsp;».</p>
+<p>Comparons deux façons d'attaquer la <em>même</em> question métier — «&nbsp;combien de trajets électriques le 1<sup>er</sup> mai&nbsp;?&nbsp;» — sur une table <code>trajets</code> partitionnée par date et stockée en Parquet. La première rapatrie tout et laisse l'analyste compter ensuite&nbsp;; la seconde est «&nbsp;bien rangée&nbsp;».</p>
 
 <figure class="code-block" data-file="scan_naif_vs_range.sql"><pre><code class="language-sql">-- (1) NAÏVE : lit TOUTE la table, TOUTES les colonnes.
 -- SELECT * force la lecture des 7 colonnes ; sans filtre de date,
 -- toutes les partitions sont ouvertes. On scanne des mois de données
--- pour ne renvoyer qu'un seul nombre.
-SELECT COUNT(*)
+-- pour une question qui ne portait que sur une journée.
+SELECT *
 FROM trajets
 WHERE type = 'electrique';        -- aucun filtre sur la date : rien n'est élagué
 
@@ -158,10 +158,10 @@ SELECT COUNT(*)
 FROM trajets
 WHERE date = '2026-05-01'         -- pruning : 1 partition au lieu de toutes
   AND type = 'electrique';        -- prédicat sélectif sur une colonne déjà lue</code></pre></figure>
-<p>Chiffrons l'écart. Supposons 180 jours de données déjà accumulés, soit ~180 partitions d'environ 150&nbsp;000 lignes chacune, et une table à 7 colonnes. La requête (1) ouvre les <strong>180 partitions</strong> et lit les <strong>7 colonnes</strong> — mettons ~2,7&nbsp;Go scannés. La requête (2) ouvre <strong>1 partition</strong> et ne lit que les colonnes <code>date</code> et <code>type</code> — de l'ordre de quelques mégaoctets. Même résultat, mais un rapport de <strong>plusieurs centaines</strong> sur les octets lus… donc sur la facture de scan.</p>
+<p>Chiffrons l'écart. Supposons 180 jours de données déjà accumulés, soit ~180 partitions d'environ 150&nbsp;000 lignes chacune, et une table à 7 colonnes. La requête (1) ouvre les <strong>180 partitions</strong> et lit les <strong>7 colonnes</strong>&nbsp;: à ~25 octets par ligne une fois compressée par Parquet (contre ~80 en CSV brut), cela fait <strong>~0,7&nbsp;Go</strong> scanné. La requête (2) ouvre <strong>1 partition</strong> et ne lit que les colonnes <code>date</code> et <code>type</code> — à peine plus d'un mégaoctet. Même besoin servi, mais un rapport de <strong>plusieurs centaines</strong> sur les octets lus… donc sur la facture de scan.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 250" role="img" aria-label="Comparaison de ce qui est réellement lu par deux requêtes sur une grille de partitions et de colonnes. À gauche, le scan complet : une grille de nombreuses cases toutes remplies et mises en évidence, représentant toutes les partitions et toutes les colonnes lues, avec la mention environ 2,7 gigaoctets. À droite, pruning plus colonnes : la même grille mais une seule colonne de cases dans une seule ligne est remplie, le reste est vide, avec la mention quelques mégaoctets. Une flèche indique un rapport de plusieurs centaines entre les deux.">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Comparaison de ce qui est réellement lu par deux requêtes sur une grille de partitions et de colonnes. À gauche, le scan complet : une grille de nombreuses cases toutes remplies et mises en évidence, représentant toutes les partitions et toutes les colonnes lues, avec la mention environ 0,7 gigaoctet. À droite, pruning plus colonnes : la même grille mais une seule colonne de cases dans une seule ligne est remplie, le reste est vide, avec la mention environ un mégaoctet. Une flèche indique un rapport de plusieurs centaines entre les deux.">
     <text class="d-label" x="320" y="24" text-anchor="middle" font-size="12">Ce qui est réellement lu sur le disque</text>
 
     <text class="d-tag" x="150" y="52" text-anchor="middle" font-size="10.5">SELECT * (aucun filtre)</text>
@@ -170,7 +170,7 @@ WHERE date = '2026-05-01'         -- pruning : 1 partition au lieu de toutes
     <rect class="d-accent" x="60" y="100" width="24" height="16" /><rect class="d-accent" x="86" y="100" width="24" height="16" /><rect class="d-accent" x="112" y="100" width="24" height="16" /><rect class="d-accent" x="138" y="100" width="24" height="16" /><rect class="d-accent" x="164" y="100" width="24" height="16" /><rect class="d-accent" x="190" y="100" width="24" height="16" /><rect class="d-accent" x="216" y="100" width="24" height="16" />
     <rect class="d-accent" x="60" y="118" width="24" height="16" /><rect class="d-accent" x="86" y="118" width="24" height="16" /><rect class="d-accent" x="112" y="118" width="24" height="16" /><rect class="d-accent" x="138" y="118" width="24" height="16" /><rect class="d-accent" x="164" y="118" width="24" height="16" /><rect class="d-accent" x="190" y="118" width="24" height="16" /><rect class="d-accent" x="216" y="118" width="24" height="16" />
     <text class="d-mut" x="150" y="150" text-anchor="middle" font-size="9.5">toutes partitions × 7 colonnes</text>
-    <text class="d-text" x="150" y="168" text-anchor="middle" font-size="10">≈ 2,7 Go lus</text>
+    <text class="d-text" x="150" y="168" text-anchor="middle" font-size="10">≈ 0,7 Go lu</text>
 
     <text class="d-tag" x="470" y="52" text-anchor="middle" font-size="10.5">pruning + colonnes</text>
     <rect class="d-line" x="380" y="64" width="24" height="16" fill="none" /><rect class="d-line" x="406" y="64" width="24" height="16" fill="none" /><rect class="d-accent" x="432" y="64" width="24" height="16" /><rect class="d-line" x="458" y="64" width="24" height="16" fill="none" /><rect class="d-line" x="484" y="64" width="24" height="16" fill="none" /><rect class="d-line" x="510" y="64" width="24" height="16" fill="none" /><rect class="d-line" x="536" y="64" width="24" height="16" fill="none" />
@@ -178,12 +178,12 @@ WHERE date = '2026-05-01'         -- pruning : 1 partition au lieu de toutes
     <rect class="d-line" x="380" y="100" width="24" height="16" fill="none" /><rect class="d-line" x="406" y="100" width="24" height="16" fill="none" /><rect class="d-line" x="432" y="100" width="24" height="16" fill="none" /><rect class="d-line" x="458" y="100" width="24" height="16" fill="none" /><rect class="d-line" x="484" y="100" width="24" height="16" fill="none" /><rect class="d-line" x="510" y="100" width="24" height="16" fill="none" /><rect class="d-line" x="536" y="100" width="24" height="16" fill="none" />
     <rect class="d-line" x="380" y="118" width="24" height="16" fill="none" /><rect class="d-line" x="406" y="118" width="24" height="16" fill="none" /><rect class="d-line" x="432" y="118" width="24" height="16" fill="none" /><rect class="d-line" x="458" y="118" width="24" height="16" fill="none" /><rect class="d-line" x="484" y="118" width="24" height="16" fill="none" /><rect class="d-line" x="510" y="118" width="24" height="16" fill="none" /><rect class="d-line" x="536" y="118" width="24" height="16" fill="none" />
     <text class="d-mut" x="470" y="150" text-anchor="middle" font-size="9.5">1 partition × 2 colonnes</text>
-    <text class="d-text" x="470" y="168" text-anchor="middle" font-size="10">≈ quelques Mo lus</text>
+    <text class="d-text" x="470" y="168" text-anchor="middle" font-size="10">≈ 1 Mo lu</text>
 
-    <text class="d-mut" x="320" y="206" text-anchor="middle" font-size="9">même résultat</text>
+    <text class="d-mut" x="320" y="206" text-anchor="middle" font-size="9">même besoin servi</text>
     <text class="d-text" x="320" y="224" text-anchor="middle" font-size="10.5">rapport ≈ ×centaines sur les octets lus</text>
   </svg>
-  <figcaption>Une requête «&nbsp;bien rangée&nbsp;» ne lit qu'une case de la grille&nbsp;: une partition, quelques colonnes. Le partitionnement élague les lignes&nbsp;; Parquet élague les colonnes. Ensemble, ils divisent la facture de scan par plusieurs centaines pour un résultat identique.</figcaption>
+  <figcaption>Une requête «&nbsp;bien rangée&nbsp;» ne lit qu'une case de la grille&nbsp;: une partition, quelques colonnes. Le partitionnement élague les lignes&nbsp;; Parquet élague les colonnes. Ensemble, ils divisent la facture de scan par plusieurs centaines pour le même besoin servi.</figcaption>
 </figure>
 
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Deux réflexes suppriment l'essentiel du gaspillage de scan&nbsp;: <strong>bannir <code>SELECT *</code></strong> (nommer les colonnes utiles) et <strong>toujours filtrer sur la colonne de partition</strong> quand elle existe. La plupart des entrepôts affichent, avant exécution, une estimation des octets qui <em>seront</em> scannés. Prends l'habitude de la lire&nbsp;: c'est ta facture, en clair, avant même de valider.</p></div></div>
@@ -205,9 +205,9 @@ trajets_an   = trajets_jour * JOURS
 capteurs_jour = 5_000_000 * 120             # octets/jour
 capteurs_an   = capteurs_jour * JOURS
 
-go = 1024 ** 3                              # 1 Go en octets
-print(f"trajets  : {trajets_an / go:6.1f} Go/an")   # ~4 Go/an
-print(f"capteurs : {capteurs_an / go:6.1f} Go/an")  # ~200 Go/an
+go = 10 ** 9                                # 1 Go = 10^9 octets (convention de facturation)
+print(f"trajets  : {trajets_an / go:6.1f} Go/an")   # -&gt;    4.4 Go/an
+print(f"capteurs : {capteurs_an / go:6.1f} Go/an")  # -&gt;  219.0 Go/an
 print(f"ratio    : x{capteurs_an / trajets_an:.0f}")  # capteurs bien plus gros
 </code></pre></figure>
 <p>Le verdict est net&nbsp;: les trajets pèsent quelques gigaoctets par an, les capteurs <em>une cinquantaine de fois</em> au-dessus. C'est là — sur les capteurs — que tout effort de maîtrise du volume aura le plus d'effet. Trois leviers permettent de contenir la croissance dans le temps.</p>
@@ -258,13 +258,20 @@ print(f"ratio    : x{capteurs_an / trajets_an:.0f}")  # capteurs bien plus gros
 <ul>
 <li><strong>Les trajets sont bon marché à garder.</strong> Quelques gigaoctets par an&nbsp;: on les conserve en Parquet, partitionnés par date, sans état d'âme. La vraie valeur ici n'est pas d'économiser le stockage (dérisoire) mais de rendre les requêtes gratuites — voir ci-dessous.</li>
 <li><strong>Une requête «&nbsp;fréquentation de mai&nbsp;» devient quasi gratuite.</strong> Grâce à Parquet + partition par date, elle ne scanne que les <strong>31 partitions</strong> du mois de mai, et seulement les colonnes utiles (<code>date</code>, <code>station_start</code>). Sur une table qui couvre plusieurs années, c'est une infime fraction des octets&nbsp;: le pruning transforme une question récurrente en une dépense négligeable.</li>
-<li><strong>Les capteurs exigent une purge et un agrégat.</strong> 200&nbsp;Go/an de brut fin, dont on ne consulte presque jamais le détail seconde par seconde au-delà de quelques semaines&nbsp;: c'est le candidat idéal pour une politique de rétention. On garde le brut fin ~90 jours sur du chaud (fenêtre de reprise et d'analyse récente), on pré-agrège en une table par station et par heure (des milliers de lignes/jour au lieu de millions), puis on archive à froid ou on purge le brut au-delà.</li>
+<li><strong>Les capteurs exigent une purge et un agrégat.</strong> 200&nbsp;Go/an de brut fin, dont on ne consulte presque jamais le détail seconde par seconde au-delà de quelques semaines&nbsp;: c'est le candidat idéal pour une politique de rétention. On garde le brut fin ~90 jours sur du chaud (fenêtre de reprise et d'analyse récente), on pré-agrège en une table par station et par heure (quelques dizaines de milliers de lignes/jour — ~1&nbsp;500 stations × 24 heures — au lieu de millions), puis on archive à froid ou on purge le brut au-delà.</li>
 </ul>
 <p>Voici l'agrégat qui désamorce le coût des capteurs&nbsp;: on paie <em>une fois par jour</em> le résumé horaire par station, et tous les tableaux de bord lisent ensuite cette table minuscule au lieu de rescanner les 5&nbsp;millions d'événements bruts.</p>
 
 <figure class="code-block" data-file="gold_capteurs_horaire.sql"><pre><code class="language-sql">-- Agrégat matérialisé : payé UNE fois par jour, lu mille fois.
--- On passe de ~5 000 000 events/jour à quelques milliers de lignes.
-CREATE TABLE gold_capteurs_horaire AS
+-- On passe de ~5 000 000 events/jour à quelques dizaines de milliers de
+-- lignes : ~1 500 stations x 24 heures, soit ~36 000 par journée.
+-- La table est créée UNE SEULE fois, à la mise en place ; chaque nuit
+-- n'y AJOUTE que la journée écoulée, désignée par le paramètre :jour.
+-- Rejeu : on efface d'abord la journée (idempotence), puis on réinsère.
+DELETE FROM gold_capteurs_horaire
+WHERE heure &gt;= :jour AND heure &lt; :jour + INTERVAL 1 DAY;
+
+INSERT INTO gold_capteurs_horaire
 SELECT
     station_id,
     DATE_TRUNC('hour', ts)          AS heure,
@@ -272,8 +279,8 @@ SELECT
     AVG(bornes_libres)              AS bornes_libres_moyen,
     COUNT(*)                        AS nb_events
 FROM bronze_capteurs
-WHERE ts &gt;= '2026-05-01'           -- pruning : on n'agrège que la fenêtre récente
-  AND ts &lt;  '2026-05-02'
+WHERE ts &gt;= :jour                  -- pruning : une seule journée agrégée
+  AND ts &lt;  :jour + INTERVAL 1 DAY
 GROUP BY station_id, DATE_TRUNC('hour', ts);
 
 -- Les dashboards interrogent DÉSORMAIS gold_capteurs_horaire (petit),
@@ -328,7 +335,7 @@ GROUP BY station_id, DATE_TRUNC('hour', ts);
 
 <h2>Récap et vérification</h2>
 <ul>
-<li>Le coût d'un pipeline se décompose en <strong>stockage + calcul + transfert (egress)</strong>&nbsp;; le poste qui surprend le plus est le <strong>volume scanné</strong>, facturé à chaque requête.</li>
+<li>Le coût d'un pipeline se décompose en quatre postes — <strong>scan + stockage + calcul + transfert (egress)</strong>&nbsp;; celui qui surprend le plus est le <strong>volume scanné</strong>, facturé à chaque requête.</li>
 <li>Le levier n° 1 est de <strong>lire moins</strong>&nbsp;: partition pruning + colonnes (Parquet) + prédicats sélectifs peuvent diviser le scan par plusieurs centaines pour un résultat identique.</li>
 <li>La volumétrie <strong>croît</strong>&nbsp;: on l'estime (volume/jour × jours), on repère le monstre (les capteurs chez Vélociti), et on la contient par <strong>rétention</strong>, <strong>archivage chaud/froid</strong> et <strong>agrégats</strong>.</li>
 <li>Des coûts restent <strong>cachés</strong>&nbsp;: small files, <code>SELECT *</code> de dashboards, re-scans, tables oubliées, flux temps réel «&nbsp;au cas où&nbsp;». Les nommer permet de les arbitrer.</li>
@@ -342,9 +349,9 @@ GROUP BY station_id, DATE_TRUNC('hour', ts);
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Beaucoup d'entrepôts (comme BigQuery) facturent une requête principalement sur quel critère ?","a":["Le volume de données LU (scanné) par la requête, indépendamment de la taille du résultat renvoyé","Le nombre de lignes RENVOYÉES par la requête, quelle que soit la quantité d'octets lus au passage","Le nombre de colonnes affichées à l'écran (après projection), multiplié par la durée de la requête","La durée d'affichage du résultat par l'utilisateur, à la seconde près"],"correct":0,"explain":"Le poste qui surprend le plus est le scan : on paie pour les octets LUS afin de produire le résultat. Un COUNT(*) sur un téraoctet renvoie un nombre mais peut lire tout le téraoctet, donc le facturer."},
-  {"q":"Quel trio de techniques réduit le mieux le volume scanné par une requête ?","a":["Partition pruning (filtrer sur la date) + stockage colonne Parquet (ne lire que les colonnes utiles) + prédicats sélectifs","Ajouter plus de CPU (des cœurs en plus) + un cluster plus gros (autoscaling) + davantage de mémoire vive sur chaque exécuteur","Chiffrer les données + les compresser deux fois (gzip sur Parquet) + les répliquer dans une autre région (pour la reprise de nuit)","Passer toutes les sources en streaming temps réel + indexer chaque colonne du lac + relancer le pipeline complet chaque nuit"],"correct":0,"explain":"Le levier n°1 est de LIRE MOINS. Le pruning élague les partitions (lignes), Parquet élague les colonnes, et un WHERE sélectif restreint encore. Combinés, ils divisent le scan par plusieurs centaines pour le même résultat."},
-  {"q":"Parmi ces postes, lequel est en général le MOINS cher dans un pipeline ?","a":["Le stockage au Go-mois (garder les données au repos)","Le scan répété par les dashboards du matin","Le calcul d'un pipeline qui recalcule tout chaque nuit","Le transfert sortant entre deux régions (egress)"],"correct":0,"explain":"Le stockage coûte quelques centimes par Go-mois : c'est rarement là qu'on économise en priorité. Le scan, le calcul récurrent et l'egress pèsent bien plus lourd."},
+  {"q":"Beaucoup d'entrepôts (comme BigQuery) facturent une requête principalement sur quel critère ?","a":["Le volume de données LU (scanné) par la requête, indépendamment de la taille du résultat renvoyé","Le nombre de lignes RENVOYÉES (le résultat) par la requête, quelle que soit la quantité d'octets lus au passage","Le nombre de colonnes affichées à l'écran (après projection), multiplié par la durée de la requête","La durée d'affichage du résultat (côté navigateur), à la seconde près"],"correct":0,"explain":"Le poste qui surprend le plus est le scan : on paie pour les octets LUS afin de produire le résultat. Un COUNT(*) sur un téraoctet renvoie un nombre mais peut lire tout le téraoctet, donc le facturer."},
+  {"q":"Quel trio de techniques réduit le mieux le volume scanné par une requête ?","a":["Partition pruning (filtrer sur la date) + stockage colonne Parquet (ne lire que les colonnes utiles) + prédicats sélectifs","Ajouter plus de CPU (des cœurs en plus) + un cluster plus gros (autoscaling) + davantage de mémoire vive sur chaque exécuteur","Chiffrer les données + les compresser deux fois (gzip sur Parquet) + les répliquer dans une autre région (pour la reprise de nuit)","Passer toutes les sources en streaming (temps réel) + indexer chaque colonne du lac + relancer le pipeline complet chaque nuit"],"correct":0,"explain":"Le levier n°1 est de LIRE MOINS. Le pruning élague les partitions (lignes), Parquet élague les colonnes, et un WHERE sélectif restreint encore. Combinés, ils divisent le scan par plusieurs centaines pour le même résultat."},
+  {"q":"Parmi ces postes, lequel est en général le MOINS cher dans un pipeline ?","a":["Le stockage au Go-mois (garder les données au repos)","Le scan répété par les dashboards (du matin)","Le calcul (CPU) d'un pipeline qui recalcule tout chaque nuit","Le transfert sortant entre deux régions (egress)"],"correct":0,"explain":"Le stockage coûte quelques centimes par Go-mois : c'est rarement là qu'on économise en priorité. Le scan, le calcul récurrent et l'egress pèsent bien plus lourd."},
   {"q":"Chez Vélociti, quelle décision de volumétrie est la plus justifiée pour les ~5 000 000 d'événements de capteurs par jour ?","a":["Garder le brut fin sur une fenêtre limitée, pré-agréger par station et par heure, puis archiver à froid ou purger au-delà","Garder chaque événement à la seconde, pour toujours, sur du stockage chaud à accès immédiat","Supprimer immédiatement tous les événements dès qu'ils arrivent, sans agrégat horaire ni archive","Passer les trajets en temps réel pour compenser le volume des capteurs, puis tout garder au chaud"],"correct":0,"explain":"Les capteurs sont le monstre (~200 Go/an brut). On garde le brut fin le temps de la reprise, on paie une fois l'agrégat horaire (des milliers de lignes au lieu de millions), puis on archive ou purge. Le tout-garder-pour-toujours empile un volume qu'on ne relit jamais au détail."}
 ]
 </script>
@@ -392,9 +399,9 @@ WHERE date = '2026-05-01'      -- pruning : une seule partition
 1) AGRÉGAT (baisse le SCAN et le CALCUL répété)
    Table gold_capteurs_horaire : moyenne de velos_dispo et
    bornes_libres par station et par heure, calculée UNE fois
-   par jour. Les dashboards lisent cette table (milliers de
-   lignes) au lieu de rescanner 5 M d'events. Les re-scans
-   du brut disparaissent.
+   par jour. Les dashboards lisent cette table (~36 000
+   lignes : 1 500 stations x 24 h) au lieu de rescanner
+   5 M d'events. Les re-scans du brut disparaissent.
 
 2) RÉTENTION (baisse le STOCKAGE chaud)
    Garder le brut fin ~90 jours (fenêtre de reprise + analyse

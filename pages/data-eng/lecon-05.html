@@ -185,6 +185,7 @@
 <p>Voici une boucle d'ingestion incrémentale typique&nbsp;: elle lit le curseur mémorisé, applique la fenêtre de sécurité, ingère chaque fichier journalier concerné, puis fait avancer le curseur.</p>
 
 <figure class="code-block" data-file="ingestion_incrementale.py"><pre><code class="language-python">from datetime import date, timedelta
+from pathlib import Path
 
 FENETRE_SECURITE = 3  # jours re-traités pour rattraper les retardataires
 
@@ -197,21 +198,34 @@ def ecrire_curseur(jour: date) -&gt; None:
     """Mémorise le nouveau high-water mark pour le prochain run."""
     ...
 
-def ingerer_un_jour(jour: date) -&gt; None:
-    """Charge trajets_AAAA-MM-JJ.csv dans bronze (idempotent : voir leçon 8)."""
-    chemin = f"trajets_{jour.isoformat()}.csv"
+def ingerer_un_jour(jour: date) -&gt; date | None:
+    """Charge trajets_AAAA-MM-JJ.csv dans bronze (idempotent : voir leçon 8).
+
+    Rend le jour RÉELLEMENT chargé, ou None si le fichier n'est pas là.
+    """
+    chemin = Path(f"trajets_{jour.isoformat()}.csv")
+    if not chemin.exists():
+        return None         # fichier pas encore livré : rien n'est chargé
     ...
+    return jour
 
 curseur = lire_curseur()
 debut = curseur - timedelta(days=FENETRE_SECURITE)  # on RECULE avant de relire
-fin = date.today() - timedelta(days=1)              # jusqu'à la veille (jour clos)
+fin = date.today() - timedelta(days=1)              # dernier jour CLOS à examiner
 
+jours_charges = []
 jour = debut
 while jour &lt;= fin:
-    ingerer_un_jour(jour)   # on relit un peu de déjà-vu : sûr SI c'est idempotent
+    charge = ingerer_un_jour(jour)  # on relit du déjà-vu : sûr SI c'est idempotent
+    if charge is not None:
+        jours_charges.append(charge)
     jour = jour + timedelta(days=1)
 
-ecrire_curseur(fin)         # le curseur avance jusqu'au dernier jour traité
+# Le curseur décrit LA DONNÉE, jamais l'horloge : il avance jusqu'au dernier
+# jour EFFECTIVEMENT chargé, pas jusqu'à la date du run. Si le fichier du
+# 3 mai n'est pas encore livré, le curseur ne le dépasse pas.
+if jours_charges:
+    ecrire_curseur(max(jours_charges))
 </code></pre></figure>
 
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Choisis un curseur <strong>strictement croissant</strong> et lié à la donnée, pas à ton horloge. La <em>date du trajet</em> est un bon curseur&nbsp;; «&nbsp;l'heure où mon script a tourné&nbsp;» en est un mauvais, car un retardataire arrivé plus tard porte une date <em>passée</em> et passera sous le radar. Règle simple&nbsp;: le curseur doit décrire <strong>la donnée</strong>, jamais l'exécution.</p></div></div>
@@ -220,28 +234,48 @@ ecrire_curseur(fin)         # le curseur avance jusqu'au dernier jour traité
 <p>Une fois qu'on sait <em>quelles</em> lignes charger, reste à savoir <em>comment</em> les écrire dans la table. Deux gestes, selon que les lignes déjà présentes peuvent changer ou non&nbsp;:</p>
 <ul>
 <li><strong>Append</strong> (ajout) — si les lignes ne changent <strong>jamais</strong> une fois créées, on se contente de les <strong>ajouter</strong> à la suite. Un trajet terminé est immuable&nbsp;: il ne sera pas «&nbsp;modifié&nbsp;» demain. L'append est le geste le plus simple, et il va comme un gant aux journaux d'événements.</li>
-<li><strong>Upsert</strong> (ou <em>merge</em>) — si une ligne déjà chargée peut être <strong>mise à jour</strong> à la source, l'ajout aveugle créerait un doublon. Il faut alors <strong>fusionner sur une clé</strong>&nbsp;: si la clé existe, on met à jour&nbsp;; sinon, on insère. C'est le <code>MERGE</code> du SQL (parfois appelé <em>upsert</em>&nbsp;: <em>update or insert</em>).</li>
+<li><strong>Upsert</strong> (ou <em>merge</em>) — si une ligne déjà chargée peut être <strong>mise à jour</strong> à la source, l'ajout aveugle créerait un doublon. Il faut alors <strong>fusionner sur une clé</strong>&nbsp;: si la clé existe, on met à jour&nbsp;; sinon, on insère. C'est le <code>MERGE</code> du SQL (parfois appelé <em>upsert</em>&nbsp;: <em>update or insert</em>). Chez Vélociti, le cas existe&nbsp;: un trajet encore <em>en cours</em> au moment de l'export part sans heure de fin (la ligne <code>9af32</code> de la <a href="lecon-01.html">leçon 1</a>), et l'export suivant le livre terminé.</li>
 </ul>
 <p>Comment savoir qu'une ligne a changé à la source&nbsp;? Le <strong>CDC</strong> (<em>Change Data Capture</em>) est la technique qui capte les <strong>insertions, modifications et suppressions</strong> d'une base source — souvent en lisant son journal de transactions — pour les rejouer à l'identique côté pipeline. On mentionne aussi les <strong>dimensions à évolution lente</strong> (<em>SCD</em>)&nbsp;: la façon de gérer un attribut qui change rarement (le quartier d'une station renommée), en écrasant l'ancienne valeur ou en gardant l'historique. Ces deux notions sont vastes&nbsp;; on se contente ici de savoir <em>qu'elles existent</em> et à quoi elles répondent.</p>
-<p>Deux façons d'écrire une journée de trajets côté entrepôt&nbsp;: le <code>MERGE</code> (upsert sur la clé), ou le plus radical <em>delete + insert</em> d'une journée entière — souvent le plus simple quand on ingère par date.</p>
+<p>Attention à <em>où</em> l'on fusionne. Le <strong>bronze reste en append pur</strong>&nbsp;: il doit rester fidèle au fichier, doublons compris (<a href="lecon-03.html">leçon 3</a>) — un <code>MERGE</code> sur la clé y rendrait tout doublon impossible et effacerait justement ce que la couche silver a pour tâche d'éliminer. C'est donc la table <strong>silver</strong> <code>trajets_nettoyes</code> qu'on met à jour, de deux façons&nbsp;: le <code>MERGE</code> (upsert sur la clé), ou le plus radical <em>delete + insert</em> d'une journée entière — souvent le plus simple quand on ingère par date.</p>
 
-<figure class="code-block" data-file="charger_une_journee.sql"><pre><code class="language-sql">-- Option A : UPSERT (MERGE) sur la clé trip_id.
--- Si la ligne existe déjà, on la met à jour ; sinon on l'insère.
-MERGE INTO bronze_trajets AS cible
-USING trajets_du_jour       AS source
+<figure class="code-block" data-file="charger_une_journee.sql"><pre><code class="language-sql">-- Le BRONZE, lui, reste en APPEND PUR : fidèle au fichier, doublons
+-- compris. On y ajoute seulement « jour », la colonne de PARTITION qui
+-- date la tranche ingérée (leçon 7). Les noms restent ceux de la source :
+-- la colonne de fin s'y appelle encore "end".
+INSERT INTO bronze_trajets (trip_id, start, "end", station_start,
+                            station_end, bike, type, jour)
+SELECT trip_id, start, "end", station_start,
+       station_end, bike, type, DATE '2026-05-01'
+FROM trajets_du_jour;
+
+-- Les deux options ci-dessous écrivent la table SILVER trajets_nettoyes
+-- (leçon 3), dont les dates sont déjà typées : debut, fin, jour.
+-- trajets_du_jour_type = les lignes du jour, typées comme en leçon 3.
+
+-- Option A : UPSERT (MERGE) sur la clé trip_id.
+-- Un trajet encore en cours arrive sans heure de fin ; l'export suivant
+-- le livre terminé. On met alors la ligne à jour, on ne l'ajoute pas.
+MERGE INTO trajets_nettoyes AS cible
+USING trajets_du_jour_type  AS source
    ON cible.trip_id = source.trip_id
 WHEN MATCHED THEN
   UPDATE SET fin = source.fin, station_end = source.station_end
 WHEN NOT MATCHED THEN
-  INSERT (trip_id, start, fin, station_start, station_end, bike, type)
-  VALUES (source.trip_id, source.start, source.fin,
-          source.station_start, source.station_end, source.bike, source.type);
+  INSERT (trip_id, debut, fin, station_start, station_end, bike, type, jour)
+  VALUES (source.trip_id, source.debut, source.fin,
+          source.station_start, source.station_end,
+          source.bike, source.type, DATE '2026-05-01');
 
--- Option B : DELETE + INSERT d'une journée entière (idempotent par partition).
+-- Option B : DELETE + INSERT d'une journée entière (idempotent par
+-- partition, grâce à la colonne « jour » déclarée ci-dessus).
 -- On efface le jour, puis on le recharge : rejouable sans doublon.
-DELETE FROM bronze_trajets WHERE jour = DATE '2026-05-01';
-INSERT INTO bronze_trajets
-SELECT * FROM trajets_du_jour WHERE jour = DATE '2026-05-01';
+DELETE FROM trajets_nettoyes WHERE jour = DATE '2026-05-01';
+INSERT INTO trajets_nettoyes (trip_id, debut, fin, station_start,
+                              station_end, bike, type, jour)
+SELECT trip_id, debut, fin, station_start,
+       station_end, bike, type, DATE '2026-05-01'
+FROM trajets_du_jour_type;
 </code></pre></figure>
 
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce</p><p>Le <em>delete + insert</em> par journée (option B) est souvent la façon la plus simple de rendre une ingestion incrémentale <strong>rejouable</strong>&nbsp;: comme on efface le jour avant de le réécrire, rejouer le même jour n'ajoute rien de neuf. C'est de l'incrémental (un jour à la fois) qui hérite d'une partie de la robustesse du full (on remplace une <em>tranche</em> entière). On y revient à la <a href="lecon-07.html">leçon 7</a> avec le partitionnement par date.</p></div></div>
@@ -325,7 +359,7 @@ SELECT * FROM trajets_du_jour WHERE jour = DATE '2026-05-01';
 </ul>
 
 <h2>Cas réel</h2>
-<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une équipe mobilité ingérait ses trajets en incrémental, curseur sur la <strong>date du fichier</strong>, sans fenêtre de sécurité. Tout allait bien jusqu'au jour où un opérateur partenaire a livré son fichier du <strong>lundi</strong> avec 48&nbsp;h de retard, le <strong>mercredi</strong>. Entre-temps, le curseur avait déjà avancé au mardi puis au mercredi&nbsp;: le fichier du lundi, daté d'avant le curseur, <strong>n'a jamais été relu</strong>. Personne ne s'en est aperçu — aucune erreur, juste une journée <em>manquante</em> dans les statistiques, découverte trois semaines plus tard par un analyste intrigué par un «&nbsp;creux&nbsp;» inexplicable. Le correctif a tenu en deux lignes&nbsp;: une <strong>fenêtre de sécurité de 3 jours</strong> et un <em>delete + insert</em> par journée pour rester idempotent. Depuis, un retardataire est simplement rattrapé au run suivant, sans doublon et sans trou.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Une équipe mobilité ingérait ses trajets en incrémental, curseur sur la <strong>date du fichier</strong>, sans fenêtre de sécurité. Tout allait bien jusqu'au jour où un opérateur partenaire a livré son fichier du <strong>lundi</strong> avec 48&nbsp;h de retard, le <strong>mercredi</strong>. Entre-temps, le curseur avait déjà avancé au mardi puis au mercredi&nbsp;: le fichier du lundi, daté d'avant le curseur, <strong>n'a jamais été relu</strong>. Personne ne s'en est aperçu — aucune erreur, juste une journée <em>manquante</em> dans les statistiques, découverte trois semaines plus tard par un analyste intrigué par un «&nbsp;creux&nbsp;» inexplicable. Le correctif a tenu en deux lignes&nbsp;: une <strong>fenêtre de sécurité de 3 jours</strong> et un <em>delete + insert</em> par journée pour rester idempotent. Depuis, un retardataire est simplement rattrapé au run suivant, sans doublon et sans trou — <strong>à condition que son retard reste inférieur à la fenêtre de sécurité</strong>. Un fichier livré avec cinq jours de retard passerait encore sous une fenêtre de trois jours&nbsp;: la fenêtre borne les retards ordinaires, elle ne remplace pas un contrôle de complétude qui compte les journées attendues et alerte sur celles qui manquent (<a href="lecon-10.html">leçon 10</a>).</p></div></div>
 
 <h2>Antisèche</h2>
 <figure class="cheat-table">
@@ -375,17 +409,17 @@ SELECT * FROM trajets_du_jour WHERE jour = DATE '2026-05-01';
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Quelle est la différence entre une ingestion pleine (full load) et une ingestion incrémentale ?","a":["La pleine recharge toute la source à chaque exécution ; l'incrémentale ne charge que les données nouvelles ou modifiées depuis la dernière exécution","La pleine est chiffrée au repos ; l'incrémentale laisse les lignes en clair, puisqu'elle ne recopie qu'une tranche de la source à chaque exécution du pipeline","La pleine sert aux flux temps réel et l'incrémentale aux fichiers uniquement, un curseur étant impossible à tenir sur une source qui change en continu","Ce sont deux mots pour la même chose, le second étant le nom donné par les entrepôts au premier depuis peu"],"correct":0,"explain":"Le full recharge tout (simple, idempotent, mais coûteux au volume) ; l'incrémental ne prend que le nouveau, ce qui est indispensable pour les gros volumes mais demande de savoir ou l'on s'est arrete."},
-  {"q":"Qu'est-ce qu'un curseur (high-water mark) en ingestion incrémentale ?","a":["Une valeur qui ne fait que croître (date, timestamp, id auto-incrémenté), mémorisée d'un run à l'autre, qui marque jusqu'où on a déjà ingéré","Un index de base de données (B-tree, hash ou bitmap) qui accélère les jointures, posé sur la colonne de date, reconstruit à chaque run, puis effacé","Le nombre maximal de lignes qu'un run peut charger, fixé à l'avance dans la configuration de l'orchestrateur","Un cache en mémoire qui ne survit pas à l'exécution, vidé dès la fin du run, sans rien garder du fichier lu"],"correct":0,"explain":"Le curseur mémorise la frontière du déjà-ingéré. Au run suivant on lit tout ce qui est strictement supérieur au curseur, puis on le fait avancer. Il doit être monotone pour ne pas sauter de lignes."},
-  {"q":"Pourquoi ajoute-t-on une fenêtre de sécurité (re-traiter les N derniers jours) à une ingestion incrémentale ?","a":["Pour rattraper les données en retard (late-arriving) datées d'avant le curseur ; c'est sûr seulement si l'ingestion est idempotente, sinon on crée des doublons","Pour accélérer les requêtes de l'entrepôt (le moteur relit une partition déjà chaude) ; relire les N derniers jours, à chaque exécution, réduit le volume scanné par le pipeline","Pour chiffrer les données sensibles avant chargement, la fenêtre servant à repasser sur les lignes récentes que le curseur avait laissées non protégées à la source","Pour supprimer automatiquement les lignes trop anciennes, la fenêtre fixant la durée de rétention au-delà de laquelle une ligne quitte la table de destination du pipeline"],"correct":0,"explain":"Une donnée peut arriver en retard avec une date déjà dépassée par le curseur : sans chevauchement, elle est perdue. Comme on relit du déjà-vu, il faut que rejouer ne doublonne pas (idempotence)."},
-  {"q":"Chez Vélociti, quelle association source / stratégie est correcte ?","a":["stations en pleine (petit référentiel), trajets en incrémental par date (un fichier par jour), capteurs en incrémental continu (gros flux)","stations en incrémental continu (gros flux), trajets en pleine chaque nuit (tout l'historique), capteurs en pleine (5 M/jour)","tout en pleine parce que c'est plus simple, y compris les cinq millions d'événements de capteurs quotidiens","tout en incrémental sans jamais garder de curseur, la date du run servant de repère à chaque exécution"],"correct":0,"explain":"Le petit référentiel des stations se recharge en full ; les trajets (150 000/jour, un fichier/jour) et la meteo s'ingèrent en incrémental par date ; les capteurs (5 M/jour, doublons) en incrémental continu et idempotent."}
+  {"q":"Quelle est la différence entre une ingestion pleine (full load) et une ingestion incrémentale ?","a":["La pleine recharge toute la source à chaque exécution ; l'incrémentale ne charge que les données nouvelles ou modifiées depuis la dernière exécution","La pleine est chiffrée au repos ; l'incrémentale laisse les lignes en clair, puisqu'elle ne recopie qu'une tranche de la source à chaque exécution du pipeline","La pleine sert aux flux temps réel et l'incrémentale aux fichiers uniquement ; un curseur est impossible à tenir sur une source qui change en continu","Ce sont deux mots pour la même chose ; le second est simplement le nom donné par les entrepôts au premier depuis peu"],"correct":0,"explain":"Le full recharge tout (simple, idempotent, mais coûteux au volume) ; l'incrémental ne prend que le nouveau, ce qui est indispensable pour les gros volumes mais demande de savoir ou l'on s'est arrete."},
+  {"q":"Qu'est-ce qu'un curseur (high-water mark) en ingestion incrémentale ?","a":["Une valeur qui ne fait que croître (date, timestamp, id auto-incrémenté), mémorisée d'un run à l'autre, qui marque jusqu'où on a déjà ingéré","Un index de base de données (B-tree, hash ou bitmap) qui accélère les jointures, posé sur la colonne de date, reconstruit à chaque run, puis effacé","Le nombre maximal de lignes qu'un run peut charger, fixé à l'avance dans la configuration (celle de l'orchestrateur)","Un cache en mémoire (vidé dès la fin du run) qui ne survit pas à l'exécution et ne garde rien du fichier lu"],"correct":0,"explain":"Le curseur mémorise la frontière du déjà-ingéré. Au run suivant on lit tout ce qui est strictement supérieur au curseur, puis on le fait avancer. Il doit être monotone pour ne pas sauter de lignes."},
+  {"q":"Pourquoi ajoute-t-on une fenêtre de sécurité (re-traiter les N derniers jours) à une ingestion incrémentale ?","a":["Pour rattraper les données en retard (late-arriving) datées d'avant le curseur ; c'est sûr seulement si l'ingestion est idempotente, sinon on crée des doublons","Pour accélérer les requêtes de l'entrepôt (le moteur relit une partition déjà chaude) ; relire les N derniers jours, à chaque exécution, réduit le volume scanné par le pipeline","Pour chiffrer les données sensibles avant chargement ; la fenêtre sert à repasser sur les lignes récentes (celles que le curseur avait laissées non protégées à la source)","Pour supprimer automatiquement les lignes trop anciennes ; la fenêtre fixe la durée de rétention (au-delà de laquelle une ligne quitte la table de destination du pipeline)"],"correct":0,"explain":"Une donnée peut arriver en retard avec une date déjà dépassée par le curseur : sans chevauchement, elle est perdue. Comme on relit du déjà-vu, il faut que rejouer ne doublonne pas (idempotence)."},
+  {"q":"Chez Vélociti, quelle association source / stratégie est correcte ?","a":["stations en pleine (petit référentiel), trajets en incrémental par date (un fichier par jour), capteurs en incrémental continu (gros flux)","stations en incrémental continu (gros flux), trajets en pleine chaque nuit (tout l'historique), capteurs en pleine (5 M/jour)","tout en pleine parce que c'est plus simple, y compris les capteurs (cinq millions d'événements par jour)","tout en incrémental sans jamais garder de curseur, la date du run (celle de l'horloge) servant de repère"],"correct":0,"explain":"Le petit référentiel des stations se recharge en full ; les trajets (150 000/jour, un fichier/jour) et la meteo s'ingèrent en incrémental par date ; les capteurs (5 M/jour, doublons) en incrémental continu et idempotent."}
 ]
 </script>
 
 <h2>Exercices</h2>
 <script type="application/json" data-exos>
 [
-  {"type":"text","accept":["full","pleine","full load","ingestion pleine","le full","la pleine"],"placeholder":"la stratégie qui recharge TOUTE la source à chaque exécution s'appelle l'ingestion p____ (ou full)","hints":["C'est la plus simple et naturellement idempotente.","On vide la table puis on la remplit entièrement.","Idéale pour un petit référentiel comme les stations."],"link":{"href":"lecon-05.html","label":"Revoir « Ingestion pleine (full load) »"}},
+  {"type":"text","accept":["full","pleine","full load","ingestion pleine","le full","la pleine"],"placeholder":"la stratégie qui recharge TOUTE la source à chaque exécution s'appelle l'ingestion p_____ (ou full)","hints":["C'est la plus simple et naturellement idempotente.","On vide la table puis on la remplit entièrement.","Idéale pour un petit référentiel comme les stations."],"link":{"href":"lecon-05.html","label":"Revoir « Ingestion pleine (full load) »"}},
   {"type":"text","accept":["curseur","le curseur","high-water mark","high water mark","highwatermark","un curseur"],"placeholder":"la valeur croissante mémorisée d'un run à l'autre qui marque jusqu'où on a ingéré s'appelle le c______ (high-water mark)","hints":["Il ne fait que croître : date, timestamp, id auto-incrémenté.","On lit tout ce qui est supérieur à lui.","En anglais : high-water mark."],"link":{"href":"lecon-05.html","label":"Revoir « Le curseur (high-water mark) »"}},
   {"type":"text","accept":["upsert","merge","le merge","l'upsert","upsert/merge","un upsert"],"placeholder":"quand une ligne déjà chargée peut être mise à jour, on fusionne sur une clé : c'est l'u_____ (le MERGE du SQL)","hints":["Contraire de l'append (simple ajout).","Update si la clé existe, sinon insert.","Le mot-clé SQL correspondant est MERGE."],"link":{"href":"lecon-05.html","label":"Revoir « Append contre upsert »"}}
 ]

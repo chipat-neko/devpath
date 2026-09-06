@@ -112,11 +112,11 @@
 <li><strong>Unicité</strong> — la clé n'a pas de doublon. Chez Vélociti, deux lignes ne doivent jamais partager le même <code>trip_id</code>. Un doublon gonfle les totaux&nbsp;: c'est une attaque directe contre l'<strong>exactitude</strong>.</li>
 <li><strong>Non-nullité / complétude</strong> — les colonnes obligatoires sont remplies, et aucun fichier n'a été sauté. <code>station_end</code>, <code>start</code>, <code>end</code> ne peuvent pas être vides&nbsp;: un trajet sans station d'arrivée n'existe pas. C'est la promesse de <strong>complétude</strong>.</li>
 <li><strong>Fraîcheur</strong> — le dernier jour attendu est bien là. Si l'on est le 2&nbsp;mai et que la table s'arrête au 30&nbsp;avril, les données sont <em>vieilles</em>&nbsp;: la promesse de <strong>fraîcheur</strong> est rompue, même si tout le reste est parfait.</li>
-<li><strong>Volumétrie &amp; plage de valeurs</strong> — le nombre de lignes est plausible, et les valeurs restent dans leur domaine. On attend <strong>~150&nbsp;000 trajets</strong> par jour&nbsp;: 12&nbsp;000 lignes trahit un fichier tronqué, 3&nbsp;millions un doublon massif. Et chaque valeur reste dans sa plage&nbsp;: <code>type</code> ∈ {<code>electrique</code>, <code>mecanique</code>}, une durée <code>&gt; 0</code>.</li>
+<li><strong>Volumétrie &amp; plage de valeurs</strong> — le nombre de lignes est plausible, et les valeurs restent dans leur domaine. On attend <strong>~150&nbsp;000 trajets</strong> par jour&nbsp;: 12&nbsp;000 lignes trahit un fichier tronqué, 3&nbsp;millions un doublon massif. Et chaque valeur reste dans sa plage&nbsp;: <code>type_velo</code> ∈ {<code>electrique</code>, <code>mecanique</code>, <code>inconnu</code>} — les trois sorties du <code>CASE</code> du silver —, une durée <code>&gt; 0</code>.</li>
 </ul>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 250" role="img" aria-label="Les quatre familles de tests de données présentées en quatre cartes. Première carte, unicité : pas deux fois le même trip_id. Deuxième carte, complétude : aucune colonne obligatoire vide, aucun fichier sauté. Troisième carte, fraîcheur : le dernier jour attendu est présent. Quatrième carte, volumétrie et plage de valeurs : environ 150 000 lignes, type parmi electrique ou mecanique, durée supérieure à zéro. Chaque carte est reliée à la promesse qu'elle protège : exactitude, complétude, fraîcheur.">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Les quatre familles de tests de données présentées en quatre cartes. Première carte, unicité : pas deux fois le même trip_id. Deuxième carte, complétude : aucune colonne obligatoire vide, aucun fichier sauté. Troisième carte, fraîcheur : le dernier jour attendu est présent. Quatrième carte, volumétrie et plage de valeurs : environ 150 000 lignes, type parmi les valeurs attendues, durée supérieure à zéro. Chaque carte est reliée à la promesse qu'elle protège : exactitude, complétude, fraîcheur.">
     <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Quatre familles, trois promesses protégées</text>
 
     <rect class="d-accent" x="24" y="44" width="140" height="150" rx="8" /><text class="d-tag" x="94" y="66" text-anchor="middle" font-size="10.5">unicité</text>
@@ -238,17 +238,24 @@ WHERE s.station_id IS NULL;
 
 -- 3) FRAÎCHEUR : le dernier jour chargé doit être hier (ou aujourd'hui).
 --    Si la requête renvoie une ligne, la table est en retard.
+--    Le test IS NULL n'est pas un luxe : sur une table VIDE, max() rend NULL
+--    et la comparaison seule serait inconnue -> le test passerait au vert.
 SELECT max(debut) AS dernier_trajet
 FROM trajets_nettoyes
-HAVING max(debut) &lt; current_date - INTERVAL '1' DAY;
+HAVING max(debut) IS NULL
+    OR max(debut) &lt; current_date - INTERVAL '1' DAY;
 
 -- 4) VOLUMÉTRIE : un jour donné doit compter un nombre plausible
 --    de trajets. Hors de la plage [100 000 ; 200 000] = suspect.
+--    On compte LA VEILLE, la journée que le run traite : à 2 h du matin,
+--    « &gt;= current_date » ne compterait que deux heures de trajets et
+--    ferait échouer le test chaque nuit (fatigue d'alerte assurée).
 SELECT count(*) AS n
 FROM trajets_nettoyes
-WHERE debut &gt;= current_date
+WHERE debut &gt;= current_date - INTERVAL '1' DAY
+  AND debut &lt;  current_date
 HAVING count(*) &lt; 100000 OR count(*) &gt; 200000;</code></pre></figure>
-<p>Ces quatre requêtes couvrent trois des quatre familles (unicité, complétude par intégrité référentielle, fraîcheur, volumétrie). Le principe est toujours le même&nbsp;: <em>la bonne réponse est «&nbsp;zéro ligne&nbsp;»</em>. Un harnais n'a plus qu'à compter les lignes rendues pour savoir si le test passe.</p>
+<p>Ces quatre requêtes couvrent les quatre familles (unicité, complétude par intégrité référentielle, fraîcheur, volumétrie). Le principe est toujours le même&nbsp;: <em>la bonne réponse est «&nbsp;zéro ligne&nbsp;»</em>. Un harnais n'a plus qu'à compter les lignes rendues pour savoir si le test passe.</p>
 
 <h3>En déclaratif : on décrit l'attente, l'outil génère le test</h3>
 <p>Écrire chaque requête à la main devient vite répétitif. Les outils modernes — <strong>dbt</strong> avec ses <code>schema.yml</code>, ou <strong>Great Expectations</strong> — proposent de <strong>déclarer</strong> les attentes&nbsp;: on liste, colonne par colonne, ce qui doit être vrai, et l'outil génère et exécute les requêtes correspondantes. Le fichier ci-dessous se lit comme un contrat.</p>
@@ -274,10 +281,14 @@ models:
               to: ref('stations')
               field: station_id
 
-      - name: type
+      # ATTENTION au nom RÉEL de la colonne : le silver de la leçon 6 la
+      # nomme type_velo, et son CASE a une branche ELSE 'inconnu' — un test
+      # sur 'type' ne porterait sur rien, et oublier 'inconnu' ferait rougir
+      # le test chaque nuit sur des lignes pourtant conformes.
+      - name: type_velo
         tests:
           - accepted_values:      # plage de valeurs autorisées
-              values: ['electrique', 'mecanique']
+              values: ['electrique', 'mecanique', 'inconnu']
 
       - name: duree_min
         tests:
@@ -298,11 +309,15 @@ class EchecQualite(Exception):
 TESTS = [
     ("unicite_trip_id", "SELECT trip_id FROM trajets_nettoyes "
                         "GROUP BY trip_id HAVING count(*) &gt; 1", "fail"),
+    # 40 lignes orphelines sur 150 000 ne justifient pas de tout bloquer :
+    # on ALERTE et on met ces lignes en quarantaine (cf. plus haut).
     ("station_end_orpheline", "SELECT t.trip_id FROM trajets_nettoyes t "
                         "LEFT JOIN stations s ON s.station_id = t.station_end "
-                        "WHERE s.station_id IS NULL", "fail"),
-    ("volumetrie_du_jour", "SELECT count(*) n FROM trajets_nettoyes "
-                        "WHERE debut &gt;= current_date "
+                        "WHERE s.station_id IS NULL", "warn"),
+    # La VEILLE, pas current_date : le run de 2 h traite la journée d'hier.
+    ("volumetrie_de_la_veille", "SELECT count(*) n FROM trajets_nettoyes "
+                        "WHERE debut &gt;= current_date - INTERVAL '1' DAY "
+                        "AND debut &lt; current_date "
                         "HAVING count(*) &lt; 100000", "warn"),
 ]
 
@@ -392,10 +407,10 @@ def lancer(conn):
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Pourquoi tester le code d'un pipeline ne suffit-il pas à garantir la qualité des données ?","a":["Parce que la donnée change à chaque exécution : un test de code figé ne dit rien du lot réel qui arrive (fichier tronqué, colonne vide, doublon). Il faut tester la donnée elle-même, à chaque run","Parce que la qualité d'un lot se vérifie seulement à la main, en relisant le tableau de bord de 8 h chaque matin (totaux, colonnes vides, doublons) : aucun test automatique ne sait décrire une attente sur une donnée réelle","Parce qu'un pipeline qui se termine sans exception produit forcément des données justes, si bien que le seul contrôle utile porte sur le code : une exécution verte suffit à signer la fraîcheur, la complétude et l'exactitude","Parce que tester la donnée coûte trop cher en calcul : chaque contrôle relit la table entière, donc on s'en tient aux tests unitaires du code, écrits une fois pour toutes, et on accepte qu'un run livre parfois un chiffre faux"],"correct":0,"explain":"Un test de code vérifie une logique sur un exemple figé ; il ne regarde pas la table livrée aujourd'hui. Le code peut être parfait et recevoir une source dégradée : d'où le besoin de tests DE DONNÉES, rejoués à chaque exécution."},
-  {"q":"Quelles sont les quatre familles de tests de données ?","a":["Unicité, complétude (non-nullité), fraîcheur, et volumétrie & plage de valeurs","Rapidité, sécurité (chiffrement), coût de stockage, lisibilité","Bronze, silver, gold, et platine pour l'archivage à froid","Extract, Transform, Load, et Publish vers le tableau de bord"],"correct":0,"explain":"Unicité (pas de doublon de clé), complétude (colonnes obligatoires remplies + fichiers présents), fraîcheur (dernier jour attendu là), volumétrie & plage de valeurs (nombre de lignes plausible, valeurs dans leur domaine)."},
+  {"q":"Pourquoi tester le code d'un pipeline ne suffit-il pas à garantir la qualité des données ?","a":["Parce que la donnée change à chaque exécution : un test de code figé ne dit rien du lot réel qui arrive (fichier tronqué, colonne vide, doublon). Il faut tester la donnée elle-même, à chaque run","Parce que la qualité d'un lot se vérifie seulement à la main, en relisant le tableau de bord de 8 h chaque matin (totaux, colonnes vides, doublons) : aucun test automatique ne sait décrire une attente sur une donnée réelle","Parce qu'un pipeline qui se termine sans exception produit forcément des données justes, et le seul contrôle utile porte alors sur le code (les tests unitaires) : une exécution verte suffit à signer la fraîcheur et la complétude","Parce que tester la donnée coûte trop cher en calcul : chaque contrôle relit la table entière, donc on s'en tient aux tests unitaires du code, écrits une fois pour toutes, et on accepte qu'un run livre parfois un chiffre faux"],"correct":0,"explain":"Un test de code vérifie une logique sur un exemple figé ; il ne regarde pas la table livrée aujourd'hui. Le code peut être parfait et recevoir une source dégradée : d'où le besoin de tests DE DONNÉES, rejoués à chaque exécution."},
+  {"q":"Quelles sont les quatre familles de tests de données ?","a":["Unicité, complétude (non-nullité), fraîcheur, et volumétrie & plage de valeurs","Rapidité, sécurité (chiffrement), coût de stockage, lisibilité","Bronze, silver, gold, et platine pour l'archivage à froid","Extract, Transform, Load, et Publish (vers le tableau de bord)"],"correct":0,"explain":"Unicité (pas de doublon de clé), complétude (colonnes obligatoires remplies + fichiers présents), fraîcheur (dernier jour attendu là), volumétrie & plage de valeurs (nombre de lignes plausible, valeurs dans leur domaine)."},
   {"q":"Un test d'unicité sur trip_id échoue juste avant la publication du gold. Quelle réaction protège le mieux la promesse d'exactitude ?","a":["Bloquer (fail) : ne pas publier le chiffre faux, garder le dernier état sain (celui d'hier) et réparer — mieux vaut en retard que faux","Publier quand même pour respecter l'horaire de 8 h : le tableau de bord (celui d'hier) reste consultable et le doublon sera corrigé demain","Supprimer le test d'unicité (trop bavard) pour que le pipeline passe au vert, puis republier le gold complet (celui du jour) — un doublon se rattrape au run suivant","Ignorer : un doublon de clé ne change pas les totaux (la somme reste juste), donc on publie à 8 h"],"correct":0,"explain":"Un doublon de clé gonfle les totaux : c'est une atteinte directe à l'exactitude. Le bon réflexe est le coupe-circuit — bloquer la publication, laisser le tableau de bord d'hier (fiable), corriger. Mieux vaut des données en retard qu'un total faux."},
-  {"q":"Que fait la mise en quarantaine face à quelques lignes fautives dans un gros lot ?","a":["Elle isole les lignes fautives dans une table à part et laisse passer les bonnes, évitant de tout bloquer pour une minorité de lignes","Elle supprime définitivement toutes les lignes du lot dès qu'une seule est fautive, ce qui garantit qu'aucune donnée douteuse ne reste stockée","Elle bloque tout le pipeline dès la première ligne fautive, si bien que rien n'est publié tant que le lot n'est pas parfait","Elle publie les lignes fautives en les marquant en rouge dans le tableau de bord, à charge pour l'analyste de les écarter"],"correct":0,"explain":"La quarantaine évite le tout-ou-rien : par exemple 40 trajets à station_end inconnue sont déviés dans une table à inspecter, et les 149 960 valides sont publiés. La donnée saine avance, la douteuse attend."}
+  {"q":"Que fait la mise en quarantaine face à quelques lignes fautives dans un gros lot ?","a":["Elle isole les lignes fautives dans une table à part et laisse passer les bonnes, évitant de tout bloquer pour une minorité de lignes","Elle supprime définitivement toutes les lignes du lot dès qu'une seule est fautive, et garantit ainsi qu'aucune donnée douteuse ne reste stockée","Elle bloque tout le pipeline dès la première ligne fautive, et rien n'est publié tant que le lot n'est pas parfait","Elle publie les lignes fautives en les marquant en rouge dans le tableau de bord, et laisse l'analyste les écarter"],"correct":0,"explain":"La quarantaine évite le tout-ou-rien : par exemple 40 trajets à station_end inconnue sont déviés dans une table à inspecter, et les 149 960 valides sont publiés. La donnée saine avance, la douteuse attend."}
 ]
 </script>
 
@@ -409,9 +424,10 @@ def lancer(conn):
 ]
 </script>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Pour chacune des assertions suivantes sur Vélociti, indique à quelle <strong>famille</strong> de test elle appartient&nbsp;: (a) «&nbsp;<code>type</code> vaut toujours <code>electrique</code> ou <code>mecanique</code>&nbsp;»&nbsp;; (b) «&nbsp;aucune ligne n'a de <code>station_end</code> vide&nbsp;»&nbsp;; (c) «&nbsp;la table contient des trajets datés d'hier&nbsp;»&nbsp;; (d) «&nbsp;il n'y a pas deux lignes avec le même <code>trip_id</code>&nbsp;».</p>
-<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">(a) Plage de valeurs (accepted values) : type reste dans
-    l'ensemble autorisé {electrique, mecanique}.
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Pour chacune des assertions suivantes sur Vélociti, indique à quelle <strong>famille</strong> de test elle appartient&nbsp;: (a) «&nbsp;<code>type_velo</code> vaut toujours <code>electrique</code>, <code>mecanique</code> ou <code>inconnu</code>&nbsp;»&nbsp;; (b) «&nbsp;aucune ligne n'a de <code>station_end</code> vide&nbsp;»&nbsp;; (c) «&nbsp;la table contient des trajets datés d'hier&nbsp;»&nbsp;; (d) «&nbsp;il n'y a pas deux lignes avec le même <code>trip_id</code>&nbsp;».</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.txt"><pre><code class="language-plaintext">(a) Plage de valeurs (accepted values) : type_velo reste dans
+    l'ensemble autorisé {electrique, mecanique, inconnu},
+    les trois sorties du CASE du silver (branche ELSE comprise).
 
 (b) Complétude / non-nullité : une colonne obligatoire
     (station_end) ne doit jamais être vide.
@@ -421,17 +437,19 @@ def lancer(conn):
 
 (d) Unicité : la clé trip_id n'a aucun doublon.</code></pre></figure></details></div>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une requête SQL de contrôle qui vérifie la <strong>plage de valeurs</strong> de la colonne <code>type</code> dans <code>trajets_nettoyes</code>&nbsp;: elle doit renvoyer <strong>zéro ligne</strong> si toutes les valeurs sont dans {<code>electrique</code>, <code>mecanique</code>}, et lister les valeurs interdites sinon. Rappelle en une phrase la convention «&nbsp;zéro ligne attendue&nbsp;».</p>
-<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sql"><pre><code class="language-sql">-- Renvoie les valeurs de type HORS de l'ensemble autorisé.
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une requête SQL de contrôle qui vérifie la <strong>plage de valeurs</strong> de la colonne <code>type_velo</code> dans <code>trajets_nettoyes</code>&nbsp;: elle doit renvoyer <strong>zéro ligne</strong> si toutes les valeurs sont dans {<code>electrique</code>, <code>mecanique</code>, <code>inconnu</code>} — les trois sorties du <code>CASE</code> du silver —, et lister les valeurs interdites sinon. Rappelle en une phrase la convention «&nbsp;zéro ligne attendue&nbsp;».</p>
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sql"><pre><code class="language-sql">-- Renvoie les valeurs de type_velo HORS de l'ensemble autorisé.
+-- La colonne s'appelle type_velo (leçon 6), et 'inconnu' EST une valeur
+-- légitime : c'est la branche ELSE du CASE qui normalise la source.
 -- Test OK si le résultat est vide (0 ligne).
-SELECT type, count(*) AS n
+SELECT type_velo, count(*) AS n
 FROM trajets_nettoyes
-WHERE type NOT IN ('electrique', 'mecanique')
-GROUP BY type;
+WHERE type_velo NOT IN ('electrique', 'mecanique', 'inconnu')
+GROUP BY type_velo;
 
 -- Convention : la requête sélectionne ce qui NE DOIT PAS exister.
 -- 0 ligne rendue = tout va bien ; chaque ligne rendue = une
--- violation à corriger (ici, une valeur de type inattendue).</code></pre></figure></details></div>
+-- violation à corriger (ici, une valeur de type_velo inattendue).</code></pre></figure></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Le fichier de trajets du jour arrive parfois avec <strong>quelques centaines</strong> de lignes dont la <code>station_end</code> n'existe pas dans le référentiel des ~1&nbsp;500 stations (une station tout juste démontée, un identifiant erroné). Bloquer tout le pipeline pour ces quelques lignes serait excessif&nbsp;; les publier fausserait la fréquentation par station. Propose une stratégie de <strong>quarantaine</strong> et esquisse-la en SQL (deux tables&nbsp;: les valides publiées, les fautives isolées).</p>
 <details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.sql"><pre><code class="language-sql">-- Stratégie : on SÉPARE le lot en deux au lieu de bloquer.
@@ -442,9 +460,11 @@ SELECT t.*
 FROM trajets_nettoyes AS t
 JOIN stations AS s ON s.station_id = t.station_end;
 
--- 2) Les lignes FAUTIVES (station_end orpheline) sont ISOLÉES
---    dans une table de quarantaine, à inspecter plus tard.
-CREATE TABLE trajets_quarantaine AS
+-- 2) Les lignes FAUTIVES (station_end orpheline) sont ISOLÉES dans une
+--    table de quarantaine, à inspecter plus tard. Le nom est PRÉCIS :
+--    trajets_quarantaine est déjà pris par la leçon 6 (autre schéma,
+--    autres motifs de rejet) ; deux quarantaines, deux tables distinctes.
+CREATE TABLE trajets_quarantaine_station AS
 SELECT t.*
 FROM trajets_nettoyes AS t
 LEFT JOIN stations AS s ON s.station_id = t.station_end

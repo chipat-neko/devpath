@@ -267,24 +267,26 @@ print(f"Brut atterri dans {landing} — {source.name}")
   <figcaption>Trois sources (trajets, stations, météo) partent en <strong>batch nocturne</strong> vers le tableau de bord du matin. Les <strong>capteurs</strong> se dédoublent&nbsp;: un chemin en <strong>flux</strong> pour l'appli «&nbsp;vélos disponibles&nbsp;» (fraîcheur à la seconde), un chemin en batch pour l'analyse d'occupation. Le rythme suit l'usage, pas la source.</figcaption>
 </figure>
 
-<p>Côté code, l'extraction d'une source «&nbsp;pull&nbsp;» batch reste très simple. Voici l'appel à l'API météo externe, tel qu'on le ferait dans la passe nocturne — on récupère les 24 lignes de la veille et on les dépose en bronze&nbsp;:</p>
+<p>Côté code, l'extraction d'une source «&nbsp;pull&nbsp;» batch reste très simple. Voici l'appel à l'API météo externe, tel qu'on le ferait dans la passe nocturne — on récupère les 24 lignes de la <em>même</em> journée que les trajets et on les dépose en bronze&nbsp;:</p>
 <figure class="code-block" data-file="extraction_meteo.py"><pre><code class="language-python">import json, urllib.request
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 
-hier = date(2026, 5, 1) - timedelta(days=1)
-url = f"https://api.meteo.example/horaire?date={hier.isoformat()}"
+# LE MÊME jour que le fichier de trajets ci-dessus : la passe nocturne
+# du 2 mai traite la journée du 1er mai, pour les deux sources.
+jour = date(2026, 5, 1)
+url = f"https://api.meteo.example/horaire?date={jour.isoformat()}"
 
 # EXTRACTION : une source externe (pull) ; on tire les 24 lignes.
 with urllib.request.urlopen(url, timeout=10) as rep:
     lignes = json.load(rep)  # [{"ts": "...", "temp_c": ..., "pluie_mm": ...}, ...]
 
 # ATTERRISSAGE : on écrit le brut, daté, sans le transformer.
-dest = Path("/lac/bronze/meteo") / f"date={hier.isoformat()}.json"
+dest = Path("/lac/bronze/meteo") / f"date={jour.isoformat()}.json"
 dest.parent.mkdir(parents=True, exist_ok=True)
 dest.write_text(json.dumps(lignes, ensure_ascii=False, indent=2), encoding="utf-8")
 
-print(f"{len(lignes)} lignes de météo atterries pour {hier}")
+print(f"{len(lignes)} lignes de météo atterries pour {jour}")
 # Source EXTERNE : on ne la maîtrise pas -> on garde le brut pour
 # pouvoir prouver plus tard ce qu'elle a réellement renvoyé ce jour-là.</code></pre></figure>
 
@@ -373,11 +375,11 @@ sources:
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Dans le vocabulaire des pipelines, qu'est-ce qu'un « puits » (sink) ?","a":["La destination d'une donnée, où le pipeline l'écrit une fois traitée : lac, entrepôt, table, tableau de bord","L'origine d'une donnée, d'où le pipeline la lit avant tout traitement : fichier, API, base relationnelle, file d'événements","Un bogue qui fait disparaître des lignes en route, entre l'extraction et la publication du lot","Le nom du fichier de configuration qui déclare la cadence de chaque source, en YAML"],"correct":0,"explain":"La source est l'origine (fichier, API, base, file d'événements) ; le puits est la destination. Le pipeline est le tuyau qui va de l'une à l'autre."},
+  {"q":"Dans le vocabulaire des pipelines, qu'est-ce qu'un « puits » (sink) ?","a":["La destination d'une donnée, où le pipeline l'écrit une fois traitée : lac, entrepôt, table, tableau de bord","L'origine d'une donnée, d'où le pipeline la lit avant tout traitement : fichier, API, base relationnelle, file d'événements","Un bogue de trajet : des lignes disparaissent en route, entre l'extraction et la publication du lot","Le nom du fichier de configuration : celui qui déclare la cadence de chaque source, en YAML"],"correct":0,"explain":"La source est l'origine (fichier, API, base, file d'événements) ; le puits est la destination. Le pipeline est le tuyau qui va de l'une à l'autre."},
   {"q":"Dans le trajet d'une donnée en quatre temps, à quoi sert la zone d'atterrissage (couche bronze) ?","a":["À déposer la donnée brute intacte et datée avant toute transformation, pour pouvoir tout rejouer plus tard","À supprimer les doublons dès l'entrée, avant même que le brut ne touche le disque","À afficher directement le tableau de bord de la mairie à partir du fichier déposé","À chiffrer les données sensibles avant de les publier dans les tables de la couche gold"],"correct":0,"explain":"La source est éphémère (un fichier est écrasé, une API ne donne que l'état courant). Garder le brut permet de recalculer le jour où une transformation change — sans redemander à la source."},
-  {"q":"Quel énoncé décrit correctement le compromis entre batch et flux (streaming) ?","a":["Le batch traite par lots : simple et robuste mais latence élevée ; le flux traite au fil de l'eau : faible latence mais plus complexe et coûteux","Le batch est toujours plus rapide que le flux : il accumule les lots, puis les traite d'un coup ; le flux réveille son cluster pour chaque message qui arrive","Le flux est plus simple à exploiter que le batch : rien à ordonnancer, aucun lot à reprendre après une panne, et aucun ordre de messages à surveiller","Il n'y a aucune différence de latence entre les deux : seul le coût d'exploitation sépare le batch du flux"],"correct":0,"explain":"Le batch accumule puis traite d'un coup (latence en heures) ; le flux traite chaque message dès son arrivée (latence en secondes), au prix de la complexité et du coût. Le micro-batch est l'entre-deux."},
+  {"q":"Quel énoncé décrit correctement le compromis entre batch et flux (streaming) ?","a":["Le batch traite par lots : simple et robuste mais latence élevée ; le flux traite au fil de l'eau : faible latence mais plus complexe et coûteux","Le batch est toujours plus rapide que le flux : il accumule les lots, puis les traite d'un coup ; le flux réveille son cluster pour chaque message qui arrive","Le flux est plus simple à exploiter que le batch : rien à ordonnancer ; aucun lot à reprendre après une panne, aucun ordre de messages à surveiller","Il n'y a aucune différence de latence entre les deux : seul le coût d'exploitation les sépare ; le batch et le flux se valent"],"correct":0,"explain":"Le batch accumule puis traite d'un coup (latence en heures) ; le flux traite chaque message dès son arrivée (latence en secondes), au prix de la complexité et du coût. Le micro-batch est l'entre-deux."},
   {"q":"Chez Vélociti, pourquoi les trajets sont-ils traités en batch nocturne alors que les capteurs de l'appli « vélos disponibles » sont candidats au flux ?","a":["Parce que le critère est la fraîcheur réellement exigée : le tableau de bord du matin se contente de la nuit, l'appli grand public agit à la seconde","Parce que les trajets sont plus volumineux que les capteurs : au-delà d'un million de lignes déposées par jour, une file d'événements ne tient plus la charge","Parce que le flux est interdit sur les fichiers CSV : une file d'événements n'accepte que du JSON, et un export quotidien reste donc forcément en batch nocturne","Parce que le batch est plus récent que le flux : les orchestrateurs modernes ont remplacé les files d'événements héritées des architectures des années passées"],"correct":0,"explain":"Ce n'est pas la source qui décide du rythme, mais l'usage en aval et sa fraîcheur exigée. Une même source peut d'ailleurs nourrir un chemin flux ET un chemin batch."},
-  {"q":"Une source météo est mise à jour toutes les heures, mais on ne s'en sert que pour croiser avec les trajets de la veille dans le rapport du matin. Quel rythme choisir ?","a":["Batch nocturne : la fraîcheur exigée par le besoin est quotidienne, indépendamment de la cadence de la source","Flux temps réel, puisque la source change chaque heure : le rythme suit la cadence de la source","Micro-batch à la seconde pour ne rien rater, quitte à payer un cluster allumé en continu","Aucun traitement n'est nécessaire : le rapport du matin lit l'API météo en direct"],"correct":0,"explain":"Il ne faut pas confondre la latence de la source (horaire) et la fraîcheur du besoin (quotidienne). C'est le besoin en aval qui commande le rythme."}
+  {"q":"Une source météo est mise à jour toutes les heures, mais on ne s'en sert que pour croiser avec les trajets de la veille dans le rapport du matin. Quel rythme choisir ?","a":["Batch nocturne : la fraîcheur exigée par le besoin est quotidienne, indépendamment de la cadence de la source","Flux temps réel, puisque la source change chaque heure : le rythme suit la cadence de la source","Micro-batch à la seconde : on ne rate rien, au prix d'un cluster allumé en continu","Aucun traitement n'est nécessaire : le rapport du matin lit l'API météo en direct"],"correct":0,"explain":"Il ne faut pas confondre la latence de la source (horaire) et la fraîcheur du besoin (quotidienne). C'est le besoin en aval qui commande le rythme."}
 ]
 </script>
 

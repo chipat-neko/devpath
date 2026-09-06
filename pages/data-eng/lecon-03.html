@@ -217,18 +217,19 @@
 <h2>Quand l'ETL garde du sens</h2>
 <p>L'ELT domine, mais l'ETL n'est pas mort&nbsp;: dans certains cas, transformer <strong>avant</strong> de charger reste la bonne décision. Le point commun de ces cas&nbsp;: on ne veut <em>pas</em> que la donnée brute entre telle quelle dans l'entrepôt.</p>
 <ul>
-<li><strong>Anonymiser ou filtrer des données sensibles</strong> avant qu'elles n'entrent. Le <strong>RGPD</strong> impose de limiter la collecte de données personnelles&nbsp;; hacher ou supprimer un identifiant <em>avant</em> le chargement évite d'exposer des données brutes nominatives dans l'entrepôt, où de nombreux analystes ont accès.</li>
+<li><strong>Pseudonymiser ou filtrer des données sensibles</strong> avant qu'elles n'entrent. Le <strong>RGPD</strong> impose de limiter la collecte de données personnelles&nbsp;; hacher ou supprimer un identifiant <em>avant</em> le chargement évite d'exposer des données brutes nominatives dans l'entrepôt, où de nombreux analystes ont accès.</li>
 <li><strong>Respecter une licence</strong>. Une source externe peut interdire de stocker ses données brutes, mais autoriser d'en garder un agrégat. On transforme alors à la source pour ne charger que le permis.</li>
 <li><strong>Réduire un flux massif à la source</strong>. Face à des milliards d'événements dont on ne veut qu'un résumé, filtrer ou pré-agréger avant chargement épargne du volume, du réseau et des coûts inutiles.</li>
 </ul>
-<p>Voici le petit ETL d'anonymisation qui a le plus de sens pour Vélociti&nbsp;: si un jour l'export des trajets contient un <code>user_id</code> nominatif, on le <strong>hache</strong> avant même de charger le fichier. L'entrepôt ne verra jamais l'identifiant en clair.</p>
+<p>Voici le petit ETL de pseudonymisation qui a le plus de sens pour Vélociti&nbsp;: si un jour l'export des trajets contient un <code>user_id</code> nominatif, on le <strong>hache</strong> avant même de charger le fichier. L'entrepôt ne verra jamais l'identifiant en clair.</p>
 
 <figure class="code-block" data-file="anonymiser_avant_chargement.py"><pre><code class="language-python">import csv, hashlib
 
-SEL = "velociti-2026"  # sel secret : empêche de « déviner » un id par force brute
+SEL = "velociti-2026"  # sel SECRET : il rend inutilisables les tables arc-en-ciel
+                       # toutes faites. Il ne doit donc PAS vivre dans le code.
 
 def hacher(user_id: str) -&gt; str:
-    """Transforme un identifiant en clair en empreinte irréversible."""
+    """Transforme un identifiant en clair en empreinte stable et non lisible."""
     if not user_id:
         return ""
     brut = (SEL + user_id).encode("utf-8")
@@ -245,9 +246,10 @@ with open("trajets_2026-05-01.csv", newline="", encoding="utf-8") as src, \
         ligne["user_hash"] = hacher(ligne.pop("user_id", ""))
         ecrivain.writerow(ligne)  # l'user_id en clair ne sort JAMAIS d'ici
 </code></pre></figure>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Hacher, ce n'est pas anonymiser</p><p>Le mot juste ici est <strong>pseudonymisation</strong>, au sens de l'article 4(5) du RGPD&nbsp;: la donnée reste <em>personnelle</em>, elle est simplement remplacée par une empreinte. Le haché est <strong>déterministe</strong> — le même <code>user_id</code> donne toujours la même valeur, ce qui permet justement de compter les trajets par usager… et donc de le pister. Et l'ensemble des <code>user_id</code> possibles est <strong>énumérable</strong>&nbsp;: qui connaît le sel peut hacher tous les identifiants plausibles et retrouver le bon. Le sel, écrit en clair dans l'exemple ci-dessus pour la lisibilité, doit en vrai venir d'un coffre à secrets&nbsp;; il n'empêche que les tables arc-en-ciel toutes faites, pas une attaque ciblée. Une vraie <strong>anonymisation</strong> — irréversible, hors du champ du RGPD — supposerait de supprimer l'identifiant ou d'agréger jusqu'à ne plus distinguer personne.</p></div></div>
 <p>Remarque bien&nbsp;: ce bout d'ETL ne <em>nettoie</em> rien (pas de dédoublonnage, pas de typage des dates). Il ne fait qu'<strong>une</strong> chose — retirer une donnée sensible — parce que c'est la seule qui <em>doive</em> arriver avant le chargement. Tout le reste du nettoyage attendra l'entrepôt, en ELT.</p>
 
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Tout transformer avant le chargement.</strong> C'est le réflexe ETL poussé trop loin&nbsp;: on nettoie, on typpe, on dédoublonne, on agrège — et l'on ne charge que le résultat final. Résultat&nbsp;: le brut n'existe plus nulle part. Le jour où une règle change ou qu'un bug est trouvé, aucune reprise n'est possible sans ré-extraire la source. Ne transforme avant le chargement que ce qui <em>doit</em> l'être (données sensibles, licence)&nbsp;; garde le brut pour tout le reste.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Tout transformer avant le chargement.</strong> C'est le réflexe ETL poussé trop loin&nbsp;: on nettoie, on type, on dédoublonne, on agrège — et l'on ne charge que le résultat final. Résultat&nbsp;: le brut n'existe plus nulle part. Le jour où une règle change ou qu'un bug est trouvé, aucune reprise n'est possible sans ré-extraire la source. Ne transforme avant le chargement que ce qui <em>doit</em> l'être (données sensibles, licence)&nbsp;; garde le brut pour tout le reste.</p></div></div>
 
 <h2>Vélociti en ELT</h2>
 <p>Appliquons tout ceci au fil rouge. La stratégie de Vélociti est <strong>ELT d'abord, avec une pincée d'ETL assumée</strong>&nbsp;:</p>
@@ -261,29 +263,40 @@ with open("trajets_2026-05-01.csv", newline="", encoding="utf-8") as src, \
 <figure class="code-block" data-file="silver_trajets_nettoyes.sql"><pre><code class="language-sql">-- ELT : la table brute est DÉJÀ dans l'entrepôt (bronze_trajets).
 -- On transforme ICI, en SQL, sans rien ré-extraire à la source.
 CREATE TABLE trajets_nettoyes AS
+WITH converti AS (                    -- 1) on TYPE d'abord : TRY_CAST rend NULL
+    SELECT                            --    si le format est mauvais, au lieu d'échouer
+        trip_id,
+        TRY_CAST(start AS TIMESTAMP)  AS debut,
+        TRY_CAST("end" AS TIMESTAMP)  AS fin,
+        station_start,
+        station_end,
+        bike,
+        type
+    FROM bronze_trajets
+),
+valide AS (                           -- 2) on filtre sur les valeurs CASTÉES,
+    SELECT converti.*,                --    jamais sur le texte d'origine
+           ROW_NUMBER() OVER (PARTITION BY trip_id ORDER BY debut) AS rang
+    FROM converti
+    WHERE debut IS NOT NULL
+      AND fin IS NOT NULL             -- dates absentes ou mal formées : écartées
+      AND fin &gt; debut                 -- durées négatives (fin avant début) : écartées
+)
 SELECT
-    trip_id,
-    CAST(start AS TIMESTAMP)                         AS debut,
-    CAST("end" AS TIMESTAMP)                         AS fin,
-    station_start,
-    station_end,
-    bike,
-    type
-FROM bronze_trajets
-WHERE "end" &gt; start               -- on écarte les durées négatives (fin avant début)
-  AND start IS NOT NULL
-  AND "end" IS NOT NULL           -- et les trajets incomplets
-QUALIFY ROW_NUMBER() OVER (       -- on ne garde qu'UNE ligne par trip_id (dédoublonnage)
-    PARTITION BY trip_id ORDER BY start
-) = 1;</code></pre></figure>
+    trip_id, debut, fin,
+    station_start, station_end, bike, type,
+    CAST(debut AS DATE) AS jour       -- colonne de PARTITION (leçons 5 et 7)
+FROM valide
+WHERE rang = 1;                       -- 3) une seule ligne par trip_id (dédoublonnage)</code></pre></figure>
 
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Un mot réservé dans la source</p><p>Dans le CSV brut, la colonne de fin s'appelle <code>end</code> — fidèle à la source, mais <code>end</code> est un <strong>mot réservé</strong> du SQL (il ferme un <code>CASE … END</code>)&nbsp;: écrite nue, <code>CAST(end AS …)</code> déclenche une erreur de syntaxe. On la protège par des guillemets doubles, <code>"end"</code> — un <strong>identifiant délimité</strong> du SQL standard (PostgreSQL, DuckDB, Snowflake, Redshift)&nbsp;; BigQuery, lui, emploie des accents graves&nbsp;: <code>`end`</code>. C'est déjà l'esprit du <a href="lecon-11.html">contrat de données</a>&nbsp;: une source livre parfois des noms hostiles, et le pipeline les gère au lieu de les subir.</p></div></div>
+<div class="callout callout--info"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></svg><div class="callout__body"><p class="callout__title">Deux détails de portabilité</p><p><code>TRY_CAST</code> rend <code>NULL</code> quand la valeur ne se convertit pas, au lieu de faire échouer toute la requête&nbsp;: indispensable ici, puisque la ligne <code>01/05/2026 08:15</code> du fichier brut ne <em>peut pas</em> se lire comme un <em>timestamp</em>. Il s'écrit ainsi dans DuckDB, Snowflake et SQL Server, <code>SAFE_CAST</code> dans BigQuery&nbsp;; PostgreSQL et Redshift n'en ont pas et demandent un <code>CASE</code> qui teste le format avant de convertir. De même, le dédoublonnage passe par une sous-requête <code>ROW_NUMBER()</code> et non par <code>QUALIFY</code>&nbsp;: ce mot-clé, bien plus court, n'existe que dans quelques moteurs (Snowflake, DuckDB, BigQuery) — ni PostgreSQL ni Redshift ne le connaissent.</p></div></div>
 <p>Tout le nettoyage vit dans une requête que n'importe quel analyste sait lire. Et si demain la règle change — par exemple, garder les trajets de zéro minute plutôt que les rejeter — on modifie ce SQL et on le rejoue sur <code>bronze_trajets</code>, <strong>sans jamais retourner au fichier d'origine</strong>. C'est l'ELT en action. On détaillera les couches bronze, silver et gold à la <a href="lecon-06.html">leçon 6</a>, et les formats de fichiers (CSV, JSON, Parquet) à la <a href="lecon-04.html">leçon 4</a>.</p>
 
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>L'ELT a fait naître une famille d'outils dédiés à la transformation <em>dans</em> l'entrepôt, dont <strong>dbt</strong> est le plus connu&nbsp;: on y écrit ses transformations en SQL, versionnées et testées comme du code. Le langage de toutes ces transformations reste le SQL&nbsp;: si tu veux consolider cette base, le <a href="../sql/cours.html">cours SQL</a> est le compagnon direct de cette leçon. Pour les sources semi-structurées (JSON des capteurs, réponses d'API), le <a href="../nosql/cours.html">cours NoSQL</a> éclaire l'autre bout de la chaîne.</p></div></div>
 
 <h2>Pièges fréquents</h2>
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Croire qu'ELT veut dire «&nbsp;ne jamais transformer avant&nbsp;».</strong> Faux&nbsp;: l'anonymisation RGPD, une licence restrictive ou un flux à réduire justifient un petit ETL <em>ciblé</em>. Un pipeline réel est souvent <strong>ELT à 95&nbsp;%</strong> avec quelques transformations pré-chargement bien identifiées. Ce n'est pas «&nbsp;ETL ou ELT&nbsp;» de façon dogmatique&nbsp;: c'est ELT par défaut, ETL là où c'est nécessaire.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Croire qu'ELT veut dire «&nbsp;ne jamais transformer avant&nbsp;».</strong> Faux&nbsp;: la pseudonymisation RGPD, une licence restrictive ou un flux à réduire justifient un petit ETL <em>ciblé</em>. Un pipeline réel est souvent <strong>ELT à 95&nbsp;%</strong> avec quelques transformations pré-chargement bien identifiées. Ce n'est pas «&nbsp;ETL ou ELT&nbsp;» de façon dogmatique&nbsp;: c'est ELT par défaut, ETL là où c'est nécessaire.</p></div></div>
 <ul>
 <li><strong>Choisir ETL «&nbsp;par habitude&nbsp;»</strong> — parce qu'un ancien outil ETL existe déjà&nbsp;; le vrai critère est le besoin de reprise, que l'ELT sert mieux.</li>
 <li><strong>Confondre lac et entrepôt</strong> — jeter des fichiers dans un lac ne les rend pas interrogeables comme des tables&nbsp;; le lac stocke, l'entrepôt requête.</li>
@@ -305,7 +318,7 @@ QUALIFY ROW_NUMBER() OVER (       -- on ne garde qu'UNE ligne par trip_id (dédo
       <tr><td>Entrepôt</td><td>Tables structurées, SQL rapide&nbsp;: le lieu de l'ELT et de l'analyse</td></tr>
       <tr><td>Lac</td><td>Fichiers bruts de tout format, stockage bon marché&nbsp;; interrogation laborieuse</td></tr>
       <tr><td>Lakehouse</td><td>Lac + entrepôt&nbsp;: fichiers bon marché <em>et</em> tables interrogeables en SQL</td></tr>
-      <tr><td>Quand l'ETL garde du sens</td><td>Anonymiser (RGPD), respecter une licence, réduire un flux massif — avant chargement</td></tr>
+      <tr><td>Quand l'ETL garde du sens</td><td>Pseudonymiser (RGPD), respecter une licence, réduire un flux massif — avant chargement</td></tr>
       <tr><td>Vélociti</td><td>ELT par défaut (bronze → silver → gold en SQL), + un ETL ciblé qui hache <code>user_id</code> avant chargement</td></tr>
     </tbody>
   </table>
@@ -319,7 +332,8 @@ QUALIFY ROW_NUMBER() OVER (       -- on ne garde qu'UNE ligne par trip_id (dédo
   <dt>Lac de données</dt><dd>Stockage bon marché (<em>data lake</em>) qui accueille des fichiers bruts de tout format sans schéma imposé à l'entrée.</dd>
   <dt>Lakehouse</dt><dd>Architecture réunissant le lac et l'entrepôt&nbsp;: stockage ouvert et bon marché, plus des tables interrogeables en SQL.</dd>
   <dt>Couche bronze</dt><dd>Couche où le brut est chargé et conservé intact, avant toute transformation&nbsp;: le point de reprise d'un pipeline ELT.</dd>
-  <dt>Anonymisation</dt><dd>Transformation qui retire ou masque une donnée personnelle (par exemple en la hachant) afin qu'elle ne soit plus identifiante.</dd>
+  <dt>Pseudonymisation</dt><dd>Transformation qui remplace une donnée personnelle par une empreinte stable et non lisible (un haché salé, par exemple)&nbsp;: la donnée reste personnelle au sens du RGPD (article 4(5)), car le lien peut être rétabli, mais elle n'apparaît plus en clair.</dd>
+  <dt>Anonymisation</dt><dd>Transformation <em>irréversible</em> qui rend une personne non réidentifiable, même en croisant d'autres informations&nbsp;: la donnée sort alors du champ du RGPD. Hacher un identifiant ne suffit pas.</dd>
   <dt>RGPD</dt><dd>Règlement européen sur la protection des données personnelles&nbsp;: impose notamment de limiter la collecte et l'exposition des données nominatives.</dd>
 </dl>
 
@@ -328,7 +342,7 @@ QUALIFY ROW_NUMBER() OVER (       -- on ne garde qu'UNE ligne par trip_id (dédo
 <li><strong>ETL</strong> transforme <em>avant</em> de charger&nbsp;; <strong>ELT</strong> charge le brut puis transforme <em>dans</em> l'entrepôt. Seule la place du <strong>T</strong> change.</li>
 <li>L'<strong>ELT domine</strong> l'analytique&nbsp;: entrepôts puissants, stockage bon marché, SQL pour tous — et surtout, garder le brut rend la <strong>reprise</strong> possible sans ré-extraire.</li>
 <li>Un <strong>entrepôt</strong> requête vite des tables&nbsp;; un <strong>lac</strong> stocke des fichiers bruts pour pas cher&nbsp;; un <strong>lakehouse</strong> vise les deux.</li>
-<li>L'<strong>ETL garde du sens</strong> pour ce qui <em>doit</em> arriver avant le chargement&nbsp;: anonymiser (RGPD), respecter une licence, réduire un flux massif.</li>
+<li>L'<strong>ETL garde du sens</strong> pour ce qui <em>doit</em> arriver avant le chargement&nbsp;: pseudonymiser (RGPD), respecter une licence, réduire un flux massif.</li>
 <li><strong>Vélociti</strong> est ELT (bronze → silver → gold en SQL), avec un petit ETL assumé&nbsp;: hacher un éventuel <code>user_id</code> avant chargement.</li>
 </ul>
 <div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol>
@@ -339,10 +353,10 @@ QUALIFY ROW_NUMBER() OVER (       -- on ne garde qu'UNE ligne par trip_id (dédo
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Quelle est la différence entre ETL et ELT ?","a":["En ETL on transforme AVANT de charger (l'entrepôt ne reçoit que du propre) ; en ELT on charge d'abord le brut puis on le transforme DANS l'entrepôt","En ETL les données sont chiffrées, en ELT elles sont en clair (l'entrepôt les déchiffre au chargement) ; c'est le SEUL écart entre les deux acronymes","ETL sert aux petites données, ELT aux grosses données uniquement : au-delà d'un million de lignes, le T passe après le L","Ce sont deux mots pour exactement la même chose : les trois lettres se lisent dans n'importe quel ordre, sans effet"],"correct":0,"explain":"Les trois opérations (Extract, Transform, Load) sont identiques ; seule la place du T change. En ELT, le Load précède le Transform, donc le brut est chargé avant d'être transformé."},
-  {"q":"Pourquoi l'ELT facilite-t-il la reprise après la découverte d'un bug dans une transformation ?","a":["Parce que le brut a été chargé d'abord (couche bronze) : on rejoue la transformation corrigée sur ce brut déjà présent, sans rien ré-extraire à la source","Parce que l'ELT chiffre automatiquement les données au chargement (couche bronze) : un bug de transformation ne peut plus atteindre l'entrepôt, ni les tables publiées","Parce que l'ELT est plus rapide que l'ETL sur les petits volumes : on relance la chaîne entière en quelques secondes, ré-extraction de la source incluse","Parce que l'ELT supprime le besoin de tests : une transformation écrite en SQL dans l'entrepôt ne peut pas se tromper"],"correct":0,"explain":"C'est l'avantage décisif : en ELT le brut vit dans l'entrepôt. Corriger = modifier le SQL et le rejouer sur le brut. En ETL, seul le résultat a été chargé, il faut retourner à la source."},
-  {"q":"Quelle affirmation décrit correctement la différence entre un lac de données et un entrepôt de données ?","a":["Le lac stocke des fichiers bruts de tout format à bas coût mais s'interroge difficilement ; l'entrepôt stocke des tables structurées interrogées en SQL rapide","Le lac et l'entrepôt sont deux noms du même produit ; les fournisseurs emploient l'un ou l'autre selon leur marché, sans la moindre différence de stockage ni de coût","Le lac est plus rapide à requêter que l'entrepôt : un stockage objet de fichiers répond en SQL sans passer par un moteur analytique, et sans aucun schéma à déclarer","L'entrepôt n'accepte que des fichiers bruts, le lac n'accepte que des tables typées : c'est l'inverse exact de ce que suggère leur nom, d'où la confusion fréquente"],"correct":0,"explain":"Le lac privilégie le coût et la liberté de format (stocke), l'entrepôt privilégie la vitesse de requête sur des tables typées (requête). Le lakehouse cherche à réunir les deux."},
-  {"q":"Dans quel cas transformer AVANT le chargement (ETL) reste-t-il la bonne décision ?","a":["Anonymiser une donnée personnelle (RGPD) avant qu'elle n'entre dans l'entrepôt, respecter une licence, ou réduire un flux massif à la source","Toujours : il faut systématiquement tout transformer avant de charger (le brut n'a aucune valeur), et ne garder dans l'entrepôt que les agrégats du jour","Jamais : l'ELT rend l'ETL totalement inutile, y compris pour les identifiants nominatifs d'un export, que l'entrepôt anonymise tout seul au chargement","Uniquement pour accélérer les requêtes de l'entrepôt, jamais pour une contrainte de licence ni pour le RGPD"],"correct":0,"explain":"L'ETL ciblé garde du sens pour ce qui NE DOIT PAS entrer brut : données sensibles à anonymiser, contraintes de licence, volume à réduire. Le reste du nettoyage se fait en ELT, dans l'entrepôt."},
+  {"q":"Quelle est la différence entre ETL et ELT ?","a":["En ETL on transforme AVANT de charger (l'entrepôt ne reçoit que du propre) ; en ELT on charge d'abord le brut puis on le transforme DANS l'entrepôt","En ETL les données sont chiffrées, en ELT elles sont en clair (l'entrepôt les déchiffre au chargement) ; c'est le SEUL écart entre les deux acronymes","ETL sert aux petites données (moins d'un million de lignes) ; ELT sert aux grosses, où le T passe forcément après le L","Ce sont deux mots pour exactement la même chose ; les trois lettres se lisent dans n'importe quel ordre (aucun effet)"],"correct":0,"explain":"Les trois opérations (Extract, Transform, Load) sont identiques ; seule la place du T change. En ELT, le Load précède le Transform, donc le brut est chargé avant d'être transformé."},
+  {"q":"Pourquoi l'ELT facilite-t-il la reprise après la découverte d'un bug dans une transformation ?","a":["Parce que le brut a été chargé d'abord (couche bronze) : on rejoue la transformation corrigée sur ce brut déjà présent, sans rien ré-extraire à la source","Parce que l'ELT chiffre automatiquement les données au chargement (couche bronze) : un bug de transformation ne peut plus atteindre l'entrepôt, ni les tables publiées","Parce que l'ELT est plus rapide sur les petits volumes : il relance tout (ré-extraction comprise) en quelques secondes, ce qui corrige le bug","Parce que l'ELT supprime les tests : une transformation écrite en SQL (dans l'entrepôt) ne peut pas se tromper, ce qui rend tout contrôle inutile"],"correct":0,"explain":"C'est l'avantage décisif : en ELT le brut vit dans l'entrepôt. Corriger = modifier le SQL et le rejouer sur le brut. En ETL, seul le résultat a été chargé, il faut retourner à la source."},
+  {"q":"Quelle affirmation décrit correctement la différence entre un lac de données et un entrepôt de données ?","a":["Le lac stocke des fichiers bruts de tout format à bas coût mais s'interroge difficilement ; l'entrepôt stocke des tables structurées interrogées en SQL rapide","Le lac et l'entrepôt sont deux noms du même produit ; les fournisseurs emploient l'un ou l'autre selon leur marché, avec exactement le même stockage et le même coût de départ","Le lac est plus rapide à requêter que l'entrepôt ; un stockage objet de fichiers répond en SQL sans passer par un moteur analytique et sans aucun schéma à déclarer","L'entrepôt n'accepte que des fichiers bruts ; le lac n'accepte que des tables typées, l'inverse exact de ce que suggère leur nom, d'où la confusion si fréquente"],"correct":0,"explain":"Le lac privilégie le coût et la liberté de format (stocke), l'entrepôt privilégie la vitesse de requête sur des tables typées (requête). Le lakehouse cherche à réunir les deux."},
+  {"q":"Dans quel cas transformer AVANT le chargement (ETL) reste-t-il la bonne décision ?","a":["Anonymiser une donnée personnelle (RGPD) avant qu'elle n'entre dans l'entrepôt, respecter une licence, ou réduire un flux massif à la source","Toujours et partout, il faut tout transformer avant de charger (le brut n'a aucune valeur) et ne garder dans l'entrepôt que les agrégats de la journée","Jamais, l'ELT rendant l'ETL totalement inutile, y compris pour les identifiants nominatifs d'un export (que l'entrepôt anonymise tout seul au chargement)","Uniquement pour accélérer les requêtes de l'entrepôt (jamais pour une contrainte de licence ou pour le RGPD)"],"correct":0,"explain":"L'ETL ciblé garde du sens pour ce qui NE DOIT PAS entrer brut : données sensibles à anonymiser, contraintes de licence, volume à réduire. Le reste du nettoyage se fait en ELT, dans l'entrepôt."},
   {"q":"Chez Vélociti, quelle étape relève d'un petit ETL assumé plutôt que de l'ELT ?","a":["Hacher un éventuel user_id nominatif AVANT de charger le fichier, pour qu'il n'entre jamais en clair dans l'entrepôt","Dédoublonner les trajets sur trip_id, qui DOIT passer avant le chargement du fichier","Typer les dates au format TIMESTAMP, une conversion qu'il est impossible d'écrire en SQL","Agréger la fréquentation par station et par jour, avant même de charger la table gold"],"correct":0,"explain":"Hacher le user_id doit se faire avant chargement (RGPD) : c'est de l'ETL ciblé. Le dédoublonnage, le typage et l'agrégation se font en SQL dans l'entrepôt : c'est de l'ELT."}
 ]
 </script>
