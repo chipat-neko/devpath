@@ -4260,6 +4260,94 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       (50 q, 98,7 %) et `lisp` (55 q, 98,2 %). ⚠️ **`stats` reste le cours-témoin de
       `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.**
 
+      ---
+
+      **26ᵉ COURS — `os`, le 2026-09-06 — et LA DÉCOUVERTE QUI OBLIGE À REVOIR LES 25 PRÉCÉDENTS.**
+
+      **Le cours** : 98,5 % → **25,0 %** sur « la plus longue », en **UNE SEULE VAGUE** (2ᵉ fois
+      d'affilée, la consigne `scratchpad/CONSIGNE-OS.md` portait dès le départ la règle « les
+      quatre ou aucune »). Rangs **67/0/0/1 → 17/17/17/17**, la cible exacte. **204 distracteurs
+      sur 204 réécrits**, `mesure-qcm-intouchable` : « Aucune atteinte ». Fourchette 70–130 % :
+      **0 hors fourchette** (0,72 à 1,28). Les trois stratégies de RESTRICTION (`;`, parenthèse,
+      deux-points) tombent à **0 % de couverture** — la marque ne tranche plus jamais, donc le
+      plafond de 50 % de la consigne molle n'existe pas ici. Pire indice restant : **26,8 %**
+      (« écarter les deux extrêmes », conséquence mécanique de la répartition plate).
+      **0 distracteur devenu vrai sur 204 réécrits — 3ᵉ cours d'affilée.**
+
+      ⚠️⚠️ **LE 13ᵉ INDICE FABRIQUÉ PAR LA CORRECTION, ET LE PLUS LOURD DE TOUS : L'INDICE
+      LEXICAL.** Un contradicteur l'a trouvé, je l'ai remesuré avec un outil neuf
+      (`tools/mesure-lexique-qcm.js`). La stratégie : *l'apprenant ouvre la leçon, cherche au
+      clavier les mots de chaque option DANS LA PAGE, et prend celle dont tout le vocabulaire
+      figure dans le cours.* La bonne réponse est écrite avec les mots enseignés ; un distracteur
+      inventé est écrit avec des mots que la page ne contient pas. **Aucune des 23 stratégies de
+      `mesure-biais-qcm.js` ne le voit** : il ne porte ni sur la longueur, ni sur la ponctuation,
+      ni sur la forme.
+
+      **La vague le FABRIQUE — mesuré sur `os`, même corpus, avant et après (`--racine=`) :**
+
+      | variante | avant la vague | après la vague |
+      |---|---:|---:|
+      | STRICTE (la seule option sans aucun mot étranger) | tranche 30,9 %, **rendement 38,1 %** | tranche 33,8 %, **rendement 100,0 %** |
+      | PROPORTION (la plus forte part de mots du cours) | tranche 57,4 %, rendement 66,7 % | tranche 88,2 %, rendement 83,3 % |
+
+      **Le classement du site le confirme, et il est contre-intuitif : les cours EN TÊTE sont
+      exactement les cours DÉJÀ DÉTORDUS** — `bdd` 100 %, `iac` 100 %, `mobile` 100 %, `os`
+      100 %, `ux` 95,7 %, `archi` 95,0 %, `git` 91,3 %, `doc` 90,9 %, `js` 89,2 % — tandis que
+      `c`, `go` et `haskell`, jamais traités, sont à **0,0 %**. Site entier (6 167 questions) :
+      STRICTE tranche sur 29,9 % et rend **54,1 %** ; PROPORTION tranche sur 63,7 % et rend
+      **62,1 %** (réussite globale 48,6 %). En allongeant les distracteurs avec du vocabulaire
+      inventé, B3 et B4 ont fermé la longueur **en ouvrant le Ctrl+F**.
+
+      **Ce que ça impose, et qui n'est PAS fait** : une 8ᵉ règle de consigne — *au moins un
+      distracteur par question doit être écrit avec AUTANT DE MOTS DU COURS que la bonne
+      réponse* — et une passe de fermeture sur les 26 cours déjà traités. Sur `os`, l'outil
+      compte **50 questions exploitables sur 68** (`--liste=os` donne les mots à remplacer,
+      option par option). Ce n'est pas « tout réécrire » : il suffit de nettoyer UN distracteur
+      par question. **Laissé décoché : c'est le sujet d'une passe entière, pas d'un reliquat.**
+
+      **La contradiction (5 agents) a rendu 15 défauts prouvés, tous corrigés** — dont **4 corps
+      de leçon qui se réfutent eux-mêmes** : `lecon-13` attribuait à un **interblocage** le
+      redémarrage de Mars Pathfinder alors que `lecon-11` consacre une section à dire que c'était
+      une **inversion de priorité** et que son QCM compte « un interblocage » comme FAUX pour ce
+      scénario exact ; `lecon-14` annonçait « treize leçons » et n'en énumérait que douze, la
+      manquante (L6) étant justement celle des outils que le projet emploie (`top`, `htop`,
+      `strace` : 14 occurrences en L6, 0 ailleurs) ; `lecon-06` renvoyait au « projet final
+      (leçon 11) » quand le projet final est la leçon 14 ; un `ls -l` transcrit **sans champ
+      date**, que la commande ne peut pas produire. Plus **un distracteur que le cours enseigne
+      comme VRAI six leçons plus loin** (l'héritage de priorité, mot pour mot celui de `lecon-11`)
+      et **deux régularités de forme fabriquées par la vague** que l'outil ne voit pas : la
+      **glose finale nominale** (les trois distracteurs finissaient par « (un/une … ) », la bonne
+      réponse jamais — 100 % de rendement sur 3 questions, alors que « écarter la glose finale »
+      rendait `couverture 0,0 %` puisque les quatre portaient bien une parenthèse : **la règle
+      « les quatre ou aucune » ne protège que la PRÉSENCE du signe, pas ce qu'il y a dedans**),
+      et **l'intrus par connecteur de conséquence** (3 distracteurs sur 3 en portaient un, la
+      bonne réponse non).
+
+      ⚠️ **Un angle mort d'outil trouvé au passage** : `plan-rangs-qcm --incise` teste
+      `/\([^)]{4,}\)/` — une parenthèse de moins de 4 caractères comme `(IPC)` ou `(OS)` lui est
+      invisible. Il rendait « 0 question en tête » sur une question où la marque tranchait à 100 %.
+
+      ⚠️ **Deux indices se sont RETOURNÉS**, comme sur `data-eng`, et sont assumés : l'écho de la
+      question (14,7 % en direct, **27,2 %** à qui l'écarte, mesuré par `scratchpad/echo-inverse.js`)
+      et le mot technique exclusif (18,8 % en direct, **27,3 %** à l'inverse, `mesure-biais-inverse`).
+      +2,2 et +2,3 points au-dessus du hasard, contre 30,4 % sur `data-eng` : la consigne « UN seul
+      distracteur fait écho, jamais les trois » a bien limité le retournement.
+
+      **Contrôles** : 15 blocs JSON valides, 0 BOM, 0 U+00A0 et 0 `&nbsp;` **introduits** (les 27
+      U+00A0 du cours sont dans des champs `q` intouchables et préexistants, vérifiés contre
+      `git show HEAD:`) ; `verif-html` **0 problème sur 1 629 fichiers** ; `verif-donnees`
+      **0 erreur** (2 avertissements préexistants) ; `verif-qcm-biais` « aucun cours n'a empiré »,
+      référence refigée et `os` marqué `traite` (**26 cours**) ; index `quiz`/`flashcards`/`search`/
+      `searchlite`/`antiseches`/`pieges` régénérés `--fresh` en nommant `pieges` explicitement.
+      ⚠️ `core.autocrlf=true` ici : l'arbre de travail est en CRLF et git normalise en LF au
+      commit — le diff fait **8 lignes par leçon**, rien d'autre. Ne pas « réparer » ces CR.
+
+      **CE QUI RESTE** : **64 cours non traités**, les plus nocifs par questions devinables étant
+      `stats` (72 q, 99,3 %), `nosql` (57 q, 99,1 %), `cobol` (50 q, 98,7 %) et `lisp` (55 q,
+      98,2 %). ⚠️ **`stats` reste le cours-témoin de `verif-qcm-biais-mutations` : changer le
+      témoin AVANT de le traiter.** ⚠️ **Et l'indice lexical est désormais le premier du site
+      devant la longueur sur les cours traités : le fermer passe avant d'en traiter un 27ᵉ.**
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
