@@ -3393,6 +3393,153 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       régression. `verif-qcm-biais-mutations` **8/8** après l'élargissement, `verif.js --rapide`
       **54,3 s tout vert**.
 
+      **FAIT — LE 20ᵉ COURS, `rust`, le 2026-09-06.** 76 questions, 22 leçons. La passe a
+      commencé par **récupérer le travail d'un réveil tué en cours de route** : 11 leçons
+      modifiées et jamais commitées, vérifiées avant reprise (112 distracteurs réécrits,
+      `mesure-qcm-intouchable` « aucune atteinte ») puis commitées telles quelles.
+
+      | indice | avant | après |
+      |---|---:|---:|
+      | **la plus longue** | **96,1 %** | **25,0 %** — le hasard exact, rangs 19/19/19/19 |
+      | **la plus COURTE** | — | **25,0 %** |
+      | la plus détaillée | 76,3 % | 43,4 % (pire stratégie, cible 60 %) |
+      | l'incise entre parenthèses | 70,5 % | **23,0 %** (0 question où la bonne est seule en tête) |
+      | biais INVERSE (écart au hasard) | — | **+0,3 point** sur 96,1 % des questions |
+
+      Global du site : **67,5 % → 66,7 %**. Référence refigée, `rust` marqué `traite` —
+      **20 cours traités**. Le **biais inverse** (le défaut trouvé sur `git`) est ici le
+      mieux tenu des 20 cours : directe 23,8 %, inverse 25,3 % — la consigne « vise
+      l'équilibre, pas l'inversion », ajoutée aux écrivains après `git`, a tenu.
+
+      ⚠️⚠️ **LA TROUVAILLE DE CETTE PASSE, ET ELLE MET EN CAUSE UN OUTIL DU PROTOCOLE :
+      le 25,0 % était une MOYENNE QUI MENTAIT, et `plan-rangs-qcm.js` la certifiait.**
+      Le cours affichait 25,0 % sur « la plus longue » *et* 25,0 % sur « la plus COURTE »,
+      donc parfaitement plat, et l'outil rendait « **0 question à retoucher** ». Trois
+      relecteurs adversariaux sur quatre ont réclamé la mesure **par leçon** ; faite :
+
+      | | avant | après |
+      |---|---:|---:|
+      | `lecon-18` | **3/3** (100 %) | 1/3 |
+      | `lecon-22`, qui porte le **QCM BILAN** | **10/13** (76,9 %) | 3/13 |
+      | — dont le bilan seul | **5/8** | **0/8** |
+      | leçons 01-17, « la plus longue » | 2/51 (**3,9 %**) | — |
+      | leçons 18-22, « la plus longue » | 17/25 (**68,0 %**) | — |
+      | leçons au-dessus de 1/3 | 3 | **aucune** |
+
+      Deux lots de biais **opposés** qui s'annulaient dans la moyenne. Sur les leçons 01-17,
+      « n'élis jamais la plus longue » était une règle d'élimination quasi parfaite ; sur
+      18-22, « élis toujours la plus longue » gagnait deux fois sur trois — et un apprenant
+      ne révise jamais que l'un des deux lots. **Ce n'est pas une impression : p = 7,4e-6
+      pour les leçons 18-22 (17 sur 25) et p = 1,3e-4 pour `lecon-22` (10 sur 13)**, contre
+      une binomiale (n, 1/4). C'est la leçon du cours `react` — « un indice de LOT vaut
+      100 % sur le lot et 25 % sur le site » — montée d'un cran : **la moyenne du COURS est
+      à son tour le mauvais endroit où décider.**
+
+      **LA CAUSE EST DANS L'OUTIL, pas dans l'écriture, et c'est ce qui la rend générale.**
+      `plan-rangs-qcm.js` triait **tous** les couples (question, rang) du cours par coût
+      croissant et servait le moins cher d'abord. Or **le rang 0 coûte ZÉRO à une question
+      qui y est déjà** : les 19 places du rang 0 partaient donc systématiquement aux mêmes
+      leçons — celles dont les options sont courtes, au premier rang desquelles le QCM
+      bilan. **L'outil produisait le défaut qu'il était censé mesurer, puis le certifiait
+      conforme.** Réparé : les rangs cibles sont distribués **fichier par fichier**, en
+      tourniquet, avec un décalage qui se poursuit d'un fichier à l'autre ; un fichier de
+      trois questions reçoit trois rangs **distincts** ; la répartition du cours ne change
+      pas ; le glouton par le coût ne joue plus qu'à l'intérieur d'un fichier. L'outil rend
+      désormais la capacité **réellement distribuée** au lieu de la théorique. Relancé sur
+      `rust` juste après : **36 questions à retoucher (984 caractères)** là où la version
+      d'avant en voyait zéro.
+
+      **CE QUE LA CORRECTION DE L'OUTIL RÉVÈLE SUR LES 19 COURS DÉJÀ CLOS — et il faut le
+      lire sans l'arrondir dans un sens ni dans l'autre.** Relancé sur les 20 cours
+      traités : **567 questions sur 1 941 (29,2 %) et 11 737 caractères** que l'ancienne
+      version déclarait conformes ; `rust` est le seul à zéro. **Mais 567 n'est PAS un
+      nombre de défauts** : la nouvelle règle est une **norme plus stricte** (chaque leçon
+      étale ses rangs), pas une preuve de biais. Le test statistique le dit : sur **435
+      fenêtres de 4 leçons** (≥ 8 questions) des 20 cours, **deux seulement** passent le
+      seuil p < 1 %, et **les deux sont sur `git`** — leçons 16-19, « la plus COURTE »
+      **9 sur 12 (p = 3,9e-4)**, et 15-18, 8 sur 12. À ce seuil on attend ~4 fausses
+      alertes sur 435 fenêtres : **`git` est donc à la limite, et les 18 autres cours clos
+      ne montrent rien.** ⚠️ Un premier jet de cette mesure comptait « 47 leçons au-dessus
+      de 50 % » et paraissait accablant : **faux seuil** — sur une leçon de trois questions,
+      2/3 arrive par hasard 15,6 % du temps, donc ~30 % des leçons devraient dépasser 50 %,
+      et on en observe 9,5 %. **Un seuil qui n'est pas comparé au hasard n'est pas une
+      mesure** ; c'est la même faute que B1 avait corrigée en prenant l'espérance exacte
+      comme étalon.
+
+      **CE QUE LA CONTRADICTION A TROUVÉ** (quatre relecteurs adversariaux, Rust **n'est
+      pas installé** ici — aucun verdict ne repose sur une compilation, seulement sur un
+      recalcul ou sur le comportement documenté de la bibliothèque standard) :
+      1. **UNE BONNE RÉPONSE FAUSSE** (`lecon-08` q1). L'énoncé demandait pourquoi
+         `fn f<T>(x: T)` ne peut pas faire `x > 0`, et la bonne réponse répondait
+         `T: PartialOrd`. **La borne donne `PartialOrd<T>`, donc le littéral `0` devrait
+         être un `T` — E0308.** Réparé à la racine en comparant deux valeurs du même type
+         (`fn f<T>(x: T, y: T)` … `x > y`), ce qui rend la bonne réponse exacte et remet
+         le distracteur « `T: Default` » du côté faux. La question 1 de « Vérifie ta
+         compréhension » portait le même défaut.
+      2. **UNE BONNE RÉPONSE APPROXIMATIVE, ET LE CORPS AVEC** (`lecon-09` q2) : « la
+         fonction doit renvoyer un Result **(ou Option)** ». Un `?` posé sur un `Result`
+         dans une fonction qui renvoie `Option` **ne compile pas**. Deuxième défaut dans la
+         même phrase : la contrainte porte sur la fonction **englobante**, pas sur « la
+         fonction appelante » — et le corps, lui, écrivait correctement « la fonction
+         courante ».
+      3. **DEUX DISTRACTEURS DEVENUS VRAIS EN ÉTANT ÉTOFFÉS**, le piège annoncé de la
+         phase : « Arc est plus lent dès qu'un seul thread est concerné » (**exact** —
+         c'est la raison d'être de `Rc`, et la leçon le dit elle-même) et « `Rc<Liste>`
+         s'impose pour un type récursif » (**exact aussi** — c'est littéralement le code
+         de la leçon 14 du même cours, et rustc suggère « a `Box`, `Rc`, or `&` »).
+      4. **QUATRE DÉFAUTS DE CORPS DE LEÇON**, le défaut fondateur de la chaîne :
+         `lecon-13` annonçait `    8     16    187` pour un `println!("{lignes:5} …")` —
+         **rejoué** : `{:5}` aligne sur **cinq** colonnes et le `Cargo.toml` que la leçon
+         publie elle-même en section 6 donne `   10    64   365` (10 lignes, 64 mots,
+         365 octets, comptés) ; `lecon-20` montrait un objet **inliné** dans un tableau en
+         sortie de `serde_json::to_string_pretty`, c'est-à-dire exactement ce que cette
+         fonction est appelée pour ne pas faire ; `lecon-14` publiait le format de panique
+         d'**avant Rust 1.73** ; `lecon-15` appelait `42.resume()`, qui **ne compile pas**
+         (E0689, type numérique ambigu) alors que la même leçon suffixe `21_i32` deux
+         sections plus bas.
+      5. Plus : la consigne de l'exercice 2 de `lecon-16` disait « le mot-clé pour un bloc
+         où le compilateur **NE VÉRIFIE PAS** la sûreté », soit l'**inverse** de ce que le
+         corps enseigne en gras et presque mot pour mot le distracteur déclaré faux dans
+         la même page ; et « Slice (taille fixe) », dans le QCM bilan, enseignait une
+         confusion (une slice est à taille **dynamique**, c'est `[T; N]` qui est fixe).
+
+      ⚠️ **Une passe précédente avait raboté des mots pour tenir une fenêtre de longueur**,
+      et c'est le relecteur qui l'a vu : sur les **3 seuls changements lexicaux** des 48
+      options retouchées par la passe « incise », tous trois étaient dans le QCM bilan et
+      tous trois retiraient 1 à 3 caractères (`Le comptage` → `Comptage`, `classique` →
+      `habituel`, `façon Haskell` → `à la Haskell`) pour repasser **sous** la bonne
+      réponse. Aucun n'avait basculé vrai/faux, mais la consigne de la passe suivante l'a
+      interdit explicitement et les trois mots ont été **restitués en allongeant**.
+
+      ⚠️ **`verif-normatif` est repassé au rouge (64/66), et c'est le mécanisme voulu** :
+      `doc/lecon-03` publie le taux de manquement du site à la clause `S3`, et détordre
+      `rust` l'a périmé — **59,1 % → 57,9 %, 3 605 → 3 532 manquements**, 5 + 5
+      occurrences. Remplacement motif par motif avec un compte affiché : `distribue/lecon-10`
+      porte un `60,3 s` de **disjoncteur** sans aucun rapport, qu'un `sed` global aurait
+      cassé. **66/66** après.
+
+      **Contrôles** : `verif.js --rapide` **60,1 s, tout vert** ; `verif-html` **0** ;
+      `verif-donnees` **0 erreur** (2 avertissements préexistants) ; `verif-normatif`
+      **66/66** ; `verif-qcm-biais-mutations` **8/8** ; `mesure-qcm-intouchable` « aucune
+      atteinte », **5 atteintes volontaires et déclarées** (2 énoncés, 2 explications,
+      1 bonne réponse, toutes listées ci-dessus) ; 45 blocs JSON valides ; les 22 fichiers
+      à **100 % CRLF** ; index `quiz`/`search` régénérés `--fresh` ; aucune URL CDN
+      introduite. ⚠️ **Quatre des six écrivains ont rendu compte que les fichiers étaient
+      « en LF, pas en CRLF » ; mesuré après coup, les 22 sont à 100 % en CRLF, inchangés.**
+      Un compte rendu d'agent n'est pas une mesure.
+
+      **CE QUI RESTE, dans l'ordre** : (1) **reprendre `git`** — c'est le seul des 19 cours
+      clos que le test statistique met en cause, sur son lot 15-19 et à l'**envers** (« la
+      plus COURTE » 9 sur 12) ; le plan corrigé y voit **38 questions / 882 caractères**.
+      (2) les cours neufs, par nocivité : `stats` 99,3 %, `nosql` 99,1 %, `cobol` 98,7 %,
+      `data-eng` 98,6 %, `os` 98,5 %, puis `java` / `csharp` / `cpp` / `ocaml` / `php`.
+      ⚠️ **`stats` reste le cours-témoin de `verif-qcm-biais-mutations` : changer le témoin
+      AVANT de le traiter.** (3) décider si la règle « chaque leçon étale ses rangs » doit
+      entrer dans le **cliquet** : elle ne peut pas passer par `EXPLOITABLES` (ce n'est pas
+      un taux de réussite), il lui faudrait un contrôle propre, adossé au test binomial
+      plutôt qu'à un seuil fixe — le seuil fixe vient d'être pris en flagrant délit de
+      surcompte dans cette passe même.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
