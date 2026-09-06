@@ -106,9 +106,19 @@ var ECRIRE = process.argv.indexOf("--ecrire") !== -1;
    (`ruby`) et 36,3 % (`iac`) sur la pire des trois, et le cours le plus expose
    du site entier est `neurones` a 42,6 % -- donc les ajouter ne fait rougir
    personne aujourd'hui. */
+/* AJOUT B4 (2026-09-06, cours `git`) : « la seule qui nie ». Le plan la laissait en
+   suspens depuis deux passes, faute d'avoir mesure ce que son entree coute. Mesure
+   faite avant de l'ecrire : 31,3 % de reussite sur le site pour 31,2 % de couverture,
+   soit un RENDEMENT de 40,6 % la ou elle tranche — nettement au-dessus du hasard, et
+   c'est le critere retenu depuis la lecon du cours `doc` (la reussite moyenne noie un
+   indice rare). Ce qu'elle coute aujourd'hui : RIEN. AUCUN des 90 cours n'est au-dessus
+   de la cible de 60 % ; le plus haut du site est `crypto` a 46,1 %, puis `cicd` 43,6 % et
+   `data-eng` 41,9 %, et le plus haut des 19 cours traites est `mobile` a 41,0 % — 13,9
+   points de marge. C'est exactement la condition posee en B2 pour qu'un cliquet reste lu :
+   il ne rougit sur personne le jour ou on l'ajoute, il fige la cible pour la suite. */
 var EXPLOITABLES = ["la plus longue", "la plus detaillee", "le mot technique exclusif",
                     "l'echo de la question", "l'incise entre parentheses",
-                    "la ponctuation finale unique",
+                    "la ponctuation finale unique", "la seule qui nie",
                     "la DEUXIEME plus longue", "la TROISIEME plus longue",
                     "ecarter les deux extremes"];
 var CLEF_LONGUEUR = "la plus longue";

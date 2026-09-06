@@ -3374,8 +3374,24 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       cours-témoin de `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter** ;
       (2) décider si le biais INVERSE mérite un contrôle propre — il ne peut pas passer par
       `EXPLOITABLES` (plafond 33,3 %), il lui faudrait sa propre borne dans le cliquet ;
-      (3) « la seule qui nie » (41,2 % de rendement site) dans `EXPLOITABLES`, toujours pas
-      tranché.
+      (3) **TRANCHÉ dans la foulée : « la seule qui nie » ENTRE dans `EXPLOITABLES`** (9 → 10
+      stratégies). Le plan la laissait en suspens depuis deux passes faute d'avoir mesuré ce
+      que son entrée coûte. Mesuré avant de l'écrire : **31,3 % de réussite pour 31,2 % de
+      couverture, soit 40,6 % de rendement** là où elle tranche — nettement au-dessus du
+      hasard, et c'est le critère retenu depuis le cours `doc`. **Ce qu'elle coûte aujourd'hui :
+      rien.** Aucun des 90 cours n'est au-dessus de la cible de 60 % ; le plus haut du site est
+      `crypto` à **46,1 %**, puis `cicd` 43,6 % et `data-eng` 41,9 %, et le plus haut des 19
+      cours traités est `mobile` à 41,0 % — **13,9 points de marge**. C'est la condition posée
+      en B2 pour qu'un cliquet reste lu : il ne rougit sur personne le jour où on l'ajoute, il
+      fige la cible pour la suite.
+
+      ⚠️ **L'ajout a produit un ROUGE qui n'était pas une régression, et il faut savoir le
+      lire** : `nodejs` a été signalé « pire indice 29,8 % → 33,2 % » alors que **rien n'a bougé
+      dans ce cours** — c'est le périmètre de la mesure qui a changé, et `nodejs` est le SEUL
+      des 90 cours dont le pire indice devient « la seule qui nie ». Référence refigée pour
+      cette raison-là, écrite ici : refiger reste interdit pour faire taire une vraie
+      régression. `verif-qcm-biais-mutations` **8/8** après l'élargissement, `verif.js --rapide`
+      **54,3 s tout vert**.
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
