@@ -4147,6 +4147,119 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       ⚠️ `mesure-biais-qcm --seul=<cours>` doit rester le premier geste de chaque passe : c'est
       le seul mode qui fait voir un indice à faible couverture.
 
+
+      ---
+
+      **`data-eng` — FAIT le 2026-09-06. 24ᵉ cours détordu, et le deuxième d'affilée en UNE
+      SEULE VAGUE d'écriture** (la consigne portait dès le départ les formulations corrigées de
+      l'incise et du point-virgule : `scratchpad/CONSIGNE-DATA-ENG.md`, réutilisable).
+      70 questions, 210 distracteurs, **208 réécrits**, 14 leçons + le QCM bilan de 12 questions.
+
+      | indice, sur les 70 questions | avant | après |
+      |---|---:|---:|
+      | la plus longue | **98,6 %** | **25,7 %** |
+      | la plus détaillée | 84,9 % (rendement 98,1 %) | 25,1 % (**5,0 %**) |
+      | l'incise entre parenthèses | 66,1 % (**100,0 %**) | 29,0 % (**0,0 %**) |
+      | le mot technique exclusif | 61,8 % | 23,3 % |
+      | la seule avec un point-virgule | 44,3 % (**100,0 %**) | 25,0 % (**0,0 %**) |
+      | la seule qui nie | 41,9 % | 25,1 % |
+      | rangs de longueur | **69 / 1 / 0 / 0** | **18 / 18 / 17 / 17** (cible exacte) |
+      | distracteurs hors 70-130 % | 210 | **0** (0,72 à 1,25) |
+
+      **Global du site : 64,1 % → 63,3 %.** `mesure-qcm-intouchable` **0 atteinte** sur les
+      70 questions. `verif-qcm-biais` refigé, **`data-eng` marqué `traite` — 25 cours traités** ;
+      `verif-qcm-biais-mutations` **8/8**, fichiers restaurés.
+
+      ⚠️⚠️ **CE POINT A TROUVÉ LE PLAFOND DE SA PROPRE CONSIGNE, ET C'EST SON RÉSULTAT
+      PRINCIPAL — IL VAUT POUR LES 25 COURS DÉJÀ TRAITÉS.** La consigne dit depuis six cours :
+      « si la bonne réponse porte un `;`, au moins un distracteur doit en porter un aussi ».
+      Elle ferme bien la stratégie « la SEULE avec un `;` » — couverture ramenée à zéro. **Mais
+      un apprenant n'a pas besoin de l'unicité : il lui suffit de RESTREINDRE son tirage aux
+      options marquées.** Si la marque est portée par la bonne réponse et par UN seul
+      distracteur, il tire à pile ou face — **50 %, le double du hasard**, et aucune des
+      19 stratégies de l'outil ne le voyait.
+
+      | rendement de la RESTRICTION | avant la vague | après « au moins un » | après « au moins deux » |
+      |---|---:|---:|---:|
+      | point-virgule | **97,4 %** | **45,6 %** | **0 %** (ne tranche plus) |
+      | parenthèse | **98,7 %** | **48,7 %** | **0 %** |
+      | deux-points | 83,8 % | 35,7 % | **0 %** |
+
+      Sur les **6 167 questions du site**, restreindre à la parenthèse rend **49,1 %** — le
+      deuxième indice du site derrière la longueur — les deux-points **39,2 %**, le
+      point-virgule **36,6 %**. Sur les cours déjà traités le plafond tient partout : `git`
+      47,8 / 50,9 %, `csharp` 43,4 / 39,4 %, `cpp` 44,2 / 42,0 %, `java` 43,0 / 39,3 %, `react`
+      34,0 / 49,0 %. **Trois stratégies « RESTREINDRE au … » sont maintenant dans
+      `tools/mesure-biais-qcm.js`**, et la règle est passée en consigne : *par marque, ou les
+      quatre options la portent, ou aucune.*
+      ⚠️ **Deux relecteurs adversariaux l'ont signalé le même jour sans se concerter — et leur
+      chiffre était faux.** Ils annonçaient « 100 % sur 13 questions sur 22 » ; c'était le taux
+      de leur LOT. Sur le cours entier : 45,6 %. La leçon de B3 (« un relecteur qui mesure sur
+      son lot extrapole faux ») s'est vérifiée une fois de plus, sur une trouvaille par ailleurs
+      juste et importante.
+
+      **LA CONTRADICTION : 53 défauts rendus, 44 appliqués, et ZÉRO distracteur devenu vrai sur
+      208 réécrits** — deuxième cours d'affilée à ce résultat, sur 112 + 88 + 80 options relues
+      une par une par trois contradicteurs. Ce qu'ils ont trouvé est ailleurs, **dans les corps
+      de leçon, et quatre défauts font que la leçon se réfute elle-même** :
+      `lecon-06` (une ligne au format de date invalide s'évapore du silver ET de la quarantaine
+      — le silver teste la nullité sur la valeur CASTÉE, la quarantaine sur la colonne BRUTE —
+      alors que la leçon garantit deux fois « aucune ligne ne doit s'évaporer en silence », et
+      que sa fonction de « contrôle de conservation » rebaptise la fuite en `doublons_retires`
+      et retourne normalement) ; `lecon-08` (la « clé déterministe » trie sur `start`, colonne
+      **constante par construction** puisqu'elle est hachée dans la clé de partition : la ligne
+      gardée est arbitraire ; et `||` propage le NULL, donc toutes les lignes à `start` nul
+      tombent dans une seule partition et une seule survit) ; `lecon-10` (le test de volumétrie
+      filtre `WHERE debut >= current_date` alors que le pipeline traite la veille — il compte
+      0 ligne et échoue **chaque nuit**, la « fatigue d'alerte » que la leçon dénonce 35 lignes
+      plus bas ; le contrat dbt porte sur une colonne `type` qui n'existe pas, la leçon 6 crée
+      `type_velo`, et interdit la valeur `inconnu` que le `CASE` du silver produit exprès ; le
+      test de fraîcheur passe au VERT sur une table vide) ; `lecon-11` (la sortie annoncée en
+      commentaire est impossible : `ATTENDU` porte les colonnes des trajets, l'exemple passe
+      celles de la météo, et le message cité nomme `temp_c` qui n'est dans aucun des deux —
+      corrigé et **revérifié par exécution Python**).
+      Plus : `lecon-03` (le `CAST` d'une date `01/05/2026` échoue ou la fausse silencieusement,
+      `WHERE "end" > start` compare du TEXTE non casté, et `QUALIFY` n'existe ni dans PostgreSQL
+      ni dans Redshift, deux des quatre moteurs que la note cite ; « anonymisation » corrigé en
+      **pseudonymisation** au sens du RGPD art. 4(5), corps + antisèche + glossaire) ;
+      `lecon-12` (le seuil de fraîcheur décalé d'un jour : `age_en_jours = 0` déclaré « frais »
+      est inatteignable pour un pipeline qui publie la veille — l'alerte partait chaque nuit) ;
+      `lecon-13` (le commentaire et le SVG décrivent un `SELECT *` sans filtre là où la requête
+      écrite est un `COUNT(*)` filtré ; et « 2,7 Go » donnait au Parquet 25 % de **surpoids** sur
+      le CSV brut chiffré par la leçon elle-même) ; `lecon-02` (la passe nocturne ingérait les
+      trajets du 1er mai et la météo du 30 avril, puis les croisait) ; `lecon-05` (le curseur
+      avançait depuis l'HORLOGE alors que la leçon dit deux fois qu'il doit décrire LA DONNÉE) ;
+      deux gabarits à trous d'une lettre de trop ou de moins, et un exercice « Au clavier »
+      **insoluble** dont la ligne d'entrée n'existait que dans la solution repliée.
+
+      ⚠️ **Un deuxième biais fabriqué par l'écriture, non corrigé et assumé** : « l'écho de la
+      question » est tombé de 40,8 % à **11,3 %** — les distracteurs reprennent désormais les
+      mots de l'énoncé PLUS que la bonne réponse. L'apprenant qui écarte l'option la plus écho
+      obtient **30,4 %** (plafond de l'inverse : 33,3 %, mesuré par `scratchpad/echo-inverse.js`).
+      C'est le même arbitrage que sur `git` : +5,4 points au-dessus du hasard, hors d'atteinte
+      de la cible de 60 % des EXPLOITABLES, et une troisième vague coûterait plus qu'elle ne
+      rapporte. La consigne dit maintenant de ne pas faire écho avec LES TROIS distracteurs.
+      Les six autres cours traités mesurés le même jour sont proches de l'équilibre
+      (`cpp` 21,4 / 23,4 %, `react` 22,5 / 25,0 %) ; `csharp` (13,1 / 28,7 %) partage le défaut.
+
+      **Contrôles** : 29 blocs JSON valides, 0 BOM, 0 CR, 0 U+00A0, 0 `&nbsp;` dans un bloc
+      quiz ; `verif-html` **0 problème sur 1 629 fichiers** ; `verif-donnees` **0 erreur**
+      (2 avertissements préexistants) ; `verif.js --rapide` **56,9 s** ; `verif-exemples`
+      **0 divergence** (197 blocs `type:code` confirmés par exécution) ; `verif-sorties`
+      **449 sorties identiques au caractère près, 0 divergente** ; `verif-sql-exos` **0 faute**
+      (13 exercices, 39 contre-requêtes) ; index `quiz`/`flashcards`/`search`/`searchlite`/
+      `antiseches`/`pieges` régénérés `--fresh` **en nommant `pieges` explicitement**.
+      ⚠️ **5 fichiers sur 14 sont revenus en CRLF** de l'outil d'édition des agents (le piège
+      déjà vu sur `css`) : 2 440 CR retirés avant le commit.
+      ⚠️ **`doc/lecon-03` s'est repérimé une 8ᵉ fois** : **54,4 % → 53,2 %**, **3 318 → 3 248**
+      manquements à S3, **10 mentions** dans **deux formes d'espace** (U+00A0 littérale pour le
+      nombre, entité `&nbsp;` pour le taux). `verif-normatif` **66/66**.
+
+      **CE QUI RESTE** : **65 cours non traités**, les plus nocifs par questions devinables
+      étant `stats` (72 q, 99,3 %), `os` (68 q, 98,5 %), `nosql` (57 q, 99,1 %), `cobol`
+      (50 q, 98,7 %) et `lisp` (55 q, 98,2 %). ⚠️ **`stats` reste le cours-témoin de
+      `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.**
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
