@@ -268,11 +268,11 @@ FROM produits;</code></pre></figure>
 
 <figure class="code-block" data-file="requete.sql"><pre><code class="language-sql">SELECT nom,
        CAST(prix AS INTEGER)              AS prix_entier,
-       CAST(quantite AS DECIMAL) / 3      AS part
+       CAST(quantite AS REAL) / 3         AS part
 FROM produits;</code></pre></figure>
 
 <table><thead><tr><th>nom</th><th>prix_entier</th><th>part</th></tr></thead><tbody><tr><td>Clavier</td><td>25</td><td>1.333…</td></tr><tr><td>Souris</td><td>12</td><td>3.333…</td></tr><tr><td>Écran</td><td>149</td><td>0.666…</td></tr><tr><td>Câble HDMI</td><td>7</td><td>6.666…</td></tr></tbody></table>
-<p class="code-caption">En convertissant <code>quantite</code> en décimal, la division garde ses décimales.</p>
+<p class="code-caption">En convertissant <code>quantite</code> en réel, la division garde ses décimales. <code>CAST(… AS DECIMAL)</code> ne suffirait pas partout&nbsp;: sans précision déclarée, SQLite et MySQL rendent un entier, donc <code>1</code> au lieu de <code>1.333…</code>.</p>
 
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Le back-office d'une boutique affiche, pour chaque article, une ligne prête à lire&nbsp;: <code>UPPER(nom)</code> pour le titre, <code>ROUND(prix * 1.2, 2)</code> pour le prix TTC, un badge de gamme calculé par <code>CASE</code>, et <code>COALESCE(remise, 0)</code> pour ne pas laisser de trou quand aucune remise n'est saisie. Aucune de ces valeurs n'est stockée dans la table&nbsp;: elles sont toutes <strong>calculées à la volée</strong> par la requête d'affichage.</p></div></div>
 
@@ -281,7 +281,7 @@ FROM produits;</code></pre></figure>
 <ul>
 <li><strong>La concaténation diffère selon le moteur.</strong> <code>||</code> (standard, PostgreSQL, SQLite), <code>CONCAT(…)</code> (MySQL et autres), <code>+</code> (SQL Server). Ne mélange pas les styles.</li>
 <li><strong>Tout calcul avec <code>NULL</code> vaut <code>NULL</code>.</strong> Une addition, une soustraction ou une concaténation impliquant une valeur absente renvoie <code>NULL</code>. Protège-toi avec <code>COALESCE</code>.</li>
-<li><strong>Division entière contre décimale.</strong> <code>7 / 2</code> peut donner <code>3</code>. Utilise <code>7.0 / 2</code> ou <code>CAST(… AS DECIMAL)</code> pour obtenir <code>3.5</code>.</li>
+<li><strong>Division entière contre décimale.</strong> <code>7 / 2</code> peut donner <code>3</code>. Utilise <code>7.0 / 2</code> ou <code>CAST(… AS REAL)</code> pour obtenir <code>3.5</code>.</li>
 <li><strong>Un alias ne s'utilise pas dans <code>WHERE</code>.</strong> Le <code>WHERE</code> est évalué avant que l'alias n'existe. Tu dois répéter l'expression. En revanche, <code>ORDER BY</code> accepte l'alias.</li>
 </ul>
 
@@ -327,7 +327,7 @@ FROM produits;</code></pre></figure>
   <dt>CASE</dt>
   <dd>Expression conditionnelle «&nbsp;si… alors… sinon&nbsp;» ; teste les <code>WHEN</code> dans l'ordre, garde le premier vrai.</dd>
   <dt>CAST</dt>
-  <dd>Conversion explicite d'une valeur vers un autre type : <code>CAST(quantite AS DECIMAL)</code>.</dd>
+  <dd>Conversion explicite d'une valeur vers un autre type : <code>CAST(quantite AS REAL)</code>.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
@@ -345,9 +345,9 @@ FROM produits;</code></pre></figure>
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Comment afficher le prix multiplié par 1,2 sous une colonne nommée prix_ttc ?","a":["SELECT prix * 1.2 AS prix_ttc","SELECT prix_ttc = prix * 1.2","SELECT prix * 1.2 INTO prix_ttc","SELECT ALIAS prix_ttc prix * 1.2"],"correct":0,"explain":"On calcule l'expression dans le SELECT et on la renomme avec AS : prix * 1.2 AS prix_ttc donne une colonne calculée portant ce nom."},
-  {"q":"Pourquoi prix - remise peut-il renvoyer NULL, et comment l'éviter ?","a":["Si remise est NULL, toute opération avec NULL donne NULL ; on utilise COALESCE(remise, 0) pour remplacer le NULL par 0","Parce que la soustraction est interdite","Parce que prix est trop grand","On ne peut pas l'éviter"],"correct":0,"explain":"NULL se propage dans les calculs : prix - NULL vaut NULL. COALESCE(remise, 0) renvoie la première valeur non nulle, ici 0 quand la remise est absente, ce qui rend le calcul correct."},
-  {"q":"Peux-tu utiliser un alias défini dans le SELECT à l'intérieur du WHERE ? Et dans le ORDER BY ?","a":["Pas dans le WHERE (évalué AVANT le SELECT, l'alias n'existe pas encore) ; oui dans le ORDER BY (évalué après)","Oui dans les deux","Non dans les deux","Oui dans le WHERE, non dans ORDER BY"],"correct":0,"explain":"L'ordre logique d'exécution place le WHERE avant le calcul des colonnes du SELECT : l'alias n'y est pas connu. Le ORDER BY, exécuté en dernier, peut s'y référer."}
+  {"q":"Comment afficher le prix multiplié par 1,2 sous une colonne nommée prix_ttc ?","a":["SELECT prix * 1.2 AS prix_ttc","SELECT prix_ttc AS prix * 1.2","SELECT prix, 1.2 AS prix_ttc","SELECT prix * 1.2 = prix_ttc"],"correct":0,"explain":"On calcule l'expression dans le SELECT et on la renomme avec AS : prix * 1.2 AS prix_ttc donne une colonne calculée portant ce nom."},
+  {"q":"Pourquoi prix - remise peut-il renvoyer NULL, et comment l'éviter ?","a":["Si remise est NULL, toute opération avec NULL donne NULL ; on utilise COALESCE(remise, 0) pour remplacer le NULL par 0","La soustraction ignore le terme absent et renvoie le prix inchangé, tel quel ; c'est NULLIF(remise, 0) qui rétablit la vraie remise","Le résultat est faux parce que remise et prix n'ont pas le même type ; la parade est ROUND(remise, 2), qui aligne les colonnes sur deux décimales","On obtient NULL parce que la remise est stockée en texte et non en nombre ; IFNULL(remise, '0') répare la ligne"],"correct":0,"explain":"NULL se propage dans les calculs : prix - NULL vaut NULL. COALESCE(remise, 0) renvoie la première valeur non nulle, ici 0 quand la remise est absente, ce qui rend le calcul correct."},
+  {"q":"Peux-tu utiliser un alias défini dans le SELECT à l'intérieur du WHERE ? Et dans le ORDER BY ?","a":["Pas dans le WHERE (évalué AVANT le SELECT, l'alias n'existe pas encore) ; oui dans le ORDER BY (évalué après)","Oui dans le WHERE si l'alias renomme une colonne, pas s'il coiffe un calcul ; dans le ORDER BY, on le préfixe du nom de la table","Non dans le WHERE (l'alias meurt sitôt la ligne écrite) ; on répète l'expression au filtre comme au tri, où l'alias reste inconnu","L'alias vaut au filtre comme au tri, mais seulement s'il est déclaré sans le mot AS"],"correct":0,"explain":"L'ordre logique d'exécution place le WHERE avant le calcul des colonnes du SELECT : l'alias n'y est pas connu. Le ORDER BY, exécuté en dernier, peut s'y référer. (SQLite, le moteur du bac à sable de cette page, est une exception : il accepte l'alias dans le WHERE. PostgreSQL, MySQL et SQL Server le refusent.)"}
 ]
 </script>
 
