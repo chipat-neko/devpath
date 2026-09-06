@@ -102,7 +102,22 @@
 
 <h2>Délégués et événements approfondis</h2>
 <p>Un délégué est un type qui référence une méthode. Un <code>event</code> encapsule un délégué pour qu'un type expose un point d'abonnement sans laisser l'extérieur déclencher l'invocation. La convention .NET est le pattern <code>EventHandler&lt;TEventArgs&gt;</code>.</p>
-<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">public sealed class Compte
+<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">var compte = new Compte();
+// Multicast : on chaîne plusieurs abonnés avec +=
+EventHandler&lt;decimal&gt; journal = (sender, solde) =&gt; Console.WriteLine($"Journal : {solde} €");
+compte.SoldeChange += journal;
+compte.SoldeChange += (s, solde) =&gt; Console.WriteLine($"Notif : nouveau solde {solde} €");
+
+compte.Deposer(100);
+// Journal : 100 €
+// Notif : nouveau solde 100 €
+
+// Se désabonner : indispensable pour ne pas garder l'abonné en vie
+compte.SoldeChange -= journal;
+compte.Deposer(50);
+
+// Les types se déclarent APRÈS les instructions de premier niveau.
+public sealed class Compte
 {
     private decimal _solde;
 
@@ -116,20 +131,6 @@
         SoldeChange?.Invoke(this, _solde);
     }
 }
-
-var compte = new Compte();
-// Multicast : on chaîne plusieurs abonnés avec +=
-EventHandler&lt;decimal&gt; journal = (sender, solde) =&gt; Console.WriteLine($"Journal : {solde} €");
-compte.SoldeChange += journal;
-compte.SoldeChange += (s, solde) =&gt; Console.WriteLine($"Notif : nouveau solde {solde} €");
-
-compte.Deposer(100);
-// Journal : 100 €
-// Notif : nouveau solde 100 €
-
-// Se désabonner : indispensable pour ne pas garder l'abonné en vie
-compte.SoldeChange -= journal;
-compte.Deposer(50);
 // Notif : nouveau solde 150 €</code></pre></figure>
 <p>Un événement multicast appelle ses abonnés dans l'ordre d'inscription. L'opérateur <code>-=</code> retire <strong>exactement</strong> la même référence : pour pouvoir te désabonner, garde la lambda dans une variable.</p>
 <figure class="diagram">
@@ -158,9 +159,7 @@ compte.Deposer(50);
 
 <h2>Pattern matching avancé</h2>
 <p>Les patterns dépassent le simple test de type. Tu peux inspecter des propriétés, déconstruire des tuples et des records, et combiner des conditions relationnelles dans une <code>switch</code> expression.</p>
-<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">public record Point(int X, int Y);
-
-static string Classer(object? valeur) =&gt; valeur switch
+<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">static string Classer(object? valeur) =&gt; valeur switch
 {
     // Property pattern (test sur des propriétés)
     Point { X: 0, Y: 0 } =&gt; "origine",
@@ -189,19 +188,15 @@ string forme = series switch
     [var seul] =&gt; $"un seul : {seul}",
     [var premier, .., var dernier] =&gt; $"de {premier} à {dernier}",
 };
-Console.WriteLine(forme); // de 1 à 4</code></pre></figure>
+Console.WriteLine(forme); // de 1 à 4
+
+// Les types se déclarent APRÈS les instructions de premier niveau.
+public record Point(int X, int Y);</code></pre></figure>
 <p>Le list pattern <code>[var premier, .., var dernier]</code> capture le premier et le dernier élément en ignorant le milieu via le slice pattern <code>..</code>. Note que <code>Classer(new Point(3, 3))</code> renvoie <code>"diagonale"</code> : la première branche qui matche l'emporte, l'ordre des cas compte.</p>
 
 <h2>Records avancés</h2>
 <p>Les records offrent une égalité de valeur en profondeur et la mutation non destructive via <code>with</code>. Ils supportent aussi l'héritage et la variante <code>record struct</code> (sémantique de valeur&nbsp;: copié à l'affectation au lieu d'être partagé par référence).</p>
-<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">public abstract record Forme(string Nom);
-public record Cercle(double Rayon) : Forme("cercle");
-public record Rectangle(double L, double H) : Forme("rectangle");
-
-// record struct : type valeur, idéal pour de petits agrégats
-public readonly record struct Coord(int X, int Y);
-
-var c1 = new Cercle(2.0);
+<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">var c1 = new Cercle(2.0);
 var c2 = c1 with { Rayon = 5.0 }; // copie modifiée, c1 reste intact
 Console.WriteLine(c1);            // Cercle { Nom = cercle, Rayon = 2 }
 Console.WriteLine(c2.Rayon);      // 5
@@ -214,7 +209,15 @@ Console.WriteLine(ReferenceEquals(a, b)); // False
 
 var p1 = new Coord(1, 2);
 var p2 = p1 with { Y = 9 };
-Console.WriteLine(p2); // Coord { X = 1, Y = 9 }</code></pre></figure>
+Console.WriteLine(p2); // Coord { X = 1, Y = 9 }
+
+// Les types se déclarent APRÈS les instructions de premier niveau.
+public abstract record Forme(string Nom);
+public record Cercle(double Rayon) : Forme("cercle");
+public record Rectangle(double L, double H) : Forme("rectangle");
+
+// record struct : type valeur, idéal pour de petits agrégats
+public readonly record struct Coord(int X, int Y);</code></pre></figure>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Un record est conçu pour être <strong>immuable</strong>. Évite d'ajouter des setters mutables : tu perdrais le bénéfice de l'égalité de valeur (deux instances « égales » pourraient diverger après coup) et tu risquerais des bugs de partage. Pour « changer » un champ, crée une copie avec <code>with</code>.</p></div></div>
 
 <h2>Span&lt;T&gt; et Memory&lt;T&gt; : performance sans allocation</h2>
@@ -306,6 +309,16 @@ Console.WriteLine(compile(21)); // 42</code></pre></figure>
 <p>La réflexion inspecte les types à l'exécution via leurs métadonnées : lister des propriétés, lire des attributs, instancier dynamiquement. Les <strong>source generators</strong> font l'inverse — ils génèrent du code <em>à la compilation</em>, sans coût d'exécution.</p>
 <figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">using System.Reflection;
 
+foreach (PropertyInfo prop in typeof(Utilisateur).GetProperties())
+{
+    var attr = prop.GetCustomAttribute&lt;ColonneAttribute&gt;();
+    string colonne = attr?.Nom ?? prop.Name;
+    Console.WriteLine($"{prop.Name} -&gt; {colonne}");
+}
+// Id -&gt; id_user
+// Nom -&gt; Nom
+
+// Les types se déclarent APRÈS les instructions de premier niveau.
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class ColonneAttribute(string nom) : Attribute
 {
@@ -316,21 +329,24 @@ public sealed class Utilisateur
 {
     [Colonne("id_user")] public int Id { get; set; }
     public string Nom { get; set; } = "";
-}
-
-foreach (PropertyInfo prop in typeof(Utilisateur).GetProperties())
-{
-    var attr = prop.GetCustomAttribute&lt;ColonneAttribute&gt;();
-    string colonne = attr?.Nom ?? prop.Name;
-    Console.WriteLine($"{prop.Name} -&gt; {colonne}");
-}
-// Id -&gt; id_user
-// Nom -&gt; Nom</code></pre></figure>
+}</code></pre></figure>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>La réflexion est coûteuse (pas d'inline, vérifications à l'exécution) et fragile (un renommage casse une chaîne magique). En contexte sensible à la performance ou compatible AOT, préfère un <strong>source generator</strong> qui produit le même code à la compilation.</p></div></div>
 
 <h2>Nouveautés C# 12</h2>
 <p>C# 12 raffine l'écriture des types. <code>required</code> impose l'initialisation d'une propriété, les <strong>primary constructors</strong> s'étendent à toutes les classes, et les <strong>collection expressions</strong> <code>[...]</code> unifient l'initialisation des collections avec l'opérateur de propagation <code>..</code>.</p>
-<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">public interface ILogger { void Log(string m); }
+<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">var s = new Service(new ConsoleLogger()) { Nom = "Auth" }; // Nom est obligatoire
+s.Demarrer(); // Auth démarré
+
+// Collection expressions : même syntaxe pour tableau, List, Span...
+int[] a = [1, 2, 3];
+List&lt;int&gt; b = [0, ..a, 4]; // spread : 0,1,2,3,4
+Console.WriteLine(string.Join(",", b)); // 0,1,2,3,4
+
+Span&lt;int&gt; sp = [10, 20, 30];
+Console.WriteLine(sp.Length); // 3
+
+// Les types se déclarent APRÈS les instructions de premier niveau.
+public interface ILogger { void Log(string m); }
 public sealed class ConsoleLogger : ILogger
 {
     public void Log(string m) =&gt; Console.WriteLine(m);
@@ -341,18 +357,7 @@ public class Service(ILogger logger)
 {
     public required string Nom { get; init; }
     public void Demarrer() =&gt; logger.Log($"{Nom} démarré");
-}
-
-var s = new Service(new ConsoleLogger()) { Nom = "Auth" }; // Nom est obligatoire
-s.Demarrer(); // Auth démarré
-
-// Collection expressions : même syntaxe pour tableau, List, Span...
-int[] a = [1, 2, 3];
-List&lt;int&gt; b = [0, ..a, 4]; // spread : 0,1,2,3,4
-Console.WriteLine(string.Join(",", b)); // 0,1,2,3,4
-
-Span&lt;int&gt; sp = [10, 20, 30];
-Console.WriteLine(sp.Length); // 3</code></pre></figure>
+}</code></pre></figure>
 <p>Omettre <code>Nom</code> à la construction est désormais une erreur de compilation, pas un bug silencieux à l'exécution. Les collection expressions choisissent la construction optimale selon le type cible.</p>
 
 <h2>Pièges fréquents</h2>
@@ -425,14 +430,7 @@ Console.WriteLine(sp.Length); // 3</code></pre></figure>
 </script>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Déclare une classe <code>Minuteur</code> exposant un événement <code>Tick</code> de type <code>EventHandler&lt;int&gt;</code>. Abonne-toi avec une lambda stockée dans une variable, déclenche deux ticks, puis désabonne-toi proprement avant un troisième tick.</p>
-<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-csharp">public sealed class Minuteur
-{
-    public event EventHandler&lt;int&gt;? Tick;
-    private int _n;
-    public void Avancer() =&gt; Tick?.Invoke(this, ++_n);
-}
-
-var m = new Minuteur();
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-csharp">var m = new Minuteur();
 EventHandler&lt;int&gt; abonne = (s, n) =&gt; Console.WriteLine($"Tick #{n}");
 m.Tick += abonne;
 
@@ -440,12 +438,18 @@ m.Avancer(); // Tick #1
 m.Avancer(); // Tick #2
 
 m.Tick -= abonne; // désabonnement propre
-m.Avancer();      // (aucune sortie)</code></pre></figure></details></div>
+m.Avancer();      // (aucune sortie)
+
+// Les types se déclarent APRÈS les instructions de premier niveau.
+public sealed class Minuteur
+{
+    public event EventHandler&lt;int&gt;? Tick;
+    private int _n;
+    public void Avancer() =&gt; Tick?.Invoke(this, ++_n);
+}</code></pre></figure></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris une méthode <code>Tarif</code> qui prend un <code>record Client(string Type, int Age)</code> et renvoie une réduction (en %) via une <code>switch</code> expression : 50 % pour un client <code>"VIP"</code>, 20 % si l'âge est strictement inférieur à 18, 10 % si l'âge est supérieur ou égal à 65, sinon 0 %.</p>
-<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-csharp">public record Client(string Type, int Age);
-
-static int Tarif(Client c) =&gt; c switch
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-csharp">static int Tarif(Client c) =&gt; c switch
 {
     { Type: "VIP" } =&gt; 50,
     { Age: &lt; 18 } =&gt; 20,
@@ -456,7 +460,10 @@ static int Tarif(Client c) =&gt; c switch
 Console.WriteLine(Tarif(new Client("VIP", 40)));    // 50
 Console.WriteLine(Tarif(new Client("Std", 15)));    // 20
 Console.WriteLine(Tarif(new Client("Std", 70)));    // 10
-Console.WriteLine(Tarif(new Client("Std", 30)));    // 0</code></pre></figure></details></div>
+Console.WriteLine(Tarif(new Client("Std", 30)));    // 0
+
+// Les types se déclarent APRÈS les instructions de premier niveau.
+public record Client(string Type, int Age);</code></pre></figure></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une méthode <code>SommeCsv</code> qui additionne les entiers d'une chaîne comme <code>"12,5,30,7"</code> <strong>sans allouer</strong> de sous-chaînes : utilise <code>ReadOnlySpan&lt;char&gt;</code>, <code>IndexOf</code> et <code>int.Parse</code> sur des tranches (<code>Slice</code>).</p>
 <details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-csharp">static int SommeCsv(ReadOnlySpan&lt;char&gt; csv)

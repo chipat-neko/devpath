@@ -238,18 +238,19 @@ finally { pool.Return(louer); }    // rendre au pool, sinon fuite logique</code>
 
 <p>Côté types, deux outils complètent le tableau. Un <code>readonly struct</code> garantit l'immuabilité et évite des copies défensives. Et <code>ValueTask</code> (ou <code>ValueTask&lt;T&gt;</code>) remplace <code>Task</code> quand une méthode <code>async</code> retourne <strong>souvent de façon synchrone</strong> (cache déjà rempli, par exemple)&nbsp;: pas d'allocation de <code>Task</code> dans le cas rapide.</p>
 
-<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">readonly struct Point(double X, double Y)
+<figure class="code-block" data-file="Program.cs"><pre><code class="language-csharp">// ValueTask : pas d'allocation quand la valeur est déjà disponible
+ValueTask&lt;int&gt; LireAsync(int cle) =&gt;
+    _cache.TryGetValue(cle, out var v)
+        ? new ValueTask&lt;int&gt;(v)            // chemin synchrone, 0 alloc
+        : new ValueTask&lt;int&gt;(ChargerAsync(cle)); // chemin async réel
+
+// Les types se déclarent APRÈS les instructions de premier niveau.
+readonly struct Point(double X, double Y)
 {
     public double X { get; } = X;
     public double Y { get; } = Y;
     public double Norme =&gt; Math.Sqrt(X * X + Y * Y); // pas de copie défensive
-}
-
-// ValueTask : pas d'allocation quand la valeur est déjà disponible
-ValueTask&lt;int&gt; LireAsync(int cle) =&gt;
-    _cache.TryGetValue(cle, out var v)
-        ? new ValueTask&lt;int&gt;(v)            // chemin synchrone, 0 alloc
-        : new ValueTask&lt;int&gt;(ChargerAsync(cle)); // chemin async réel</code></pre></figure>
+}</code></pre></figure>
 
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Un <code>ValueTask</code> ne doit être attendu (<code>await</code>) qu'<strong>une seule fois</strong>, et jamais en parallèle. Si tu dois le consommer plusieurs fois ou le stocker, convertis-le d'abord avec <code>.AsTask()</code>. En cas de doute, reste sur <code>Task</code>&nbsp;: <code>ValueTask</code> est une optimisation ciblée, pas un remplaçant systématique.</p></div></div>
 
