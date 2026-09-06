@@ -163,6 +163,17 @@ function motAttaque(t) {
   return mm ? mm[0] : m.split(/\s+/)[0];
 }
 
+/* Le rang de longueur d'une option, les ex aequo etant tous candidats : sans cela
+   une egalite ferait rendre un choix arbitraire et la mesure vaudrait le hasard. */
+function parRang(q, rang) {
+  var L = longueurs(q);
+  var tri = L.slice().sort(function (a, b) { return b - a; });
+  if (rang >= tri.length) return toutes(q);
+  var cible = tri[rang];
+  var s = L.reduce(function (acc, x, i) { if (x === cible) acc.push(i); return acc; }, []);
+  return s.length ? s : toutes(q);
+}
+
 var STRATEGIES = [
   {
     nom: "hasard (etalon)",
@@ -357,6 +368,36 @@ var STRATEGIES = [
       var n = f.reduce(function (a, x) { return a + x; }, 0);
       if (n === 0 || n === f.length) return toutes(q);
       return f.reduce(function (acc, x, i) { if (!x) acc.push(i); return acc; }, []);
+    },
+  },
+  /* ⚠️ LES TROIS STRATEGIES DE RANG, ajoutees au point B4 (cours `sql`, 2026-09-06).
+     ELLES MESURENT CE QUE LA CORRECTION FABRIQUE. Le chantier corrige « la bonne
+     reponse est la plus LONGUE » jusqu'a la faire tomber sous le hasard -- mais une
+     question a quatre options a QUATRE rangs de longueur, et ecraser le rang 0 pousse
+     la bonne reponse sur le rang 1. Mesure du 2026-09-06 sur les 22 cours deja
+     traites : `doc`, qui n'a JAMAIS la bonne reponse la plus longue (0,0 %), l'a en
+     DEUXIEME position dans 60,9 % des cas -- soit deux fois et demie le hasard, et
+     bien pire que ce que la correction croyait avoir supprime. `archi` est a 56,3 %
+     sur le rang 2. Aucune des quatorze strategies precedentes ne voyait cela : elles
+     ne connaissent que les extremes. LA REGLE QUI EN DECOULE : viser 25 % sur CHAQUE
+     rang, jamais 0 % sur le premier. */
+  {
+    nom: "la DEUXIEME plus longue",
+    quoi: "le rang 1 de longueur — ce que devient la bonne reponse quand on ecrase le rang 0",
+    choisir: function (q) { return parRang(q, 1); },
+  },
+  {
+    nom: "la TROISIEME plus longue",
+    quoi: "le rang 2 de longueur",
+    choisir: function (q) { return parRang(q, 2); },
+  },
+  {
+    nom: "ecarter les deux extremes",
+    quoi: "ni la plus longue ni la plus courte — la zone ou la correction pousse la bonne reponse",
+    choisir: function (q) {
+      var L = longueurs(q), mx = Math.max.apply(null, L), mn = Math.min.apply(null, L);
+      var s = L.reduce(function (acc, x, i) { if (x !== mx && x !== mn) acc.push(i); return acc; }, []);
+      return s.length ? s : toutes(q);
     },
   },
   {
