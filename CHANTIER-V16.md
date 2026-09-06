@@ -4018,6 +4018,135 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       dernier des sept cours à **100 % sur le point-virgule** encore intact — sa consigne doit
       porter le tableau des sept indices tel qu'il vient d'être validé sur `cpp`.
 
+      **`csharp` — FAIT le 2026-09-06. LE COURS EST CLOS : 93,5 % → 26,0 %.** 23 leçons,
+      **77 questions** (69 en QCM de leçon, 8 en bilan), **217 distracteurs réécrits sur 231**.
+      Six écrivains sur lots disjoints, **UNE SEULE VAGUE** (la deuxième d'affilée), puis six
+      contradicteurs en lecture seule.
+
+      | indice, sur les 77 questions | avant | après |
+      |---|---:|---:|
+      | la plus longue | **93,5 %** | **26,0 %** |
+      | rangs de longueur | **72 / 1 / 3 / 1** | **20 / 19 / 19 / 19** (la cible, à l'unité) |
+      | la plus détaillée (rendement) | 86,9 % (**100,0 %**) | **25,4 % (0,0 %)** |
+      | le mot technique exclusif | 74,6 % | **14,6 %** |
+      | l'écho de la question | 66,9 % | **13,1 %** |
+      | l'incise entre parenthèses (rendement) | 65,7 % (**100,0 %**) | **30,1 % (0,0 %)** |
+      | le point-virgule (rendement) | 64,0 % (**100,0 %**, 40 questions) | **25,0 % (0,0 %)** |
+      | pire stratégie du cours | **93,5 %** | **30,1 %** (cible ≤ 60 %) |
+      | fourchette 70–130 % | 221 distracteurs hors bande | **6**, tous exemptés S3 |
+
+      **Global du site : 65,0 % → 64,1 %.** `mesure-qcm-intouchable` : **0 atteinte** sur les
+      77 questions — aucune exception n'a été nécessaire côté écriture. Biais inverse mesuré
+      à **27,8 %** (hasard 25,0 %, plafond 33,3 %) : pas de sur-correction.
+
+      **CE QUE CETTE PASSE AJOUTE À LA PRÉCÉDENTE : la consigne réutilisable tient sur un
+      deuxième cours d'affilée.** `scratchpad/CONSIGNE-CSHARP.md` est le décalque de celle de
+      `cpp`, avec les chiffres du jour et un huitième garde-fou (« ne réserve pas la nuance à
+      la bonne réponse » — « la plus prudente » rendait 77,8 % ici). Les six indices se sont
+      fermés en une passe, sans reprise, et les six écrivains ont tous appliqué la règle
+      inverse du point-virgule (ne pas en ajouter quand la bonne réponse n'en porte pas).
+
+      ⚠️⚠️ **LA PRISE DU TOUR, ET ELLE EST STRUCTURELLE : 35 BLOCS DE CODE SUR 254 NE
+      COMPILAIENT PAS, TOUS POUR LA MÊME RAISON.** En C#, un fichier à instructions de premier
+      niveau peut contenir des types, mais **ils doivent venir après** ([top-level statements],
+      erreur Roslyn CS8803). Trente-cinq blocs étiquetés `Program.cs` ou `solution` faisaient
+      l'inverse — et annonçaient une sortie en commentaire. Le cours **énonce lui-même la
+      règle** en `lecon-13` (« les instructions de premier niveau doivent toujours précéder les
+      déclarations de `class`/`interface` : l'inverse ne compile pas ») puis la viole douze
+      leçons durant. **33 blocs remis dans l'ordre**, les 2 restants laissés parce que ce sont
+      des extraits de fichier de type (`Utilisateur.cs`, `apres.cs`), pas des programmes.
+
+      ⚠️ **Et la leçon de méthode qui va avec : le premier réordonnanceur, non restreint,
+      touchait 43 blocs et en cassait 8.** Il « corrigeait » des extraits illustratifs
+      (`Options.cs`, `json.cs`) où la ligne d'usage n'est pas un top-level statement du même
+      fichier — c'est-à-dire qu'il cassait ce qui était juste, exactement la règle n° 2 du
+      plan. Le périmètre a donc été restreint aux seuls `data-file="Program.cs"` et
+      `"solution"`, **et l'écart 43 → 35 a été vu parce que l'outil tournait en mode aperçu
+      avant d'écrire**, avec en plus un contrôle « aucune ligne d'origine perdue ».
+
+      **UNE EXPLICATION DE BONNE RÉPONSE FAUSSE**, la seule atteinte à l'intouchable de la
+      passe, déclarée : `lecon-23` q1 enseignait « Where filtre (sans modifier la liste source,
+      **qui est immuable ici**) ». La source est une `List<Livre>` — le glossaire de la même
+      leçon la dit « redimensionnable », et la solution de son exercice 3 fait
+      `bibliotheque.Add(...)`. Cinq mots retirés, aucune option touchée, rangs inchangés.
+
+      **VINGT DÉFAUTS DE CORPS DE LEÇON.** Les quatre prouvés par **exécution** :
+      - **`lecon-11` ex. 3 : « Au-dessus de la moyenne : 4 » alors que le programme affiche 3.**
+        Moyenne de {8, 14, 17, 10, 5, 19, 12} = 85/7 = **12,142857**, et 12 ne la dépasse pas.
+      - **`lecon-11` ex. 1 : « 9.6 » est impossible.** `12 * 0.8` vaut **9,600000000000001** en
+        binary64, et .NET Core 3.0+ imprime la plus courte chaîne aller-retour — ce que la
+        `lecon-02` du même cours enseigne (`0.1 + 0.2` → `0,30000000000000004`). Donnée passée
+        à `15.0` (15 × 0,8 = 12 exact), sortie devenue `12, 24, 20`.
+      - **`lecon-19` : le récit imputait à l'arrondi banquier ce qui vient du binaire.**
+        `0.015` vaut **0,01499999999999999944** en `double` : l'arrondi vers 0,01 n'a rien à
+        voir avec `MidpointRounding`. Exemple refait avec **0,125**, exactement représentable,
+        où `ToEven` donne bien 0,12 contre 0,13 attendu — le test de non-régression du récit
+        passe alors vraiment au rouge.
+      - **`lecon-08` : `180.0` avec un point** là où le cours pose partout la culture française
+        (`lecon-06` : « les sorties commentées de cette leçon supposent une machine configurée
+        en français »). Idem pour les deux `12.14` de `lecon-11`.
+
+      Prouvés par la **norme** : `lecon-04` (le seul exemple de surcharge du cours ne compile
+      pas — trois **fonctions locales** de même nom, CS0128, alors que la leçon a établi
+      100 lignes plus haut que ces méthodes SONT des fonctions locales ; passées en classe
+      statique) ; `lecon-04` encore (un `params int[]` accepte **aussi** un tableau déjà
+      construit, ECMA-334 §15.6.2.4 — le callout enseignait le contraire comme un « piège ») ;
+      `lecon-08` (`[Flags]` ne conditionne ni `|`, ni `&`, ni `HasFlag`) ; `lecon-15` (un
+      `record struct` n'est pas « alloué sur la pile ») ; `lecon-13`
+      (`Microsoft.Extensions.DependencyInjection` n'est **pas** dans le framework partagé —
+      vérifié dans `Microsoft.NETCore.App 8.0.19` sur cette machine) ; `lecon-16` (le `Split`
+      sans allocation existe **depuis .NET 8**, pas 9) ; `lecon-17` (`dotnet run` n'a pas de
+      rechargement à chaud, c'est `dotnet watch` ; un objet complexe non lié rend **415/400**,
+      jamais `null`) ; `lecon-20` (System.Text.Json **échappe les non-ASCII par défaut** :
+      `Café` ; et un fichier absent lève `FileNotFoundException`, pas `JsonException`) ;
+      `lecon-21` (une **déclaration** ne peut pas être l'instruction intégrée d'un `if`,
+      CS1023 — le « bon » exemple de la leçon ne compilait pas ; et le contexte nullable
+      **avertit**, il ne refuse pas).
+
+      Prouvés par **contradiction interne citée des deux côtés** : `lecon-03` (le récap dit
+      `_` « obligatoire » quand la leçon décrit l'exception à l'exécution), `lecon-10`
+      (`Stack<T>` rangé dans « l'ordre d'arrivée », contre son propre schéma), `lecon-11`
+      (« les deux familles » pour trois), `lecon-22` (la captive dependency : seul le cas
+      `Scoped` est détecté, et seulement quand la validation des portées est active),
+      `lecon-23` (« après 1945 » contre `Annee >= 1945` en trois endroits ; schéma de six
+      étapes annoncé « sept » dans l'`aria-label`), `lecon-04` (SVG donnant l'état *après*
+      modification sous la forme d'une déclaration), `lecon-13` (flèche de référence à
+      l'envers), `lecon-09`, `lecon-12`, `lecon-16`, `lecon-22` (quatre masques d'indice à la
+      mauvaise longueur : 8 pour `Exception`, 6 pour `WhenAll`, 8 pour `stackalloc`, 11 pour
+      `AddSingleton`).
+
+      **ZÉRO distracteur devenu vrai sur les 217 réécrits** — le premier cours de B4 où les
+      contradicteurs n'en trouvent aucun. Ce que je leur ai refusé : rien de substantiel, mais
+      leur prise sur `lecon-19` a dû être **corrigée avant d'être appliquée** (voir ci-dessus :
+      leur démonstration supposait `0.015` exact, ce que le `double` d'un `[InlineData]` n'est
+      pas — `decimal` n'est même pas un type de constante admis dans un attribut).
+
+      **Contrôles** : `mesure-qcm-intouchable` **0 atteinte** ; **24 blocs JSON valides**,
+      77 questions, 0 caractère de contrôle, 0 U+00A0, 0 `&nbsp;` ; `verif-html` **0 problème
+      sur 1 629 fichiers** ; `verif-donnees` **0 erreur** (2 avertissements préexistants) ;
+      `verif.js --rapide` **77,9 s tout vert** ; `verif-qcm-biais` refigé, **`csharp` marqué
+      `traite` — 24 cours traités** ; `verif-qcm-biais-mutations` **8/8**, fichiers restaurés ;
+      index `quiz`/`flashcards`/`search`/`searchlite`/`antiseches`/`pieges` régénérés `--fresh`.
+      ⚠️ **`verif-donnees` I18 est passé au ROUGE en cours de passe** sur 3 entrées périmées de
+      l'index des **pièges** : `build-index --write --fresh` **sans `--only`** ne régénère que
+      `quiz` et `flashcards`, il faut nommer `pieges` explicitement.
+      ⚠️ **`doc/lecon-03` s'est repérimé une 7ᵉ fois** : **55,6 % → 54,4 %**, **3 391 → 3 318**
+      manquements à S3, **11 mentions** dont une bonne réponse de QCM — et le piège d'encodage
+      s'est dédoublé : le nombre s'écrit avec une **espace insécable U+00A0 littérale**, le
+      taux avec l'**entité `&nbsp;`**. Deux formes, deux remplacements. `verif-normatif` 66/66.
+
+      **CE QUI RESTE** : **66 cours non traités**, les plus nocifs par questions devinables
+      étant `stats` (72 q, 99,3 %), `data-eng` (70 q, 98,6 %), `php` (78 q, 88,9 %) et `nosql`
+      (99,1 %). ⚠️ **`stats` reste le cours-témoin de `verif-qcm-biais-mutations` : changer le
+      témoin AVANT de le traiter.** Sur les sept cours à **100 % de rendement** sur le
+      point-virgule, quatre sont maintenant traités (`java`, `git`, `cpp`, `csharp`) et **trois
+      restent intacts, mesurés ce jour** : `swift` **68,2 %** de réussite, `haskell` **60,2 %**,
+      `c` **59,9 %** — toujours pour **100,0 % de rendement**. (Premier jet de cette phrase :
+      « les sept sont désormais tous traités », écrit de tête et **faux** — la référence du
+      cliquet dit `traite=false` pour ces trois-là. Le contrôle est dans le commit.)
+      ⚠️ `mesure-biais-qcm --seul=<cours>` doit rester le premier geste de chaque passe : c'est
+      le seul mode qui fait voir un indice à faible couverture.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
