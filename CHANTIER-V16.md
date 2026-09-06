@@ -4571,7 +4571,7 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       Elle est donc à **1,7 point**, soit un ou deux cours, alors que le cadrage de B4 annonçait
       qu'il en faudrait 40. ⚠️ Ne pas en conclure que B4 est fini : 62 cours restent au-dessus
       de leur propre seuil, et la moyenne du site est justement le mauvais endroit où décider
-      (leçon du cours ).
+      (leçon du cours `react`).
 
       **CE QUI RESTE, ET CE QUE JE N'AI PAS FAIT** : **62 cours non traités**.
       Trois dettes écrites plutôt qu'arrondies :
