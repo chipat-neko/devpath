@@ -178,6 +178,14 @@ function motAttaque(t) {
   return mm ? mm[0] : m.split(/\s+/)[0];
 }
 
+/* La RESTRICTION : les options qui portent la marque, ou toutes si la marque est
+   absente ou universelle (la strategie ne tranche alors pas). */
+function restreindre(q, porte) {
+  var m = q.a.map(porte), n = m.filter(Boolean).length;
+  if (n === 0 || n === q.a.length) return toutes(q);
+  return m.reduce(function (acc, x, i) { if (x) acc.push(i); return acc; }, []);
+}
+
 /* Le rang de longueur d'une option, les ex aequo etant tous candidats : sans cela
    une egalite ferait rendre un choix arbitraire et la mesure vaudrait le hasard. */
 function parRang(q, rang) {
@@ -448,6 +456,41 @@ var STRATEGIES = [
       var s = L.reduce(function (acc, x, i) { if (x !== mx && x !== mn) acc.push(i); return acc; }, []);
       return s.length ? s : toutes(q);
     },
+  },
+  /* LES TROIS STRATEGIES DE RESTRICTION, ajoutees au point B4 (cours `data-eng`,
+     2026-09-06). ELLES MESURENT LE PLAFOND QUE LA CORRECTION ELLE-MEME INSTALLE.
+     Les strategies de marque ci-dessus cherchent l'option SEULE a porter un signe ;
+     la consigne de correction dit « au moins un distracteur doit porter la meme
+     marque », ce qui ramene leur couverture a zero. Mais un apprenant n'a pas besoin
+     de l'unicite : il lui suffit de RESTREINDRE son tirage aux options marquees. Si
+     la marque est portee par la bonne reponse et par UN seul distracteur, il tire a
+     pile ou face -- 50 %, le double du hasard, et AUCUNE des 19 strategies
+     precedentes ne le voit. Deux relecteurs adversariaux l'ont signale le meme jour,
+     sans se concerter ; leur chiffre (100 %) etait celui de leur LOT, la mesure sur le
+     cours entier dit 45,6 %.
+     Mesure du jour, avant / apres la vague d'ecriture sur `data-eng` : point-virgule
+     97,4 % -> 45,6 % de rendement, parenthese 98,7 % -> 48,7 %, deux-points 83,8 %
+     -> 35,7 %. Le residu n'est pas un oubli, c'est le PLAFOND MECANIQUE de la
+     consigne. Sur les cours deja traites il tient : `git` 47,8 / 50,9 %, `csharp`
+     43,4 / 39,4 %, `cpp` 44,2 / 42,0 %, `java` 43,0 / 39,3 %, `react` 34,0 / 49,0 %.
+     LA REGLE QUI EN DECOULE, a mettre en consigne : porter la marque sur DEUX
+     distracteurs quand la bonne reponse la porte, et en poser aussi sur des
+     distracteurs de questions ou la bonne reponse n'en porte PAS. L'etalon reste
+     25,0 % : une marque distribuee au hasard sur n options rend n/4 x 1/n. */
+  {
+    nom: "RESTREINDRE au point-virgule",
+    quoi: "tirer parmi les seules options qui portent un « ; » — le plafond de 50 %",
+    choisir: function (q) { return restreindre(q, function (t) { return /;/.test(t); }); },
+  },
+  {
+    nom: "RESTREINDRE a la parenthese",
+    quoi: "tirer parmi les seules options qui portent une incise entre parentheses",
+    choisir: function (q) { return restreindre(q, function (t) { return /[(][^()]+[)]/.test(t); }); },
+  },
+  {
+    nom: "RESTREINDRE aux deux-points",
+    quoi: "tirer parmi les seules options qui portent un « : »",
+    choisir: function (q) { return restreindre(q, function (t) { return /:/.test(t); }); },
   },
   {
     nom: "COMBINE : tiret puis longueur",
