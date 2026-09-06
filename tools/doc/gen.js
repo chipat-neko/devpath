@@ -360,6 +360,19 @@ const NORM_NB = (function () {
     s3Echecs: milliers(cl.S3.echecs),
     s3Pct: ((cl.S3.conformes / cl.S3.total) * 100).toFixed(1).replace('.', ','),
     s3PctEchec: ((cl.S3.echecs / cl.S3.total) * 100).toFixed(1).replace('.', ','),
+    /* Le meme taux DIT EN TOUTES LETTRES, parce qu'une BONNE REPONSE de QCM
+       l'enonce et qu'une bonne reponse ne peut pas etre ecrite a la main quand
+       son explication, elle, est engendree. Defaut trouve le 2026-09-06 : la
+       bonne reponse de `l3.html` disait « pres de NEUF cas sur dix » quand
+       l'explication juste dessous affichait le chiffre mesure, 68,1 %. Les deux
+       ont diverge en silence a mesure que le chantier B4 assainissait le site --
+       et aucune des quatre options n'etait plus vraie. Cette cle ferme la faille
+       a la racine : le texte suit desormais la mesure. */
+    s3EnMots: (function () {
+      var mots = ['zero', 'un', 'deux', 'trois', 'quatre', 'cinq',
+                  'six', 'sept', 'huit', 'neuf', 'dix'];
+      return mots[Math.round((cl.S3.echecs / cl.S3.total) * 10)];
+    })(),
     s2Echecs: String(cl.S2.echecs),
     s1Conformes: milliers(cl.S1.conformes),
     a1Employe: milliers(cl.A1.total - cl.A1.echecs),

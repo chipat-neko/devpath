@@ -284,7 +284,14 @@ if (page) {
      violaient 15 fois sur 48 — un cours qui enseigne une règle et l'enfreint
      n'enseigne rien. Le reste du site reste sous le régime du seuil. */
   const S3clause = conformite.CLAUSES.find((c) => c.id === 'S3');
-  for (const f of ['lecon-01.html', 'lecon-02.html', 'lecon-03.html']) {
+  /* ⚠ `lecon-04.html` MANQUAIT A CETTE LISTE, et c'est un angle mort de la meme
+     famille que ceux du chantier : un controle strict qui laisse dehors un
+     quart de son corpus protege moins qu'il ne le laisse croire. La quatrieme
+     lecon porte en plus le QCM BILAN du cours -- celui que l'apprenant passe en
+     bloc, donc l'endroit ou un indice de lot paie le plus. Verifie avant de
+     l'ajouter : les quatre lecons sont a zero manquement (2026-09-06), donc la
+     liste s'etend sans rien faire rougir. */
+  for (const f of ['lecon-01.html', 'lecon-02.html', 'lecon-03.html', 'lecon-04.html']) {
     const chemin = path.join(RACINE, 'pages', 'doc', f);
     if (!fs.existsSync(chemin)) continue;
     const h = fs.readFileSync(chemin, 'utf8');
@@ -296,6 +303,28 @@ if (page) {
     }
     verdict(viole === 0, 'doc/' + f + ' respecte la règle S3 qu il publie',
       viole + ' manquement(s) sur ' + total);
+  }
+
+  /* LA BONNE REPONSE QUI DISAIT LE CONTRAIRE DE SON EXPLICATION (trouve le
+     2026-09-06). `lecon-03` q6 demande l'ecart entre les MUST et le SHOULD S3.
+     Son explication affiche le taux MESURE ; sa bonne reponse, elle, etait
+     ECRITE A LA MAIN : « pres de NEUF cas sur dix » quand la mesure disait
+     68,1 %. Les deux ont diverge en silence a mesure que le chantier B4
+     assainissait le site, et la question s'est retrouvee SANS AUCUNE option
+     vraie. La bonne reponse est desormais engendree (@@NORMNB:s3EnMots@@) ;
+     ce controle interdit qu'on la reecrive un jour a la main. */
+  const l3 = path.join(RACINE, 'pages', 'doc', 'lecon-03.html');
+  if (fs.existsSync(l3)) {
+    const MOTS = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq',
+                  'six', 'sept', 'huit', 'neuf', 'dix'];
+    const taux = s3.echecs / s3.total;
+    const veut = MOTS[Math.round(taux * 10)];
+    const dit = (fs.readFileSync(l3, 'utf8')
+      .match(/ignorée dans près de ([a-zéèA-Z]+) cas sur dix/) || [])[1];
+    verdict(dit === veut,
+      'doc/lecon-03 : la bonne réponse chiffrée suit la mesure',
+      'la page dit « ' + dit + ' cas sur dix », la mesure dit « ' + veut + ' » ('
+        + (taux * 100).toFixed(1).replace('.', ',') + ' %)');
   }
 }
 

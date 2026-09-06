@@ -10,16 +10,21 @@
 
    IL NE JUGE DONC PAS LE PASSE, IL VERROUILLE LE PRESENT. Quatre echecs :
      1. REGRESSION — un cours dont le biais REMONTE de plus d'un point par rapport
-        a `tools/qcm-biais-reference.json`. Ajouter une question devinable a un
-        cours existant est desormais impossible sans le voir.
+        a `tools/qcm-biais-reference.json`, que ce soit sur l'ECART AU HASARD de la
+        longueur ou sur son PIRE INDICE exploitable. Ajouter une question devinable
+        a un cours existant est desormais impossible sans le voir.
      2. CIBLE PERDUE — un cours marque `traite: true` qui repasse au-dessus de la
-        cible (40 % sur la longueur, 60 % sur toute strategie exploitable). Le
-        travail de B3 et B4 ne peut pas se defaire en silence.
+        cible (bande 10-40 % sur la longueur, 60 % sur toute strategie
+        exploitable). Le travail de B3 et B4 ne peut pas se defaire en silence.
      3. COURS NEUF NON CONFORME — un cours absent de la reference doit naitre sous
-        la cible. Les cinq cours ecrits apres le constat le prouvent faisable :
-        `doc` est a 0,0 %, `distribue` a 5,6 %.
+        la cible. Les cours ecrits apres le constat le prouvent faisable.
      4. REFERENCE ORPHELINE — un cours de la reference qui n'existe plus sur le
         disque, sinon la reference devient un cimetiere qu'on ne relit plus.
+
+   ⚠️ LA CIBLE EST UNE BANDE, PAS UN PLAFOND (mesure du 2026-09-06). « Le plus bas
+   possible » est un contresens sur la longueur : `doc`, a 0,0 % — le meilleur
+   chiffre du site — se laissait deviner 60,2 % du temps par « la DEUXIEME plus
+   longue ». Ce qui compte est la DISTANCE AU HASARD (25,0 %), dans les deux sens.
 
    IL NE MESURE RIEN LUI-MEME : il demande la mesure a `mesure-biais-qcm.js --json`,
    qui lit les blocs `data-quiz` et `data-quiz-bilan` des sources. Recopier une
@@ -86,11 +91,53 @@ var ECRIRE = process.argv.indexOf("--ecrire") !== -1;
    COURS alors que l'ecriture se fait PAR LOT DE LECONS. Le defaut de `react`
    plafonnait a 38,1 % au niveau du cours, sous la cible de 60 % : meme inscrite
    ici, cette strategie ne l'aurait pas fait rougir. Seule une mesure par FENETRE
-   DE LECONS le verrait. C'est le manque le plus net laisse par B4. */
+   DE LECONS le verrait. C'est le manque le plus net laisse par B4.
+
+   AJOUT B4 (2026-09-06) : LES TROIS STRATEGIES DE RANG, et c'est le trou le plus
+   grave que ce cliquet ait eu. `mesure-biais-qcm.js` sait depuis le 2026-09-05
+   que corriger « la plus longue » ne ferme pas le biais mais le DEPLACE d'un
+   rang ; le cliquet, lui, ne l'avait jamais appris. Resultat mesure : `doc`
+   affichait 0,0 % sur la longueur -- le meilleur chiffre du site -- et se
+   laissait deviner 60,2 % du temps par « la DEUXIEME plus longue », sans qu'une
+   seule ligne rouge le dise. Un cliquet aveugle a la moitie du phenomene qu'il
+   surveille vaut l'illusion de protection, pas la protection.
+   Verifie avant de les inscrire, comme pour les deux precedentes : une fois
+   `doc` et `archi` repris, les 18 cours marques `traite` sont entre 25,3 %
+   (`ruby`) et 36,3 % (`iac`) sur la pire des trois, et le cours le plus expose
+   du site entier est `neurones` a 42,6 % -- donc les ajouter ne fait rougir
+   personne aujourd'hui. */
 var EXPLOITABLES = ["la plus longue", "la plus detaillee", "le mot technique exclusif",
                     "l'echo de la question", "l'incise entre parentheses",
-                    "la ponctuation finale unique"];
+                    "la ponctuation finale unique",
+                    "la DEUXIEME plus longue", "la TROISIEME plus longue",
+                    "ecarter les deux extremes"];
 var CLEF_LONGUEUR = "la plus longue";
+
+/* L'AVANTAGE que « la plus longue » donne a l'apprenant n'est PAS son taux : c'est
+   sa DISTANCE AU HASARD. Un cours ou la bonne reponse n'est JAMAIS la plus longue
+   (0,0 %) est exactement aussi exploitable qu'un cours ou elle l'est toujours
+   (100 %) -- il suffit d'inverser la regle, et c'est ce que fait « la DEUXIEME
+   plus longue ». Mesure du 2026-09-06 : le cliquet a compte pour une REGRESSION
+   de 25 points le passage de `doc` de 0,0 % a 25,0 %, alors que son pire indice
+   tombait dans le meme temps de 60,2 % a 44,1 %. Un critere qui punit la
+   correction qu'il reclame ne peut pas etre suivi longtemps. */
+var HASARD = 0.25;
+function avantage(t) { return Math.abs(t - HASARD); }
+
+/* LE PLANCHER, et c'est la CONTRE-EPREUVE de l'epreuve par injection qui l'a
+   impose. Une fois `doc` ramene a 25,0 % pile sur la longueur, son ecart au
+   hasard vaut ZERO -- et un cours a zero d'ecart ne peut plus que remonter :
+   ajouter six questions PARFAITEMENT EQUILIBREES le faisait passer a 22,9 %,
+   soit 2,1 points d'ecart, donc au-dessus de la tolerance d'un point. Le cliquet
+   rougissait sur une modification irreprochable. C'est le defaut inverse de
+   celui qu'on redoute, et il est aussi grave : un outil qui rougit sur le travail
+   bien fait cesse d'etre lu aussi surement qu'un outil qui ne rougit jamais.
+   Le plancher applique ici la regle deja retenue par B1 pour ECARTER trois
+   strategies : entre 26,3 % et 30,2 %, c'est-a-dire a moins de 5,2 points du
+   hasard, un indice ne discrimine pas. On ne police donc pas un ecart de 5
+   points ou moins ; au-dela, la tolerance d'un point reprend. */
+var PLANCHER = 0.05;
+function avantageSurveille(t) { return Math.max(avantage(t) - PLANCHER, 0); }
 
 /* ------------------------------------------------------------------- la mesure */
 var r = cp.spawnSync(process.execPath, [path.join(TOOLS, "mesure-biais-qcm.js"), "--json"],
@@ -114,16 +161,31 @@ if (fs.existsSync(REF)) {
   catch (e) { console.error("verif-qcm-biais : qcm-biais-reference.json illisible — " + e.message); process.exit(1); }
 }
 
+/* La PIRE strategie EXPLOITABLE d'un cours. Elle sert au verdict comme a la
+   reference : les deux doivent lire la meme quantite, sans quoi le cliquet se
+   compare a un chiffre qu'il ne calcule pas. La reference figeait jusqu'ici
+   `a.taux`, c'est-a-dire la meilleure de TOUTES les strategies mesurees, y
+   compris celles que B1 a ecartees a dessein. */
+function pireExploitableDe(a) {
+  var pire = { nom: "", taux: -1 };
+  EXPLOITABLES.forEach(function (s) {
+    var t = a.parStrategie[s];
+    if (typeof t === "number" && t > pire.taux) pire = { nom: s, taux: t };
+  });
+  return pire;
+}
+
 function referenceNeuve(precedent) {
   var cours = {};
   Object.keys(actuel).sort().forEach(function (c) {
     var a = actuel[c];
     var vieux = precedent && precedent.cours && precedent.cours[c];
+    var pe = pireExploitableDe(a);
     cours[c] = {
       questions: a.questions,
       longueur: Number(a.longueur.toFixed(4)),
-      pire: Number(a.taux.toFixed(4)),
-      pireStrategie: a.meilleure,
+      pire: Number(pe.taux.toFixed(4)),
+      pireStrategie: pe.nom,
       traite: vieux ? !!vieux.traite : false,
     };
   });
@@ -165,33 +227,46 @@ var progres = [];
 Object.keys(actuel).sort().forEach(function (c) {
   var a = actuel[c];
   var v = ref.cours && ref.cours[c];
-  var pireExploitable = { nom: "", taux: -1 };
-  EXPLOITABLES.forEach(function (s) {
-    var t = a.parStrategie[s];
-    if (typeof t === "number" && t > pireExploitable.taux) pireExploitable = { nom: s, taux: t };
-  });
+  var pireExploitable = pireExploitableDe(a);
+
+  /* La cible « longueur <= 40 % » de B1 se lit desormais comme un ECART au hasard :
+     40 % - 25 % = 15 points, donc la bande admise est [10 %, 40 %]. Un cours a
+     0,0 % en sort, et c'est voulu -- voir le commentaire de `avantage`. */
+  var ECART_CIBLE = CIBLE.longueur - HASARD;
+  var horsBande = avantage(a.longueur) > ECART_CIBLE;
 
   if (!v) {
     /* 3 — un cours neuf doit naitre conforme. */
-    if (a.longueur > CIBLE.longueur || pireExploitable.taux > CIBLE.exploitable) {
+    if (horsBande || pireExploitable.taux > CIBLE.exploitable) {
       fautes.push({ quoi: "cours neuf non conforme", cours: c,
-        dit: a.questions + " questions · longueur " + pc(a.longueur) + " (cible " + pc(CIBLE.longueur) + ")" +
+        dit: a.questions + " questions · longueur " + pc(a.longueur) + " (bande admise "
+          + pc(HASARD - ECART_CIBLE) + " a " + pc(CIBLE.longueur) + ")" +
           " · pire indice « " + pireExploitable.nom + " » " + pc(pireExploitable.taux) + " (cible " + pc(CIBLE.exploitable) + ")",
         faire: "etoffer les distracteurs avant de publier, comme l'ont fait doc, distribue et neurones" });
     }
     return;
   }
-  /* 1 — la regression, quel que soit l'etat du cours. */
-  if (a.longueur > v.longueur + TOL) {
+  /* 1 — la regression, quel que soit l'etat du cours. Elle se juge sur l'ECART AU
+     HASARD de la longueur et sur le PIRE INDICE, jamais sur le taux brut. */
+  if (avantageSurveille(a.longueur) > avantageSurveille(v.longueur) + TOL) {
     fautes.push({ quoi: "regression", cours: c,
-      dit: "longueur " + pc(v.longueur) + " -> " + pc(a.longueur) + " (+" + ((a.longueur - v.longueur) * 100).toFixed(1) + " points, tolerance " + pc(TOL) + ")",
+      dit: "longueur " + pc(v.longueur) + " -> " + pc(a.longueur) + " : l'ecart au hasard passe de "
+        + ((avantage(v.longueur)) * 100).toFixed(1) + " a " + ((avantage(a.longueur)) * 100).toFixed(1)
+        + " points (tolerance " + pc(TOL) + ")",
       faire: "la ou les questions ajoutees sont devinables a leur taille : etoffer leurs distracteurs" });
+  }
+  if (typeof v.pire === "number" && pireExploitable.taux > v.pire + TOL) {
+    fautes.push({ quoi: "regression", cours: c,
+      dit: "pire indice " + pc(v.pire) + " (« " + (v.pireStrategie || "?") + " ») -> "
+        + pc(pireExploitable.taux) + " (« " + pireExploitable.nom + " »), tolerance " + pc(TOL),
+      faire: "le biais s'est deplace sur un autre indice que celui qu'on venait de fermer" });
   }
   /* 2 — un cours traite reste sous la cible. */
   if (v.traite) {
-    if (a.longueur > CIBLE.longueur) {
+    if (horsBande) {
       fautes.push({ quoi: "cible perdue", cours: c,
-        dit: "cours marque traite, longueur " + pc(a.longueur) + " au-dessus de la cible " + pc(CIBLE.longueur),
+        dit: "cours marque traite, longueur " + pc(a.longueur) + " hors de la bande admise "
+          + pc(HASARD - ECART_CIBLE) + " a " + pc(CIBLE.longueur),
         faire: "reprendre les questions ajoutees depuis, ou retirer le marquage traite en l'expliquant" });
     }
     if (pireExploitable.taux > CIBLE.exploitable) {
@@ -200,8 +275,10 @@ Object.keys(actuel).sort().forEach(function (c) {
         faire: "les distracteurs sont trop pauvres sur un autre indice que la longueur" });
     }
   }
-  if (a.longueur < v.longueur - TOL) {
-    progres.push({ cours: c, de: v.longueur, a: a.longueur });
+  if (avantageSurveille(a.longueur) < avantageSurveille(v.longueur) - TOL
+      || (typeof v.pire === "number" && pireExploitable.taux < v.pire - TOL)) {
+    progres.push({ cours: c, de: v.longueur, a: a.longueur,
+      pireDe: v.pire, pireA: pireExploitable.taux });
   }
 });
 
@@ -240,7 +317,10 @@ if (DETAIL) {
 
 if (progres.length) {
   console.log("\n  " + progres.length + " cours ont PROGRESSE depuis la reference :");
-  progres.forEach(function (p) { console.log("    " + p.cours + " : " + pc(p.de) + " -> " + pc(p.a)); });
+  progres.forEach(function (p) {
+    console.log("    " + p.cours + " : longueur " + pc(p.de) + " -> " + pc(p.a)
+      + "   pire indice " + (typeof p.pireDe === "number" ? pc(p.pireDe) : "?") + " -> " + pc(p.pireA));
+  });
   console.log("  -> refiger avec --ecrire pour que le gain soit verrouille (et passer `traite` a true si la cible est atteinte).");
 }
 

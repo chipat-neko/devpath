@@ -55,7 +55,37 @@ process.on('uncaughtException', function (e) { restaurer(); console.error(e); pr
 
 /* ------------------------------------------------------- fabriquer des questions */
 /* Devinables : la bonne réponse est trois fois plus longue que les distracteurs,
-   et elle est la seule à être détaillée. C'est exactement le défaut à attraper. */
+   et elle est la seule à être détaillée. C'est exactement le défaut à attraper.
+
+   ⚠️ CE CAS EST INJECTÉ DANS `doc`, ET SA PREMISSE A ÉTÉ RETOURNÉE le 2026-09-06.
+   Il s'intitulait « 6 questions devinables ajoutées à doc (0,0 % au départ) » :
+   0,0 % passait alors pour le meilleur chiffre du site. On sait maintenant que
+   0,0 % est aussi exploitable que 100 % — il suffit d'inverser la règle — et le
+   cliquet juge donc l'ÉCART AU HASARD. Conséquence mesurée : ajouter à `doc` six
+   questions dont la bonne réponse est la plus longue le fait passer de 0,0 % à
+   8,6 %, c'est-à-dire le RAPPROCHE du hasard. Le cliquet répondait « progrès »,
+   et il avait raison ; c'était la mutation qui se trompait de défaut.
+   Le cas injecte donc désormais des questions AU RANG 1 (bonne réponse deuxième
+   plus longue), qui est le biais réel de `doc` : 39 de ses 64 questions y sont,
+   et c'est ce qui le rend devinable 60,2 % du temps. Une mutation doit renforcer
+   le biais du cours qu'elle vise, pas un biais imaginaire. */
+function questionsRang1(n) {
+  var out = [];
+  for (var i = 0; i < n; i++) {
+    out.push({
+      q: 'Question de rang 1 n° ' + (i + 1) + ' — que fait cette opération ?',
+      a: [
+        'Elle applique la règle attendue en tenant compte du contexte et des cas limites décrits',
+        'Elle échoue toujours, quel que soit le contexte, et sans jamais rien signaler à personne au passage',
+        'Rien',
+        'Autre chose',
+      ],
+      correct: 0,
+      explain: 'Question injectée par une épreuve de mutation : elle ne doit jamais rester dans le dépôt.',
+    });
+  }
+  return out;
+}
 function questionsBiaisees(n) {
   var out = [];
   for (var i = 0; i < n; i++) {
@@ -98,19 +128,29 @@ function questionsEquilibrees(n) {
    « l'incise entre parentheses » : sans ce cas, la branche neuve d'EXPLOITABLES
    n'etait eprouvee par RIEN, et un verificateur dont une branche n'est jamais
    exercee ne vaut pas mieux qu'un verificateur absent.
-   Les quatre options sont de longueur voisine, portent le meme nombre de virgules
-   et le meme vocabulaire : SEULE la bonne reponse glisse une incise entre
+   Les quatre options sont de longueur EXACTEMENT egale, portent le meme nombre de
+   virgules et le meme vocabulaire : SEULE la bonne reponse glisse une incise entre
    parentheses. Le verdict attendu doit donc nommer la PARENTHESE, pas la
-   longueur -- c'est ce que le motif de la mutation controle. */
+   longueur -- c'est ce que le motif de la mutation controle.
+
+   ⚠️ CORRIGE le 2026-09-06, et le defaut valait la peine d'etre trouve : les
+   quatre options faisaient 89, 89, 90 et 93 caracteres, la BONNE etant la plus
+   longue des quatre -- parce que l'incise « (avant l ecriture) » qu'on lui ajoutait
+   l'allongeait. Ce cas ne prouvait donc PAS la branche « parenthese » : il
+   prouvait la branche « longueur », deja couverte par le premier cas, et le
+   verdict nommait « la plus longue » a 61,3 %. Une epreuve par injection qui
+   croit prouver une branche et en prouve une autre laisse cette branche sans
+   preuve -- exactement le trou qu'elle etait censee fermer. Les quatre options
+   font desormais 93 caracteres chacune, et l'incise est le seul ecart. */
 function questionsParenthesees(n) {
   var out = [];
   for (var i = 0; i < n; i++) {
     out.push({
       q: 'Question parenthesee n° ' + (i + 1) + ' — quel enonce decrit le comportement ?',
       a: [
-        'Le compteur est remis a zero avant la lecture, si bien que la valeur affichee reste nulle',
-        'Le compteur est remis a zero apres la lecture, si bien que la valeur affichee est doublee',
-        'Le compteur est recopie avant la lecture, si bien que la valeur affichee vient de la copie',
+        'Le compteur est remis a zero juste avant la lecture, si bien que la valeur affichee est nulle',
+        'Le compteur est remis a zero peu apres la lecture, si bien que la valeur affichee est doublee',
+        'Le compteur est recopie avant la lecture, si bien que la valeur affichee provient de la copie',
         'Le compteur est lu avant la remise a zero (avant l ecriture), et la valeur affichee est juste',
       ],
       correct: 3,
@@ -126,19 +166,28 @@ function questionsParenthesees(n) {
    en laissant leur bonne reponse sans ponctuation finale. Sur ces cinq lecons,
    l'option a la fin unique etait la bonne 15 fois sur 15 -- et aucune des onze
    strategies d'alors ne regardait le DERNIER caractere.
-   Les quatre options sont ici de longueur voisine, de meme vocabulaire, de meme
-   mot d'attaque et de meme ponctuation interne : SEULE la bonne reponse n'a pas
-   de point final. Le verdict attendu doit nommer la PONCTUATION FINALE. */
+   Les quatre options sont ici de longueur EXACTEMENT egale, de meme vocabulaire,
+   de meme mot d'attaque et de meme ponctuation interne : SEULE la bonne reponse
+   n'a pas de point final. Le verdict attendu doit nommer la PONCTUATION FINALE.
+
+   ⚠️ CORRIGE le 2026-09-06, meme defaut que ci-dessus et plus sournois : les
+   quatre options faisaient 78, 78, 83 et 81 caracteres, la bonne etant la
+   DEUXIEME plus longue des quatre -- dans les 60 questions injectees. Le verdict
+   tombait donc sur « ecarter les deux extremes » a 63,1 %, pas sur la ponctuation
+   finale. Le defaut est reste invisible tant que les strategies de RANG n'ont pas
+   ete inscrites dans EXPLOITABLES : jusque-la, aucun outil ne pouvait dire que la
+   fixture etait devinable a sa taille. Les quatre options font desormais 83
+   caracteres chacune. */
 function questionsPointees(n) {
   var out = [];
   for (var i = 0; i < n; i++) {
     out.push({
       q: 'Question pointee n° ' + (i + 1) + ' — quel enonce decrit le comportement ?',
       a: [
-        'Le tampon est vide avant la lecture, si bien que la valeur rendue reste nulle.',
-        'Le tampon est vide apres la lecture, si bien que la valeur rendue est doublee.',
-        'Le tampon est copie avant la lecture, si bien que la valeur rendue vient du double.',
-        'Le tampon est lu avant la remise a zero, si bien que la valeur rendue reste juste',
+        'Le tampon est vide bien avant la lecture, si bien que la valeur rendue reste nulle.',
+        'Le tampon est vide apres la lecture, si bien que la valeur rendue est bien doublee.',
+        'Le tampon est copie un peu avant la lecture, si bien que la valeur rendue est vide.',
+        'Le tampon est lu avant la remise a zero, si bien que la valeur rendue demeure juste',
       ],
       correct: 3,
       explain: 'Question injectee par une epreuve de mutation : elle ne doit jamais rester dans le depot.',
@@ -164,8 +213,8 @@ function refAvec(transforme) {
 
 /* Chaque mutation : [libellé, ce qu'on écrit, verdict attendu, motif attendu] */
 var MUTATIONS = [
-  ['6 questions devinables ajoutées à doc (0,0 % au départ)',
-    function () { fs.writeFileSync(PAGE, pageAvec(questionsBiaisees(6))); },
+  ['6 questions AU RANG 1 ajoutées à doc, le biais réel de ce cours',
+    function () { fs.writeFileSync(PAGE, pageAvec(questionsRang1(6))); },
     1, /regression/],
 
   ['60 questions devinables, et doc marqué « traité »',
@@ -244,6 +293,12 @@ try {
     } else {
       aveugles.push(mu[0] + ' [code ' + r.code + ', attendu ' + mu[2] + (motifOk ? '' : ', motif absent') + ']');
       console.log('  RATÉ · ' + mu[0] + ' (code ' + r.code + ', attendu ' + mu[2] + (motifOk ? '' : ' ; motif attendu absent de la sortie') + ')');
+      /* Un cas raté qui ne dit pas CE QUE le cliquet a repondu oblige a rejouer
+         l'injection a la main pour comprendre. On recopie donc le verdict rendu :
+         c'est la seule information qui permette d'agir (ajoute le 2026-09-06,
+         apres avoir passe une demi-heure a deviner pourquoi trois cas rataient). */
+      r.sortie.split('\n').filter(function (l) { return /^\s{2,}\d+\.\s\[|^\s{4,}\S/.test(l) && !/^\s+->/.test(l); })
+        .slice(0, 10).forEach(function (l) { console.log('         | ' + l.trim()); });
     }
   });
 } finally {
