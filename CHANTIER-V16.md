@@ -3719,6 +3719,144 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       fourchette se dépasse sans qu'on le voie. **À vérifier sur les QCM bilan des 18 autres
       cours clos avant de déclarer la phase B tenable.**
 
+      ---
+
+      **PASSE DU 2026-09-06 (soir) — LA VÉRIFICATION CI-DESSUS EST FAITE, ET ELLE NE DEMANDE
+      AUCUNE ÉCRITURE ; `java` EST CLOS (21ᵉ cours) ; `sql` N'AVAIT JAMAIS ÉTÉ VERROUILLÉ.**
+
+      **(1) Les QCM bilan des 20 cours clos : la dette annoncée n'existe pas.** Mesuré sur les
+      **273 questions de bilan et leurs 819 distracteurs** : **35 sont hors de la bande
+      70-130 %**, répartis sur 6 cours (`html` 15, `js` 6, `rust` 6, `python` 4, `doc` 3,
+      `css` 1). Mais **les 35 sont couverts par la clause S3 du normatif** — celle qui exempte
+      les questions dont la bonne réponse fait moins de 20 caractères, parce que la bande n'y
+      admet souvent qu'une seule longueur entière. **Non-conformités réelles : 0.**
+
+      **Et la contre-épreuve, parce qu'une exemption n'est pas une preuve d'innocuité** : sur
+      les **72 questions bilan exemptées**, la bonne réponse est la plus longue **20 fois
+      (27,8 %)** — mais **13 de ces 20 sont des ex aequo**, donc l'apprenant ne peut pas
+      trancher. En désignation unique : **7 sur 72 = 9,7 %, sous le hasard**. Rangs 20/16/28/8.
+      **Le point est clos par la mesure, sans une ligne réécrite.**
+
+      **(2) `sql` était conforme depuis sa clôture et n'était pas marqué `traite`.** Trouvé en
+      listant les cours verrouillés : 20 drapeaux pour 21 cours annoncés clos. `sql` mesurait
+      **16,9 % sur la longueur et 33,2 % sur sa pire stratégie**, donc sous les deux cibles —
+      il n'était simplement pas verrouillé, et le cliquet le laissait libre de se dégrader.
+      Marqué. **22 cours `traite` désormais** (`java` compris).
+
+      ---
+
+      **`java` — FAIT le 2026-09-06. LE COURS EST CLOS : 94,2 % → 26,0 %.** 23 leçons,
+      **77 questions** (69 en QCM de leçon, 8 en bilan), **216 distracteurs réécrits sur 231**.
+      Cinq écrivains sur lots disjoints, puis **une SECONDE VAGUE de quatre écrivains**, puis
+      quatre contradicteurs ; aucun commit d'agent, un seul écrivain par fichier à tout instant.
+
+      | indice, sur les 77 questions | avant | après |
+      |---|---:|---:|
+      | la plus longue | **94,8 %** | **26,0 %** |
+      | la plus COURTE | 1,3 % | 22,1 % (pas de retournement) |
+      | rangs de longueur | **73 / 2 / 2 / 0** | **20 / 20 / 20 / 17** |
+      | l'incise entre parenthèses (rendement) | **65,7 %** | **39,9 %** |
+      | l'incise, quand elle tranche seule | **21/24 = 87,5 %** | **2/10 = 20,0 %** |
+      | le point-virgule (rendement) | **32/32 = 100 %** | **0,0 %** (4 questions tranchées) |
+      | pire stratégie du cours | 94,2 % | **42,4 %** (cible ≤ 60 %) |
+      | distracteurs hors 70-130 % non exemptés par S3 | 222 | **0** |
+
+      **Global du site : 66,7 % → 65,8 %.** `mesure-qcm-intouchable` : **0 atteinte** sur les
+      77 questions.
+
+      ⚠️⚠️ **CE QUE CETTE PASSE APPREND, ET QUI VAUT POUR LES 68 COURS RESTANTS : FERMER LA
+      LONGUEUR NE FERME PAS L'INCISE, ET IL FAUT UNE SECONDE VAGUE.** Après la première vague,
+      `java` était à 26,0 % sur la longueur — parfait — et **l'incise entre parenthèses valait
+      encore 65,7 % de rendement, 87,5 % quand elle tranchait seule**. La cause est la même que
+      pour le point-virgule : la bonne réponse porte l'explication, donc elle est la seule à
+      glisser une précision entre parenthèses. **Les agents de la première vague avaient
+      pourtant reçu la consigne « la bonne réponse ne doit pas être la SEULE à porter une
+      incise » — et ils l'ont tenue.** Ce n'était pas la bonne consigne : la stratégie compte
+      le **nombre** d'incises, pas leur présence. Une bonne réponse à 2 incises face à des
+      distracteurs à 0 ou 1 reste désignée. **La consigne des prochains lots doit dire : « au
+      moins un distracteur porte AUTANT d'incises que la bonne réponse ».** Le mode
+      `plan-rangs-qcm.js --incise` donne le plan tout fait ; la seconde vague a coûté 2 à 8
+      caractères par question, à rang et à fourchette constants.
+
+      **QUATRE DÉFAUTS DE CORPS DE LEÇON, tous prouvés par calcul.** ⚠️ **Java n'est PAS
+      installé ici** (`java` et `javac` : command not found) — rien n'a donc été jugé de tête,
+      et les prises non reproductibles ont été refusées.
+      1. **`lecon-12` : LE DÉFAUT FONDATEUR DE LA CHAÎNE, dans un corps de leçon.**
+         `mots.stream().filter(m -> m.length() > 4).findFirst()` sur `["chat", "chien",
+         "cheval"]` rend **`chien`** — 5 caractères, donc `5 > 4` — et la leçon annonçait
+         **`cheval`** dans **deux commentaires ET deux mentions du diagramme SVG**. Prouvé par
+         comptage de caractères, pas par exécution. Corrigé en portant le filtre à `> 5`, ce
+         qui rend les quatre mentions justes d'un seul coup.
+      2. **`lecon-08` : une unité physique fausse, trois fois.** `G * masse / (rayon * rayon)`
+         est une **accélération** : l'unité est **m/s²**, pas m/s. Les valeurs, elles, sont
+         exactes — **recalculées** avec les constantes de la leçon : 9,80 et 3,71.
+      3. **`lecon-22` : la leçon se contredit d'un paragraphe à l'autre.** « dix appels de
+         150 ms bout à bout […] le temps total est tombé à celui du plus lent, environ
+         **200 ms** » : si les dix font 150 ms, le plus lent fait 150 ms. Et le QCM de la même
+         leçon enseigne « on paie la durée du plus lent (~150 ms) ».
+      4. **`lecon-05` : un commentaire qui enseigne l'inverse de la leçon 10.** « var déduit le
+         type ; le diamant `<>` reprend celui de gauche » — sous un code qui **ne contient
+         aucun diamant** (`new ArrayList<String>()`), et avec `var` il n'y a précisément **pas
+         de type à gauche** dont le diamant pourrait hériter (`var l = new ArrayList<>()`
+         infère `Object`). `lecon-10` donne, elle, la définition juste.
+      Plus une mention ajoutée sur `lecon-10` : **`Map.of` ne garantit pas l'ordre de
+      parcours** (il dépend d'un SALT tiré au démarrage de la JVM), et la leçon affichait un
+      ordre fixe sans le dire.
+
+      **19 DISTRACTEURS DEVENUS VRAIS OU AMBIGUS**, le piège annoncé de la phase, jugés un par
+      un avant remplacement. Les plus nets : « le mot-clé `return` devient facultatif **(on
+      peut l'omettre)** » — c'est **exact** dans une méthode `void`, **et la leçon l'écrit** ;
+      « `List<String>` **peut lever elle aussi** une `ClassCastException` » — vrai par
+      pollution du tas, et c'est justement le mécanisme que la leçon décrit ; « **une `Map`
+      dont on laisse les valeurs à `null`** » — c'est l'implémentation même de `HashSet` ;
+      « chaque écriture **vide le tampon de sortie** » — `System.out` est en autoflush ;
+      « `statusCode()` **relit un en-tête déjà reçu** » — exact, aucune E/S ; « (donc **un
+      futur de futur**) » — exact ; « **BigDecimal est plus rapide** construit depuis un
+      double » — exact, il n'y a pas d'analyse de chaîne.
+
+      ⚠️ **DEUX INDICES DE LOT, invisibles dans la moyenne du cours** — la leçon de `react`,
+      confirmée une fois de plus.
+      - **« ex. » : 4 questions où la bonne réponse était la SEULE à porter l'abréviation**
+        (`lecon-09`, `lecon-16`, `lecon-17` ×2). Rendement **100 %** sur ces quatre. Le tic
+        vient des bonnes réponses, qui sont intouchables : il se corrige donc **par le bas**,
+        en donnant un « ex. » à un distracteur.
+      - **`lecon-23` : les TROIS questions du QCM de leçon avaient la bonne réponse la plus
+        COURTE** (155 vs 167/156/168, 130 vs 146/137/149, 165 vs 193/171/172), plus **les
+        guillemets « … », la flèche → et le sigle CLI exclusifs à la bonne réponse**. Quatre
+        stratégies à 100 % sur un lot que la moyenne du cours noie complètement. Rangs remis à
+        **1 / 3 / 2**, signatures redistribuées.
+
+      ⚠️ **CE QUE J'AI REFUSÉ AUX CONTRADICTEURS, faute de pouvoir le prouver ici.** L'ordre de
+      sortie de `groupingBy` sur `lecon-12` : le calcul de casier d'une `HashMap` de capacité 16
+      donne bien `'r'` (casier 2) **avant** `'c'` (casier 3), donc `{r=…, c=…}` et non l'inverse
+      — **mais aucune JVM n'est disponible pour le vérifier**, et la leçon prévient déjà juste
+      en dessous que « l'ordre des clés n'est PAS garanti ». Remplacer une incertitude par une
+      autre coûte plus cher que la laisser. Refusés aussi : deux « bonnes réponses fausses »
+      signalées (`lecon-06` q3 « surcharger : dans la même classe » et `lecon-16` q2 sur la
+      dominance des étiquettes) — les prises sont sérieuses, **mais une bonne réponse est
+      intouchable dans ce protocole** ; elles sont notées ici pour une passe de fond.
+
+      **Contrôles** : `mesure-qcm-intouchable` **0 atteinte** sur 77 questions (`q`, `correct`,
+      `explain` et bonnes réponses identiques à `git show HEAD:`) ; **24 blocs JSON valides** ;
+      `verif-html` **0** ; `verif-donnees` **0 erreur** (2 avertissements préexistants) ;
+      `verif.js --rapide` **61,2 s, tout vert** ; `verif-qcm-biais` OK et référence refigée ;
+      `verif-qcm-biais-mutations` **8/8**, fichiers restaurés ; `verif-normatif` **66/66**
+      après mise à jour du taux que `doc/lecon-03` publie sur lui-même — il s'est **repérimé
+      une 5ᵉ fois** : **57,9 % → 56,7 %**, **3 532 → 3 460 manquements**, **10 mentions**
+      (dont l'explication d'un QCM, d'où la seconde régénération d'index) ; index `quiz` et
+      `search` régénérés `--fresh` **deux fois** ; **0 BOM, 0 CRLF, 0 URL CDN**.
+      ⚠️ Le nombre « 3 532 » s'écrivait avec une **espace insécable U+00A0 littérale** : trois
+      tentatives de remplacement ont rendu « 0 mention modifiée » **sans erreur**, et c'est le
+      vérificateur qui a refusé de passer au vert, pas l'outil d'édition.
+
+      **CE QUI RESTE** : **68 cours non traités**, dont les plus nocifs par questions
+      devinables sont `cpp` (77 q, 92,9 %), `csharp` (77 q, 93,5 %), `stats` (72 q, 99,3 %),
+      `data-eng` (70 q, 98,6 %) et `php` (78 q, 88,9 %). ⚠️ **`stats` reste le cours-témoin de
+      `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.** `cpp` et `csharp`
+      sont deux des sept cours à **100 % sur le point-virgule** — la consigne de leur lot doit
+      porter la leçon de cette passe : **traiter la longueur, l'incise ET le point-virgule dans
+      la même vague**, sinon il en faut deux.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
