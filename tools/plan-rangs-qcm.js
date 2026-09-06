@@ -117,32 +117,67 @@ function planifier(cours) {
   /* Capacite par rang : la repartition la plus plate que n permette. */
   var cap = [0, 0, 0, 0];
   for (var i = 0; i < n; i++) cap[i % 4]++;
-  /* Cout de chaque (question, rang), puis affectation gloutonne du moins cher au
-     plus cher. Ce n'est pas l'optimum hongrois, mais la mesure suffit : le cout
-     total obtenu est rendu, et c'est lui qui compte, pas sa preuve d'optimalite. */
-  var paires = [];
+  /* CORRECTION du 2026-09-06, apres la relecture adversariale du cours `rust` :
+     l'affectation gloutonne GLOBALE (tous les couples question-rang tries par
+     cout croissant) est plate au niveau du COURS et biaisee au niveau de la
+     LECON. Le cout du rang 0 vaut ZERO pour une question qui y est deja : les
+     19 places du rang 0 partaient donc aux 19 questions les moins cheres, qui
+     sont systematiquement les memes lecons -- celles dont les options sont
+     courtes, au premier rang desquelles le QCM BILAN. Mesure sur `rust` avant
+     correction : le cours affichait 25,0 % sur « la plus longue » ET 25,0 % sur
+     « la plus COURTE », donc parfaitement plat, pendant que `lecon-18` etait a
+     3/3 (100 %), `lecon-22` a 10/13 (76,9 %) et seize lecons a 0/3 -- deux lots
+     de biais opposes qui s'annulent dans la moyenne. C'est la lecon du cours
+     `react` (« un indice de LOT vaut 100 % sur le lot et 25 % sur le site »)
+     transposee d'un cran : la moyenne du COURS est a son tour le mauvais endroit
+     ou decider, et un apprenant ne voit jamais que le lot qu'il revise.
+
+     La reparation : les rangs cibles sont distribues FICHIER PAR FICHIER, en
+     tourniquet, avec un decalage global qui se poursuit d'un fichier a l'autre.
+     Un fichier de trois questions recoit donc trois rangs DISTINCTS, et la
+     repartition du cours reste la meme (cap inchange). L'affectation gloutonne
+     par le cout ne joue plus qu'a l'interieur d'un fichier. */
+  var parFichier = {}, ordre = [];
   lot.forEach(function (e, qi) {
-    for (var r = 0; r < 4; r++) {
-      var m = coutRang(e, r);
-      paires.push({ qi: qi, rang: r, total: m.total, detail: m.detail });
-    }
+    if (!parFichier[e.fichier]) { parFichier[e.fichier] = []; ordre.push(e.fichier); }
+    parFichier[e.fichier].push(qi);
   });
-  paires.sort(function (a, b) { return a.total - b.total; });
-  var affecte = new Array(n).fill(null), reste = cap.slice();
-  paires.forEach(function (p) {
-    if (affecte[p.qi] !== null || reste[p.rang] <= 0) return;
-    affecte[p.qi] = p; reste[p.rang]--;
+  var affecte = new Array(n).fill(null), decalage = 0;
+  ordre.forEach(function (f) {
+    var qis = parFichier[f];
+    /* Les rangs a distribuer dans CE fichier, en tourniquet depuis le decalage. */
+    var reste = [0, 0, 0, 0];
+    for (var j = 0; j < qis.length; j++) reste[(decalage + j) % 4]++;
+    decalage += qis.length;
+    var paires = [];
+    qis.forEach(function (qi) {
+      for (var r = 0; r < 4; r++) {
+        if (reste[r] === 0) continue;
+        var m = coutRang(lot[qi], r);
+        paires.push({ qi: qi, rang: r, total: m.total, detail: m.detail });
+      }
+    });
+    paires.sort(function (a, b) { return a.total - b.total; });
+    paires.forEach(function (p) {
+      if (affecte[p.qi] !== null || reste[p.rang] <= 0) return;
+      affecte[p.qi] = p; reste[p.rang]--;
+    });
+    /* Filet : une question sans rang libre au cout minimal prend ce qui reste. */
+    qis.forEach(function (qi) {
+      if (affecte[qi] !== null) return;
+      for (var r = 0; r < 4; r++) if (reste[r] > 0) {
+        var m = coutRang(lot[qi], r);
+        affecte[qi] = { qi: qi, rang: r, total: m.total, detail: m.detail };
+        reste[r]--; return;
+      }
+    });
   });
-  /* Filet : une question sans rang libre au cout minimal prend ce qui reste. */
-  lot.forEach(function (e, qi) {
-    if (affecte[qi] !== null) return;
-    for (var r = 0; r < 4; r++) if (reste[r] > 0) {
-      var m = coutRang(e, r);
-      affecte[qi] = { qi: qi, rang: r, total: m.total, detail: m.detail };
-      reste[r]--; return;
-    }
-  });
-  return { cours: cours, lot: lot, plan: affecte, cap: cap };
+  /* La capacite REELLEMENT distribuee, qui peut differer de la plus plate quand
+     les fichiers ne font pas un multiple de quatre questions. On rend celle-la,
+     pas la theorique : afficher une cible qu'on n'a pas distribuee serait mentir. */
+  var capReelle = [0, 0, 0, 0];
+  affecte.forEach(function (a) { if (a) capReelle[a.rang]++; });
+  return { cours: cours, lot: lot, plan: affecte, cap: capReelle };
 }
 
 function rangActuel(e) {
