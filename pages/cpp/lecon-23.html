@@ -143,11 +143,11 @@ struct Stats {
     std::uintmax_t taille_max = 0;
 };
 
-Stats analyser(const fs::path&amp; racine) {
-    Stats s;
-    std::error_code ec;   // version non lançante : un dossier illisible n'arrête pas tout
-    for (const auto&amp; e : fs::recursive_directory_iterator(racine, ec)) {
-        if (!e.is_regular_file()) continue;          // on ignore dossiers et liens
+Stats analyser(const fs::path&amp; racine, std::error_code&amp; ec) {
+    Stats s;   // ec est renseigné si la RACINE elle-même ne s'ouvre pas
+    constexpr auto sauter = fs::directory_options::skip_permission_denied;
+    for (const auto&amp; e : fs::recursive_directory_iterator(racine, sauter, ec)) {
+        if (!e.is_regular_file()) continue;          // que les vrais fichiers
         std::uintmax_t taille = e.file_size();
         ++s.fichiers;
         s.octets += taille;
@@ -176,7 +176,7 @@ Stats analyser(const fs::path&amp; racine) {
   </svg>
   <figcaption>Un seul parcours suffit&nbsp;: on met à jour compteur, <code>map</code> par extension et «&nbsp;plus gros&nbsp;» simultanément. Relire le disque une fois par statistique serait bien plus lent.</figcaption>
 </figure>
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent — un dossier illisible ne doit pas tout arrêter</p><p>Sur un vrai disque, on tombe sur des dossiers sans droit de lecture, voire des boucles de liens symboliques. En passant un <code>std::error_code&amp;</code> à <code>recursive_directory_iterator</code>, le parcours <strong>saute</strong> l'obstacle au lieu de lever une exception qui interromprait toute l'analyse. Le filtre <code>is_regular_file()</code> évite en plus d'appeler <code>file_size()</code> sur autre chose qu'un vrai fichier.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent — un dossier illisible ne doit pas tout arrêter</p><p>Sur un vrai disque, on tombe sur des dossiers sans droit de lecture. C'est l'option <code>directory_options::skip_permission_denied</code> qui fait <strong>sauter</strong> ces dossiers&nbsp;: sans elle, l'incrément de la boucle lèverait un <code>filesystem_error</code> et l'analyse s'arrêterait. L'<code>std::error_code&amp;</code>, lui, ne couvre que l'ouverture de la racine&nbsp;: il faut le tester. Le filtre <code>is_regular_file()</code> évite en plus d'appeler <code>file_size()</code> sur autre chose qu'un vrai fichier.</p></div></div>
 
 <h2>Étape 3 — trier la répartition et l'afficher</h2>
 <p>Une <code>std::map</code> est triée par <strong>clé</strong> (l'extension), or on veut l'afficher par <strong>taille décroissante</strong>. On recopie donc les paires dans un <code>std::vector</code>, qu'on trie avec <code>std::sort</code> et une lambda. L'affichage aligné utilise <code>&lt;iomanip&gt;</code> (<code>std::setw</code>, <code>std::left</code>/<code>std::right</code>).</p>
@@ -248,10 +248,10 @@ struct Stats {
     std::uintmax_t taille_max = 0;
 };
 
-Stats analyser(const fs::path&amp; racine) {
+Stats analyser(const fs::path&amp; racine, std::error_code&amp; ec) {
     Stats s;
-    std::error_code ec;
-    for (const auto&amp; e : fs::recursive_directory_iterator(racine, ec)) {
+    constexpr auto sauter = fs::directory_options::skip_permission_denied;
+    for (const auto&amp; e : fs::recursive_directory_iterator(racine, sauter, ec)) {
         if (!e.is_regular_file()) continue;
         std::uintmax_t taille = e.file_size();
         ++s.fichiers;
@@ -266,13 +266,15 @@ Stats analyser(const fs::path&amp; racine) {
 
 int main(int argc, char* argv[]) {
     fs::path racine = (argc &gt; 1) ? argv[1] : ".";
+    std::error_code ec;
     if (!fs::is_directory(racine)) {
         std::cerr &lt;&lt; racine &lt;&lt; " n'est pas un dossier\n";
         return 1;
     }
 
     auto t0 = std::chrono::steady_clock::now();
-    Stats s = analyser(racine);
+    Stats s = analyser(racine, ec);
+    if (ec) std::cerr &lt;&lt; "Parcours incomplet : " &lt;&lt; ec.message() &lt;&lt; "\n";
     auto t1 = std::chrono::steady_clock::now();
     auto ms = std::chrono::duration_cast&lt;std::chrono::milliseconds&gt;(t1 - t0).count();
 
@@ -305,7 +307,7 @@ int main(int argc, char* argv[]) {
     <tbody>
       <tr><td>Lire un argument</td><td><code>argc</code> / <code>argv</code></td><td><code>argv[1]</code> ou <code>"."</code></td></tr>
       <tr><td>Parcourir récursivement</td><td><code>recursive_directory_iterator</code></td><td><code>for (auto&amp; e : …)</code></td></tr>
-      <tr><td>Ne pas tout arrêter</td><td><code>std::error_code&amp;</code></td><td><code>iterator(racine, ec)</code></td></tr>
+      <tr><td>Ne pas tout arrêter</td><td><code>skip_permission_denied</code></td><td><code>iterator(racine, opts, ec)</code></td></tr>
       <tr><td>Taille d'un fichier</td><td><code>file_size</code></td><td><code>e.file_size()</code></td></tr>
       <tr><td>Cumuler par catégorie</td><td><code>std::map</code></td><td><code>m[ext] += t</code></td></tr>
       <tr><td>Trier librement</td><td><code>std::sort</code> + lambda</td><td><code>a.second &gt; b.second</code></td></tr>
@@ -318,13 +320,13 @@ int main(int argc, char* argv[]) {
 <h2>Glossaire</h2>
 <dl class="glossary">
   <dt><code>argc</code> / <code>argv</code></dt><dd>Le nombre d'arguments et le tableau de chaînes reçus par <code>main</code>&nbsp;; <code>argv[0]</code> est le nom du programme, <code>argv[1]</code> le premier argument.</dd>
-  <dt><code>recursive_directory_iterator</code></dt><dd>Itérateur de <code>&lt;filesystem&gt;</code> qui traverse un dossier <strong>et tous ses sous-dossiers</strong>&nbsp;; accepte un <code>error_code</code> pour ignorer les obstacles.</dd>
+  <dt><code>recursive_directory_iterator</code></dt><dd>Itérateur de <code>&lt;filesystem&gt;</code> qui traverse un dossier <strong>et tous ses sous-dossiers</strong>&nbsp;; lui donner <code>directory_options::skip_permission_denied</code> pour ignorer les dossiers interdits.</dd>
   <dt><code>std::map</code></dt><dd>Conteneur associatif trié par clé&nbsp;; <code>m[clé] += v</code> crée la clé à la première rencontre puis l'incrémente. Idéal pour cumuler par catégorie.</dd>
   <dt>Structured bindings</dt><dd>Syntaxe C++17 <code>auto&amp; [a, b] = paire;</code> qui nomme directement les membres d'une paire ou d'un tuple, ici <code>[ext, octets]</code>.</dd>
   <dt><code>std::sort</code> + comparateur</dt><dd>Tri en place d'un intervalle&nbsp;; une lambda <code>(a, b) → bool</code> définit l'ordre, ici décroissant par octets.</dd>
   <dt><code>&lt;iomanip&gt;</code> / <code>setw</code></dt><dd>Manipulateurs de flux&nbsp;: <code>setw(n)</code> fixe la largeur du prochain champ, <code>left</code>/<code>right</code> son alignement, pour des colonnes régulières.</dd>
   <dt><code>steady_clock</code></dt><dd>Horloge <strong>monotone</strong> de <code>&lt;chrono&gt;</code>, faite pour mesurer des durées&nbsp;: elle n'est jamais ajustée en arrière comme peut l'être l'heure du système.</dd>
-  <dt><code>error_code</code></dt><dd>Objet renseigné par la version non lançante d'une opération&nbsp;; permet de continuer un parcours malgré un fichier ou dossier récalcitrant.</dd>
+  <dt><code>error_code</code></dt><dd>Objet renseigné par la version non lançante d'une opération&nbsp;; la surcharge qui le prend ne lève pas, mais c'est à toi de le tester.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
@@ -333,15 +335,15 @@ int main(int argc, char* argv[]) {
 <li>Un <strong>seul parcours</strong> récursif alimente tous les agrégats (compteur, <code>map</code> par extension, plus gros fichier).</li>
 <li>Une <code>map</code> est triée par clé&nbsp;: pour un autre ordre, copie ses paires dans un <code>vector</code> et appelle <code>std::sort</code>.</li>
 <li><code>&lt;iomanip&gt;</code> aligne les colonnes&nbsp;; <code>steady_clock</code> chronomètre le traitement.</li>
-<li>Passer un <code>error_code</code> au parcours évite qu'un dossier illisible n'interrompe toute l'analyse.</li>
+<li>L'option <code>skip_permission_denied</code> évite qu'un dossier illisible n'interrompe toute l'analyse&nbsp;; l'<code>error_code</code>, lui, ne couvre que l'ouverture de la racine.</li>
 </ul>
-<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi remplir la <code>map</code>, le compteur et le «&nbsp;plus gros&nbsp;» dans un même parcours&nbsp;?</li><li>Pourquoi copier la <code>map</code> dans un <code>vector</code> avant de trier&nbsp;?</li><li>À quoi sert le <code>std::error_code</code> passé à l'itérateur récursif&nbsp;?</li><li>Pourquoi <code>steady_clock</code> plutôt que l'heure du système pour mesurer une durée&nbsp;?</li></ol></div>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi remplir la <code>map</code>, le compteur et le «&nbsp;plus gros&nbsp;» dans un même parcours&nbsp;?</li><li>Pourquoi copier la <code>map</code> dans un <code>vector</code> avant de trier&nbsp;?</li><li>Qu'est-ce qui fait sauter un dossier interdit&nbsp;: l'<code>error_code</code> ou l'option de parcours&nbsp;?</li><li>Pourquoi <code>steady_clock</code> plutôt que l'heure du système pour mesurer une durée&nbsp;?</li></ol></div>
 
 <script type="application/json" data-quiz>
 [
   {"q":"Pourquoi remplir le compteur, la map par extension et le « plus gros fichier » dans un seul et même parcours ?","a":["Pour ne lire le disque qu'une fois : chaque fichier met à jour les trois agrégats en même temps, ce qui est bien plus rapide","Parce que la STL l'impose : le compteur, la map par extension et le plus gros fichier ne peuvent pas être remplis pendant deux parcours distincts","Parce qu'un recursive_directory_iterator ne peut être construit qu'une seule fois par programme, toute autre construction levant une exception","Pour éviter d'écrire une struct Stats : sans agrégat unique, le compilateur refuserait la boucle"],"correct":0,"explain":"Le parcours du disque est l'opération coûteuse. Un seul passage qui alimente tous les agrégats évite de relire l'arborescence une fois par statistique."},
   {"q":"Pourquoi copie-t-on la std::map dans un std::vector avant de l'afficher triée par taille ?","a":["Parce qu'une map est toujours triée par CLÉ ; pour l'ordonner par valeur (les octets), on copie ses paires dans un vector qu'on trie librement","Parce qu'une std::map ne peut pas être parcourue par un range-for ; pour AFFICHER ses paires (clé, valeur), il faut d'abord les recopier dans un vector","Parce que std::sort ne compile pas sur un std::vector de paires : seule une std::list accepte d'être triée, d'où la conversion avant l'affichage","Pour libérer la mémoire de la map dès la copie faite : un conteneur associatif ne peut pas rester vivant pendant l'affichage, sous peine d'invalider ses clés"],"correct":0,"explain":"std::map maintient l'ordre de ses clés ; on ne peut pas la réordonner par valeur. On copie ses paires dans un vector, que std::sort trie selon le critère voulu (ici octets décroissants)."},
-  {"q":"À quoi sert le std::error_code passé à recursive_directory_iterator ?","a":["À poursuivre le parcours malgré un dossier illisible ou une boucle de liens, au lieu de lever une exception qui arrêterait tout","À accélérer le parcours en désactivant les vérifications de droits, ce qui évite au système un appel supplémentaire par fichier rencontré","À trier les fichiers rencontrés par code d'erreur croissant, de sorte que les dossiers inaccessibles soient listés en dernier dans le rapport","À convertir automatiquement chaque chemin en std::string, puisque error_code stocke le message associé à chaque entrée du dossier"],"correct":0,"explain":"La version qui prend un error_code ne lève pas : elle signale l'obstacle et laisse le parcours continuer. Sur un vrai disque, un dossier sans droit de lecture ne doit pas faire échouer toute l'analyse."}
+  {"q":"Qu'est-ce qui fait qu'un dossier illisible n'arrête pas le parcours récursif ?","a":["L'option skip_permission_denied donnée au parcours ; l'error_code, lui, ne renseigne que l'échec d'ouverture de la racine","À accélérer le parcours en désactivant les vérifications de droits, ce qui évite au système un appel supplémentaire par fichier rencontré","À trier les fichiers rencontrés par code d'erreur croissant, de sorte que les dossiers inaccessibles soient listés en dernier dans le rapport","À convertir automatiquement chaque chemin en std::string, puisque error_code stocke le message associé à chaque entrée du dossier"],"correct":0,"explain":"L'error_code n'est passé qu'au constructeur. La boucle, elle, avance par operator++, qui n'a pas d'argument error_code et lève donc un filesystem_error. Seule l'option directory_options::skip_permission_denied fait sauter un dossier sans droit de lecture."}
 ]
 </script>
 
@@ -363,6 +365,9 @@ std::map&lt;std::string, ParExt&gt; par_extension;
 auto&amp; agg = par_extension[ext];
 agg.octets += taille;
 agg.nombre += 1;
+
+// le comparateur du tri doit suivre le changement de type :
+[](const auto&amp; a, const auto&amp; b) { return a.second.octets &gt; b.second.octets; }
 
 // à l'affichage :
 for (const auto&amp; [ext, agg] : lignes)
@@ -446,12 +451,12 @@ int main() {
 <script type="application/json" data-quiz-bilan>
 [
   {"q":"Comment inclure la bibliothèque d'entrées/sorties ?","a":["#include <iostream>","import iostream","using io","#include stdio"],"correct":0,"explain":"std::cout et std::cin viennent de <iostream>."},
-  {"q":"Comment afficher sur la sortie standard ?","a":["std::cout << x","print(x)","sys::out << x","printf seul"],"correct":0,"explain":"<< est l'opérateur d'insertion dans le flux."},
+  {"q":"Comment afficher sur la sortie standard ?","a":["std::cout << x","print(x)","sys::out << x","std::cerr << x"],"correct":0,"explain":"<< est l'opérateur d'insertion dans le flux."},
   {"q":"Quel conteneur dynamique standard privilégier ?","a":["std::vector","un tableau C int[]","une liste chaînée maison","std::array figé"],"correct":0,"explain":"vector gère sa taille et sa mémoire."},
   {"q":"Comment passer un gros objet sans le copier ni le modifier ?","a":["const T&","T (par valeur)","T*","T&&"],"correct":0,"explain":"La référence constante évite la copie et protège l'objet."},
   {"q":"Qui garantit la libération des ressources en fin de portée (RAII) ?","a":["Le destructeur","Un ramasse-miettes","free() manuel","Personne"],"correct":0,"explain":"C++ n'a pas de GC : le destructeur nettoie automatiquement."},
   {"q":"Quel espace de noms regroupe la bibliothèque standard ?","a":["std","stdlib","core","cpp"],"correct":0,"explain":"std::vector, std::string, std::cout…"},
-  {"q":"Quel outil écrit du code générique sur le type ?","a":["template","macro","auto","generic"],"correct":0,"explain":"template<typename T> rend une fonction/classe générique."},
+  {"q":"Quel outil écrit du code générique sur le type ?","a":["template","macro","typedef","generic"],"correct":0,"explain":"template<typename T> rend une fonction/classe générique."},
   {"q":"Quelle paire alloue puis libère dynamiquement ?","a":["new / delete","malloc / delete","alloc / free","create / destroy"],"correct":0,"explain":"Mieux : préférer les conteneurs et les smart pointers."}
 ]
 </script>
