@@ -3264,6 +3264,119 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       l'ajouter fige la cible pour la suite. ⚠️ **`stats` (99,3 %) reste le cours-témoin de
       `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.**
 
+      **FAIT — LE 19ᵉ COURS, `git`, le 2026-09-06.** 80 questions, 78 retouchées, 6 lots
+      d'écriture puis 6 relecteurs adversariaux sur les mêmes lots.
+
+      | indice | avant | après |
+      |---|---:|---:|
+      | **la plus longue** | **93,8 %** | **25,0 %** — le hasard exact, rangs 20/20/20/20 |
+      | la plus détaillée | 82,5 % | 38,3 % |
+      | l'incise entre parenthèses | 72,8 % | 34,1 % |
+      | l'écho de la question | 66,3 % | 28,6 % |
+      | le mot technique exclusif | 65,4 % | **11,6 %** ⚠️ |
+
+      Global du site sur « la plus longue » : **68,4 % → 67,5 %**. Référence refigée, `git`
+      marqué `traite` — **19 cours traités**.
+
+      ⚠️⚠️ **LA TROUVAILLE DE CETTE PASSE, ET ELLE VAUT POUR TOUS LES COURS DÉJÀ CLOS :
+      la correction FABRIQUE un biais INVERSE, que le cliquet ne voit pas.** « Le mot
+      technique exclusif » n'est pas tombé au hasard, il est tombé **13,4 points EN DESSOUS**
+      — parce qu'on étoffe les distracteurs avec du vocabulaire technique et que la bonne
+      réponse cesse d'en être la seule porteuse. **OUTIL NEUF :
+      `tools/mesure-biais-inverse.js`**, qui recopie à dessein la règle de
+      `mesure-biais-qcm` (la colonne « directe » doit tomber sur la sienne au dixième près,
+      sinon l'une des deux a bougé) puis inverse la décision — l'apprenant ÉCARTE l'option
+      désignée et tire parmi les trois autres :
+
+      | cours | stratégie directe | stratégie INVERSE | elle tranche sur |
+      |---|---:|---:|---:|
+      | `git` (traité aujourd'hui) | 11,6 % | **29,7 %** | 91,3 % des questions |
+      | `doc` (traité la veille) | 15,2 % | **31,9 %** | 98,4 % |
+      | `ruby` (traité, témoin) | 26,4 % | 23,2 % | 81,0 % |
+
+      **L'avantage réel est de +4,7 points sur `git` et +6,9 sur `doc`, pas de 13,4** : écarter
+      une option sur quatre ne rend que 1/3, donc une stratégie à 0 % plafonne son inverse à
+      **33,3 %**. C'est pourquoi ce défaut ne se traite PAS comme la longueur, et pourquoi
+      l'ajouter à `EXPLOITABLES` (cible 60 %) ne servirait à rien : il ne peut jamais y toucher.
+      **Le déséquilibre est réel mais petit ; il est mesuré et écrit ici plutôt que tu.**
+      **Et le défaut est LOCALISÉ, ce que seule la mesure des 19 cours traités dit** :
+      cinq cours seulement passent au-dessus du hasard en inverse (`doc` +6,9, `git` +4,7,
+      `maths` +2,6, `zig` +1,3, `mobile` +0,7) ; **les quatorze autres sont en dessous**,
+      jusqu'à −3,1 pour `equipe` et `projets-js`. Ce sont les deux cours les plus récents
+      qui sont les plus déséquilibrés — la consigne d'écriture s'est durcie sur ce point
+      précis au fil des passes, et elle est allée trop loin. **La consigne des prochains
+      lots doit demander l'équilibre, pas l'inversion.**
+
+      **OUTIL NEUF : `plan-rangs-qcm.js --incise`**, symétrique de `--ponctuation`, écrit parce
+      que fermer la longueur DÉPLACE le biais une deuxième fois. Il liste les questions où la
+      bonne réponse est en tête sur le nombre d'incises `(…)` d'au moins 4 caractères, avec la
+      fenêtre de longueur du côté ACTUEL de chaque distracteur — l'ajustement se fait donc à
+      longueur quasi constante (« A et B » → « A (et B) », 2 caractères) sans défaire le rang.
+      **La cible n'est pas « aucune parenthèse » : c'est que la bonne réponse ne soit pas SEULE
+      en tête** — une question dont les quatre options en portent une est neutre. Son chiffre
+      (52,1 % avant la vague 2) est tombé sur celui de `mesure-biais-qcm` **au dixième près,
+      par deux implémentations indépendantes**, ce qui est la seule raison de lui faire
+      confiance. Après la passe : **34,1 %**.
+
+      **CE QUE LA CONTRADICTION A TROUVÉ — et c'est là que le fan-out paie** : **zéro**
+      distracteur devenu vrai sur les 216 réécrits (les six relecteurs sont formels, chacun
+      preuve d'exécution à l'appui : git 2.54.0 est installé, tout a été rejoué dans des dépôts
+      jetables). Mais **quatre défauts de CORPS DE LEÇON**, tous invisibles aux QCM :
+      1. `lecon-02` affirmait que « les versions récentes de Git » créent `main` par défaut.
+         **Faux** : `git init` sans `init.defaultBranch`, avec `HOME` isolé et
+         `GIT_CONFIG_NOSYSTEM=1`, crée toujours `master` en 2.54.0. Ce sont les plateformes
+         qui créent en `main`. Corrigé en distinguant les deux.
+      2. `lecon-02` publiait **deux transcriptions de terminal que git ne produit pas** :
+         `nothing to commit (create/copy files to get started)` au lieu de `… and use "git add"
+         to track`, et `(use "git restore --staged <file>…" to unstage)` là où git écrit
+         `git rm --cached` **tant qu'aucun commit n'existe**. C'est le défaut fondateur de la
+         chaîne, dans le cours qui enseigne l'outil même du chantier.
+      3. `lecon-07` donnait 90 jours pour l'expiration du reflog dans le cas décrit — un commit
+         **inaccessible**, dont `gc.reflogExpireUnreachable` fixe le délai à **30 jours**.
+      4. `lecon-14` q1 : la bonne réponse écrivait « GitHub Flow **(trunk-based)** » quand le
+         corps de la même leçon **oppose** les deux (schéma à trois troncs, note « pour une
+         grosse équipe qui déploie en continu, trunk-based »). Signalée sans être tranchée par
+         le relecteur, vérifiée puis corrigée en « (le plus léger) », qui reprend le texte du
+         corps — +2 caractères, rang inchangé (150 car. contre 155 / 162 / 105).
+
+      Plus **un distracteur AMBIGU** (`lecon-20` q3) : « on fait `git commit` directement, ce qui
+      clôt tout de même proprement le cherry-pick ». Rejoué : `git commit` **réussit et clôt
+      bien la séquence** (`.git/CHERRY_PICK_HEAD` disparaît) — il committe simplement les
+      marqueurs de conflit. La moitié de l'affirmation était vraie ; réécrit sans le mot
+      « proprement ».
+
+      ⚠️ **La correction a fait ROUGIR `verif-normatif` (64/66), et c'est le mécanisme voulu** :
+      `doc/lecon-03` publie le taux de manquement à la clause `S3` mesuré sur le site, et
+      détordre `git` l'a périmé — **60,3 % → 59,1 %, 3 680 → 3 605 manquements**, 10 occurrences
+      dans la page. Mises à jour, **66/66**. ⚠️ Le remplacement a été fait motif par motif avec
+      un compte affiché : `60,3` apparaît aussi dans `distribue/lecon-10` pour un **disjoncteur**,
+      sans aucun rapport — un `sed` global aurait cassé une leçon juste.
+
+      ⚠️ **Un sous-agent a écrasé le `~/.gitconfig` de la machine** en lançant
+      `git config --global user.email` dans son dépôt jetable ; il l'a repéré et restauré
+      lui-même. Vérifié après coup : `chipat-neko <alison.noah23@gmail.com>`, identique aux
+      trois derniers commits. **La consigne des prochains lots doit imposer `--local`.**
+
+      **CONSTAT HORS PÉRIMÈTRE, mesuré au passage** : `verif-rendu` rend 6 erreurs sur
+      `git/lecon-24` — « 3 exercices déclarés dans `data-exos` pour 4 blocs `.exercise` ».
+      **Préexistant** (le compte est identique dans `git show HEAD:`) et **il touche 39 leçons
+      sur 1 629 (2,4 %)** : `python/lecon-50`, `html/lecon-33`, `sql/lecon-24`, `react/lecon-26`…
+      Un bloc d'exercice y reste sans champ de réponse. À traiter en phase E, pas ici.
+
+      **Contrôles** : `verif.js --rapide` **54,9 s, tout vert** ; `verif-html` **0** ;
+      `verif-donnees` **0 erreur** (2 avertissements préexistants) ; `verif-normatif` **66/66** ;
+      `verif-qcm-biais-mutations` **8/8** ; `verif-rendu` sur 3 des pages touchées **0 erreur** ;
+      49 blocs JSON valides, **0 octet CR, 0 BOM** ; index `quiz` et `search` régénérés
+      `--fresh` ; aucune URL CDN introduite.
+
+      **CE QUI RESTE, dans l'ordre** : (1) `rust` (96,1 %, 76 q), `java` (94,2 %, 77),
+      `php` (88,9 %, 78), `csharp`, `cpp`, `ocaml` — et **`stats` (99,3 %) qui reste le
+      cours-témoin de `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter** ;
+      (2) décider si le biais INVERSE mérite un contrôle propre — il ne peut pas passer par
+      `EXPLOITABLES` (plafond 33,3 %), il lui faudrait sa propre borne dans le cliquet ;
+      (3) « la seule qui nie » (41,2 % de rendement site) dans `EXPLOITABLES`, toujours pas
+      tranché.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 

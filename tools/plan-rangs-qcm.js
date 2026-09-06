@@ -29,6 +29,7 @@
      node tools/plan-rangs-qcm.js <cours>              # le plan lisible
      node tools/plan-rangs-qcm.js <cours> --json       # le meme, pour un agent
      node tools/plan-rangs-qcm.js <cours> --ponctuation
+     node tools/plan-rangs-qcm.js <cours> --incise
 */
 "use strict";
 var fs = require("fs"), path = require("path");
@@ -151,7 +152,7 @@ function rangActuel(e) {
 
 var args = process.argv.slice(2);
 var cours = args.filter(function (a) { return a.indexOf("--") !== 0; })[0];
-if (!cours) { console.log("usage : node tools/plan-rangs-qcm.js <cours> [--json]"); process.exit(1); }
+if (!cours) { console.log("usage : node tools/plan-rangs-qcm.js <cours> [--json|--ponctuation|--incise]"); process.exit(1); }
 var p = planifier(cours);
 if (!p) { console.error("cours introuvable : " + cours); process.exit(1); }
 
@@ -188,6 +189,69 @@ if (args.indexOf("--ponctuation") !== -1) {
         console.log("      opt" + d.i + " : " + d.p + " signes, " + d.l + " car. (fenetre "
           + t.bandeBonne[0] + ".." + t.bandeBonne[1] + ")");
         console.log("            " + d.t);
+      });
+      console.log("");
+    });
+  }
+  process.exit(0);
+}
+
+/* ------------------------------------------------- le mode INCISE
+   Ajoute le 2026-09-06 (B4, cours `git`), pour la meme raison que --ponctuation :
+   fermer la longueur DEPLACE le biais. Sur `git`, la longueur est tombee de 93,8 %
+   a 25,0 % (le hasard exact) et « l'incise entre parentheses » est restee a 52,1 %,
+   devenue le pire indice du cours. C'est aussi le pire RENDEMENT du site (89,7 %).
+
+   Le critere est celui de mesure-biais-qcm : une incise d'AU MOINS 4 caracteres
+   entre parentheses -- pas un appel de fonction comme `map()`. La cible n'est pas
+   « aucune parenthese » : c'est que la bonne reponse ne soit pas SEULE en tete.
+   Une question dont les quatre options portent une incise est parfaitement neutre.
+
+   Comme --ponctuation, l'ajustement se fait a longueur quasi constante : la fenetre
+   rendue pour chaque distracteur est celle de son COTE ACTUEL, pour ne pas defaire
+   le travail de rang. « A et B » -> « A (et B) » coute 2 caracteres. */
+function incises(t) { return (String(t).match(/\([^)]{4,}\)/g) || []).length; }
+if (args.indexOf("--incise") !== -1) {
+  var lignesI = [], gagne = 0, score = 0;
+  p.lot.forEach(function (e) {
+    var k = e.q.correct || 0, I = e.q.a.map(incises);
+    var mx = Math.max.apply(null, I);
+    var exaequo = I.filter(function (x) { return x === mx; }).length;
+    if (I[k] === mx) score += 1 / exaequo;
+    /* rien a faire si la bonne reponse ne gagne pas, ou si les QUATRE sont a egalite
+       (cas neutre : la strategie tire alors au hasard, ce qui est la cible). */
+    if (I[k] !== mx || exaequo === 4) return;
+    gagne++;
+    var bon = e.q.a[k].length;
+    var cand = e.q.a.map(function (t, i) {
+      var plusLong = t.length > bon;
+      return { option: i, incises: I[i], longueur: t.length,
+               fenetre: fenetre(bon, plusLong), texte: t };
+    }).filter(function (o) { return o.option !== k; })
+      .sort(function (x, y) { return y.incises - x.incises; });
+    lignesI.push({ fichier: e.fichier, bloc: e.bloc, bilan: e.bilan, question: e.num,
+      enonce: e.q.q, correcte: k, bonne: e.q.a[k], inciseBonne: I[k],
+      exaequo: exaequo, longueurBonne: bon, distracteurs: cand });
+  });
+  if (args.indexOf("--json") !== -1) {
+    console.log(JSON.stringify({ cours: cours, questions: p.lot.length,
+      gagnees: gagne, taux: score / p.lot.length, travaux: lignesI }, null, 1));
+  } else {
+    console.log("\nplan-rangs-qcm --incise — " + cours + " : " + p.lot.length + " questions");
+    console.log("  score de la strategie « l'incise entre parentheses » : "
+      + (score / p.lot.length * 100).toFixed(1) + " % (hasard : 25,0 %)");
+    console.log("  questions ou la bonne reponse est en tete SANS egalite a quatre : "
+      + gagne + "\n");
+    lignesI.forEach(function (t) {
+      console.log("  " + t.fichier + (t.bilan ? " [BILAN]" : "") + " q" + t.question
+        + "   bonne reponse : " + t.inciseBonne + " incise(s), " + t.longueurBonne
+        + " car." + (t.exaequo > 1 ? ", a egalite avec " + (t.exaequo - 1) : ", SEULE en tete"));
+      console.log("      BONNE (ne pas toucher) : " + t.bonne);
+      t.distracteurs.forEach(function (d) {
+        console.log("      opt" + d.option + " : " + d.incises + " incise(s), " + d.longueur
+          + " car. (fenetre " + d.fenetre[0] + ".."
+          + (d.fenetre[1] === Infinity ? "inf" : d.fenetre[1]) + ")");
+        console.log("            " + d.texte);
       });
       console.log("");
     });
