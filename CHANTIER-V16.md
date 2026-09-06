@@ -4348,6 +4348,28 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       témoin AVANT de le traiter.** ⚠️ **Et l'indice lexical est désormais le premier du site
       devant la longueur sur les cours traités : le fermer passe avant d'en traiter un 27ᵉ.**
 
+      **LE CLIQUET LEXICAL EST POSÉ, LUI, ET IL EST DANS LA CHAÎNE.** Trouver l'indice sans
+      l'outiller aurait reproduit exactement le défaut fondateur du V16 (« un vérificateur hors
+      chaîne vaut un vérificateur inexistant »). Livré dans la même passe :
+      `tools/mesure-lexique-qcm.js` (mesure, `--seul=`, `--racine=`, `--json`, et surtout
+      `--liste=<cours>` qui donne **les mots à remplacer, option par option**, en marquant les
+      questions EXPLOITABLES — 50 sur 68 pour `os`), puis `tools/verif-qcm-lexique.js`, cliquet
+      bâti sur le modèle de `verif-qcm-biais.js` : latitude 2 points, cible 60 % pour un cours
+      marqué `traite`, référence `tools/qcm-lexique-reference.json` figée sur les 90 cours.
+      **Câblé dans `tools/verif.js`** (`qcmlexi`) : la chaîne passe de 52 à **53 vérificateurs
+      dans un mode**, `verif-chaine-declaree` reste vert (7 hors chaîne, 7 déclarés).
+      ⚠️ **Prouvé capable d'ÉCHOUER, et pas seulement de passer** : injection d'un mot inventé
+      dans les trois distracteurs de `go/lecon-01` → `ECHEC — go : PROPORTION 44,4 % → 50,0 %`,
+      code de sortie 1 ; restauration → code 0. C'est le geste exact que la vague d'écriture fait,
+      et il est maintenant vu au moment où il est fait.
+
+      ⚠️ **`doc/lecon-03` s'est repérimé une 9ᵉ fois**, comme à chaque cours détordu :
+      **53,2 % → 52,1 %** et **3 248 → 3 181** manquements à S3, **10 mentions** corrigées
+      (5 taux + 5 nombres, toutes avec un séparateur U+00A0 littéral cette fois — pas d'entité
+      `&nbsp;`, contrairement à la 8ᵉ fois : vérifier la forme AVANT de remplacer).
+      `verif-normatif` repassé de **64/66 à 66/66**. `verif.js --rapide` : **58,9 s**, un seul
+      signalement, celui-là, désormais éteint.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 

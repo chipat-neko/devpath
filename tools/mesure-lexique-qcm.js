@@ -15,7 +15,7 @@
  *   STRICTE     : la seule option dont aucun mot n'est etranger a la page.
  *   PROPORTION  : l'option dont la part de mots presents dans la page est la plus forte.
  *
- * usage : node tools/mesure-lexique-qcm.js [--seul=<cours>] [--racine=<dir>]
+ * usage : node tools/mesure-lexique-qcm.js [--seul=<cours>] [--racine=<dir>] [--json]
  *         node tools/mesure-lexique-qcm.js --liste=<cours>   (mots etrangers, option par option)
  */
 "use strict";
@@ -139,6 +139,21 @@ cours.forEach(function (c) {
   ["n", "sTr", "sOk", "pTr", "pOk"].forEach(function (k) { glob[k] += st[k]; });
   lignes.push({ c: c, st: st });
 });
+
+if (argv.indexOf("--json") !== -1) {
+  var out = { global: glob, cours: {} };
+  lignes.forEach(function (x) {
+    out.cours[x.c] = {
+      questions: x.st.n,
+      stricteCouverture: x.st.n ? +(x.st.sTr / x.st.n).toFixed(4) : 0,
+      stricteRendement: x.st.sTr ? +(x.st.sOk / x.st.sTr).toFixed(4) : 0,
+      proportionCouverture: x.st.n ? +(x.st.pTr / x.st.n).toFixed(4) : 0,
+      proportionRendement: x.st.pTr ? +(x.st.pOk / x.st.pTr).toFixed(4) : 0
+    };
+  });
+  process.stdout.write(JSON.stringify(out));
+  process.exit(0);
+}
 
 function pc(a, b) { return b ? (100 * a / b).toFixed(1) + " %" : "—"; }
 

@@ -166,6 +166,14 @@ var ETAPES = [
      qui reperd sa cible, cours NEUF publie hors cible, reference orpheline. Il ne
      mesure rien lui-meme : il lit `mesure-biais-qcm.js --json`. */
   { nom: "qcmbiai", fichier: "verif-qcm-biais.js", args: [], quoi: "le biais des QCM n'a empire nulle part (cliquet)" },
+  /* Le meme cliquet, sur l'indice que les 23 strategies du precedent NE VOIENT PAS :
+     l'apprenant qui cherche au clavier les mots de chaque option DANS LA PAGE et
+     prend celle dont tout le vocabulaire figure dans le cours. C'est la CORRECTION
+     du biais de longueur qui le fabrique — mesure sur `os`, meme corpus, avant et
+     apres la vague de B4 : rendement 38,1 % -> 100,0 %. Sans ce cliquet, chaque
+     cours detordu rouvre la faille en silence. Prouve capable d'echouer par
+     injection (un mot invente dans les distracteurs d'une lecon le fait rougir). */
+  { nom: "qcmlexi", fichier: "verif-qcm-lexique.js", args: [], quoi: "l'indice lexical des QCM n'a empire nulle part (cliquet)" },
   /* Un caractere de controle ecrit par accident est INVISIBLE a la relecture :
      un « \b » devenu un vrai backspace dans une expression reguliere avait fait
      afficher « 0 » a deux compteurs, et seule une capture d'ecran l'avait montre. */
