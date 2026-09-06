@@ -2860,6 +2860,127 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       devinables à la longueur**. La case reste **décochée** : dix-sept cours sur les quarante que
       la cible de B1 demande.
 
+      ---
+
+      **`sql` — FAIT le 2026-09-06. LE COURS EST CLOS : 91,9 % → 19,5 %.** 24 leçons, **82
+      questions**, **246 distracteurs**, **238 réécrits**, tous entre **0,73 et 1,30**. Un réveil
+      interrompu avait laissé la vague d'écriture posée mais **non contredite** : ce passage l'a
+      relue, mesurée et corrigée.
+
+      | mesure, sur les 82 questions | avant | après |
+      |---|---:|---:|
+      | la bonne réponse est la plus LONGUE | 91,9 % | **19,5 %** |
+      | questions **OFFERTES** par un motif d'élimination | **6** | **0** |
+      | motif « les deux / c'est pareil » (distracteurs) | 30 | **9** |
+      | motif « annonce une erreur ou un refus » | 22 | **9** |
+      | motif « adverbe de prudence » | 9 | **1** |
+      | motif « le moteur agit tout seul » | 5 | **1** |
+      | l'incise entre parenthèses | 26,6 % | 29,2 % |
+
+      Le compte des **questions offertes** est neuf, et il fonde le travail : une question est
+      *offerte* quand les trois distracteurs portent un même motif et la bonne réponse non — on
+      raye sans lire une ligne de SQL. `sql` en avait **6**, contre **0 à 1** sur les cinq cours
+      déjà clos (`ruby` 1, `react` 0, `bdd` 1, `algo` 0, `python` 1). C'était donc une régression
+      **fabriquée par la vague d'écriture**, pas un héritage. Outil : `scratchpad/b4sql/motifs.js`.
+
+      ⚠️⚠️ **LA TROUVAILLE DU TOUR, ET ELLE VAUT POUR TOUS LES COURS DÉJÀ CLOS : ÉCRASER « LA PLUS
+      LONGUE » DÉPLACE LE BIAIS D'UN RANG.** Une question à quatre options a **quatre rangs de
+      longueur**. En ramenant le rang 0 sous le hasard, on pousse la bonne réponse sur le rang 1 —
+      et *aucune* des quatorze stratégies de `mesure-biais-qcm.js` ne regardait ailleurs qu'aux
+      extrêmes. Mesuré le 2026-09-06 sur les 22 cours déjà traités :
+
+      | cours | « la plus longue » | le PIRE rang | il vaut |
+      |---|---:|---|---:|
+      | `doc` | **0,0 %** | la DEUXIÈME plus longue | **60,9 %** |
+      | `archi` | 8,3 % | la TROISIÈME plus longue | **56,3 %** |
+      | `neurones` | 15,4 % | rang 1 | 44,6 % |
+      | `distribue` | 5,6 % | rang 1 | 42,0 % |
+      | `offensive` | — | rang 3 | 40,6 % |
+      | `iac` | 13,3 % | rang 1 | 40,0 % |
+      | `sql` (ce jour) | 19,5 % | rang 1 | 30,5 % |
+      | `ruby` | 25,3 % | rang 0 | **26,2 %** |
+
+      **`doc`, le cours écrit APRÈS le constat de B1 — donc le plus soigné — est le PIRE** : il
+      n'a jamais la bonne réponse la plus longue, et c'est exactement ce qui la rend devinable une
+      fois sur deux au rang suivant. **Trois stratégies ajoutées à l'outil** (« la DEUXIÈME plus
+      longue », « la TROISIÈME plus longue », « écarter les deux extrêmes »), avec une fonction
+      `parRang()` qui rend **tous les ex æquo candidats** — sans quoi une égalité ferait rendre un
+      choix arbitraire et la mesure vaudrait le hasard. **Épreuve que l'outil enrichi passe** : en
+      `--cours`, la pire stratégie de `doc` est désormais nommée à **60,2 %** là où l'outil
+      affichait **0,0 %** ; en `--lots=4`, la fenêtre `archi 7-10` ressort à **79,2 %**.
+      **RÈGLE À REMETTRE EN CONSIGNE D'ÉCRITURE : viser 25 % sur CHAQUE RANG, jamais 0 % sur le
+      premier.** C'est le **7ᵉ déplacement** mesuré de la phase B. ⚠️ **`doc` et `archi` sont à
+      REPRENDRE** : ils sont comptés « faits » et sont en réalité plus devinables que `ruby`.
+
+      ⚠️ **UN AUTRE OUTIL DU PROTOCOLE ÉTAIT CASSÉ** : `mesure-qcm-longueurs.js --tout` plantait à
+      chaque appel (`ReferenceError: window is not defined` — `js/data.js` est un script de
+      navigateur). Réparé. C'est la deuxième fois qu'un outil du protocole se révèle aveugle ou
+      mort ; le premier l'était depuis cinq cours.
+
+      **CONTRADICTION** : six relecteurs adversariaux, **92 prises**, **≈ 190 requêtes exécutées**
+      sous le SQLite 3.49.1 que le site **embarque**. **Trois bonnes réponses fausses ou imprécises
+      corrigées** : `lecon-07` q3 disait « NULL supérieur à 10 est **faux** » alors que c'est
+      *inconnu* (mesuré : la négation rend NULL elle aussi) — **et `lecon-02` q2 fait justement
+      REJETER un distracteur qui énonce cela** ; `lecon-08` q2 exigeait « **deux** alias » pour une
+      auto-jointure alors qu'**un seul suffit** (mesuré : 4 lignes justes ; c'est ZÉRO alias qui
+      échoue) ; `lecon-04` q3 nie que l'alias s'utilise dans le `WHERE` — vrai de PostgreSQL,
+      **faux du moteur du bac à sable**, ce que l'explication dit désormais.
+
+      **TROIS DÉFAUTS FONDATEURS dans des CORPS de leçon**, tous prouvés par exécution :
+      `lecon-04` — `CAST(x AS DECIMAL)/3` annonce `1.333…` et **rend `1`** : *l'exemple censé
+      guérir la division entière tombait dedans* (l'affinité NUMERIC garde l'entier ; `REAL` rend
+      bien `1.3333333333333333`) ; `lecon-13` — le cadre de fenêtre par défaut est **RANGE**, pas
+      ROWS : sur deux lignes ex æquo le cumul rend **320 sur les DEUX**, et c'est *la* leçon qui
+      fait des ex æquo son sujet ; `lecon-15` — `OLD` dans un trigger `AFTER INSERT`
+      (`no such column: OLD.titre`), le `CREATE TRIGGER` passant en silence par résolution
+      paresseuse. Plus le **glossaire de `lecon-20`** qui définissait ROLLUP « de droite à gauche »
+      quand le corps, l'exercice et `lecon-19` disent l'inverse — **et quand son propre QCM compte
+      FAUX un distracteur pour l'avoir écrit** ; et `lecon-14` qui se présentait comme « cette
+      **dernière** leçon » d'un cours qui en compte 24, avec cinq « pistes pour continuer » qui
+      sont des leçons du même cours.
+
+      ⚠️ **LES DEUX GARDE-FOUS ONT SERVI, ET L'UN A ÉVITÉ UNE FAUTE** : `mesure-qcm-intouchable`
+      n'a laissé passer que les **5 atteintes VOLONTAIRES** du coordinateur (2 explications, 1 bonne
+      réponse, 1 énoncé) sur 238 distracteurs réécrits par six agents ; et le refus « **cible
+      unique** » a **bloqué** un remplacement de « de droite à gauche » qui aurait rendu **VRAI un
+      distracteur volontairement faux**. *Le motif trop large a été arrêté par l'outil, pas par
+      l'attention.*
+
+      **CE QUE LA CONTRADICTION A RENDU ET QUI N'EST PAS TRAITÉ** — une soixantaine de prises
+      mineures, dont deux qui relèvent d'un chantier à part : `sql/lecon-10` a **11 blocs sur 13
+      qui échouent au clic** (la table de démonstration de `js/runner.js` déclare `email`, pas
+      `points`), et `verif-sql.js` mesure déjà **124 blocs en erreur** à l'échelle du site, sous
+      cliquet. **Ce n'est pas B4 : c'est un point de phase F à ouvrir.** Restent aussi `lecon-09`
+      (l'exemple `INTERSECT` rend 2 lignes là où la légende en annonce 1, la précédence jouant de
+      gauche à droite), `lecon-21` (`date('now')` donné comme l'équivalent SQLite de
+      `CURRENT_DATE` : c'est de l'**UTC**, dans *la* leçon sur les fuseaux), `lecon-17` (un `<svg>`
+      qui annonce que l'index « ne sert pas » quand SQLite comme PostgreSQL le lisent en COVERING
+      INDEX) et `lecon-24` (la colonne `t2` du pivot, morte parce que le socle est borné au premier
+      trimestre).
+
+      **Une prise RÉFUTÉE par la mesure** : `lecon-11` q1 (« UNIQUE garantit l'unicité ») était
+      donnée pour fausse au motif qu'une colonne `UNIQUE` accepte plusieurs `NULL`. Vérifié : c'est
+      le comportement **standard** — `NULL` n'est égal à rien, pas même à lui-même — et cela
+      n'infirme pas l'unicité des valeurs renseignées. Non appliquée, et le refus transmis aux
+      correcteurs pour qu'ils ne la reprennent pas.
+
+      **Contrôles** : `mesure-qcm-intouchable` **5 atteintes volontaires, 0 involontaire** ;
+      `verif.js --rapide` **70,5 s**, les 2 signalements étant les chiffres de `doc` périmés par
+      ce travail (**6ᵉ fois**) — `gen.js` relancé, `verif-normatif` **60/60**, `verif-doc`
+      **36/36** ; `verif-html` **0** ; `verif-donnees` **0 erreur** (index régénérés `--fresh`, une
+      entrée périmée purgée) ; `verif-sql` **au cliquet, 124** ; longueurs **hors bande 0** ; 0 BOM,
+      0 caractère de contrôle, 0 doublon, JSON valide sur 82 questions.
+
+      **CE QUI RESTE À FAIRE SUR B4, mesuré après `sql`** : `git` (80 q, **93,8 %**, 75 devinables),
+      `rust` (76, 96,1 %), `php` (78, 93,6 %), `java` (77, 94,8 %), `csharp` (77, 93,5 %), `cpp`
+      (77, 93,5 %), `ocaml` (75, 92,0 %), puis la longue traîne.
+      ⚠️ **`stats` (72 q, 100,0 %) reste le cours-témoin de `verif-qcm-biais-mutations` : changer le
+      témoin AVANT de le traiter.** ⚠️ **Et avant tout nouveau cours, REPRENDRE `doc` et `archi` au
+      rang de longueur** — deux cours comptés « faits » et plus devinables que `ruby`.
+      Global du site : **« la plus longue » à 68,0 %**. **68 cours sur 90 restent au-dessus de
+      60 %.** La case reste **décochée** : **dix-huit cours** sur les quarante que la cible de B1
+      demande.
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.

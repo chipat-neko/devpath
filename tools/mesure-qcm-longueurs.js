@@ -72,7 +72,13 @@ function pc(n, tot) { return (n / tot * 100).toFixed(1) + " %"; }
 
 var args = process.argv.slice(2);
 if (args.indexOf("--tout") !== -1) {
-  var data = require(path.join(RACINE, "js", "data.js"));
+  /* ⚠️ `js/data.js` est un script de NAVIGATEUR : il assigne window.SITE_DATA et
+     lance un ReferenceError sous Node. Le mode --tout plantait donc a chaque appel
+     (constate le 2026-09-06, point B4). On pose le global avant de le charger --
+     et on garde le require, la liste des cours devant rester celle des DONNEES. */
+  if (typeof global.window === "undefined") global.window = {};
+  require(path.join(RACINE, "js", "data.js"));
+  var data = global.window.SITE_DATA;
   var cours = fs.readdirSync(path.join(RACINE, "pages")).filter(function (d) {
     return fs.statSync(path.join(RACINE, "pages", d)).isDirectory();
   });
