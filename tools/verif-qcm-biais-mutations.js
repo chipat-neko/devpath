@@ -232,12 +232,33 @@ var MUTATIONS = [
     },
     1, /cible perdue/],
 
-  /* Le cours-temoin doit etre un cours ENCORE biaise : quand ce cas employait 'zig',
-     le point B3 l'a ramene a 23,9 % et l'epreuve a cesse de prouver quoi que ce soit --
-     elle est passee VERTE en silence. Verifier ce choix a chaque cours traite. */
-  ['stats (99,3 % de biais) retiré de la référence : il redevient un « cours neuf »',
-    function () { fs.writeFileSync(REF, refAvec(function (j) { delete j.cours.stats; })); },
-    1, /cours neuf non conforme/],
+  /* ⚠️ LE TÉMOIN N'EST PLUS ÉCRIT EN DUR, ET C'EST LA LEÇON DE CE CAS.
+     Ce cas a employé `zig`, puis `stats` : à chaque fois, le cours-témoin a fini par
+     être détordu par le chantier B4, et l'épreuve est passée VERTE EN SILENCE — elle
+     ne prouvait plus rien alors qu'elle disait « vu ». Une épreuve calibrée sur l'état
+     tordu d'un cours se périme EN ÉTANT RÉUSSIE. Le témoin est donc choisi À CHAQUE
+     EXÉCUTION : le cours non traité dont le pire indice est le plus élevé. S'il n'en
+     reste aucun au-dessus de la cible, le cas ne se tait pas — il s'ARRÊTE en code 2,
+     parce que c'est alors l'épreuve qu'il faut repenser, pas le site. */
+  (function () {
+    var j = JSON.parse(refOrig);
+    var cible = (j.cible && j.cible.exploitable) || 0.60;
+    var noms = Object.keys(j.cours).filter(function (c) {
+      return !j.cours[c].traite && j.cours[c].pire > cible;
+    }).sort(function (a, b) { return j.cours[b].pire - j.cours[a].pire; });
+    if (!noms.length) {
+      console.log('AUCUN cours-témoin disponible : plus un seul cours non traité au-dessus de');
+      console.log('la cible de ' + Math.round(cible * 100) + ' %. Le cas « cours neuf non conforme » ne peut plus être');
+      console.log('prouvé par un cours réel — fabriquer un cours-témoin synthétique dans la référence.');
+      process.exit(2);
+    }
+    var temoin = noms[0];
+    return [
+      temoin + ' (' + (j.cours[temoin].pire * 100).toFixed(1).replace('.', ',') +
+        ' % de biais, le plus tordu des non traités) retiré de la référence : il redevient un « cours neuf »',
+      function () { fs.writeFileSync(REF, refAvec(function (r) { delete r.cours[temoin]; })); },
+      1, /cours neuf non conforme/];
+  }()),
 
   /* B4 : le biais de PARENTHESE sans biais de longueur. Le motif attendu nomme
      l'incise : si le verdict tombait sur « la plus longue », le cas ne
