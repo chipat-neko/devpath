@@ -24,14 +24,26 @@
    54,1 % de rendement sur la variante STRICTE. Un verificateur qui exigerait la
    cible tout de suite rougirait pendant des mois, donc ne serait plus lu.
 
+   ⚠️ LA VARIANTE INVERSE, ajoutee le 2026-09-06, quelques heures apres cet outil.
+   Le cours `mobile` a ete detordu selon la premiere consigne — « ZERO mot etranger
+   dans les quatre options ». Les six lots l'ont tenue : STRICTE et PROPORTION sont
+   passees de 100,0 % et 88,4 % a « ne tranche plus du tout ». ET CE CLIQUET EST
+   RESTE VERT alors que le cours restait devinable a 100 % : la bonne reponse etant
+   INTOUCHABLE, ses mots etrangers a elle sont restes pendant que les 219
+   distracteurs passaient a zero, si bien qu'il suffisait de RETOURNER la regle —
+   « choisis l'option qui contient un mot ABSENT de la page » — pour avoir juste
+   37 fois sur 37. Un cliquet qui ne mesure qu'un sens d'un indice ne protege de
+   rien : il deplace la faille. La variante INVERSE est donc surveillee ici au meme
+   titre que les deux autres.
+
    TROIS ECHECS :
-     1. REGRESSION — le rendement STRICTE ou PROPORTION d'un cours remonte de plus
-        de LATITUDE (2 points) au-dessus de `tools/qcm-lexique-reference.json`.
+     1. REGRESSION — le rendement STRICTE, PROPORTION ou INVERSE d'un cours remonte
+        de plus de LATITUDE (2 points) au-dessus de `tools/qcm-lexique-reference.json`.
         C'est le cas qui compte : il attrape la vague d'ecriture qui refabrique
         l'indice, au moment ou elle le fabrique.
      2. CIBLE PERDUE — un cours marque `traite: true` repasse au-dessus de la cible
         (60 % de rendement, la meme borne que celle des strategies exploitables de
-        `verif-qcm-biais.js`).
+        `verif-qcm-biais.js`) sur l'UNE QUELCONQUE des trois variantes.
      3. REFERENCE ORPHELINE — un cours de la reference qui n'existe plus sur disque.
 
    IL NE MESURE RIEN LUI-MEME : il demande la mesure a
@@ -97,6 +109,8 @@ if (ECRIRE) {
       "Cliquet de l'INDICE LEXICAL des QCM (voir l'entete de tools/verif-qcm-lexique.js).",
       "`stricte` = rendement de « la seule option dont aucun mot n'est etranger a la page ».",
       "`proportion` = rendement de « l'option dont la part de mots du cours est la plus forte ».",
+      "`inverse` = rendement de « l'option qui porte le PLUS de mots absents de la page » ;",
+      "c'est le sens que la correction fabrique quand elle nettoie les distracteurs a zero.",
       "`traite: true` = cours dont l'indice lexical a ete ferme ; il ne peut plus repasser",
       "au-dessus de " + Math.round(CIBLE * 100) + " % sans faire echouer la chaine.",
       "Refiger APRES avoir ameliore un cours — jamais pour faire taire une regression."
@@ -111,6 +125,8 @@ if (ECRIRE) {
       stricte: a.stricteRendement,
       stricteCouverture: a.stricteCouverture,
       proportion: a.proportionRendement,
+      inverse: a.inverseRendement,
+      inverseCouverture: a.inverseCouverture,
       traite: ancien.traite === true
     };
   });
@@ -129,28 +145,46 @@ Object.keys(ref.cours).forEach(function (c) {
 Object.keys(aujourdhui).sort().forEach(function (c) {
   var a = aujourdhui[c], r = ref.cours[c];
   if (!r) return;
+  /* `inverse` peut manquer d'une reference figee avant le 2026-09-06 : on ne
+     compare que ce que la reference contient reellement. */
+  var refInv = typeof r.inverse === "number" ? r.inverse : null;
   if (a.stricteRendement > r.stricte + LATITUDE) {
     regressions.push(c + " : STRICTE " + pc(r.stricte) + " -> " + pc(a.stricteRendement));
   } else if (a.proportionRendement > r.proportion + LATITUDE) {
     regressions.push(c + " : PROPORTION " + pc(r.proportion) + " -> " + pc(a.proportionRendement));
+  } else if (refInv !== null && a.inverseRendement > refInv + LATITUDE) {
+    regressions.push(c + " : INVERSE " + pc(refInv) + " -> " + pc(a.inverseRendement) +
+                     "  (des distracteurs ont ete nettoyes SOUS le niveau de la bonne reponse)");
   } else if (a.stricteRendement < r.stricte - LATITUDE) {
     progres.push(c + " : STRICTE " + pc(r.stricte) + " -> " + pc(a.stricteRendement));
   }
-  if (r.traite === true && a.stricteRendement > CIBLE) {
-    ciblesPerdues.push(c + " : marque traite, STRICTE a " + pc(a.stricteRendement) +
-                       " (cible " + pc(CIBLE) + ")");
+  if (r.traite === true) {
+    if (a.stricteRendement > CIBLE) {
+      ciblesPerdues.push(c + " : marque traite, STRICTE a " + pc(a.stricteRendement) +
+                         " (cible " + pc(CIBLE) + ")");
+    }
+    if (a.proportionRendement > CIBLE) {
+      ciblesPerdues.push(c + " : marque traite, PROPORTION a " + pc(a.proportionRendement) +
+                         " (cible " + pc(CIBLE) + ")");
+    }
+    if (a.inverseRendement > CIBLE) {
+      ciblesPerdues.push(c + " : marque traite, INVERSE a " + pc(a.inverseRendement) +
+                         " (cible " + pc(CIBLE) + ")");
+    }
   }
 });
 
 if (DETAIL) {
-  console.log("\n  cours            questions   STRICTE (couv.)      PROPORTION   traite");
+  console.log("\n  cours            questions   STRICTE (couv.)      PROPORTION   INVERSE (couv.)   traite");
   Object.keys(aujourdhui).sort(function (x, y) {
     return aujourdhui[y].stricteRendement - aujourdhui[x].stricteRendement;
   }).forEach(function (c) {
     var a = aujourdhui[c], r = ref.cours[c] || {};
     console.log("  " + c.padEnd(16) + String(a.questions).padStart(6) + "   " +
       pc(a.stricteRendement).padStart(8) + " (" + pc(a.stricteCouverture).padStart(7) + ")   " +
-      pc(a.proportionRendement).padStart(9) + "   " + (r.traite ? "oui" : "-"));
+      pc(a.proportionRendement).padStart(9) + "   " +
+      pc(a.inverseRendement).padStart(8) + " (" + pc(a.inverseCouverture).padStart(7) + ")   " +
+      (r.traite ? "oui" : "-"));
   });
 }
 
@@ -161,7 +195,8 @@ console.log("\n  reference du " + (ref.date || "—") + " : " + Object.keys(ref.
 if (g.n) {
   console.log("  site : " + g.n + " questions · STRICTE tranche sur " + pc(g.sTr / g.n) +
               " et rend " + pc(g.sTr ? g.sOk / g.sTr : 0) +
-              " · PROPORTION rend " + pc(g.pTr ? g.pOk / g.pTr : 0));
+              " · PROPORTION rend " + pc(g.pTr ? g.pOk / g.pTr : 0) +
+              " · INVERSE tranche sur " + pc(g.iTr / g.n) + " et rend " + pc(g.iTr ? g.iOk / g.iTr : 0));
 }
 
 if (progres.length) {
@@ -176,8 +211,10 @@ if (regressions.length) {
   console.log("\nECHEC — l'indice lexical a EMPIRE sur " + regressions.length + " cours :");
   regressions.forEach(function (l) { console.log("    " + l); });
   console.log("  Une vague d'ecriture vient probablement d'allonger des distracteurs avec du");
-  console.log("  vocabulaire absent de la lecon. `node tools/mesure-lexique-qcm.js --liste=<cours>`");
-  console.log("  donne les mots a remplacer, option par option.");
+  console.log("  vocabulaire absent de la lecon — ou, pour l'INVERSE, de nettoyer les trois");
+  console.log("  distracteurs a zero alors que la bonne reponse, elle, garde des mots etrangers.");
+  console.log("  `node tools/mesure-lexique-qcm.js --liste=<cours>` donne le travail exact :");
+  console.log("  si la bonne reponse porte k mots etrangers, DEUX distracteurs a zero, UN a k.");
 }
 if (ciblesPerdues.length) {
   echecs += ciblesPerdues.length;

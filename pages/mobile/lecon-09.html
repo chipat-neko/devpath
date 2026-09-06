@@ -102,7 +102,7 @@
 
 <h2>Pourquoi la mémoire ne suffit pas</h2>
 <p>Un débutant garde ses données dans un tableau&nbsp;: <code>var observations = [...]</code>. Tant que l'app tourne, tout va bien. Puis l'utilisateur reçoit un appel, passe à une autre app, laisse le téléphone dormir. Le système, à court de mémoire, <strong>tue</strong> Carnet en arrière-plan. Au retour, l'app est relancée de zéro&nbsp;: le tableau est vide, les observations ont disparu. La <strong>mémoire vive</strong> (RAM) est <em>volatile</em>&nbsp;: elle ne survit ni à la fermeture, ni au redémarrage du téléphone. Pour durer, une donnée doit être <strong>écrite sur le stockage</strong> de l'appareil — sur le disque, pas dans la RAM.</p>
-<p>Mais on n'écrit pas n'importe où&nbsp;: rappelle-toi le <strong>bac à sable</strong> de la <a href="lecon-01.html">leçon 1</a>. Chaque app dispose d'un dossier privé, le sien, où elle range ses fichiers&nbsp;; le reste du téléphone lui est fermé. Tout ce qu'on va stocker — préférences, fichiers, base — vit <em>à l'intérieur</em> de ce bac à sable. C'est une bonne nouvelle&nbsp;: personne d'autre ne lit ces données, et elles partent proprement quand on désinstalle l'app.</p>
+<p>Mais on n'écrit pas n'importe où&nbsp;: rappelle-toi le <strong>bac à sable</strong> de la <a href="lecon-01.html">leçon 1</a>. Chaque app dispose d'un dossier privé, le sien, où elle range ses fichiers&nbsp;; le reste du téléphone lui est fermé. Tout ce qu'on va stocker — préférences, fichiers, base — vit <em>à l'intérieur</em> de ce bac à sable. C'est une bonne nouvelle&nbsp;: personne d'autre ne lit ces données, et elles partent proprement quand on désinstalle l'app. Attention toutefois&nbsp;: <strong>privé ne veut pas dire chiffré</strong>. Le bac à sable écarte les <em>autres apps</em>&nbsp;; il ne protège ni d'un accès au disque, ni d'une sauvegarde, ni d'un téléphone débridé. Un secret laissé en clair dans une préférence ou dans une base y reste lisible — d'où la quatrième zone, celle du stockage sécurisé.</p>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 250" role="img" aria-label="Le bac à sable d'une application vu comme un grand rectangle privé contenant quatre zones distinctes. Première zone : préférences clé-valeur, pour de petits réglages. Deuxième zone : dossier de fichiers, pour des blobs comme les photos et les exports. Troisième zone : base de données locale, pour les collections interrogeables. Quatrième zone, mise en évidence à part : stockage sécurisé, un coffre matériel pour les secrets. Autour du bac à sable, une barrière indique que le reste du téléphone lui est fermé.">
@@ -244,16 +244,21 @@ final class Observation {         // SwiftData en fait une table
     var titre: String
     var note: String
     var date: Date
+    var latitude: Double          // la POSITION du relevé
+    var longitude: Double
     var cheminPhoto: String?      // le CHEMIN du fichier, pas l'image
-    init(titre: String, note: String, date: Date, cheminPhoto: String?) {
+    init(titre: String, note: String, date: Date,
+         latitude: Double, longitude: Double, cheminPhoto: String?) {
         self.titre = titre; self.note = note
-        self.date = date; self.cheminPhoto = cheminPhoto
+        self.date = date; self.latitude = latitude
+        self.longitude = longitude; self.cheminPhoto = cheminPhoto
     }
 }
 
 // Insérer : on crée l'objet et on l'ajoute au contexte, qui persiste.
 let obs = Observation(titre: "Héron", note: "au bord de l'étang",
-                      date: .now, cheminPhoto: "photos/heron.jpg")
+                      date: .now, latitude: 48.86, longitude: 2.35,
+                      cheminPhoto: "photos/heron.jpg")
 contexte.insert(obs)
 try? contexte.save()</code></pre></figure>
 
@@ -264,6 +269,8 @@ data class Observation(
     val titre: String,
     val note: String,
     val date: Long,
+    val latitude: Double,         // la POSITION du relevé
+    val longitude: Double,
     val cheminPhoto: String?,     // le CHEMIN du fichier, pas l'image
 )
 
@@ -275,7 +282,8 @@ interface ObservationDao {
 
 // Insérer une observation (dans une coroutine).
 dao.inserer(Observation(titre = "Héron", note = "au bord de l'étang",
-    date = System.currentTimeMillis(), cheminPhoto = "photos/heron.jpg"))</code></pre></figure>
+    date = System.currentTimeMillis(), latitude = 48.86, longitude = 2.35,
+    cheminPhoto = "photos/heron.jpg"))</code></pre></figure>
 
 <p>En <strong>Flutter</strong>, <strong>sqflite</strong> parle SQLite directement&nbsp;: on insère une <code>Map</code> dans une table&nbsp;:</p>
 <figure class="code-block" data-file="stockage.dart"><pre><code class="language-dart">// La table est créée une fois (voir plus bas). Ici, on insère une ligne.
@@ -283,6 +291,8 @@ await db.insert('observations', {
   'titre': 'Héron',
   'note': 'au bord de l\'étang',
   'date': DateTime.now().millisecondsSinceEpoch,
+  'latitude': 48.86,                    // la POSITION du relevé
+  'longitude': 2.35,
   'chemin_photo': 'photos/heron.jpg',   // le CHEMIN du fichier, pas l'image
 });</code></pre></figure>
 
@@ -292,14 +302,14 @@ await db.insert('observations', {
   titre        TEXT NOT NULL,
   note         TEXT NOT NULL,
   date         INTEGER NOT NULL,     -- millisecondes depuis 1970
-  lat          REAL,
-  lon          REAL,
+  latitude     REAL,
+  longitude    REAL,
   chemin_photo TEXT                  -- le CHEMIN du fichier, JAMAIS l'image
 );
 
 -- Interroger devient trivial (impossible en clé-valeur) :
 SELECT * FROM observations
-WHERE lat &lt; 49 AND lon &gt; 2       -- filtrer par zone
+WHERE latitude &lt; 49 AND longitude &gt; 2   -- filtrer par zone
 ORDER BY date DESC;                  -- trier du plus récent au plus ancien</code></pre></figure>
 
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Mettre l'image dans la base.</strong> On est tenté de stocker la photo directement dans une colonne (en «&nbsp;blob&nbsp;» ou en base64). Résultat&nbsp;: la base gonfle, chaque lecture de la liste traîne des méga-octets d'images inutiles, et tout ralentit. La bonne pratique universelle&nbsp;: la <strong>photo est un fichier</strong> dans le dossier de l'app, et la base ne garde que son <strong>chemin</strong> (<code>chemin_photo</code>). La base reste légère et rapide&nbsp;; les octets lourds restent des fichiers.</p></div></div>
@@ -393,10 +403,10 @@ ORDER BY date DESC;                  -- trier du plus récent au plus ancien</co
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Pourquoi ne peut-on pas se contenter de garder les observations dans une variable en mémoire ?","a":["La mémoire est volatile : l'app mise en arrière-plan peut être tuée par le système, et au retour la variable est vide — il faut écrire sur le stockage de l'appareil","Le ramasse-miettes du langage libère les objets dès qu'un écran est quitté : la liste d'observations perd ses éléments au fil de la navigation entre les écrans","Le bac à sable limite la mémoire vive de l'app à deux méga-octets, si bien qu'une collection d'observations dépasse la limite dès la trentième fiche saisie par l'utilisateur","Le système efface la mémoire vive de l'application toutes les soixante secondes pour économiser la batterie, ce qui vide les variables même lorsque l'app reste au premier plan"],"correct":0,"explain":"La RAM ne survit ni à la fermeture ni au redémarrage. Comme l'app est sans cesse mise en arrière-plan puis parfois tuée (cycle de vie, L3), toute donnée qui compte doit être persistée sur le disque, dans le bac à sable."},
-  {"q":"Quelle option de stockage local est faite pour une COLLECTION qu'on veut trier et filtrer (les observations de Carnet) ?","a":["Une base de données locale (SwiftData, Room, sqflite) : elle sait interroger, trier et filtrer, contrairement à la clé-valeur","Le stockage sécurisé, qui indexe et trie ses entrées, accueille les collections (observations, réglages, photos) de l'app","Un fichier JSON unique, relu et réécrit en entier à chaque ajout, garde les observations déjà triées et filtrées","Une liste gardée dans une variable globale, relue depuis la mémoire vive au lancement suivant, où tri et filtre restent immédiats"],"correct":0,"explain":"Dès qu'on veut trier ou filtrer une collection, c'est une base. La clé-valeur ne sait que lire/écrire une valeur sous une clé ; le stockage sécurisé est pour les secrets ; un gros fichier n'est pas interrogeable."},
-  {"q":"Comment ranger la PHOTO d'une observation, et que met-on en base ?","a":["La photo est un fichier dans le dossier de l'app ; en base, on ne stocke que son chemin (chemin_photo), pas l'image","On convertit l'image en base64 et on la range sous une clé des préférences, d'où on la relit au moment d'afficher la fiche","L'image part dans le stockage sécurisé (Keychain), et la base conserve sa taille en octets ainsi que sa date de prise","On copie les octets de l'image dans une colonne de la base, et l'on note en plus sa taille dans une colonne voisine"],"correct":0,"explain":"Une image est un blob binaire : elle va en fichier. La base ne garde que le chemin, ce qui la maintient légère et rapide. Embarquer l'image (en base ou en préférence) gonfle le stockage et ralentit tout."},
-  {"q":"Où doit-on ranger un jeton de synchronisation (un secret) pour Carnet ?","a":["Dans le stockage sécurisé : Keychain sur iOS, EncryptedSharedPreferences sur Android — un coffre chiffré réservé aux secrets","Dans les préférences clé-valeur, comme n'importe quel réglage, puisque le bac à sable de l'app en interdit déjà la lecture aux autres","Dans une colonne de la base locale, à condition de préfixer son nom par secret_ pour activer le chiffrement","Dans le dossier public de téléchargement, protégé par un mot de passe que le système attribue à chaque application"],"correct":0,"explain":"Un secret (jeton, mot de passe, clé) ne se met jamais en clair : ni en préférence, ni en base, ni en fichier simple. Il va au Keychain sur iOS, ou en EncryptedSharedPreferences sur Android, chiffré et souvent adossé au matériel."}
+  {"q":"Pourquoi ne peut-on pas se contenter de garder les observations dans une variable en mémoire ?","a":["La mémoire est volatile : l'app mise en arrière-plan peut être tuée par le système, et au retour la variable est vide — il faut écrire sur le stockage de l'appareil","Le système efface les variables de l'app à chaque fermeture d'un écran : la collection peut se vider au fil de la navigation — pas à la fermeture de l'app","Le bac à sable de l'app ne laisse à la mémoire vive que quelques méga-octets : une collection de dizaines d'observations ne tient déjà plus après quelques relevés — le disque est la seule solution","La mémoire vive revient au système toutes les quelques secondes, dès que l'app ne fait plus rien : une variable n'y survit jamais entre deux gestes — même si personne n'a fermé l'app"],"correct":0,"explain":"La RAM ne survit ni à la fermeture ni au redémarrage. Comme l'app est sans cesse mise en arrière-plan puis parfois tuée (cycle de vie, L3), toute donnée qui compte doit être persistée sur le disque, dans le bac à sable."},
+  {"q":"Quelle option de stockage local est faite pour une COLLECTION qu'on veut trier et filtrer (les observations de Carnet) ?","a":["Une base de données locale (SwiftData, Room, sqflite) : elle sait interroger, trier et filtrer, contrairement à la clé-valeur","Le stockage sécurisé (Keychain, EncryptedSharedPreferences) : il sait ranger, trier, filtrer, compter les observations","Un fichier JSON unique (relu et écrit en entier à chaque ajout) : il garde les observations déjà triées","Une liste gardée dans une variable globale (tenue en mémoire au lancement) : elle sait trier et filtrer, et elle survit à la fermeture de l'app"],"correct":0,"explain":"Dès qu'on veut trier ou filtrer une collection, c'est une base. La clé-valeur ne sait que lire/écrire une valeur sous une clé ; le stockage sécurisé est pour les secrets ; un gros fichier n'est pas interrogeable."},
+  {"q":"Comment ranger la PHOTO d'une observation, et que met-on en base ?","a":["La photo est un fichier dans le dossier de l'app ; en base, on ne stocke que son chemin (chemin_photo), pas l'image","On range l'image en base64 sous une clé des préférences (un texte comme un autre) ; c'est de là qu'on la relit pour afficher la fiche","L'image part dans le stockage sécurisé (le Keychain, un coffre) ; la base garde sa taille en octets, sa date et son titre","On copie les octets de l'image dans une colonne de la base ; le dossier de l'app ne garde rien (pas de fichier), et tout tient au même endroit"],"correct":0,"explain":"Une image est un blob binaire : elle va en fichier. La base ne garde que le chemin, ce qui la maintient légère et rapide. Embarquer l'image (en base ou en préférence) gonfle le stockage et ralentit tout."},
+  {"q":"Où doit-on ranger un jeton de synchronisation (un secret) pour Carnet ?","a":["Dans le stockage sécurisé : Keychain sur iOS, EncryptedSharedPreferences sur Android — un coffre chiffré réservé aux secrets","Dans les préférences clé-valeur : c'est un réglage comme un autre — le bac à sable suffit à le garder secret","Dans une colonne de la base locale : la base est déjà dans le dossier privé — un secret y est chiffré par défaut","Dans un fichier du dossier de l'app, loin de la base : le disque est chiffré — personne d'autre ne le lit"],"correct":0,"explain":"Un secret (jeton, mot de passe, clé) ne se met jamais en clair : ni en préférence, ni en base, ni en fichier simple. Il va au Keychain sur iOS, ou en EncryptedSharedPreferences sur Android, chiffré et souvent adossé au matériel."}
 ]
 </script>
 

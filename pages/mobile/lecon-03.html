@@ -152,7 +152,7 @@
 <p>Comment ton code est-il <em>prévenu</em> qu'un changement d'état a lieu&nbsp;? Chaque écosystème expose un point d'accroche — un <strong>callback</strong> du cycle de vie — que tu observes pour réagir. Les mots-clés diffèrent&nbsp;; la correspondance, elle, est frappante&nbsp;: à chaque état son signal.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 250" role="img" aria-label="Tableau à trois colonnes alignant les callbacks du cycle de vie par écosystème. Une colonne SwiftUI, une colonne Compose Android, une colonne Flutter. Ligne « devient actif » : scenePhase active, onResume, resumed. Ligne « devient inactif » : scenePhase inactive, aucun équivalent direct, inactive. Ligne « part en arrière-plan » : scenePhase background, onPause puis onStop, paused. Ligne « va être détruite » : pas de signal fiable partout, onDestroy, detached. La ligne arrière-plan est mise en évidence comme le moment où l'on sauvegarde.">
+  <svg viewBox="0 0 640 250" role="img" aria-label="Tableau à trois colonnes alignant les callbacks du cycle de vie par écosystème. Une colonne SwiftUI, une colonne Compose Android, une colonne Flutter. Ligne « devient actif » : scenePhase active, onResume, resumed. Ligne « devient inactif » : scenePhase inactive, onPause, inactive. Ligne « part en arrière-plan » : scenePhase background, onStop, paused. Ligne « va être détruite » : pas de signal fiable partout, onDestroy, detached. La ligne arrière-plan est mise en évidence comme le moment où l'on sauvegarde.">
     <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le même cycle, trois vocabulaires</text>
     <text class="d-tag" x="250" y="52" text-anchor="middle" font-size="10">SwiftUI</text>
     <text class="d-tag" x="405" y="52" text-anchor="middle" font-size="10">Compose (Android)</text>
@@ -165,13 +165,13 @@
 
     <text class="d-mut" x="30" y="118" text-anchor="start" font-size="8.5">devient inactif</text>
     <text class="d-text" x="250" y="118" text-anchor="middle" font-size="8.5">scenePhase .inactive</text>
-    <text class="d-mut" x="405" y="118" text-anchor="middle" font-size="8">(pas d'exact équiv.)</text>
+    <text class="d-text" x="405" y="118" text-anchor="middle" font-size="8.5">onPause</text>
     <text class="d-text" x="560" y="118" text-anchor="middle" font-size="8.5">inactive</text>
 
     <rect class="d-accent" x="24" y="132" width="592" height="26" rx="6" />
     <text class="d-mut" x="30" y="150" text-anchor="start" font-size="8.5">part en arrière-plan</text>
     <text class="d-text" x="250" y="150" text-anchor="middle" font-size="8.5">scenePhase .background</text>
-    <text class="d-text" x="405" y="150" text-anchor="middle" font-size="8.5">onPause → onStop</text>
+    <text class="d-text" x="405" y="150" text-anchor="middle" font-size="8.5">onStop</text>
     <text class="d-text" x="560" y="150" text-anchor="middle" font-size="8.5">paused</text>
 
     <text class="d-mut" x="30" y="184" text-anchor="start" font-size="8.5">va être détruite</text>
@@ -188,7 +188,7 @@
     <line class="d-line" x1="330" y1="60" x2="330" y2="196" stroke-dasharray="2 3" />
     <line class="d-line" x1="485" y1="60" x2="485" y2="196" stroke-dasharray="2 3" />
   </svg>
-  <figcaption>Une même colonne d'états, trois vocabulaires. La ligne <strong>surlignée</strong> — le passage en arrière-plan — est celle qui compte&nbsp;: c'est le dernier moment garanti où l'on peut sauvegarder avant que l'app ne soit gelée puis, peut-être, tuée.</figcaption>
+  <figcaption>Une même colonne d'états, trois vocabulaires. La ligne <strong>surlignée</strong> — le passage en arrière-plan — est celle qui compte&nbsp;: c'est le dernier moment garanti où l'on peut sauvegarder avant que l'app ne soit gelée puis, peut-être, tuée. Attention à la colonne Android&nbsp;: <code>onPause</code> répond à l'<strong>inactif</strong> (l'app perd le premier plan mais reste visible) et <code>onStop</code> au <strong>passage en arrière-plan</strong> (l'app disparaît de l'écran). En pratique on sauvegarde dès <code>ON_PAUSE</code>&nbsp;: il arrive le premier, et il est le plus sûrement appelé des deux.</figcaption>
 </figure>
 
 <p>D'abord <strong>SwiftUI</strong> (iOS). Le monde moderne observe une valeur d'environnement, <code>scenePhase</code>, qui vaut <code>.active</code>, <code>.inactive</code> ou <code>.background</code>&nbsp;:</p>
@@ -343,7 +343,11 @@ class _CarnetScreenState extends State&lt;CarnetScreen&gt;
 
 struct EditeurNote: View {
     // @SceneStorage sauve et restaure automatiquement ce texte
-    // à travers l'arrière-plan ET un démarrage à froid.
+    // à travers l'arrière-plan, et même un démarrage à froid
+    // décidé par le SYSTÈME (l'app tuée pour libérer la mémoire).
+    // Mais ce n'est PAS une persistance : si l'utilisateur balaie
+    // l'app hors du sélecteur, iOS jette l'état de scène et le
+    // brouillon est perdu. Du contenu durable se persiste (leçon 9).
     @SceneStorage("brouillon_note") private var texte = ""
 
     var body: some View {
@@ -428,10 +432,10 @@ void initState() {
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Que peut-il arriver à une application suspendue en arrière-plan ?","a":["Le système peut la tuer sans aucun avertissement pour récupérer de la mémoire ; elle redémarrera « à froid », et tout état non sauvegardé sera perdu","Elle continue d'exécuter ses tâches de fond à cadence réduite, le système lui accordant une tranche de temps chaque minute","Le système lui envoie un signal « je vais te tuer » quelques secondes avant de libérer sa mémoire ; l'app a donc un dernier instant pour se sauvegarder","Le système l'écrit en entier sur le disque avant de libérer sa mémoire, puis la recharge à l'identique quand l'utilisateur revient"],"correct":0,"explain":"Une app suspendue est gelée et peut être tuée silencieusement quand le système manque de mémoire. Il n'existe pas de signal fiable « je vais mourir » : d'où la règle de sauvegarder dès le passage en arrière-plan."},
-  {"q":"À quel moment faut-il sauvegarder l'état de l'application ?","a":["Au passage en inactif / arrière-plan (quand l'app quitte le premier plan) — le dernier moment garanti avant le gel","À la destruction de l'écran (onDestroy / dispose), une fois la dernière vue retirée","Toutes les cinq minutes, par une minuterie qui écrit l'état pendant que l'app est au premier plan","Au retour de l'app au premier plan, juste après que le système a recalculé l'écran"],"correct":0,"explain":"La fermeture volontaire n'arrive presque jamais sur mobile ; l'arrière-plan, lui, arrive tout le temps. On sauvegarde donc au passage inactif/arrière-plan, à chaque fois."},
-  {"q":"Quelle est la différence entre une reprise « à chaud » et un démarrage « à froid » ?","a":["À chaud, l'app était seulement suspendue en mémoire et réapparaît intacte ; à froid, elle avait été tuée et doit être reconstruite à partir de ce qu'on a persisté","À chaud, l'app relit toutes ses données depuis le disque à chaque retour de l'utilisateur ; à froid, elle les garde en mémoire vive et réapparaît donc bien plus vite","À chaud désigne un lancement depuis une notification, à froid un lancement depuis l'écran d'accueil : deux chemins différents qui aboutissent pourtant au même écran restauré","À chaud, le système reconstruit discrètement l'app en tâche de fond pendant qu'elle dort ; à froid, il attend que l'utilisateur touche l'icône pour la reconstruire écran par écran"],"correct":0,"explain":"Reprise à chaud : l'état en mémoire est intact, rien à reconstruire. Démarrage à froid : la mémoire est repartie, il faut reconstruire l'écran depuis les données sauvegardées. C'est ce dernier cas qui casse quand on n'a rien sauvegardé."},
-  {"q":"Comment le passage en arrière-plan est-il signalé au code dans les trois écosystèmes ?","a":["scenePhase = .background en SwiftUI, ON_PAUSE en Compose, AppLifecycleState.paused en Flutter — le même événement sous trois noms","Un unique événement système, nommé onBackground, adopté à l'identique par les trois frameworks depuis 2023","onStart en SwiftUI, onCreate en Compose, initState en Flutter — trois noms pour le moment précis où l'app quitte le premier plan et se fait geler","Par une notification à laquelle l'app doit s'abonner auprès du magasin, faute de quoi le changement d'état lui échappe"],"correct":0,"explain":"L'idée est universelle, seuls les noms changent : .background (scenePhase), l'événement ON_PAUSE observé via le Lifecycle, et l'état paused reçu par didChangeAppLifecycleState. C'est là qu'on sauvegarde."}
+  {"q":"Que peut-il arriver à une application suspendue en arrière-plan ?","a":["Le système peut la tuer sans aucun avertissement pour récupérer de la mémoire ; elle redémarrera « à froid », et tout état non sauvegardé sera perdu","Elle travaille encore, mais moins vite ; le système lui rend la main quelques secondes de temps en temps, et rien ne se perd","Le système la prévient par un signal « je vais te tuer » quelques secondes avant qu'il ne libère sa mémoire ; l'app a donc un dernier instant pour se sauvegarder","Le système écrit toute l'app dans le stockage local avant de la geler ; il la rétablit à l'identique quand l'utilisateur revient"],"correct":0,"explain":"Une app suspendue est gelée et peut être tuée silencieusement quand le système manque de mémoire. Il n'existe pas de signal fiable « je vais mourir » : d'où la règle de sauvegarder dès le passage en arrière-plan."},
+  {"q":"À quel moment faut-il sauvegarder l'état de l'application ?","a":["Au passage en inactif / arrière-plan (quand l'app quitte le premier plan) — le dernier moment garanti avant le gel","À la destruction de l'écran (onDestroy / dispose) — une fois que la vue n'est plus à l'écran","Cinq minutes après le lancement (une seule fois, par précaution) — pendant que l'app est encore au premier plan","Au retour de l'app au premier plan (juste après la reprise) — quand le système a restauré l'écran"],"correct":0,"explain":"La fermeture volontaire n'arrive presque jamais sur mobile ; l'arrière-plan, lui, arrive tout le temps. On sauvegarde donc au passage inactif/arrière-plan, à chaque fois."},
+  {"q":"Quelle est la différence entre une reprise « à chaud » et un démarrage « à froid » ?","a":["À chaud, l'app était seulement suspendue en mémoire et réapparaît intacte ; à froid, elle avait été tuée et doit être reconstruite à partir de ce qu'on a persisté","À chaud, l'app relit ses données depuis le stockage local à chaque retour de l'utilisateur ; à froid, elle les garde en mémoire vive et réapparaît donc bien plus vite","À chaud, c'est un lancement depuis le sélecteur d'apps ; à froid, un lancement depuis l'écran d'accueil, et ce sont deux façons de revenir au même écran, restauré en tout point","À chaud, le système reconstitue l'app discrètement pendant qu'elle dort en arrière-plan ; à froid, il attend que l'utilisateur ouvre l'app pour la reconstruire écran par écran"],"correct":0,"explain":"Reprise à chaud : l'état en mémoire est intact, rien à reconstruire. Démarrage à froid : la mémoire est repartie, il faut reconstruire l'écran depuis les données sauvegardées. C'est ce dernier cas qui casse quand on n'a rien sauvegardé."},
+  {"q":"Comment le passage en arrière-plan est-il signalé au code dans les trois écosystèmes ?","a":["scenePhase = .background en SwiftUI, ON_PAUSE en Compose, AppLifecycleState.paused en Flutter — le même événement sous trois noms","Un seul événement système, nommé ON_STOP partout — le même nom unique dans les trois écosystèmes","scenePhase = .active en SwiftUI, onResume en Compose, AppLifecycleState.resumed en Flutter — les TROIS noms du moment où l'app quitte le premier plan","Par aucun signal — l'app doit regarder l'écran, compter les secondes et voir toute SEULE qu'elle n'est plus au premier plan, juste avant le gel"],"correct":0,"explain":"L'idée est universelle, seuls les noms changent : .background (scenePhase), l'événement ON_PAUSE observé via le Lifecycle, et l'état paused reçu par didChangeAppLifecycleState. C'est là qu'on sauvegarde."}
 ]
 </script>
 

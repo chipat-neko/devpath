@@ -4370,6 +4370,121 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       `verif-normatif` repassé de **64/66 à 66/66**. `verif.js --rapide` : **58,9 s**, un seul
       signalement, celui-là, désormais éteint.
 
+      ---
+
+      **27ᵉ cours détordu : `mobile` — et LA LEÇON QUI VAUT POUR LES 26 AUTRES : fermer un indice
+      à fond le RETOURNE.** Le 2026-09-06, seconde passe de la journée. Le plan disait de fermer
+      l'indice lexical avant de traiter un 27ᵉ cours ; c'est ce qui a été fait, sur le cours le
+      plus nocif des traités (`mobile`, 73 questions, STRICTE **100,0 %**, PROPORTION 88,4 % sur
+      94,5 % des questions).
+
+      **CE QUE LA PREMIÈRE VAGUE A FAIT, ET POURQUOI ELLE A ÉCHOUÉ EN RÉUSSISSANT.** Consigne
+      donnée : « ZÉRO mot étranger dans les quatre options ». Six lots, **218 distracteurs sur 219
+      réécrits**, consigne tenue à la lettre : STRICTE et PROPORTION tombent toutes deux de leur
+      niveau à **0,0 % de couverture** — elles ne tranchent plus du tout. **Et le cours restait
+      devinable à 100 %.** La bonne réponse étant INTOUCHABLE, ses mots étrangers à elle sont
+      restés pendant que les 219 distracteurs passaient à zéro : il suffisait de **retourner la
+      règle** — « choisis l'option qui contient un mot ABSENT de la page » — pour avoir juste
+      **37 fois sur 37**. Mesure indépendante (`scratchpad/mes-inverse.js`, écrit exprès pour ne
+      pas croire l'outil sur parole) : **tranche sur 50,7 % des questions, rendement 100,0 %**.
+      ⚠️ **Et le cliquet `verif-qcm-lexique.js` était VERT**, parce qu'il ne mesurait qu'un sens.
+      Un cliquet qui ne surveille qu'une direction d'un indice ne protège de rien : il déplace la
+      faille. C'est le défaut fondateur du V16 (« un vérificateur hors chaîne vaut un vérificateur
+      inexistant ») dans sa variante la plus sournoise — le vérificateur EST dans la chaîne, il
+      passe, et il ne voit pas.
+
+      C'est **le lot A qui l'a signalé de lui-même**, en fin de compte rendu, sous le titre « ce
+      que je n'ai pas pu tenir » : il a mesuré l'inverse sur son propre lot (100,0 % sur 8 sur 8)
+      et proposé la parade. Une consigne qui exige un compte rendu de ce qui n'a pas pu être tenu
+      rapporte plus que la consigne elle-même.
+
+      **LA RÈGLE QUI FERME LES TROIS VARIANTES, et elle est arithmétique.** Soit `k` le nombre de
+      mots étrangers de la bonne réponse (donnée, puisque intouchable) :
+      *k = 0* → les trois distracteurs à zéro ; *k > 0* → **DEUX distracteurs à zéro et UN à
+      exactement k**. Alors STRICTE voit deux zéros (elle en exige un seul), PROPORTION voit deux
+      parts à 1,0 ex æquo, INVERSE voit deux maxima ex æquo : **aucune des trois ne tranche**.
+      Distribution mesurée sur `mobile` : 36 questions à k=0, 23 à k=1, et 14 au-dessus (jusqu'à
+      **k=9** sur le QCM bilan, dont les bonnes réponses emploient le vocabulaire des quinze
+      leçons alors que la page de référence est la seule leçon 15).
+
+      **OUTILLÉ LE JOUR MÊME, avant la correction et pas après.**
+      `tools/mesure-lexique-qcm.js` reçoit la **troisième variante INVERSE** (colonne dans le
+      tableau, ligne d'ensemble, champs `inverseCouverture`/`inverseRendement` en `--json`), et son
+      mode `--liste=` ne dit plus « zéro partout » : il calcule `k`, affiche les distracteurs visés
+      (`0 / 0 / k`) contre ceux d'aujourd'hui, et compte séparément les questions **exploitables**
+      et les questions **à mettre en forme** — 37 sur 73 au départ. `tools/verif-qcm-lexique.js`
+      surveille désormais les trois variantes en régression comme en cible, et sa référence porte
+      `inverse` (les références antérieures sans ce champ sont ignorées sans planter).
+      ⚠️ **Prouvé capable d'ÉCHOUER, pas seulement de passer** : injection du geste exact de la
+      première vague — un mot étranger d'un distracteur de `mobile/lecon-01` q1 remplacé par un mot
+      présent dans la page, ce qui met les trois distracteurs à zéro face à une bonne réponse à
+      k=1 → `ECHEC — mobile : INVERSE 0.0 % -> 100.0 %` **et** `marque traite, INVERSE a 100.0 %`,
+      **code de sortie 1** ; restauration → code 0.
+
+      **LA TROISIÈME VAGUE, ET LE DEUXIÈME INDICE QUE LA CORRECTION A FABRIQUÉ.** Quatre relecteurs
+      adversariaux lancés sur les 73 questions réécrites ont rendu un verdict sévère, et le lot
+      `lecon-15` a conclu « ne pas committer en l'état ». Trouvé :
+      **5 distracteurs devenus vrais ou indéfendables** (`lecon-14` q5 décrivait TestFlight, que la
+      leçon présente deux paragraphes plus haut ; `lecon-15` bilan Q2 affirmait « un paquet par
+      plateforme », ce que le bloc de code de la leçon dit mot pour mot ; bilan Q12 avait reçu la
+      « vérification des étiquettes de confidentialité », que le magasin fait réellement ;
+      `lecon-08` q1 n'énonçait **aucune** affirmation fausse ; `lecon-06` q3 donnait la persistance
+      comme raison de hisser un état, ce que la leçon enseigne).
+      Et surtout **DEUX indices de forme fabriqués par la contrainte lexicale** :
+      (1) **une quinzaine de distracteurs ne voulaient plus rien dire** (« il écrit des lignes de
+      texte dans la commande de la machine », « un envoi idempotent déserte la file », « le
+      composant inférieur inscrit dans l'état du HAUT », « sans case de côté ») — **la bonne réponse
+      devenait la seule option grammaticalement intelligible**, ce qui est un indice plus fort que
+      tous ceux qu'on venait de fermer ; (2) **17 distracteurs sur 60** (leçons 06-10) finissaient
+      par une clause qui condamnait l'option elle-même (« ne sert plus à rien », « le processeur
+      chauffe », « le spinner tourne indéfiniment ») quand la bonne réponse ne le fait qu'une fois :
+      `lecon-08` q2 était **offerte à 100 %**. Ramenés à **0 sur 60**.
+      La règle neuve, qui prime désormais sur les contraintes de forme : **un distracteur doit être
+      du français naturel et plausible ; si une contrainte oblige à écrire une phrase bancale,
+      c'est la contrainte qui cède.** Et un distracteur affirme sa thèse POSITIVEMENT — sa fausseté
+      est dans le mécanisme décrit, jamais dans un aveu final.
+
+      **RÉSULTAT MESURÉ, après les trois vagues** (`mesure-biais-qcm --seul=mobile`, 73 questions) :
+
+      | | avant | après |
+      |---|---:|---:|
+      | indice lexical STRICTE (rendement) | **100,0 %** | ne tranche plus (**0,0 %** de couverture) |
+      | indice lexical PROPORTION | 88,4 % sur 94,5 % | ne tranche plus (**0,0 %**) |
+      | indice lexical INVERSE | *jamais mesuré* → 100,0 % après vague 1 | ne tranche plus (**0,0 %**) |
+      | la seule avec un tiret | 100,0 % | **0,0 %** de couverture |
+      | la MAJUSCULE d'emphase | 90,0 % | **0,0 %** de couverture |
+      | la plus détaillée | 69,7 % | **0,0 %** |
+      | RESTREINDRE au point-virgule | 66,7 % | **0,0 %** |
+      | la seule qui nie | 55,2 % | 16,7 % |
+      | l'incise entre parenthèses | 54,5 % | **0,0 %** de couverture |
+      | la plus longue | 21,1 % | 26,8 % (rangs **19/18/18/18** = cible exacte) |
+      | pire indice du cours (réussite) | 51,9 % | **38,9 %** |
+
+      **Onze stratégies sur 23 sont à 0,0 % de COUVERTURE** : elles ne désignent plus jamais rien.
+      `verif-qcm-biais` et `verif-qcm-lexique` refigés, `mobile` marqué `traite` dans les deux
+      (**27 cours** au biais, **1er** au lexique). Chaîne complète `verif.js --rapide` : **53,3 s,
+      les 53 vérificateurs verts**, dont `normatf` — `doc/lecon-03` ne s'est PAS repérimé cette
+      fois, les longueurs du cours n'ayant pas bougé. `verif-html` 1 629 fichiers 0 problème,
+      `verif-donnees` 25 contrôles 0 erreur, index `quiz`/`search` régénérés `--fresh`.
+
+      **DEUX DETTES ASSUMÉES, écrites plutôt qu'arrondies.**
+      1. **« Le mot technique exclusif » a MONTÉ pendant la réparation** : 25,0 % → 34,4 % après la
+         vague 1 → **42,5 % de rendement** (54,8 % de couverture) après la vague 3. Écrire du
+         français naturel avec le vocabulaire du cours concentre mécaniquement les mots longs dans
+         la bonne réponse, qui est intouchable. C'est **sous la cible de 60 %** et le cliquet est
+         vert, mais la trajectoire est mauvaise et c'est le troisième indice que nos propres
+         corrections fabriquent. Le fermer demande d'injecter dans les distracteurs des mots longs
+         **déjà présents dans la page**, sous les contraintes simultanées de longueur, de rang, de
+         ponctuation et de `k` : c'est un chantier de cours entier, pas un rattrapage de fin de
+         passe. **À traiter comme B4 traite les autres indices : mesurer sur les 90 cours d'abord.**
+      2. **Une coquille dans une BONNE réponse**, donc intouchable par la règle de la vague :
+         `mobile/lecon-15` bilan q11 écrit « motif de rejet nº 1 » avec **U+00BA** (indicateur
+         ordinal masculin) au lieu de U+00B0. Repérée par balayage des points de code. La corriger
+         ferait échouer `mesure-qcm-intouchable` ; il faut le faire hors vague, en le déclarant.
+
+      **CE QUI RESTE** : 63 cours non traités. ⚠️ **`stats` reste le cours-témoin de
+      `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.**
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
