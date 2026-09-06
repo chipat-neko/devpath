@@ -464,6 +464,16 @@ var STRATEGIES = [
 
 /* ---------------------------------------------------------------------- la mesure */
 var corpus = lireCorpus();
+/* --seul=<cours> : le tableau des 19 strategies RESTREINT a un seul cours, avec sa
+   colonne RENDEMENT. Ajoute au point B4 (cours `cpp`) : `--cours` ne rendait que la
+   longueur et la meilleure strategie, et `--lots=<n> --cours=<c>` ne montrait que ce
+   qui depasse un seuil de 60 % — donc un indice RARE et SUR (le point-virgule, mesure
+   a 93,5 % de rendement sur le site) restait invisible cours par cours. */
+var SEUL = (process.argv.filter(function (x) { return x.indexOf("--seul=") === 0; })[0] || "").slice(7);
+if (SEUL) {
+  corpus = corpus.filter(function (q) { return q.cours === SEUL; });
+  if (!corpus.length) { console.error("cours inconnu ou sans QCM : " + SEUL); process.exit(2); }
+}
 if (!corpus.length) { console.error("aucune question trouvee sous pages/ — mesure impossible"); process.exit(2); }
 
 var resultats = STRATEGIES.map(function (s) {
