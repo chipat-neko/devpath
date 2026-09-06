@@ -4485,6 +4485,123 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       **CE QUI RESTE** : 63 cours non traités. ⚠️ **`stats` reste le cours-témoin de
       `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.**
 
+      ---
+
+      **LE 28ᵉ COURS : `stats`, le plus tordu du site (2026-09-07).** 99,3 % → **25,0 %**, le
+      hasard exact. Trois lots d'écriture (72 questions, 216 distracteurs), puis **cinq relecteurs
+      adversariaux** sur les 15 leçons. Le témoin de l'épreuve par injection étant devenu dynamique
+      au réveil précédent, la contrainte notée ci-dessus était levée : rien à changer avant de
+      traiter.
+
+      | mesure (`mesure-biais-qcm --seul=stats`, 72 questions) | avant | après |
+      |---|---:|---:|
+      | la plus longue | **99,3 %** | **25,0 %** |
+      | rangs de longueur | 72 / 0 / 0 / 0 | **18 / 18 / 18 / 18** (cible exacte) |
+      | pire indice du cours | 99,3 % | **27,1 %** |
+      | la plus détaillée | 77,0 % | 16,9 % |
+      | RESTREINDRE à la parenthèse / aux deux-points / au point-virgule | 54,2 / 55,8 / 43,1 % | **0,0 %** de couverture |
+      | l'incise entre parenthèses | 53,1 % | **0,0 %** de couverture |
+      | indice lexical STRICTE / PROPORTION / INVERSE | 40,0 % / — / — | **0,0 %** de rendement |
+
+      **Neuf stratégies sur 23 ne tranchent plus jamais.** Cliquets refigés, `stats` marqué
+      `traite` (**27ᵉ** au biais, **2ᵉ** au lexique), épreuve par injection **8/8**.
+
+      **⚠️⚠️ LA TROUVAILLE QUI DOMINE CE COURS, ET QUI VAUT POUR TOUS LES AUTRES : UNE LEÇON QUI SE
+      RÉFUTE PAR SA PROPRE MÉTHODE.** `lecon-15` enseigne la vérification anti-Simpson, la fait
+      tourner sur ses propres données, et **jette le résultat**. Le mélange d'appareils n'était pas
+      le même dans les deux bras (**60/40 côté A contre 70/30 côté B**) : le test stratifié de
+      Mantel-Haenszel rend **z = 2,352 et p = 0,0187 — significatif** — là où la leçon conclut
+      p = 0,063, *non concluant*, sur toute sa longueur. **Le lecteur qui applique correctement la
+      méthode que la page vient de lui enseigner obtient l'INVERSE de sa conclusion.** Second étage :
+      la section suivante demande « l'affectation était-elle vraiment aléatoire ? » sans regarder ses
+      propres chiffres (**z = 4,69, p = 2,8 × 10⁻⁶** : un tirage aléatoire ne produit cet écart
+      qu'une fois sur 75 000). Correctif appliqué et prouvé : mélange égalisé
+      (`600/36/600/48` et `400/44/400/56`), **totaux 80 et 104 conservés**, B devant A dans chaque
+      segment (le point pédagogique tient), et le test stratifié retombe sur **z = 1,864, p = 0,0623**,
+      concordant avec le p global. Trois blocs de code corrigés.
+      ⚠️ **Les QCM, eux, restaient justes** : leurs énoncés *donnent* z ≈ 1,86 et p ≈ 0,063 en
+      prémisse. Le défaut était **entièrement dans le corps** — exactement le profil du défaut
+      fondateur de la chaîne, celui qu'aucun vérificateur ne voit.
+
+      **QUATRE AUTRES DÉFAUTS DE FOND, tous prouvés par exécution.** `lecon-03` annonçait une
+      variance de **19** à trois endroits quand `pvariance(stable)` vaut **20 exactement** (22,22 en
+      ÷n−1) — aucune convention ne donne 19, et l'un des trois est un **énoncé de QCM**, donc une
+      **exception déclarée** à la règle intouchable (`mesure-qcm-intouchable` la signale, ce qui
+      prouve qu'il fonctionne). `lecon-06` écrivait « moyenne − 2σ ≈ −268 ms » quand la ligne du
+      dessus imprime **−311.0**. `lecon-09` **inversait les deux branches du U** dans son figcaption
+      (r local mesuré sur les `<circle>` : gauche **−0,9121**, droite **+0,9279**). `lecon-05`
+      envoyait sur la mauvaise page deux fois (l'intervalle de confiance est en 07, pas en 08).
+
+      **QUATRE DISTRACTEURS DEVENUS VRAIS — le prix connu du procédé, et il se paie à chaque fois.**
+      `lecon-14` q3 : la « moyenne simple » **est** la standardisation à poids égaux, et la
+      population de l'essai est réellement 50/50, donc pour **tout** public de référence commun
+      B > A. `lecon-12` q4 : « résidu nul donc sans influence » est un **théorème exact** — la droite
+      reste 13,071429 / −5,25 alors que le levier du point vaut **0,9951**. `lecon-13` q4 : la clause
+      ajoutée était la **définition verbatim** de la leçon. `lecon-13` q2 : un seuil à 1 % rend bien
+      le test plus exigeant. S'y ajoutent deux **auto-réfutants** (`lecon-02` q2 avouait dans sa
+      propre parenthèse que 67857 est la moyenne) et `lecon-01` q4, dont la **seconde moitié est
+      vraie et démontrable** (bootstrap 200 000 tirages : IC 95 % de la moyenne = **[102 ; 427]**).
+
+      **15 SORTIES PYTHON ANNONCÉES QUE LE SITE N'AFFICHE PAS**, documentées par un réveil précédent
+      et **jamais appliquées** : `statistics.mean()` sur des entiers rend un `int` — la leçon annonce
+      `239.0`, Chrome affiche `239`. Prouvé **dans un vrai Chrome, en `file://`** : `lecon-05`
+      annonçait `[1825, 411, 3902, 77, 2664]` là où Pyodide 3.12.1 affiche
+      `[913, 205, 2254, 2007, 1829]` — sur la page qui enseigne la **reproductibilité**, et le
+      « ex. » masquait une valeur simplement fausse (un réveil précédent l'avait classée faux
+      positif *à cause de ce « ex. »*). ⚠️ **Le piège du motif trop large est démontré dans la même
+      leçon** : `median(latence)` affiche bien `107.0` et `sum/len` bien `239.0`. Chaque correction
+      vise UNE ligne.
+
+      ⚠️ **LA RÈGLE QUI M'A SERVI CONTRE MOI-MÊME** : mon premier calcul de vérification, fait sur
+      des données que j'avais **inventées** au lieu de les extraire du bloc, donnait 169,75 et
+      26857,1 au lieu de 105 et 21857,1. Extraire les vraies données a tout remis d'aplomb. Ne
+      jamais calculer de tête vaut aussi pour *vérifier* le travail d'un autre.
+
+      **VÉRIFICATIONS** : `verif-html` 1 629 fichiers 0 problème, `verif-donnees` 25 contrôles
+      0 erreur, chaîne `verif.js --rapide` **53,0 s, les 53 vérificateurs verts**, index `quiz` et
+      `search` régénérés `--fresh`.
+
+      **EFFET DE BORD ASSUMÉ, la 10ᵉ fois** : détordre un cours périme les chiffres qu'une autre
+      leçon publie **sur le site**. `doc/lecon-03` citait 52,1 % et 3 181 manquements à sa propre
+      clause S3 ; la mesure du jour donne **51,0 % et 3 110**. Reperimé (10 substitutions),
+      `verif-normatif` repasse à **66/66**.
+
+      **OU EN EST LA CIBLE DE B1, mesuré et pas estimé** : le global « la plus longue » du site
+      est passé à **61,7 %** (6 167 questions, 90 cours) — la cible de B1 était **60,0 %**.
+      Elle est donc à **1,7 point**, soit un ou deux cours, alors que le cadrage de B4 annonçait
+      qu'il en faudrait 40. ⚠️ Ne pas en conclure que B4 est fini : 62 cours restent au-dessus
+      de leur propre seuil, et la moyenne du site est justement le mauvais endroit où décider
+      (leçon du cours ).
+
+      **CE QUI RESTE, ET CE QUE JE N'AI PAS FAIT** : **62 cours non traités**.
+      Trois dettes écrites plutôt qu'arrondies :
+      1. **Les réécritures de points de SVG, refusées faute de temps mesuré.** Les relecteurs ont
+         livré des jeux de coordonnées corrigés et prouvés pour cinq figures (`lecon-09` : les
+         panneaux « +0,9 » et « −0,8 » sont dessinés **parfaitement alignés** donc indiscernables du
+         cas |r| = 1 ; `lecon-11` : la droite des moindres carrés passe **au-dessus de 4 des 6
+         points**, somme des résidus **−33,5 px** au lieu de 0, dans la figure même qui enseigne
+         « aucune autre droite ne fait mieux », et l'étiquette « R² ≈ 0,25 » est **géométriquement
+         inatteignable**, le minimum possible dans la boîte étant 0,465). C'est un chantier de
+         figures, pas un rattrapage de fin de passe. **Rapports conservés** dans
+         `scratchpad/contra-stats-{a,b2,c2,d2,e2}/`.
+      2. **Deux `aria-label` encore faux**, signalés et non corrigés : `lecon-12` l. 191 annonce un
+         point de test qui n'est pas dessiné, l. 155 promet une zone grisée que le SVG n'a pas.
+      3. **« Le mot technique exclusif » reste la trajectoire à surveiller** : 50,6 % → 19,3 %,
+         donc fermé ici — mais c'est l'indice qui **monte** quand on écrit du français naturel, et
+         `mobile` avait fini à 42,5 %. Le suivre cours par cours, pas en moyenne de site.
+
+      ⚠️ **UN OUTIL À CÂBLER, mesuré et documenté par un réveil précédent dans
+      `scratchpad/b4-echo-inverse.md`, toujours pas fait** : les 22 stratégies de
+      `mesure-biais-qcm.js` sont **toutes directionnelles sauf quatre**. Sur `stats`, « l'écho de la
+      question » tombe à **10,9 %**, très SOUS le hasard — un indice sous le hasard n'est pas fermé,
+      il est **retourné**, et « ÉCARTER l'écho » rend jusqu'à 34,2 % sur les cours déjà traités.
+      Un relecteur l'a re-mesuré ici, indépendamment : sur les 72 questions de `stats`, quand une
+      option porte strictement le plus de `, : ;`, ce n'est **jamais** la bonne — **0 sur 33**.
+      Câbler « ÉCARTER » dans l'outil fera remonter `pire` sur une dizaine de cours d'un coup :
+      il faut donc **ajouter la stratégie ET refiger la référence dans le même commit**, en écrivant
+      que ce n'est pas une régression mais une dimension neuve. À faire dans une passe dédiée, pour
+      ne pas mêler ce refigeage à celui d'un cours en cours de traitement.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
