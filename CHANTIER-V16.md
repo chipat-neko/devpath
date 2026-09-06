@@ -3682,6 +3682,43 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       point-virgule — le **deux-points** rend déjà **79,9 % sur 1 652 questions** du site, et
       personne ne l'a encore regardé cours par cours.
 
+      **COMPLÉMENT MESURÉ LE MÊME JOUR — ET IL CORRIGE LA RECOMMANDATION CI-DESSUS.**
+      Avant de lancer une campagne « point-virgule » sur les 89 autres cours, deux mesures
+      ont été faites, et les deux ont retourné l'intuition.
+
+      **(a) Sur les cours NON traités, ce n'est pas un chantier séparé.** Les sept cours à
+      100 % sont des cours de langage, et l'on pouvait croire que le `;` y venait du CODE.
+      Vérifié sur `csharp` : non, il vient bien de la ponctuation d'explication. Mais les
+      distracteurs y sont **squelettiques** — « C'est l'inverse », « Aucune différence »,
+      « void renvoie 0 » face à une bonne réponse de 130 caractères. Y traiter le
+      point-virgule seul serait un pansement sur un cours dont « la plus longue » vaut
+      encore ~99 %. **La conclusion est donc : le point-virgule entre en CONSIGNE des passes
+      de détordage, il ne fait pas l'objet d'une passe à lui.**
+
+      **(b) Sur les 20 cours DÉJÀ CLOS, la dette est bien plus faible qu'annoncé — 56
+      questions sur 1 941, pas 1 070.** L'effet de bord des réécritures avait déjà cassé
+      l'indice presque partout (`nodejs` et `git` à zéro question tranchée, `react` et
+      `maths` à 0 % de rendement). Deux cours restaient : **`rust` 16 sur 21 (76,2 %)** et
+      **`archi` 7 sur 7 (100 %)**. Traités le jour même, deux agents sur cours disjoints :
+
+      | les 20 cours clos | avant | après |
+      |---|---:|---:|
+      | questions OFFERTES par le point-virgule | **56** | **33** |
+      | rendement de la stratégie | 47,5 % | **34,7 %** |
+      | espérance d'un apprenant qui ne sait rien | 27,2 % | **26,3 %** (hasard : 25,0 %) |
+      | `rust` | 16/21 = 76,2 % | **0/5 = 0,0 %** |
+      | `archi` | 7/7 = 100,0 % | **0 question tranchée** |
+
+      23 distracteurs retouchés, `mesure-qcm-intouchable` : *aucune atteinte* sur les deux
+      cours ; rangs de longueur **strictement inchangés** (`rust` 19/19/19/19, `archi`
+      inchangé), `verif.js --rapide` **62,7 s tout vert**, référence refigée.
+      ⚠️ **Signalé sans être traité** : `rust` porte **6 distracteurs hors de la fourchette
+      70-130 %** (jusqu'à **3,50×**), tous dans le QCM bilan de `lecon-22` et tous
+      **antérieurs** à cette passe — le fichier n'a pas été modifié. C'est le même défaut que
+      les trois du bilan de `git` corrigés ici : sur des options de quelques mots, la
+      fourchette se dépasse sans qu'on le voie. **À vérifier sur les QCM bilan des 18 autres
+      cours clos avant de déclarer la phase B tenable.**
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
