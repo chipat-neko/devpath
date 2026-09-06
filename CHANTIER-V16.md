@@ -4602,6 +4602,39 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       que ce n'est pas une régression mais une dimension neuve. À faire dans une passe dédiée, pour
       ne pas mêler ce refigeage à celui d'un cours en cours de traitement.
 
+      **FAIT DANS LA FOULEE, une fois `stats` isole dans son propre commit.** Deux strategies
+      INVERSES cablees dans `mesure-biais-qcm.js` (24 strategies), et **la premiere strategie
+      inverse du CLIQUET** : `ECARTER l'echo de la question` entre dans `EXPLOITABLES`.
+
+      ⚠️ **LA MESURE A CORRIGE CE QUE LA NOTE ANNONCAIT, et c'est le plus interessant.** La note
+      qui reclamait cet ajout predisait qu'il ferait remonter `pire` « sur une dizaine de cours
+      d'un coup ». Mesure faite : **DEUX** (`stats` 27,1 % → 32,6 %, `data-eng` 29,0 % → 30,4 %).
+      Le cliquet les a vus tous les deux, tout seul, avant le refigeage. Le plus haut du site est
+      `doc` à **34,2 %**, très loin de la cible de 60 % : personne ne rougit.
+
+      | | ÉCARTER la plus détaillée | ÉCARTER l'écho |
+      |---|---:|---:|
+      | site (6 167 questions) | **12,4 %** | **20,3 %** |
+      | plus haut cours | 25,2 % (`stats`) | **34,2 %** (`doc`) |
+      | moyenne des 27 cours **traités**, pire des deux | — | **25,2 %** |
+      | moyenne des 63 cours **non traités**, pire des deux | — | **17,3 %** |
+
+      **Ce que ça dit vraiment, et qui nuance la thèse du retournement** : les deux règles inverses
+      sont **sous le hasard sur le site** — normal, puisque les règles directes y sont fortes. Le
+      retournement n'apparaît que sur les cours **déjà corrigés**, où la moyenne remonte pile à
+      **25,2 %**, c'est-à-dire **au hasard, pas au-dessus**. Ce n'est donc pas le cas `mobile` (où
+      l'inverse valait 100 %) : c'est une dérive réelle, mesurée, et **modérée**. ⚠️ Et elle n'est
+      pas purement un artefact de nos corrections — `compilation`, jamais traité, est à 33,2 %.
+
+      **`ECARTER la plus detaillee` n'entre PAS dans le cliquet**, et il faut dire pourquoi : 12,4 %
+      sur le site, et elle ne dépasse le hasard **nulle part** (25,2 % au plus haut). Un cliquet ne
+      se charge pas d'une dimension sur laquelle aucun cours n'est exploitable. Elle reste
+      **mesurée** — c'est la trajectoire qui compte, pas le niveau du jour.
+
+      **CLAUSE À AJOUTER AUX CONSIGNES D'ÉCRITURE, désormais outillée** : la bonne réponse ne doit
+      être ni celle qui reprend **le plus** de mots de l'énoncé, ni celle qui en reprend **le
+      moins**. Viser 25 % dans les **deux** sens, comme pour les rangs de longueur.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 

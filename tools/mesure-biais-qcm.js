@@ -137,6 +137,16 @@ function argMax(vals) {
 }
 function toutes(q) { return q.a.map(function (_, i) { return i; }); }
 
+/* L'INVERSE d'argMax : les indices qui ne sont PAS au maximum. Si tout le monde est
+   a egalite, la regle ne tranche pas et l'apprenant tire au hasard (toutes). Sans ce
+   garde-fou, une question dont les quatre options ont le meme score serait comptee
+   comme « couverte » et fausserait la couverture vers le haut. */
+function ecarterMax(q, scores) {
+  var m = Math.max.apply(null, scores);
+  var s = scores.reduce(function (acc, v, i) { if (v !== m) acc.push(i); return acc; }, []);
+  return s.length ? s : toutes(q);
+}
+
 /* Le tiret d'explication : « — », « – », ou un « - » entoure d'espaces. C'est la
    marque typographique de la reponse qui s'explique elle-meme. */
 function aTiret(t) { return /—|–| - |\(c'est-à-dire|, c'est-à-dire/.test(t); }
@@ -455,6 +465,50 @@ var STRATEGIES = [
       var L = longueurs(q), mx = Math.max.apply(null, L), mn = Math.min.apply(null, L);
       var s = L.reduce(function (acc, x, i) { if (x !== mx && x !== mn) acc.push(i); return acc; }, []);
       return s.length ? s : toutes(q);
+    },
+  },
+  /* ⚠️ LES DEUX STRATEGIES « ECARTER », ajoutees au point B4 (cours `stats`, 2026-09-07).
+     ELLES REPARENT UN DEFAUT DE L'OUTIL, PAS DU CONTENU, et c'est ce qui les rend
+     importantes : les vingt-trois strategies precedentes sont TOUTES directionnelles
+     sauf quatre (`ecarter les absolus`, `ecarter la glose finale`, `ecarter les deux
+     extremes`, et les rangs 2/3 de longueur). Un indice qu'on ferme trop fort ne
+     disparait pas : il SE RETOURNE, et l'outil reste vert pendant que la faille est
+     entiere. C'est la lecon du cours `mobile` (fermer un indice a fond le RETOURNE)
+     transposee a la FORME DE LA MESURE elle-meme.
+
+     Ce qui a declenche l'ajout : sur `stats` detordu, « la plus detaillee » tombe a
+     16,9 % et « l'echo de la question » a 10,9 % — tres SOUS l'etalon du hasard de
+     25,0 %. Un taux sous le hasard n'est pas un indice ferme, c'est un indice inverse
+     exploitable. Mesure independante d'un relecteur adversarial sur les 72 questions
+     du cours : quand une option porte STRICTEMENT le plus de `, : ;`, ce n'est JAMAIS
+     la bonne — 0 sur 33.
+
+     La consigne d'ecriture doit donc etre SYMETRIQUE : la bonne reponse ne doit etre
+     ni celle qui en porte le plus, ni celle qui en porte le moins. Viser 25 % dans
+     les DEUX sens, comme pour les rangs de longueur.
+
+     ⚠️ Ajouter ces deux strategies fait remonter `pire` sur une dizaine de cours d'un
+     coup. Ce n'est PAS une regression : c'est une dimension neuve. La reference a donc
+     ete refigee dans LE MEME COMMIT, en le disant. */
+  {
+    nom: "ECARTER la plus detaillee",
+    quoi: "tirer parmi les options qui ne portent PAS le maximum de , : ;",
+    choisir: function (q) {
+      return ecarterMax(q, q.a.map(function (t) { return (t.match(/[,:;]/g) || []).length; }));
+    },
+  },
+  {
+    nom: "ECARTER l'echo de la question",
+    quoi: "tirer parmi les options qui ne reprennent PAS le plus de mots de l'enonce",
+    choisir: function (q) {
+      var enonce = new Set((q.q.toLowerCase().match(/[a-zà-ÿ][a-zà-ÿ-]{3,}/g) || []));
+      return ecarterMax(q, q.a.map(function (t) {
+        var n = 0;
+        (new Set((t.toLowerCase().match(/[a-zà-ÿ][a-zà-ÿ-]{3,}/g) || []))).forEach(function (m) {
+          if (enonce.has(m)) n++;
+        });
+        return n;
+      }));
     },
   },
   /* LES TROIS STRATEGIES DE RESTRICTION, ajoutees au point B4 (cours `data-eng`,

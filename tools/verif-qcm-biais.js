@@ -72,6 +72,26 @@ var ECRIRE = process.argv.indexOf("--ecrire") !== -1;
    ecartee. La meme regle doit valoir pour les deux. Elle reste MESUREE par
    mesure-biais-qcm.js, parce qu'elle monte a 44,9 % sur certains cours.
 
+   AJOUT B4 (2026-09-07, cours `stats`) : « ECARTER l'echo de la question ». C'est la
+   PREMIERE strategie INVERSE du cliquet, et elle repare un defaut de l'OUTIL, pas du
+   contenu : les vingt-trois strategies precedentes sont toutes directionnelles sauf
+   quatre. Un indice qu'on ferme trop fort ne disparait pas, il SE RETOURNE — lecon du
+   cours `mobile` transposee a la forme de la mesure. Declencheur : sur `stats` detordu,
+   « l'echo » tombe a 10,9 %, tres SOUS le hasard.
+
+   ⚠️ CE QUE LA MESURE A DIT, ET QUI CORRIGE CE QUE J'ATTENDAIS. La note qui reclamait
+   cet ajout (`scratchpad/b4-echo-inverse.md`) annoncait qu'il ferait remonter `pire`
+   « sur une dizaine de cours d'un coup ». Mesure faite : il le fait remonter sur DEUX
+   (`stats` 27,1 % -> 32,6 %, `data-eng` 29,0 % -> 30,4 %), et le plus haut du site est
+   `doc` a 34,2 %, tres loin de la cible de 60 %. Personne ne rougit. La reference est
+   tout de meme refigee dans LE MEME COMMIT : ce n'est pas une regression, c'est une
+   dimension neuve.
+
+   NON retenue, et il faut dire pourquoi : « ECARTER la plus detaillee » vaut 12,4 % sur
+   le site et ne depasse le hasard NULLE PART (25,2 % au plus haut, sur `stats`). Elle
+   reste MESUREE par mesure-biais-qcm.js — c'est la trajectoire qui compte — mais elle
+   n'a pas sa place dans un cliquet tant qu'aucun cours n'est exploitable dessus.
+
    AJOUT B4 (2026-09-05) : « la ponctuation finale unique », et son cas OBLIGE A
    CHANGER LA REGLE D'ADMISSION. Les cinq strategies ci-dessus sont entrees ici
    parce qu'elles depassaient nettement le hasard SUR TOUT LE SITE. Celle-ci vaut
@@ -120,7 +140,7 @@ var EXPLOITABLES = ["la plus longue", "la plus detaillee", "le mot technique exc
                     "l'echo de la question", "l'incise entre parentheses",
                     "la ponctuation finale unique", "la seule qui nie",
                     "la DEUXIEME plus longue", "la TROISIEME plus longue",
-                    "ecarter les deux extremes"];
+                    "ecarter les deux extremes", "ECARTER l'echo de la question"];
 var CLEF_LONGUEUR = "la plus longue";
 
 /* L'AVANTAGE que « la plus longue » donne a l'apprenant n'est PAS son taux : c'est
