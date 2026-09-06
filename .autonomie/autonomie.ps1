@@ -419,7 +419,25 @@ try {
       $motif = if ($resetSession) { 'a la reprise annoncee par la limite de session' } else { '5 min apres la fin' }
       $tOnce = New-ScheduledTaskTrigger -Once -At $next -RepetitionInterval (New-TimeSpan -Hours 2)
       Set-ScheduledTask -TaskName 'Syntaxe-Autonomie' -Trigger $tOnce -ErrorAction Stop | Out-Null
-      Log "[$(Stamp)] prochain reveil planifie ~$($next.ToString('HH:mm')) ($motif)"
+      # POSER UN DECLENCHEUR NE SUFFIT PAS : si la tache est DESACTIVEE, rien ne se
+      # produira. Constate le 2026-09-06 : le journal annoncait « prochain reveil
+      # planifie ~09:31 » et aucun reveil n a eu lieu, la tache ayant ete arretee la
+      # veille. Un journal qui affirme ce qu il n a pas verifie est pire qu un journal
+      # muet. On verifie donc, et on dit la verite.
+      $tacheActive = $true
+      try { $tacheActive = [bool](Get-ScheduledTask -TaskName 'Syntaxe-Autonomie' -ErrorAction Stop).Settings.Enabled } catch {}
+      if ($tacheActive) {
+        Log "[$(Stamp)] prochain reveil planifie ~$($next.ToString('HH:mm')) ($motif)"
+      } elseif (Test-Path (Join-Path $dir 'arret-volontaire.txt')) {
+        Log "[$(Stamp)] ATTENTION : declencheur pose a $($next.ToString('HH:mm')) mais la tache est DESACTIVEE avec un arret volontaire -- AUCUN REVEIL N AURA LIEU. Retirer .autonomie/arret-volontaire.txt puis reactiver la tache."
+      } else {
+        try {
+          Enable-ScheduledTask -TaskName 'Syntaxe-Autonomie' -ErrorAction Stop | Out-Null
+          Log "[$(Stamp)] tache trouvee DESACTIVEE sans arret demande -- REACTIVEE. Prochain reveil ~$($next.ToString('HH:mm')) ($motif)"
+        } catch {
+          Log "[$(Stamp)] ATTENTION : tache DESACTIVEE et reactivation impossible ($_) -- aucun reveil n aura lieu."
+        }
+      }
     } catch {
       Log "[$(Stamp)] ATTENTION replanification KO ($_) -- le filet 2h prend le relais."
     }
