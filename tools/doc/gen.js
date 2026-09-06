@@ -178,7 +178,13 @@ const MENTIONS = (function () {
 })();
 
 function milliers(n) {
-  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '&nbsp;');
+  /* Une ESPACE INSECABLE REELLE (U+00A0), pas l'entite « &nbsp; » : ces nombres
+     sont injectes aussi bien dans la prose HTML que dans les blocs JSON des QCM,
+     et un <script type="application/json"> est du RAW TEXT -- le navigateur n'y
+     decode aucune entite, puis js/lecon.js echappe le & avant de l'afficher.
+     L'apprenant lisait donc « 6&nbsp;103 » dans quatre questions du cours.
+     Le caractere, lui, traverse les deux chemins sans dommage. */
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 const MESURES_CORPUS = {
   lecons: milliers(RELEVE.lecons),
@@ -374,6 +380,14 @@ const NORM_NB = (function () {
       return mots[Math.round((cl.S3.echecs / cl.S3.total) * 10)];
     })(),
     s2Echecs: String(cl.S2.echecs),
+    /* S4 est une clause de POPULATION : elle se compte en COURS, pas en
+       questions. Ajoutee le 2026-09-06 avec la revision de la section 7 --
+       la clause par question qu'elle accompagne ne suffit pas, et c'est ce
+       cours qui l'a prouve a ses depens. */
+    s4Cours: String(CONF.s4.cours),
+    s4Conformes: String(CONF.s4.conformes),
+    s4Echecs: String(CONF.s4.echecs),
+    s4Pct: ((CONF.s4.conformes / CONF.s4.cours) * 100).toFixed(1).replace('.', ','),
     s1Conformes: milliers(cl.S1.conformes),
     a1Employe: milliers(cl.A1.total - cl.A1.echecs),
     lignesSpec: String(NB_LIGNES_SPEC),

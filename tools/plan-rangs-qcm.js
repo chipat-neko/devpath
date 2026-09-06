@@ -57,8 +57,18 @@ function questionsDe(cours) {
 
 /* Fenetre de longueur admissible pour un distracteur, selon qu'il doit etre
    PLUS LONG ou PLUS COURT que la bonne reponse. Les bornes 70-130 % priment :
-   un distracteur qui sort de la bande redonne un indice, quel que soit son rang. */
+   un distracteur qui sort de la bande redonne un indice, quel que soit son rang.
+   ⚠️ EXEMPTION, ajoutee le 2026-09-06 en meme temps que la section 7 du document
+   normatif du cours `doc` : sous 20 caracteres, la bande n'admet souvent qu'UNE
+   SEULE longueur entiere (a 3 caracteres : de 2,1 a 3,9), donc quatre options de
+   longueur identique. L'outil reclamait alors une reecriture IMPOSSIBLE -- vu sur
+   une question dont la bonne reponse est « Aucune » (6 caracteres), ou il exigeait
+   trois distracteurs de 7 caracteres exactement. Sous ce seuil, les options sont
+   des jetons de code ou des quantites : ce qui les tient ensemble est leur GENRE,
+   pas leur taille, et le rang seul continue de compter. */
+var SEUIL_JETON = 20;
 function fenetre(bon, plusLong) {
+  if (bon < SEUIL_JETON) return plusLong ? [bon + 1, Infinity] : [1, bon - 1];
   var basBande = Math.ceil(BAS * bon), hautBande = Math.floor(HAUT * bon);
   if (plusLong) return [Math.max(bon + 1, basBande), hautBande];
   return [basBande, Math.min(bon - 1, hautBande)];

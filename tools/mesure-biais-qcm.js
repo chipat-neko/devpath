@@ -24,6 +24,15 @@
         critere, la strategie doit trancher, et elle tranche au hasard : on compte
         alors 1/n de succes, pas 1. Prendre « la premiere a egalite » gonflerait
         tous les taux, la bonne reponse etant premiere dans le source.
+     3bis. LE RENDEMENT, ajoute le 2026-09-06 (B4, cours `doc`). La colonne « reussite » est
+        une moyenne sur TOUT le corpus : une strategie qui ne tranche que sur 3 % des questions
+        y est condamnee a rester pres de l'etalon, meme si elle ne se trompe JAMAIS sur ces 3 %.
+        Mesure du 2026-09-06 : « la seule avec un tiret » rendait 26,9 % de reussite
+        et 84,2 % de rendement. Les deux chiffres sont IMPRIMES depuis la mesure du
+        jour, jamais recopies : la premiere redaction en avait grave un (« 87 % »)
+        que la colonne d'a cote dementait deja.
+        La cible d'un chantier de correction est le rendement ; la couverture dit seulement
+        combien de questions il faut reprendre.
      3. Le HASARD sert d'etalon : sa reussite est l'esperance exacte (moyenne des
         1/n), pas une simulation. Un indice ne vaut d'etre corrige que s'il fait
         NETTEMENT mieux que le hasard.
@@ -130,7 +139,13 @@ function toutes(q) { return q.a.map(function (_, i) { return i; }); }
 
 /* Le tiret d'explication : « — », « – », ou un « - » entoure d'espaces. C'est la
    marque typographique de la reponse qui s'explique elle-meme. */
-function aTiret(t) { return /—|–| - |\(c'est-a-dire|, c'est-a-dire/.test(t); }
+function aTiret(t) { return /—|–| - |\(c'est-à-dire|, c'est-à-dire/.test(t); }
+
+/* La NEGATION. Attention au piege de mesure : « n' » doit etre cherche AVEC son
+   apostrophe typographique comme avec l'apostrophe droite, sans quoi la moitie du
+   corpus echappe a la regle -- c'est le meme defaut que « c'est-a-dire » sans
+   accent dans aTiret(), corrige le meme jour. */
+var NIE = /\b(ne|ni|non|pas|jamais|aucun|aucune|rien)\b|\bn[’']/i;
 
 /* Les affirmations ABSOLUES sont la signature du distracteur expedie. Un
    apprenant qui les ecarte n'a rien compris mais elimine beaucoup. */
@@ -206,6 +221,19 @@ var STRATEGIES = [
     quoi: "l'option qui nuance (« souvent », « permet », « selon »)",
     choisir: function (q) {
       var s = q.a.reduce(function (acc, t, i) { if (PRUDENTS.test(t)) acc.push(i); return acc; }, []);
+      return s.length ? s : toutes(q);
+    },
+  },
+  {
+    /* AJOUTEE le 2026-09-06 (B4, cours `doc`). Aucune des 17 strategies ne mesurait
+       la NEGATION, et c'est un trou : sur `doc`, quand une seule option nie, c'est
+       la bonne 2 fois sur 3 (rendement 66,7 %, contre 41,6 % sur le site et 9 a
+       29 % sur les cours deja traites). Un correcteur qui redige la bonne reponse
+       comme un DEMENTI de l'idee recue laisse cette trace, et rien ne la voyait. */
+    nom: "la seule qui nie",
+    quoi: "l'option seule a porter une negation (« ne », « pas », « jamais », « aucun »)",
+    choisir: function (q) {
+      var s = q.a.reduce(function (acc, t, i) { if (NIE.test(t)) acc.push(i); return acc; }, []);
       return s.length ? s : toutes(q);
     },
   },
@@ -418,18 +446,19 @@ var corpus = lireCorpus();
 if (!corpus.length) { console.error("aucune question trouvee sous pages/ — mesure impossible"); process.exit(2); }
 
 var resultats = STRATEGIES.map(function (s) {
-  var succes = 0, exaequo = 0, francs = 0;
+  var succes = 0, exaequo = 0, francs = 0, tranche = 0;
   corpus.forEach(function (q) {
     var choix = s.choisir(q);
     if (!choix.length) choix = toutes(q);
-    if (choix.length > 1) exaequo++;
+    if (choix.length > 1) exaequo++; else tranche++;
     if (choix.indexOf(q.k) !== -1) {
       succes += 1 / choix.length;
       if (choix.length === 1) francs++;
     }
   });
   return { nom: s.nom, quoi: s.quoi, taux: succes / corpus.length,
-    francs: francs / corpus.length, exaequo: exaequo / corpus.length };
+    francs: francs / corpus.length, exaequo: exaequo / corpus.length,
+    tranche: tranche / corpus.length, rendement: tranche ? francs / tranche : 0 };
 });
 
 /* Le biais POSITIONNEL, pour information seulement : les options sont melangees
@@ -489,14 +518,24 @@ console.log("mesure-biais-qcm — " + corpus.length + " questions (" +
   corpus.filter(function (q) { return q.bilan; }).length + " en QCM bilan) sur " +
   Object.keys(parCours).length + " cours\n");
 console.log("  Reussite d'un apprenant qui ne comprend RIEN et applique une regle mecanique :\n");
-console.log("    strategie                        reussite   sans ex aequo   ex aequo");
+console.log("    strategie                        reussite   sans ex aequo   ex aequo   couverture   RENDEMENT");
 resultats.forEach(function (r) {
   console.log("    " + (r.nom + "                                 ").slice(0, 32) +
     " " + ("       " + pct(r.taux)).slice(-8) +
     "   " + ("       " + pct(r.francs)).slice(-8) +
-    "      " + ("      " + pct(r.exaequo)).slice(-7));
+    "      " + ("      " + pct(r.exaequo)).slice(-7) +
+    "    " + ("       " + pct(r.tranche)).slice(-8) +
+    "    " + ("       " + pct(r.rendement)).slice(-8));
 });
 console.log("\n  Lecture : « sans ex aequo » = la strategie a designe UNE option, et c'etait la bonne.");
+console.log("  « couverture » = part des questions ou la strategie TRANCHE ; « RENDEMENT » = sa reussite");
+console.log("  SUR CES QUESTIONS-LA seulement. Colonne ajoutee le 2026-09-06 (B4, cours `doc`) parce que");
+console.log("  la colonne « reussite » NOIE un indice rare et sur dans le hasard des questions qu'il ne");
+var TIRET = resultats.filter(function (r) { return r.nom === "la seule avec un tiret"; })[0];
+console.log("  couvre pas : « la seule avec un tiret » a une reussite de " + pct(TIRET.taux) + " et un rendement de");
+console.log("  " + pct(TIRET.rendement) + ". B1 avait ecarte trois strategies « au niveau du hasard » sur la seule reussite ;");
+console.log("  leur rendement dit l'inverse. C'est la lecon du cours `react` — un indice de LOT vaut");
+console.log("  100 % sur le lot et 25 % sur le site — transposee a la FORME de la mesure elle-meme.");
 console.log("  Un indice ne vaut d'etre corrige que s'il depasse nettement l'etalon du hasard (" +
   pct(resultats[0].taux) + ").");
 

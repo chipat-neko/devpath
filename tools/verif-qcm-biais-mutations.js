@@ -213,8 +213,16 @@ function refAvec(transforme) {
 
 /* Chaque mutation : [libellé, ce qu'on écrit, verdict attendu, motif attendu] */
 var MUTATIONS = [
-  ['6 questions AU RANG 1 ajoutées à doc, le biais réel de ce cours',
-    function () { fs.writeFileSync(PAGE, pageAvec(questionsRang1(6))); },
+  /* ⚠️ RECALIBRÉ le 2026-09-06, et c'est une leçon sur les épreuves par injection :
+     ce cas injectait SIX questions au rang 1 parce que `doc` en comptait alors 39 sur
+     64 (60,9 %) et qu'il suffisait d'un souffle pour l'aggraver. B4 a ramené le cours
+     à 16/16/16/16 — et six questions ne le sortent plus de la tolérance : le cas est
+     passé AVEUGLE sans que rien ne change dans le cliquet. Une mutation calibrée sur
+     l'état tordu d'un cours cesse de prouver dès que le cours est réparé. Calculé
+     sur l'état réparé : il faut n tel que (16+n)/(64+n) dépasse la tolérance, soit
+     n ≈ 14 ; on en injecte 20 pour que le cas prouve au lieu de frôler. */
+  ['20 questions AU RANG 1 ajoutées à doc, le biais que ce cours avait',
+    function () { fs.writeFileSync(PAGE, pageAvec(questionsRang1(20))); },
     1, /regression/],
 
   ['60 questions devinables, et doc marqué « traité »',

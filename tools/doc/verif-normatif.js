@@ -70,7 +70,7 @@ const ATTENDUES = [
   ['MUST NOT', 'MUST NOT refer to its own position'],
   ['SHOULD', 'SHOULD offer exactly four options'],
   ['SHOULD', 'It SHOULD be present'],
-  ['SHOULD NOT', 'SHOULD NOT be strictly the longest'],
+  ['SHOULD NOT', 'SHOULD NOT be shorter than 70% or longer than 130%'],
   ['MAY', 'It MAY be omitted'],
 ];
 /* Le document est mis en page sur 72 colonnes : une clause y tient sur deux
@@ -125,6 +125,37 @@ const temoinsVrais = [
   ['on sert la dernière réponse mise en cache', 'b', 'c', 'd'],
   ['filtre la réponse côté client', 'b', 'c', 'd'],
 ];
+/* ⚠️ AJOUTÉ le 2026-09-06, sur une prise de relecture adversariale : S3 était la
+   SEULE clause dont l'implémentation venait d'être réécrite, et la seule sans
+   témoin. Si « n < bonne * 0.7 » avait été tapé « n < bonne * 0.07 », les 62
+   contrôles seraient restés verts. Un contrôle qui vérifie qu'une page cite le
+   nombre que l'outil vient de calculer est un contrôle de FRAÎCHEUR ; il ne dit
+   rien de la justesse de la règle. Les témoins, eux, la disent. */
+const S3 = conformite.CLAUSES.find((c) => c.id === 'S3');
+const s3Faux = [
+  /* bonne = 100 car., un distracteur à 60 (60 %) : hors bande, doit être VU */
+  ['x'.repeat(100), 'y'.repeat(60), 'z'.repeat(95), 'w'.repeat(105)],
+  /* bonne = 100 car., un distracteur à 140 (140 %) : hors bande, doit être VU */
+  ['x'.repeat(100), 'y'.repeat(90), 'z'.repeat(140), 'w'.repeat(105)],
+];
+const s3Vrais = [
+  /* tout dans la bande 70-130 % : ne doit PAS crier */
+  ['x'.repeat(100), 'y'.repeat(70), 'z'.repeat(130), 'w'.repeat(100)],
+  /* bonne réponse de 3 caractères : la section 7 exempte, ne doit PAS crier */
+  ['any', 'unknown', 'object', 'never'],
+];
+const s3Vues = s3Faux.filter((a) => !S3.test({ q: 'x', a, correct: 0 })).length;
+const s3FauxPos = s3Vrais.filter((a) => !S3.test({ q: 'x', a, correct: 0 })).length;
+verdict(s3Vues === s3Faux.length, 'la clause S3 voit les ' + s3Faux.length + ' violations témoins',
+  s3Vues + ' vue(s)');
+verdict(s3FauxPos === 0, 'la clause S3 ne crie pas sur les ' + s3Vrais.length + ' cas légitimes',
+  s3FauxPos + ' fausse(s) alerte(s)');
+/* S4 est une clause de POPULATION : son témoin est un COURS, pas une question. */
+verdict(r.s4 && r.s4.cours > 0, 'la mesure de population S4 porte sur des cours',
+  r.s4 ? r.s4.cours + ' cours' : 'absente');
+verdict(r.s4 && r.s4.conformes < r.s4.cours,
+  'la mesure S4 voit au moins un cours non conforme (sinon elle ne mesure rien)',
+  r.s4 ? r.s4.echecs + ' non conforme(s)' : 'absente');
 const vues = temoinsFaux.filter((a) => !M6.test({ q: 'x', a, correct: 0 })).length;
 const fauxPos = temoinsVrais.filter((a) => !M6.test({ q: 'x', a, correct: 0 })).length;
 verdict(vues === temoinsFaux.length, 'la clause M6 voit les ' + temoinsFaux.length + ' violations témoins', vues + ' vue(s)');

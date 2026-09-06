@@ -71,14 +71,32 @@ const CLAUSES = [
     test: (x) => Array.isArray(x.a) && x.a.length === 4 },
   /* La clause née de la mesure de verif-contenu : sur ce site, la bonne réponse
      est la plus longue dans neuf cas sur dix. Une bonne réponse reconnaissable
-     à sa forme n'évalue plus rien. */
-  { id: 'S3', niveau: 'SHOULD', libelle: 'la bonne réponse n est pas STRICTEMENT la plus longue',
+     à sa forme n'évalue plus rien.
+     ⚠️ RÉVISÉE le 2026-09-06 (B4). Elle disait « la bonne réponse n'est pas
+     STRICTEMENT la plus longue », et le cours `doc` était écrit pour la tenir
+     sans exception. Mesure : 0,0 % de ses 64 questions avaient la bonne réponse
+     la plus longue — et 60,2 % l'avaient en DEUXIÈME position. La clause ne
+     supprimait pas l'indice, elle le descendait d'un rang, là où aucun outil ne
+     le cherchait. Une règle énoncée PAR QUESTION ne peut pas exprimer une
+     propriété de POPULATION ; celle-ci le peut, et laisse le classement libre.
+     Manquements SUR LE CORPUS DE CE FICHIER (le cours `doc` exclu) : 68,1 % avec
+     l'ancienne formulation, 60,3 % avec celle-ci — le contraste que la leçon
+     enseigne entre MUST et SHOULD tient.
+     ⚠️ L'EXEMPTION est imposée par la mesure, pas par le confort : sous 20
+     caractères, la bande 70-130 % n'admet souvent qu'UNE SEULE longueur entière
+     (à 3 caractères : de 2,1 à 3,9), donc quatre options de longueur identique.
+     Elle rendrait insatisfaisables 30 questions du site dont les options sont des
+     JETONS DE CODE — `["any","unknown","object","never"]` demanderait d'inventer
+     trois types TypeScript de trois lettres. Le B4 avait déjà acté cette exception
+     par écrit ; elle est ici dans la règle. 415 questions (6,7 %) sont exemptées. */
+  { id: 'S3', niveau: 'SHOULD NOT', libelle: 'aucun distracteur hors de la bande 70-130 % de la bonne réponse',
     test: (x) => {
       if (!Array.isArray(x.a) || x.a.length < 2) return false;
       const L = x.a.map((o) => String(o).length);
       const bonne = L[x.correct || 0];
-      /* strictement : un ex aequo n'est reconnaissable par personne. */
-      return L.filter((n) => n >= bonne).length > 1;
+      if (!bonne) return false;
+      if (bonne < 20) return true;   /* jetons de code : voir ci-dessus */
+      return !L.some((n, i) => i !== (x.correct || 0) && (n < bonne * 0.7 || n > bonne * 1.3));
     } },
   /* Un MAY ne peut pas être violé : la colonne « conformes » compte donc ici
      les questions qui EMPLOIENT la faculté, pas celles qui la respectent.
@@ -139,11 +157,31 @@ function mesurer() {
     };
   });
   const cours = new Set(valides.map((e) => e.fichier.split('/')[1]));
+  /* S4 est une clause de POPULATION : elle ne se teste pas sur une question,
+     seulement sur un cours entier. C'est la leçon que la révision du 2026-09-06 a
+     apprise à ses dépens — une clause par question (« la bonne réponse n'est pas la
+     plus longue ») tenue sans exception ne supprime pas l'indice, elle le descend
+     d'un rang. Elle est donc comptée à part, en cours et non en questions. */
+  const rangs = {};
+  for (const e of valides) {
+    const c = e.fichier.split('/')[1];
+    const L = e.q.a.map((o) => String(o).length);
+    const bonne = L[e.q.correct || 0];
+    const r = L.filter((n, i) => i !== (e.q.correct || 0) && n > bonne).length;
+    (rangs[c] = rangs[c] || [0, 0, 0, 0])[Math.min(r, 3)]++;
+  }
+  const noms = Object.keys(rangs);
+  const s4Conformes = noms.filter((c) => {
+    const t = rangs[c].reduce((a, b) => a + b, 0);
+    return Math.max.apply(null, rangs[c]) / t <= 0.40;
+  });
   return {
     questions: valides.length,
     blocsInvalides: toutes.filter((e) => e.invalide),
     rejets: toutes.rejets || [],
     cours: cours.size, clauses: resultats,
+    s4: { cours: noms.length, conformes: s4Conformes.length,
+          echecs: noms.length - s4Conformes.length, rangs: rangs },
   };
 }
 

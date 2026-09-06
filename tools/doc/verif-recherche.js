@@ -234,10 +234,17 @@ for (const attr of ['data-quiz', 'data-exos', 'data-quiz-bilan']) {
 }
 
 console.log('=== 6. le cours respecte la règle qu’il enseigne ===');
-/* La leçon 03 a imposé au cours « doc » de tenir sa propre clause S3 : la bonne
-   réponse ne doit pas être STRICTEMENT la plus longue. Une leçon qui explique
-   qu'une justification n'est pas une preuve serait mal venue de trahir la bonne
-   réponse par sa longueur. */
+/* La leçon 03 a imposé au cours « doc » de tenir sa propre clause S3. Une leçon
+   qui explique qu'une justification n'est pas une preuve serait mal venue de
+   trahir la bonne réponse par sa forme.
+   ⚠️ RÉÉCRIT le 2026-09-06. Ce contrôle testait l'ANCIENNE rédaction de S3 (« la
+   bonne réponse n'est jamais strictement la plus longue »), que la section 7 du
+   document déclare retirée : la tenir sans exception ne supprimait pas l'indice,
+   elle le descendait d'un rang (mesuré sur ce cours : 0 bonne réponse la plus
+   longue, et 39 sur 64 la DEUXIÈME plus longue). Il teste désormais les deux
+   clauses qui l'ont remplacée : la BANDE, sur chaque question, et le RANG, sur le
+   cours entier — cette seconde est une propriété de population, elle n'a aucun
+   sens sur une leçon isolée. */
 function questionsDe(html) {
   const out = [];
   const re = /<script type="application\/json" data-quiz(?:-bilan="[^"]*")?>([\s\S]*?)<\/script>/g;
@@ -249,19 +256,36 @@ function questionsDe(html) {
 }
 const QS = questionsDe(HTML);
 verifier('la leçon porte au moins 10 questions', QS.length >= 10, QS.length + ' questions');
-let plusLongue = 0, plusCourte = 0;
+/* (a) LA BANDE, question par question. */
+let horsBande = 0;
 for (const q of QS) {
   if (!q || !Array.isArray(q.a)) continue;
   const ci = q.correct || 0;
-  const lc = String(q.a[ci] || '').length;
-  const autres = q.a.filter(function (_, i) { return i !== ci; }).map(function (x) { return String(x || '').length; });
-  if (lc > Math.max.apply(null, autres)) plusLongue++;
-  if (lc < Math.min.apply(null, autres)) plusCourte++;
+  const L = q.a.map(function (x) { return String(x || '').length; });
+  const lc = L[ci];
+  if (!lc || lc < 20) continue;   /* jetons de code : la section 7 exempte */
+  if (L.some(function (n, i) { return i !== ci && (n < lc * 0.7 || n > lc * 1.3); })) horsBande++;
 }
-verifier('la bonne réponse n’est jamais strictement la plus longue (clause S3)',
-  plusLongue === 0, plusLongue + ' question(s) sur ' + QS.length + ' trahissent la réponse par sa longueur');
-console.log('  (répartition : ' + plusLongue + ' la plus longue, ' + plusCourte +
-  ' la plus courte, ' + (QS.length - plusLongue - plusCourte) + ' au milieu)');
+verifier('aucun distracteur hors de la bande 70-130 % (clause S3)',
+  horsBande === 0, horsBande + ' question(s) sur ' + QS.length + ' hors bande');
+/* (b) LE RANG, sur le COURS entier — 16 questions ne prouvent rien : à ce
+   volume, l'écart-type du pur hasard vaut 1,7 question, soit 11 points. */
+const RANGS = [0, 0, 0, 0];
+let totalCours = 0;
+for (const f of ['lecon-01', 'lecon-02', 'lecon-03', 'lecon-04']) {
+  const h = fs.readFileSync(path.join(RACINE, 'pages', 'doc', f + '.html'), 'utf8');
+  for (const q of questionsDe(h)) {
+    if (!q || !Array.isArray(q.a)) continue;
+    const ci = q.correct || 0;
+    const L = q.a.map(function (x) { return String(x || '').length; });
+    const r = L.filter(function (n, i) { return i !== ci && n > L[ci]; }).length;
+    RANGS[Math.min(r, 3)]++; totalCours++;
+  }
+}
+const pire = Math.max.apply(null, RANGS) / totalCours;
+verifier('aucun rang de longueur au-dessus de 40 % sur le cours (clause de population)',
+  pire <= 0.40, 'rangs ' + RANGS.join('/') + ' sur ' + totalCours + ', pire ' + (pire * 100).toFixed(1) + ' %');
+console.log('  (répartition du cours entier : ' + RANGS.join(' / ') + ' — rang 0 = la bonne réponse est la plus longue)');
 
 /* --------------------------------------------------------------- verdict */
 console.log('');

@@ -3124,6 +3124,146 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.**
 
 
+
+      ---
+
+      **PASSE DU 2026-09-06 — `doc` CLOS (18ᵉ cours), et la mesure elle-même corrigée.**
+      Reprise de `tools/doc/corps/l*.html` (le cours est ENGENDRÉ par `tools/doc/gen.js`,
+      jamais écrit à la main dans `pages/`). Résultat mesuré : rangs de longueur
+      **0/39/14/11 → 16/16/16/16** ; « la plus longue » **0,0 % → 25,0 %** ; pire indice
+      exploitable **60,2 % → 36,1 %** (« la plus détaillée »). **147 distracteurs réécrits**
+      (100 par quatre agents d'écriture pour les longueurs, 15 pour la négation, le reste à
+      la main), aucune bonne réponse écrasée.
+
+      ⚠️⚠️ **LA TROUVAILLE DE LA PASSE, ET ELLE VAUT POUR TOUT LE CHANTIER B : la colonne
+      « réussite » NOIE les indices rares.** `mesure-biais-qcm.js` rendait « la seule avec un
+      tiret » à **26,9 %**, tout près de l'étalon du hasard — B1 l'avait donc écartée. Elle ne
+      tranche que sur **3,0 %** des questions, mais **elle a raison 84,2 % du temps quand elle
+      tranche**. Sur tout le site : **155 questions n'ont qu'une seule option portant un tiret
+      cadratin, et c'est la bonne 142 fois — 91,6 %**. L'information était calculable depuis
+      toujours (`sans ex aequo ÷ (1 − ex aequo)`) et n'était **jamais affichée**. Une colonne
+      **COUVERTURE** et une colonne **RENDEMENT** ont été ajoutées, et elles retournent le
+      verdict de B1 sur trois stratégies classées « au niveau du hasard » : « la MAJUSCULE
+      d'emphase » **28,4 % de réussite → 64,2 % de rendement**, « la plus prudente » 29,2 % →
+      **57,6 %**, « la seule avec un tiret » 26,9 % → **84,2 %**. Et les deux pires du site sont
+      « l'incise entre parenthèses » (**89,7 %**) et « la plus détaillée » (**83,4 %**). C'est la
+      leçon de `react` — un indice de LOT vaut 100 % sur le lot et 25 % sur le site — transposée
+      à la FORME de la mesure : **la moyenne est le mauvais endroit pour juger un indice rare.**
+
+      ⚠️ **UN TROISIÈME OUTIL DU PROTOCOLE CHERCHAIT CE QU'IL NE POUVAIT PAS TROUVER.** La
+      fonction `aTiret()` testait le motif « c'est-a-dire » **sans accent**. Mesure : **0 option
+      sur 6 167 questions** porte « c'est-a-dire », **24** portent « c'est-à-dire ». Deux
+      alternatives sur cinq étaient mortes depuis l'écriture de l'outil. Même famille que
+      `motAttaque` sur `ruby` (minuscules avant de comparer la casse) et que
+      `mesure-qcm-longueurs` aveugle à 184 questions sur `maths`. **Et le piège s'est reproduit
+      dans la même passe** : la stratégie neuve « la seule qui nie », écrite le même jour, a
+      d'abord rendu **0,0 % de couverture** parce que les bornes de mot de sa regex avaient été
+      mangées par le shell — la sortie disait « 25,0 %, ne tranche jamais », ce qui aurait passé
+      pour « pas d'indice ». **Une couverture nulle doit être lue comme une PANNE, pas comme un
+      résultat.**
+
+      **DEUX INDICES DE PLUS, MESURÉS ET FERMÉS.** (1) Le **tiret cadratin**, signalé non traité
+      par la passe précédente : 8 questions de `doc` n'avaient qu'une option en portant, **c'était
+      la bonne 7 fois (87,5 %)**. Le tiret a été DÉPLACÉ (retiré de 5 bonnes réponses, ajouté à
+      5 distracteurs, à longueur strictement constante — « — », « : » et « ; » valent un
+      caractère) → **25,0 % pile**. (2) La **NÉGATION**, qu'aucune des 17 stratégies ne mesurait :
+      rendement **66,7 % sur `doc`** contre 41,6 % sur le site et 9 à 29 % sur les cours déjà
+      clos. Une 18ᵉ stratégie a été ajoutée à l'outil, puis 15 distracteurs réécrits →
+      **25,0 %**. ⚠️ L'agent a *reculé* de 17 corrections à 15 après avoir mesuré 10,0 % :
+      **retourner un indice n'est pas le supprimer**, c'est le rendre exploitable à l'envers.
+
+      ⚠️⚠️ **LE CORRECTIF A CASSÉ CE QU'IL DEVAIT PROTÉGER, ET LA CONTRADICTION L'A VU.**
+      Fermer la longueur a fait remonter « la plus détaillée » de **37,1 % à 41,1 %** — hors
+      bande — parce que remplacer « : » par « — » dans un distracteur lui retire un signe compté
+      par cette stratégie. Six distracteurs ont dû être re-rééquilibrés à rang et fenêtre
+      constants → **36,5 %**. C'est le motif de remplacement trop large, en version subtile : la
+      correction d'un indice EN NOURRIT UN AUTRE, et seul le rejeu complet du scénario le montre.
+
+      ⚠️⚠️⚠️ **LE CŒUR DE LA PASSE : LE COURS PUBLIAIT UNE NORME QUI FABRIQUAIT LE BIAIS.**
+      `doc` publie un faux document normatif (`tools/doc/reference/quiz-format.txt`) dont la
+      clause **S3** disait « *The correct option SHOULD NOT be strictly the longest of the four* »,
+      et un vérificateur exigeait du cours qu'il la tienne **à zéro manquement**. C'est
+      exactement ce qui l'avait rendu devinable : **0,0 % au rang 0 et 60,9 % au rang 1** (39 de
+      ses 64 questions). La section 7 a été **révisée, datée, et l'ancienne rédaction citée comme
+      retirée** — la forme d'un vrai errata, dans le cours qui enseigne à lire une norme. La
+      clause devient la **bande 70-130 %**, plus une clause **S4 de POPULATION** (« sur un cours
+      entier, la bonne réponse tombe à chaque rang environ une fois sur quatre »), **la seule du
+      document qui ne se vérifie pas sur un bloc isolé, et elle est écrite quand même**.
+      Manquements mesurés hors `doc` : ancienne **68,1 %**, nouvelle **60,3 %** — le contraste
+      MUST/SHOULD que la leçon enseigne tient. S4 : **18 cours conformes sur 89, 20,2 %**.
+
+      **CE QUE LA CONTRADICTION A RENDU** (3 relecteurs adversariaux, ~35 prises, exécutions sous
+      Node v24.16.0). Six défauts graves, tous corrigés :
+      1. **`tools/doc/verif-recherche.js` était passé AU ROUGE** (1 échec, il est dans `verif.js`
+         étape `doc-rec`) : il testait encore l'ancienne S3. Réécrit — il teste désormais la
+         **bande par question** ET le **rang sur le cours entier**. **76 contrôles, 0 échec.**
+      2. **Le programme EXÉCUTABLE publié dans la leçon** (`tools/doc/code/normatif-conformite.js`)
+         implémentait encore la clause retirée, sous la même étiquette `S3`, **400 lignes après
+         que la page publie l'autre**. C'est le défaut fondateur de la chaîne — un corps de leçon
+         qui annonce ce que son code ne fait pas — dans le cours qui enseigne à lire une norme.
+      3. **La note de révision citait 60,2 %, qui n'est pas la grandeur qu'elle nommait** : 60,2 %
+         est le SCORE d'une stratégie (crédit fractionné aux ex æquo), la fréquence est **60,9 %**
+         (39/64). Recalculé et corrigé. Idem pour l'attribution causale : la note disait que la
+         clause « CRÉAIT » le biais ; mesuré sur les **1 835 questions d'autres cours** qui la
+         respectaient déjà, le rang 1 vaut **38,4 %**, pas 60 — la règle explique **13 des 36
+         points d'écart**, le reste est une habitude de rédaction. La note dit maintenant cela.
+      4. **La bande seule ne remplace pas l'ancienne clause** : **572 questions du site** la
+         respectent et ont pourtant la bonne réponse la plus longue **à 100 %**. D'où S4.
+      5. **La bande était INSATISFAISABLE sous 20 caractères** : à 3 caractères elle n'admet
+         qu'une seule longueur entière, donc quatre options identiques — les quatre types
+         TypeScript `any` / `unknown` / `object` / `never` demanderaient d'en inventer trois de
+         trois lettres. L'exemption (**415 questions, 6,7 %**) est écrite dans la clause, dans la
+         spec **et** dans `plan-rangs-qcm.js`, qui réclamait jusque-là une réécriture impossible.
+      6. **`&nbsp;` lu LITTÉRALEMENT par l'apprenant.** Un bloc `<script type="application/json">`
+         est du *raw text* : le navigateur n'y décode aucune entité, puis `js/lecon.js` échappe le
+         `&`. La fonction `milliers()` de `gen.js` insérait l'entité → **5 champs de QCM**
+         affichaient « 6&nbsp;103 ». Remplacée par le caractère U+00A0, qui traverse les deux
+         chemins. Les **8 occurrences restantes du site sont VOLONTAIRES** (`html/lecon-21`,
+         `securite/lecon-02`, `offensive/lecon-05` enseignent les entités).
+
+      **QUATRE FAITS FAUX, rejoués :** `17 101 − 9 007 = 8 094`, pas 8 095 (un distracteur
+      affichait une dérivation fausse) ; un `explain` annonçait « Mesuré : trier trois éléments
+      rend “cab” » quand le corps de la leçon dit qu'**il en faut seize** et qu'un tri de trois
+      rend « bca » ; un autre disait « quatre comparaisons sur cinq » là où le corps et la sortie
+      du programme disent **trois sur quatre** ; un troisième prêtait à la section 6 du document
+      l'**inverse de ce qu'elle écrit**. Plus **trois distracteurs devenus vrais** (dont « la
+      lettre œ ne figure pas dans la table de `normalize()` », qui est la bonne réponse en plus
+      court) et **un énoncé sous-déterminé** : `function f(n = 10)` rend `null`, mais `n || 10`
+      et `n ?? 10` rendent 10 — la syntaxe est désormais dans la question.
+
+      ⚠️ **L'ÉPREUVE PAR INJECTION AVAIT CESSÉ DE PROUVER, sans que rien ne change en elle.** Le
+      cas « 6 questions au rang 1 ajoutées à `doc` » était calibré sur un cours à 39/64 au rang 1.
+      Le cours réparé (16/64), six questions ne le sortent plus de la tolérance : **7/8, angle
+      mort silencieux**. Recalibré sur l'état RÉPARÉ — il faut n tel que (16+n)/(64+n) dépasse la
+      tolérance, soit n ≈ 14 — le cas en injecte **20** et le harnais revient à **8/8**. *Une
+      mutation calibrée sur l'état tordu d'un cours cesse de prouver dès que le cours est réparé.*
+      Dans le même mouvement, **`S3` — la seule clause dont l'implémentation venait d'être
+      réécrite — n'avait AUCUN témoin** : deux témoins de violation et deux cas légitimes lui ont
+      été ajoutés (`n < bonne * 0.07` au lieu de `0.7` serait passé vert), plus deux pour S4.
+      `verif-normatif` **62 → 66 contrôles, 0 échec**.
+
+      **Contrôles** : `verif.js --rapide` **52,6 s, 52 étapes tout vert** ; `verif-html` **0** ;
+      `verif-donnees` **0 erreur, 0 avertissement** ; `verif-normatif` **66/66** ; `verif-doc`
+      **36/36** ; `verif-recherche` **76/76** ; `verif-qcm-biais-mutations` **8/8** ;
+      `verif-chaine-declaree` **OK (52 dans un mode, 7 déclarés hors chaîne)** ; index régénérés
+      `--fresh` ; 8 blocs JSON valides, 0 BOM, 0 CRLF ; aucune URL CDN (les 3 occurrences du site
+      sont du contenu pédagogique intouché).
+
+      **Référence refigée, `doc` marqué `traite` — 18 cours traités.** ⚠️ **Le global du site
+      monte de 68,2 % à 68,4 % sur « la plus longue », et c'est NORMAL : ramener `doc` de 0,0 %
+      à 25,0 % rapproche ce cours du hasard mais éloigne la moyenne de zéro.** C'est précisément
+      ce que B1 avait acté en jugeant l'écart au hasard plutôt que le taux brut ; la moyenne du
+      site reste le mauvais chiffre pour juger une correction.
+
+      **CE QUI RESTE, dans l'ordre** : (1) `git` (80 q), `rust` (76), `php` (78), `java` (77),
+      `csharp`, `cpp`, `ocaml` ; (2) **instruire les deux pires rendements du site**, mesurés
+      aujourd'hui et jamais traités : « l'incise entre parenthèses » **89,7 %** sur 37,3 % de
+      couverture, et « la plus détaillée » **83,4 %** sur 58,5 % — ce sont désormais les plus
+      nocifs, devant la longueur ; (3) décider si « la seule qui nie » (41,2 % de rendement site)
+      entre dans `EXPLOITABLES` — elle ne fait rougir aucun cours traité aujourd'hui, mais
+      l'ajouter fige la cible pour la suite. ⚠️ **`stats` (99,3 %) reste le cours-témoin de
+      `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.**
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
