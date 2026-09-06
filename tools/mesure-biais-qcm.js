@@ -201,6 +201,27 @@ var STRATEGIES = [
     choisir: function (q) { return argMax(longueurs(q)); },
   },
   {
+    /* AJOUTEE AU POINT B4 (reprise du cours `git`, 2026-09-06). DEUX contradicteurs sur
+       quatre l'ont trouvee separement, et aucune des dix-huit strategies precedentes ne la
+       voyait : la bonne reponse porte l'explication, donc elle est souvent la SEULE a
+       separer deux propositions par un point-virgule. « la plus detaillee » compte les
+       virgules et les deux-points ensemble, ce qui NOIE la marque : le point-virgule seul
+       est bien plus tranchant.
+       Mesure du jour, sur les 6 167 questions du site : couverture 17,4 %, RENDEMENT
+       93,5 % (1 000 bonnes sur 1 070 questions tranchees). Sur `git` avant reprise :
+       26 sur 26, soit 100,0 %. C'est le meme phenomene que la longueur, et il y SURVIT :
+       `git` etait a 25,0 % sur la longueur et gardait 100 % sur le point-virgule.
+       ⚠️ Elle n'entre PAS dans EXPLOITABLES de verif-qcm-biais.js : les cours deja
+       marques `traite` sont au-dessus de 60 % dessus, et un cliquet qui rougit partout
+       cesse d'etre lu. La dette est mesuree ici, elle se solde cours par cours. */
+    nom: "la seule avec un point-virgule",
+    quoi: "la seule option qui separe deux propositions par un point-virgule",
+    choisir: function (q) {
+      var s = q.a.reduce(function (acc, t, i) { if (String(t).indexOf(";") !== -1) acc.push(i); return acc; }, []);
+      return s.length === 1 ? s : toutes(q);
+    },
+  },
+  {
     nom: "la seule avec un tiret",
     quoi: "la seule option qui porte un tiret d'explication",
     choisir: function (q) {

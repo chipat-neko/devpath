@@ -3540,6 +3540,148 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       plutôt qu'à un seuil fixe — le seuil fixe vient d'être pris en flagrant délit de
       surcompte dans cette passe même.
 
+      ---
+
+      **`git` REPRIS le 2026-09-06 — le premier cours détordu DEUX FOIS, et la reprise a
+      trouvé bien plus que ce qu'elle venait chercher.** Le point (1) du « ce qui reste »
+      ci-dessus est clos : les leçons 15-19, où la bonne réponse était la plus COURTE
+      **10 fois sur 15**, ne le sont plus.
+
+      | mesure sur les 80 questions | avant | après |
+      |---|---:|---:|
+      | fenêtres de 4 leçons sous p < 1 % | **2** (15-18 : 8/12 · 16-19 : 9/12) | **0** |
+      | fenêtres sous p < 5 % | 3 | **0** |
+      | rangs de longueur du cours | 20/20/20/20 | 20/20/20/20 (inchangé) |
+      | leçons dont les 3 rangs sont distincts | 4 sur 24 | **24 sur 24** |
+      | distracteurs hors de la fourchette 70-130 % | 6 | **0** |
+      | **« la seule option avec un POINT-VIRGULE »** | **26/26 = 100,0 %** | **0 question tranchée** |
+
+      **83 distracteurs réécrits sur 240**, `mesure-qcm-intouchable` : *aucune atteinte*
+      (énoncés, index `correct`, explications et bonnes réponses identiques à `git show HEAD:`).
+      Cinq écrivains sur fichiers disjoints, quatre contradicteurs, trois écrivains pour la
+      seconde vague ; aucun commit d'agent.
+
+      ⚠️⚠️ **LA TROUVAILLE DE CETTE PASSE, ET ELLE VAUT POUR LES 89 AUTRES COURS : LE
+      POINT-VIRGULE EST UN INDICE À 93,5 % DE RENDEMENT, ET AUCUNE DES DIX-HUIT STRATÉGIES
+      NE LE VOYAIT.** Deux contradicteurs sur quatre l'ont trouvé séparément, sans se
+      concerter. Mesuré ensuite sur les **6 167 questions du site** : la stratégie tranche
+      sur **1 070 questions (17,4 %)** et y a raison **93,5 %** du temps. Sept cours sont à
+      **100 %** dessus (`csharp` 40/40, `swift` 38/38, `c` 33/33, `java` 32/32, `haskell`
+      31/31, `git` 26/26, `cpp` 26/26).
+
+      **Et il SURVIT au traitement de la longueur, ce qui est le point qui compte** : `git`
+      était à **25,0 % exactement sur les quatre rangs** de longueur — le hasard parfait,
+      cours déclaré clos le 2026-09-05 — et gardait **100 % sur le point-virgule**. Un
+      apprenant qui ne connaissait rien à Git en tirait **48,4 %** du cours (25 questions
+      gagnées d'office, le hasard sur les 55 autres). La cause est la même que pour la
+      longueur, et c'est pour cela qu'elle y résiste : la bonne réponse porte l'explication,
+      donc elle est la seule à séparer deux propositions. « la plus détaillée » comptait
+      déjà les virgules et les deux-points ensemble — et les NOYAIT : la marque isolée est
+      bien plus tranchante (le deux-points seul, sur `git`, ne rend que 28,6 %).
+
+      **La stratégie est entrée dans `mesure-biais-qcm.js`** (19ᵉ stratégie). Elle n'entre
+      **PAS** dans `EXPLOITABLES` de `verif-qcm-biais.js`, et c'est délibéré : les cours déjà
+      marqués `traite` sont au-dessus de 60 % dessus, donc le cliquet rougirait partout et
+      cesserait d'être lu — la règle posée en B2. La dette est mesurée, elle se soldera cours
+      par cours. Correction faite ici sans jamais toucher la bonne réponse : un point-virgule
+      **ajouté dans un distracteur**, à rang de longueur et à fourchette constants.
+
+      **CE QUE LA CONTRADICTION A TROUVÉ — et git 2.54.0 est installé ici, donc RIEN n'est
+      jugé de tête : chaque verdict est une exécution dans un dépôt jetable.**
+      1. **QUATRE DISTRACTEURS DEVENUS VRAIS OU INDÉFENDABLES**, le piège annoncé de la
+         phase : `lecon-01` q3 « il contient une abréviation absente du glossaire Git » —
+         **littéralement exact** (aucune liste d'abréviations n'existe, et « maj » est bien
+         absent du glossaire livré avec Git) ; `lecon-17` q2 « limiter la taille des fichiers,
+         interdire les emojis, exiger une majuscule » — **les trois sont des règles de
+         *ruleset* GitHub qui existent**, et c'est la passe précédente qui l'a aggravé en
+         retirant la cheville « (par convention) » qui marquait le caractère cosmétique ;
+         `lecon-14` q3 prescrivait d'ajouter le fichier au `.gitignore`, **ce que la leçon
+         prescrit elle-même** ; `lecon-14` q1 « Git Flow, qui multiplie les étapes de fusion
+         avant la mise en production » — **chaque mot est exact**, l'option argumentait contre
+         elle-même. ⚠️ Les deux dernières sont les questions JUMELLES de `lecon-17` q1, que la
+         passe précédente avait corrigée : **elle a réparé l'une et laissé l'autre.**
+      2. **ONZE DÉFAUTS DE CORPS DE LEÇON**, le défaut fondateur de la chaîne, tous rejoués :
+         `lecon-15` publiait `6b584e8…` comme sortie de `echo "bonjour" | git hash-object
+         --stdin` en écrivant « le même contenu donnera TOUJOURS ce même hash, sur n'importe
+         quelle machine » — **exécuté : `1cd909e05d33f0f6bc4ea1caf19b5749b434ceb3`**, et c'est
+         le pire cas possible puisque la leçon invite l'apprenant à le reproduire ;
+         `lecon-23` annonçait `0003-met-a-jour-l-aide.patch` quand `git format-patch`
+         **supprime** le caractère accentué au lieu de le translittérer
+         (`0003-met-jour-l-aide.patch`) — et le même nom faux était **dupliqué dans un
+         `<svg>`**, invisible à tout outil qui ne lit que les blocs de code ; `lecon-13`
+         faisait lister `build/` par `git clean -n`, **qui ne liste jamais un dossier sans
+         `-d`** (et le bloc se contredisait trois lignes plus bas) ; `lecon-13` affirmait
+         « un stash n'est pas un commit » alors que `git cat-file -t refs/stash` rend
+         **`commit`** ; `lecon-22` écrivait le format de `git blame` avec la parenthèse fermée
+         AVANT le numéro de ligne (`10:11) 12)`), que Git ne produit jamais, sur trois lignes
+         plus une quatrième dans un exercice ; `lecon-22` montrait `git log -S` dans l'ordre
+         **chronologique**, contredisant l'exercice 2 de la même page, qui a raison ;
+         `lecon-19` annonçait `running 'npm test' --silent` quand `git bisect run` **quote
+         chaque argument séparément** (mesuré : `running 'chemin' '--' '--silent'`) ;
+         `lecon-19` écrivait « Seuls apps/site-web et packages/ui apparaissent » alors que le
+         mode cône **matérialise aussi les fichiers de la racine** (mesuré : `ls` rend
+         `README.md` et `package.json`) ; `lecon-20` présentait `(cherry picked from…)` comme
+         une **sortie de terminal**, alors que `-x` l'écrit dans le **message du commit** ;
+         `lecon-05` publiait des SHA **impossibles** (`0o0o0o0`, `9z8y7x6` : `o`, `z` et `y`
+         ne sont pas hexadécimaux) ; `lecon-07` faisait dire à son glossaire que le reflog
+         garde un commit décroché « environ 90 jours » quand `gc.reflogExpireUnreachable`
+         vaut **30 jours** (doc `git-reflog.adoc`), l'encadré de la même page disant déjà 30.
+      3. **TROIS DISTRACTEURS HORS FOURCHETTE créés par la passe précédente**, tous dans le
+         QCM bilan et pour la raison qu'elle avait annoncée — sur des options de 8 à 40
+         caractères, allonger revient à inventer une commande : `.hgignore ou .npmignore`
+         valait **2,30×** la bonne réponse. `mesure-qcm-longueurs` les voyait ; personne ne
+         l'avait relancé. Les trois remplaçants sont vérifiés inexistants par exécution.
+
+      ⚠️ **CE QUE J'AI REFUSÉ AUX CONTRADICTEURS**, parce qu'une prise non prouvée coûte plus
+      cher qu'une prise manquée. Le format de progression de `git fsck` : la ligne part sur
+      **stderr** et ne s'affiche pas dans un terminal non interactif — **non reproductible
+      ici**, donc non corrigé. Le SHA abrégé des transcriptions `bisect` : Git imprime bien
+      40 caractères, mais tout le cours emploie des SHA fictifs à 7 caractères et uniformiser
+      serait cosmétique. Le jour de semaine « Mon May 19 » jugé faux : **le 19 mai 2025 était
+      un lundi**, et la leçon ne donne pas d'année — la prise reposait sur une année supposée.
+
+      ⚠️ **UNE PRISE CORRIGÉE SANS PREUVE, ET DITE COMME TELLE** : le YAML en ligne de
+      `lecon-18` est invalide en contexte *flow* (un scalaire nu ne peut pas porter une
+      accolade), mais **aucun parseur YAML n'est disponible ici** — ni js-yaml, ni PyYAML,
+      et le contradicteur qui affirmait en avoir lancé un n'a pas pu être suivi. La correction
+      retenue met le scalaire entre apostrophes : forme valide dans les deux lectures, donc
+      sans risque même si la prise était fausse.
+
+      ⚠️⚠️ **DEUX PIÈGES D'OUTIL, dont un que je me suis infligé et qui périme une ligne de la
+      mémoire du projet.** (a) **Sous Git Bash, `grep -c` avec un motif de retour chariot ne
+      mesure pas les CRLF** : il m'a rendu « 382 lignes sur 382 en CRLF » sur un fichier qui
+      est en **LF pur** (recompté en octets : zéro occurrence de CR LF). J'ai contredit cinq
+      agents qui avaient raison, puis un sixième. Le dépôt est en LF, `HEAD` est en LF, et
+      l'avertissement « LF will be replaced by CRLF » vient de `core.autocrlf=true` : il est
+      normal et ne signale rien. ⚠️ **La passe `rust` a inscrit « les 22 fichiers à 100 %
+      CRLF » sur la foi du même outil : c'est le même faux positif.** (b) Réécrire une option
+      en repassant par `JSON.stringify` **reformate le bloc entier** (7 lignes changées → 90) :
+      les blocs n'ont pas tous la même forme — une question par ligne dans la plupart des
+      leçons, **tout sur une seule ligne dans `lecon-24`**. Le format a été rétabli et
+      **prouvé par une épreuve** : reformater le fichier tiré de `HEAD` doit rendre `HEAD` à
+      l'octet près, sinon on n'écrit rien.
+
+      **Contrôles** : `verif.js --rapide` **63,4 s, tout vert** ; `verif-html` **0** ;
+      `verif-donnees` **0 erreur** (2 avertissements préexistants) ; `verif-normatif` **66/66**
+      (le taux publié par `doc/lecon-03` n'a pas été périmé cette fois, contrôle « la bonne
+      réponse chiffrée suit la mesure » compris) ; `verif-qcm-biais` OK, référence refigée ;
+      `verif-qcm-biais-mutations` **8/8**, contre-épreuve verte et fichiers restaurés ;
+      49 blocs JSON valides ; 0 BOM, 0 mojibake, **0 URL CDN** ; index `quiz` et `search`
+      régénérés `--fresh`. Global du site : **66,7 %** sur la longueur (inchangé — 80 questions
+      sur 6 167 ne déplacent pas la moyenne) ; meilleure stratégie sur `git` : **38,1 %**
+      (l'incise entre parenthèses), sous la cible de 60 %.
+
+      **CE QUI RESTE, dans l'ordre** : (1) **le point-virgule sur les 89 autres cours** — la
+      dette est de **1 070 questions tranchées à 93,5 %**, et les six autres cours à 100 %
+      sont `csharp`, `swift`, `c`, `java`, `haskell` et `cpp`. Le traiter coûte beaucoup moins
+      cher que la longueur : on ajoute un point-virgule dans un distracteur, sans toucher au
+      fond, au rang ni à la fourchette. (2) les cours neufs par nocivité : `stats` 99,3 %,
+      `nosql` 99,1 %, `cobol` 98,7 %, `data-eng` 98,6 %, `os` 98,5 %. ⚠️ **`stats` reste le
+      cours-témoin de `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.**
+      (3) mesurer les autres ponctuations exclusives comme on vient de le faire pour le
+      point-virgule — le **deux-points** rend déjà **79,9 % sur 1 652 questions** du site, et
+      personne ne l'a encore regardé cours par cours.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
