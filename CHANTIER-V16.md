@@ -2981,6 +2981,148 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       60 %.** La case reste **décochée** : **dix-huit cours** sur les quarante que la cible de B1
       demande.
 
+      **PASSE DU 2026-09-06 — `archi` REPRIS AU RANG, ET LE CLIQUET RÉPARÉ DE DEUX DÉFAUTS.**
+      La consigne laissée par la passe `sql` était : « avant tout nouveau cours, REPRENDRE `doc` et
+      `archi` au rang de longueur ». Mesure reproduite d'abord : `doc` **60,2 %** (« la DEUXIÈME
+      plus longue »), `archi` **55,2 %** (« la TROISIÈME »), contre `ruby` à 28,0 %. Les deux
+      comptés « faits », les deux plus devinables que le dernier cours traité.
+
+      **OUTIL NEUF — `tools/plan-rangs-qcm.js`.** Il n'écrit rien, il dit quoi écrire : pour chaque
+      question il assigne un rang cible (répartition la plus plate que le nombre de questions
+      permette), choisit **au coût le plus faible en caractères** quel distracteur doit passer de
+      l'autre côté de la bonne réponse, et rend une fenêtre de longueur bornée par la consigne
+      70-130 % de B3. Le plan de `doc` : 50 questions à retoucher, **2 058 caractères** ; celui de
+      `archi` : 18 questions, **224 caractères**. Un mode `--ponctuation` a été ajouté en cours de
+      passe, pour la raison dite plus bas.
+
+      **`archi` — LE COURS EST REPRIS**, et c'est le seul résultat de contenu que cette passe garde.
+
+      | | avant | après |
+      |---|---:|---:|
+      | rangs par longueur (0/1/2/3) | 4 / 14 / 27 / 3 | **12 / 12 / 12 / 12** |
+      | « la plus longue » | 7,3 % | **24,0 %** |
+      | bonne réponse SEULE la plus ponctuée | 14/48 (29,2 %) | **0/48 (0,0 %)** |
+      | « la plus détaillée » | 43,8 % | **24,0 %** |
+      | **pire stratégie exploitable** | **55,2 %** | **41,3 %** |
+
+      36 distracteurs réécrits, **hors bande 70-130 % : 0**, `mesure-qcm-intouchable` **0 atteinte**
+      (énoncés, `correct`, explications et bonnes réponses intacts contre git HEAD).
+
+      ⚠️⚠️ **LE PIÈGE QUI A COÛTÉ LE TRAVAIL SUR `doc`, ET QUI VAUT POUR TOUTE LA CHAÎNE :
+      `pages/doc/*.html` SONT DES FICHIERS ENGENDRÉS.** Quatre agents avaient réécrit **112
+      distracteurs sur 192**, amenant `doc` à 16/16/16/16 sur les rangs, 0 hors bande, 0 sur la
+      ponctuation et **28,5 % sur sa pire stratégie exploitable — le meilleur chiffre de toute la
+      phase B**. Puis `node tools/doc/gen.js` a été lancé pour rafraîchir les chiffres mesurés de la
+      leçon 3 : il **régénère les quatre pages depuis `tools/doc/corps/l*.html`**, où les QCM sont
+      écrits en dur. Les 112 réécritures ont été effacées en une commande, sans sauvegarde, et le
+      dépôt est revenu à `doc` = 0,0 % / 60,2 %. **Rien de tout cela n'était visible depuis la
+      page** : ni en-tête « fichier engendré », ni contrôle. La leçon générale : *avant de corriger
+      une page à la main, chercher si un générateur la produit* — et pour `doc`, la reprise devra
+      se faire dans `tools/doc/corps/`. Le coût est réel (≈ 2 000 caractères de réécriture à
+      refaire) et il est écrit ici plutôt qu'arrondi.
+
+      **LE DÉFAUT FONDATEUR QUE CET INCIDENT A RÉVÉLÉ, lui, est réparé — et il était grave.**
+      `doc/lecon-03` q6 demande l'écart entre les MUST et le SHOULD S3 du format que la leçon
+      publie. Son explication affiche le **taux mesuré** par un marqueur (`@@NORMNB:s3PctEchec@@`,
+      **68,1 %** ce jour) ; sa **bonne réponse**, elle, était **écrite à la main** : « la
+      recommandation est ignorée dans près de **neuf** cas sur dix ». Les deux ont divergé en
+      silence à mesure que B4 assainissait le site — et la question s'est retrouvée **sans aucune
+      option vraie** (les trois autres disent « plus de 95 % », « une dizaine », « pas mesurable »).
+      C'est le défaut fondateur de la chaîne, dans une bonne réponse de QCM, dans le cours qui
+      enseigne la documentation. Corrigé **à la racine** : le texte est désormais engendré
+      (`@@NORMNB:s3EnMots@@` → « sept »), et `verif-normatif.js` porte un contrôle qui compare le
+      mot publié à la mesure du jour — **éprouvé par injection : remis à « neuf », il échoue
+      (code 1) ; restauré, il repasse vert.** Deuxième trou fermé au passage : la liste du contrôle
+      strict « respecte la règle S3 qu'il publie » ne contenait que `lecon-01`, `02` et `03` —
+      **`lecon-04`, qui porte le QCM BILAN du cours, en était absente**. Les quatre leçons sont à
+      zéro manquement, la liste s'étend sans rien faire rougir. `verif-normatif` **60/60 → 62/62**.
+
+      ⚠️ **LE CLIQUET AVAIT DEUX DÉFAUTS, et le premier est le plus grave qu'il ait eu.**
+      `mesure-biais-qcm.js` sait depuis le 2026-09-05 que corriger « la plus longue » **déplace** le
+      biais d'un rang ; `verif-qcm-biais.js` ne l'avait jamais appris. Ses `EXPLOITABLES`
+      ignoraient les trois stratégies de rang, si bien que `doc` — 0,0 % sur la longueur, **le
+      meilleur chiffre du site** — se laissait deviner **60,2 %** du temps sans qu'une seule ligne
+      rouge le dise. Vérifié avant de les inscrire, comme pour les deux ajouts précédents : les
+      cours marqués `traite` sont entre **25,3 %** (`ruby`) et **36,3 %** (`iac`) sur la pire des
+      trois, et le plus exposé du site entier est `neurones` à **42,6 %** — les ajouter ne fait
+      rougir personne.
+      **Second défaut, découvert en étant sa propre victime** : le critère de régression lisait le
+      **taux brut**. Ramener `doc` de 0,0 % à 25,0 % — c'est-à-dire *à la cible* — était compté
+      pour **+25 points de régression**. Un critère qui punit la correction qu'il réclame ne peut
+      pas être suivi longtemps. La régression se juge désormais sur l'**écart au hasard**
+      `|taux − 25 %|`, et la cible « ≤ 40 % » se lit comme une **bande [10 %, 40 %]**. Troisième
+      correction, plus discrète : la référence figeait la meilleure de **toutes** les stratégies
+      mesurées quand le verdict lisait la pire **exploitable** — deux quantités différentes, donc
+      une comparaison qui ne voulait rien dire.
+
+      ⚠️ **LE PLANCHER, imposé par la CONTRE-ÉPREUVE et non par le raisonnement.** Une fois `doc`
+      à 25,0 % pile, son écart au hasard valait **zéro** — et un cours à zéro d'écart ne peut plus
+      que remonter : ajouter six questions **parfaitement équilibrées** le portait à 22,9 %, soit
+      2,1 points, au-dessus de la tolérance d'un point. **Le cliquet rougissait sur du travail
+      irréprochable.** C'est le défaut inverse de celui qu'on redoute et il est aussi grave. Un
+      plancher de **5 points** applique la règle que B1 avait déjà retenue pour *écarter* trois
+      stratégies (26,3 % à 30,2 % = « au niveau du hasard »).
+
+      ⚠️⚠️ **DEUX FIXTURES D'INJECTION SUR HUIT NE PROUVAIENT PAS CE QU'ELLES ANNONÇAIENT.** C'est
+      la trouvaille méthodologique de la passe. Le cas « 60 questions devinables **à la seule
+      parenthèse** » présentait quatre options de **89, 89, 90 et 93** caractères — la bonne étant
+      **la plus longue**, parce que l'incise `(avant l ecriture)` qu'on lui ajoutait l'allongeait.
+      Le verdict nommait donc « la plus longue » à 61,3 %, branche déjà couverte par un autre cas :
+      **la branche « parenthèse » restait sans preuve, exactement le trou que ce cas était censé
+      fermer.** Même défaut sur « la seule ponctuation finale » : 78/78/83/81, la bonne étant la
+      **deuxième** plus longue, et le verdict tombait sur « écarter les deux extrêmes » à 63,1 %.
+      Ce second défaut est resté invisible tant que les stratégies de rang n'étaient pas dans
+      `EXPLOITABLES` : **aucun outil ne pouvait dire que la fixture était devinable à sa taille.**
+      Les options sont désormais égalisées à 93 et 83 caractères. Et le premier cas, « 6 questions
+      devinables ajoutées à `doc` (0,0 % au départ) », **injectait un biais imaginaire** : sur un
+      cours à 0,0 %, rendre la bonne réponse la plus longue *rapproche* du hasard, et le cliquet
+      répondait « progrès » à juste titre. Il injecte désormais **au rang 1**, biais réel de `doc`
+      (39 de ses 64 questions y sont). **8 cas sur 8 vus, contre-épreuve verte** — et le harnais
+      recopie maintenant le verdict rendu sur un cas raté, sans quoi il faut rejouer l'injection à
+      la main pour comprendre.
+
+      **CONTRADICTION** : trois relecteurs adversariaux, **~30 prises**, exécutions sous Node
+      v24.16.0. Les trois plus sérieuses portent sur `doc` et **sont à reprendre dans
+      `tools/doc/corps/` en même temps que les distracteurs perdus** : `lecon-02` b1 q8 opt2
+      (« une SyntaxError est levée au chargement du fichier, avant tout appel ») est **vraie dans
+      un module ES** — mesuré : `SyntaxError: Identifier 'aire' has already been declared` en ESM,
+      `NaN` sans erreur en CommonJS ; `lecon-02` bilan q3 opt2 (« peut laisser les données à moitié
+      écrites ») est **la moitié de la définition de « atomic » que la leçon publie elle-même** ;
+      `lecon-01` bilan q6 opt2 (« `deprecated` n'a aucune conséquence pratique immédiate ») est
+      **endossé mot pour mot par son propre `explain`**. Sur `archi`, **aucun distracteur réécrit
+      n'est devenu vrai** ; quatre ont gagné une ambiguïté (bilan q10, q6, q5, q3), toutes signalées
+      avec une reformulation à longueur et ponctuation conservées. Un relecteur a aussi trouvé un
+      **schéma de rédaction risqué** que la vague a produit six fois : *greffer une subordonnée
+      VRAIE sur une affirmation fausse* — l'option reste fausse, mais elle gagne un appui factuel
+      gratuit. **À mettre en consigne d'écriture.**
+
+      ⚠️ **UN INDICE DE PLUS, MESURÉ ET NON TRAITÉ : le TIRET CADRATIN.** Sur les 32 questions de
+      `doc/lecon-03` et `04`, 5 ont exactement une option portant `—` : **c'est la bonne 5 fois sur
+      5**, et **0 distracteur sur 96** n'en porte. Sur le cours entier, 7 sur 8 (**87,5 %**). La
+      stratégie « la seule avec un tiret » de l'outil ne le voit pas (elle mesure 32,8 % sur `doc`)
+      — à instruire : cherche-t-elle le bon caractère ? C'est le même motif que « le point final »
+      de `react` et « le mot d'attaque » de `projets-js`. Second indice mesuré : **la négation**
+      (une seule option porte `ne`/`n'`/`pas`) désigne la bonne réponse **9 fois sur 13 (69,2 %)**
+      sur ce périmètre.
+
+      **Contrôles** : `verif.js --rapide` **50,8 s, 50 étapes, tout vert** ; `verif-html` **0** ;
+      `verif-donnees` **0 erreur** (2 avertissements antérieurs : un doublon `zig` et `doc` sans
+      encadré d'erreur) ; `verif-normatif` **62/62** ; `verif-doc` **36/36** ;
+      `verif-qcm-biais-mutations` **8/8** ; `verif-chaine-declaree` **OK** ; `quiz-index.js`
+      régénéré `--fresh` ; JSON valide, 0 BOM.
+      **Référence refigée honnêtement** : `archi` verrouillé à 24,0 % / 41,3 %, marqué `traite` ;
+      **`doc` remis à ses vrais chiffres (0,0 % / 60,2 %) et `traite: false`** — la référence
+      enregistrait, avant cette passe, un `pire` de 40,0 % qui masquait 60,2 % faute des stratégies
+      de rang. **17 cours marqués `traite`.** Global du site : **« la plus longue » à 68,2 %**.
+      La case reste **décochée**.
+
+      **CE QUI RESTE, dans l'ordre** : (1) **`doc` à refaire dans `tools/doc/corps/l*.html`** — le
+      plan chiffré est reproductible par `node tools/plan-rangs-qcm.js doc`, et les trois prises
+      adversariales ci-dessus sont à traiter dans le même mouvement ; (2) `git` (80 q, 93,8 %),
+      `rust` (76, 96,1 %), `php` (78, 93,6 %), `java` (77, 94,8 %), `csharp`, `cpp`, `ocaml` ;
+      (3) le tiret cadratin à instruire. ⚠️ **`stats` (99,3 %) reste le cours-témoin de
+      `verif-qcm-biais-mutations` : changer le témoin AVANT de le traiter.**
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
