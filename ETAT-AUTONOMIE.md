@@ -1,6 +1,6 @@
 ﻿# Etat de l'autonomie
 
-Releve du **2026-09-06 10:58**. Ce fichier est reecrit a chaque controle : s'il est vieux, c'est que le controle ne tourne plus.
+Releve du **2026-09-06 12:57**. Ce fichier est reecrit a chaque controle : s'il est vieux, c'est que le controle ne tourne plus.
 
 ## SAIN
 
@@ -10,9 +10,9 @@ Rien a signaler.
 |---|---|
 | tache | active |
 | passe en cours | oui |
-| prochain reveil | 09/06/2026 12:45:28 |
-| derniere trace | 2026-09-06 10:45  (il y a 0.2 h) |
-| usage hebdomadaire | 49 % |
+| prochain reveil | 09/06/2026 14:57:43 |
+| derniere trace | 2026-09-06 12:57  (il y a 0 h) |
+| usage hebdomadaire | 55 % |
 | cases restantes | **14** |
 | plan courant | CHANTIER-V16.md |
 
@@ -24,4 +24,4 @@ Rien a signaler.
 | CHANTIER-V15.md | 32/32 | termine |
 | CHANTIER-V16.md | 8/22 | 14 |
 
-Derniere ligne du journal : `[2026-09-06 10:45:29] ===== reveil autonome =====`
+Derniere ligne du journal : `[2026-09-06 12:57:44] ===== reveil autonome =====`
