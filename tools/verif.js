@@ -26,7 +26,7 @@
                                     #   mis a l epreuve par 9 + 13 fautes injectees
      node tools/verif.js --strict   # 51 etapes, code 1 des qu'un outil signale quoi que ce soit
      node tools/verif.js --lister   # la liste des etapes du mode demande, sans rien lancer
-     node tools/verif.js --mutations  # les 13 epreuves par injection, et rien d'autre : elles
+     node tools/verif.js --mutations  # les 14 epreuves par injection, et rien d'autre : elles
                                     #   MODIFIENT des fichiers avant de les restaurer, et le mode
                                     #   verifie lui-meme que le depot ressort comme il est entre
 
@@ -557,6 +557,13 @@ if (flag("mutations")) {
        EXPLOITABLES le 2026-09-04. Une branche de verificateur que rien n'eprouve
        ne vaut pas mieux qu'un verificateur absent. */
     { nom: "qcmbiai ", fichier: "verif-qcm-biais-mutations.js", vues: "7 / 7" },
+    /* Ajoutee le 2026-09-07, avec la lecture RESTREINDRE du cliquet lexical. Son
+       2e cas est le seul du depot a exiger que le verdict NOMME une dimension
+       precise (« INVERSE/restr. ») : il injecte l'ancienne regle d'ecriture
+       0 / 0 / k, que les trois dimensions historiques ne peuvent pas voir. Sans
+       cette exigence, le cas serait passe vert sur une branche ancienne et la
+       branche neuve serait restee sans preuve. */
+    { nom: "qcmlexi ", fichier: "verif-qcm-lexique-mutations.js", vues: "6 / 6" },
     { nom: "fraich  ", fichier: "fraicheur/verif-fraicheur-mutations.js", vues: "13 / 13" },
     { nom: "fr-affi ", fichier: "fraicheur/verif-affichage-mutations.js", vues: "14 / 14" },
     { nom: "mth-inj ", fichier: "maths/preuve-injection.js", vues: "13 / 13" },
