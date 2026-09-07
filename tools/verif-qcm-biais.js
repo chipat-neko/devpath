@@ -136,11 +136,27 @@ var ECRIRE = process.argv.indexOf("--ecrire") !== -1;
    `data-eng` 41,9 %, et le plus haut des 19 cours traites est `mobile` a 41,0 % — 13,9
    points de marge. C'est exactement la condition posee en B2 pour qu'un cliquet reste lu :
    il ne rougit sur personne le jour ou on l'ajoute, il fige la cible pour la suite. */
+/* AJOUT B4 (2026-09-07, cours `php`) : « la plus dense (mots longs) », et c'est un
+   indice que LA CONSIGNE D'ECRITURE fabrique elle-meme. La consigne impose aux
+   distracteurs une longueur en CARACTERES proche de la bonne reponse (fenetre
+   70-130 %) ; pour y arriver on les rembourre avec de petits mots francais, donc
+   la longueur devient plate pendant que les distracteurs portent PLUS DE MOTS,
+   chacun PLUS COURT. Aucune des 24 strategies precedentes ne comptait des MOTS.
+   Verifie avant de l'inscrire, comme pour toutes les precedentes : le cours le plus
+   expose est `java` a 49,1 %, AUCUN cours n'atteint la cible de 60 %, donc l'ajouter
+   ne fait rougir personne aujourd'hui — mais il surveillera les 61 cours restants.
+   ⚠️ CE QUE LE CLASSEMENT DIT, et qui est l'argument decisif : sur les 12 cours les
+   plus exposes, SEPT sont marques `traite` (java 49,1 %, mobile 46,6 %, bdd 41,9 %,
+   ruby 40,2 %, php 38,1 %, projets-js 38,1 %, js 36,9 %). Un indice qui prefere les
+   cours qu'on a corriges est un indice que la correction produit.
+   La reference a ete refigee dans LE MEME COMMIT : ce n'est pas une regression,
+   c'est une dimension neuve. */
 var EXPLOITABLES = ["la plus longue", "la plus detaillee", "le mot technique exclusif",
                     "l'echo de la question", "l'incise entre parentheses",
                     "la ponctuation finale unique", "la seule qui nie",
                     "la DEUXIEME plus longue", "la TROISIEME plus longue",
-                    "ecarter les deux extremes", "ECARTER l'echo de la question"];
+                    "ecarter les deux extremes", "ECARTER l'echo de la question",
+                    "la plus dense (mots longs)"];
 var CLEF_LONGUEUR = "la plus longue";
 
 /* L'AVANTAGE que « la plus longue » donne a l'apprenant n'est PAS son taux : c'est

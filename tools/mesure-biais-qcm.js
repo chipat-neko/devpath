@@ -137,6 +137,14 @@ function argMax(vals) {
 }
 function toutes(q) { return q.a.map(function (_, i) { return i; }); }
 
+/* Longueur moyenne des mots d'une option : le rembourrage en petits mots la fait
+   BAISSER, alors que la longueur en caracteres reste dans la fenetre. Voir le bloc
+   des deux strategies de densite plus bas. */
+function densiteMots(t) {
+  var w = t.match(/[A-Za-zÀ-ÿ0-9_]+/g) || [];
+  return w.length ? w.join("").length / w.length : 0;
+}
+
 /* L'INVERSE d'argMax : les indices qui ne sont PAS au maximum. Si tout le monde est
    a egalite, la regle ne tranche pas et l'apprenant tire au hasard (toutes). Sans ce
    garde-fou, une question dont les quatre options ont le meme score serait comptee
@@ -545,6 +553,40 @@ var STRATEGIES = [
     nom: "RESTREINDRE aux deux-points",
     quoi: "tirer parmi les seules options qui portent un « : »",
     choisir: function (q) { return restreindre(q, function (t) { return /:/.test(t); }); },
+  },
+  /* ⚠️ LES DEUX STRATEGIES DE DENSITE, ajoutees au point B4 (cours `php`, 2026-09-07).
+     ELLES MESURENT CE QUE LA FENETRE 70-130 % FABRIQUE. La consigne d'ecriture impose
+     aux distracteurs une longueur en CARACTERES proche de la bonne reponse ; pour y
+     arriver on les rembourre avec de petits mots francais, si bien que la longueur
+     est plate mais que les distracteurs portent PLUS DE MOTS, chacun PLUS COURT.
+     Mesure du jour sur `php` fraichement detordu : 19,6 mots par distracteur contre
+     18,1 pour la bonne reponse, et 4,56 lettres par mot contre 4,83. La regle « coche
+     l'option qui dit la meme chose en MOINS DE MOTS » tranche sur 93,6 % des questions
+     et rend 39,0 % — et ce n'est pas propre a cette vague : `mobile` 46,6 %, `ruby`
+     40,4 %, `js` 36,9 %. C'est une dette de TOUTE la campagne, restee invisible parce
+     que les 24 strategies precedentes comptent des CARACTERES et des SIGNES, jamais
+     des MOTS. LA REGLE QUI EN DECOULE : allonger un distracteur avec du vocabulaire
+     technique, pas avec des chevilles ; viser un nombre de mots comparable.
+     Trouvee par un agent mesureur charge de chercher ce qu'aucun outil ne cherche,
+     puis re-mesuree independamment avant d'etre cablee ici.
+
+     ⚠️ Ajouter ces deux strategies fait remonter `pire` sur beaucoup de cours d'un
+     coup. Ce n'est PAS une regression : c'est une dimension neuve. La reference est
+     donc refigee dans LE MEME COMMIT, en le disant. */
+  {
+    nom: "la plus dense (mots longs)",
+    quoi: "l'option dont les mots sont en moyenne les plus longs — ce que le rembourrage trahit",
+    choisir: function (q) { return argMax(q.a.map(densiteMots)); },
+  },
+  {
+    nom: "la moins bavarde (peu de mots)",
+    quoi: "l'option qui compte le MOINS de mots a longueur egale",
+    choisir: function (q) {
+      var n = q.a.map(function (t) { return (t.match(/[A-Za-zÀ-ÿ0-9_]+/g) || []).length; });
+      var mn = Math.min.apply(null, n);
+      var s = n.reduce(function (acc, x, i) { if (x === mn) acc.push(i); return acc; }, []);
+      return s.length === q.a.length ? toutes(q) : s;
+    },
   },
   {
     nom: "COMBINE : tiret puis longueur",

@@ -195,6 +195,41 @@ function questionsPointees(n) {
   }
   return out;
 }
+/* B4 (2026-09-07, cours `php`) : le biais de DENSITE, sans biais de longueur.
+   Les quatre options font EXACTEMENT le meme nombre de caracteres et portent la
+   meme ponctuation ; seule la bonne reponse est ecrite en mots longs, les trois
+   distracteurs en petits mots — ce que le rembourrage de la fenetre 70-130 %
+   fabrique. Si le verdict ne nommait pas « la plus dense », le cas prouverait une
+   autre branche que la branche neuve.
+   L EGALITE DES LONGUEURS EST VERIFIEE ICI MEME : une injection qui rate son
+   egalite prouverait « la plus longue » et se ferait passer pour une reussite. */
+function questionsDenses(n) {
+  var bonne = "Linterpretation conditionnelle transforme automatiquement lenregistrement";
+  var faux = [
+    "Le bout de code qui suit le test met a plat ce que lon a mis dans le tas ici",
+    "Le bloc de test qui se lit en bas rend a plat tout ce que lon a mis de cote",
+    "La part du test qui se pose en haut met de cote ce que lon a mis en tas la",
+  ].map(function (t) {
+    while (t.length < bonne.length) t += " la";
+    return t.slice(0, bonne.length);
+  });
+  faux.forEach(function (t) {
+    if (t.length !== bonne.length) {
+      console.error("epreuve invalide : les options ne sont pas de meme longueur");
+      process.exit(2);
+    }
+  });
+  var out = [];
+  for (var i = 0; i < n; i++) {
+    out.push({
+      q: "Question dense n° " + (i + 1) + " — quel enonce decrit le comportement ?",
+      a: [faux[0], faux[1], faux[2], bonne],
+      correct: 3,
+      explain: "Question injectee par une epreuve de mutation : elle ne doit jamais rester dans le depot.",
+    });
+  }
+  return out;
+}
 function pageAvec(questions) {
   var bloc = '<script type="application/json" data-quiz>' + JSON.stringify(questions) + '</script>\n  ';
   return pageOrig.replace('</body>', bloc + '</body>');
@@ -291,6 +326,16 @@ var MUTATIONS = [
   ['la référence rendue illisible',
     function () { fs.writeFileSync(REF, '{ ceci n’est pas du JSON'); },
     1, /illisible/],
+
+  /* B4 : le biais de DENSITE, la dimension ajoutee le 2026-09-07 avec le cours `php`.
+     Le motif attendu nomme la densite : sans lui, le cas prouverait une branche
+     ancienne et le cablage de la strategie neuve resterait decoratif. */
+  ['60 questions devinables A LA SEULE DENSITE DE MOTS, et doc marqué « traité »',
+    function () {
+      fs.writeFileSync(PAGE, pageAvec(questionsDenses(60)));
+      fs.writeFileSync(REF, refAvec(function (j) { j.cours.doc.traite = true; }));
+    },
+    1, /plus dense/],
 
   ['CONTRE-ÉPREUVE : 6 questions ÉQUILIBRÉES ajoutées au même endroit',
     function () { fs.writeFileSync(PAGE, pageAvec(questionsEquilibrees(6))); },

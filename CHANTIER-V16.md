@@ -4783,6 +4783,48 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       les deux indices ci-dessus disent que la moyenne du site sur *une seule* dimension est le
       mauvais endroit où décider.
 
+
+      **DETTE 2 TRAITÉE DANS LA FOULÉE, une fois `php` isolé dans son propre commit :
+      « la plus dense » entre dans la MESURE et dans le CLIQUET.** Deux stratégies neuves
+      dans `mesure-biais-qcm.js` (**26 stratégies**), et « la plus dense (mots longs) »
+      inscrite dans `EXPLOITABLES` de `verif-qcm-biais.js`.
+
+      **CE QUE LE CLASSEMENT DIT, et c'est l'argument décisif : cet indice PRÉFÈRE les cours
+      qu'on a corrigés.** Sur les 12 cours les plus exposés, **SEPT sont marqués `traite`** :
+
+      | cours | traité | « la plus dense » |
+      |---|:---:|---:|
+      | `java` | ✅ | **49,1 %** |
+      | `mobile` | ✅ | 46,6 % |
+      | `bdd` | ✅ | 41,9 % |
+      | `linux` | — | 41,8 % |
+      | `powershell` | — | 40,2 % |
+      | `ruby` | ✅ | 40,2 % |
+      | `php` | ✅ | 38,1 % |
+      | site (6 167 questions) | | 27,0 % |
+
+      Un indice qui préfère les cours corrigés est un indice **que la correction produit** :
+      la fenêtre 70–130 % porte sur les CARACTÈRES, et on l'atteint en rembourrant avec de
+      petits mots français. **Aucun cours n'atteint la cible de 60 %** (le plus haut est
+      `java` à 49,1 %), donc l'inscrire ne fait rougir personne aujourd'hui — mais elle
+      surveillera les 61 cours restants. Le cliquet a signalé **8 cours** au moment de
+      l'ajout ; référence refigée dans **le même commit**, et il faut le redire : ce n'est
+      pas une régression, c'est une dimension neuve.
+
+      **ET SURTOUT — L'ÉPREUVE PAR INJECTION A ÉTÉ ÉTENDUE, sans quoi le câblage serait
+      décoratif.** `verif-qcm-biais-mutations.js` passe de 8 à **9 cas** : 60 questions dont
+      les quatre options font **exactement le même nombre de caractères** et portent la même
+      ponctuation, seule la bonne réponse étant écrite en mots longs. Le motif attendu nomme
+      *la densité* : si le verdict tombait sur « la plus longue », le cas prouverait une
+      branche ancienne et laisserait la neuve sans preuve — c'est très exactement l'erreur
+      qu'avait faite le cas « parenthèse » en septembre, qui allongeait la bonne réponse en
+      lui ajoutant son incise. Le générateur **vérifie lui-même l'égalité des longueurs et
+      s'arrête en code 2** si elle est rompue. Résultat : **9 cas vus sur 9**, contre-épreuve
+      restée verte, fichiers restaurés.
+
+      **Restent les dettes 1 et 3** (créditer `1/n` sur les égalités du lexique ; étendre
+      « les quatre ou aucune » au point interne, à la flèche et aux guillemets).
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
