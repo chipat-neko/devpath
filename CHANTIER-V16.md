@@ -4635,6 +4635,154 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       être ni celle qui reprend **le plus** de mots de l'énoncé, ni celle qui en reprend **le
       moins**. Viser 25 % dans les **deux** sens, comme pour les rangs de longueur.
 
+
+      ---
+
+      **29ᵉ COURS DÉTORDU — `php`, le plus nocif de ceux qui restaient (2026-09-07).**
+      **88,9 % → 25,3 %** sur « la plus longue » (rendement 93,1 % → 25,3 %). Rangs de longueur
+      **73/3/1/1 → 21/20/19/18** (cible 20/20/19/19). **212 distracteurs réécrits sur 234**,
+      `mesure-qcm-intouchable php` : *aucune atteinte*. Les **24 stratégies de l'outil tiennent
+      entre 21,6 % et 27,6 %**, aucune ne dépasse le hasard de plus de 2,6 points. Indice lexical
+      de l'outil : 32 questions exploitables et 60 à mettre en forme → **0 et 0**.
+      Protocole : 5 écrivains sur lots disjoints, puis 5 relecteurs adversariaux, puis 3 correcteurs.
+      Consigne réutilisable : `scratchpad/CONSIGNE-PHP.md` (elle portait dès le départ la règle
+      « les quatre ou aucune », l'incise en NOMBRE, la règle du `k` et la clause d'écho inverse).
+
+      **LE DÉFAUT FONDATEUR, RETROUVÉ POUR LA CINQUIÈME FOIS — et cette fois dans un contrôle de
+      TYPE.** `php/lecon-09` déclarait `interface Comparable { public function comparer(self $autre): int; }`
+      puis `class Produit implements Comparable { public function comparer(self $autre): int {…} }`
+      et publiait `// Sortie : Stylo;1.5`. **Le bloc ne s'exécute dans aucune version de PHP** :
+      `self` se résout à la classe **déclarante** (`Comparable` dans l'interface, `Produit` dans la
+      classe), les paramètres sont contravariants depuis 7.4 et invariants avant, donc PHP lève une
+      `E_COMPILE_ERROR` — « Declaration of Produit::comparer(Produit $autre): int must be compatible
+      with Comparable::comparer(Comparable $autre): int » — **au linkage, avant le moindre `echo`**.
+      Prouvé deux fois indépendamment (`Zend/zend_inheritance.c`, puis la documentation *Type
+      declarations* + *Covariance and Contravariance*), PHP n'étant pas installé ici. Corrigé, et la
+      prose qui définissait `self` comme « un objet de la même classe » — c'est `static` — réécrite
+      en piège pédagogique. ⚠️ **Aucun des 53 vérificateurs ne voyait ce défaut** : `verif-sorties`
+      rejoue 449 blocs et n'exécute pas PHP, faute d'interpréteur sur la machine.
+
+      **TROIS BONNES RÉPONSES SUPPLÉMENTAIRES FABRIQUÉES PAR LA VAGUE, trouvées par contradiction :**
+      `lecon-14` q3 (un distracteur dont les trois clauses sur le *data provider* et le *mock*
+      étaient vraies — et **confirmées deux fois par le corps de la leçon**) ; `lecon-15` q2
+      (« elle range le contenu dans le cache du gabarit » décrit exactement Blade, que la page
+      n'enseigne pas, donc irréfutable) ; `lecon-21` bilan (le distracteur **`@php`** est une
+      directive Blade réelle qui répond littéralement à « comment ouvrir un bloc de code PHP ? » —
+      et ce cours enseigne Blade en `lecon-16`). Plus `lecon-15` q3, **résoluble par pure
+      élimination** : ses trois distracteurs recopiaient *verbatim* les bonnes réponses de q1 et q2.
+
+      **UN RAISONNEMENT FAUX ATTRAPÉ PAR LE RELECTEUR SUIVANT, à ne pas rejouer.** La vague d'écriture
+      avait retiré le distracteur `exit(true)` en le croyant JUSTE (`true` → entier 1 = échec). Le
+      changelog PHP **8.4.0** dit : « Prior to PHP 8.4.0 … any value not of type int was cast to
+      string » — donc en 8.1/8.3, `exit(true)` **affiche « 1 » et sort avec le code 0**, un succès :
+      le distracteur était faux. Le cours annonce 9 fois PHP 8.1 et 8 fois PHP 8.3, **jamais 8.4**.
+      **Règle : raisonner à la version que le cours annonce, pas à la dernière parue.**
+
+      **NEUF AUTRES DÉFAUTS DE CORPS corrigés et prouvés par la spécification** : `lecon-13`
+      (`use ($total)` fige la valeur **à la définition** → la sortie était `115`, elle vaut `100` —
+      et le bloc **se contredisait lui-même** deux lignes plus haut ; `strtoupper('cléo')` rend
+      `CLéO` et non `CLÉO`, la fonction étant *locale-insensitive* depuis 8.2 ; la cause du second
+      `foreach` d'un générateur, d'abord corrigée à moitié — le **message** vient de
+      `zend_generator_get_iterator()` sur un générateur **fermé**, pas de `rewind()`, qui en lève un
+      autre) ; `lecon-18` (le SVG, sa légende et son `aria-label` annonçaient une propriété **`->a`**
+      de `DateInterval` **qui n'existe pas** — `%a` n'est qu'un format — alors que le bloc de code de
+      la même page écrivait déjà `->days`) ; `lecon-20` (`catch (RequestException $e)` annoncé comme
+      attrapant « timeout, DNS… tout », alors que **`ConnectException` hérite de `TransferException`**
+      et lui échappe — dans la leçon même qui martèle le timeout) ; `lecon-12` (« un `default`
+      **obligatoire** » : le manuel dit qu'il est facultatif, l'exhaustivité étant garantie par
+      `UnhandledMatchError`) ; `lecon-11` (phpdotenv : `createImmutable()` **n'appelle pas
+      `putenv()`**, donc `getenv()` rend `false` — corrigé aux 3 endroits, y compris l'antisèche) ;
+      `lecon-17` (l'ancre `$` accepte un saut de ligne final : `/^[0-9]{5}$/` valide `"12345\n"`,
+      dit 4 fois à tort) ; `lecon-09` (un `new User(...)` sans `require` ni autoloader annonçait une
+      sortie au lieu de `Class not found`) ; `lecon-10` (`// 199` promettait un type que la leçon ne
+      définit nulle part — 0 `CREATE TABLE` — et que PDO_MySQL, qui émule par défaut, rend en chaîne).
+      Plus les `print_r` annotés en notation JS de `lecon-04` et `lecon-17` : **tranché par comptage**
+      sur tout le cours (format fidèle 2 fois, format JS 4 fois, et `lecon-04` se contredit à 76
+      lignes d'écart) — c'était une faute, pas une convention.
+
+      **CE QUI DOMINE CETTE PASSE : DEUX INDICES QUE LE PROTOCOLE NE MESURE PAS, et le cliquet est
+      VERT pendant ce temps.** Un agent mesureur a été chargé de chercher ce qu'aucune des 24
+      stratégies ne cherche. Ses deux trouvailles ont été **re-mesurées ici, indépendamment** — et la
+      mesure corrige ses chiffres et **réfute son attribution causale**, ce qui est le plus utile.
+
+      1. **La règle du `k` (`0 / 0 / k`) ferme la DÉSIGNATION UNIQUE, pas le CHAMP.** L'apprenant
+         qui **écarte les options dont tous les mots figurent déjà dans la page** passe de 4 options
+         à 2. Sur `php` : la règle tranche sur **62,8 % des questions** et **rend 43,2 %**.
+         `verif-qcm-lexique` est **vert** et `mesure-lexique-qcm --liste=php` affiche « 0 exploitable,
+         0 à mettre en forme » — parce que les trois variantes de l'outil exigent que la stratégie
+         désigne **UNE SEULE** option : une égalité à deux vaut **50 % pour l'apprenant et 0 pour
+         l'outil**. C'est la leçon « RESTREINDRE » de `data-eng`, transposée au lexique.
+      2. **La vague a aplati les CARACTÈRES, pas les MOTS.** Pour atteindre la fenêtre 70–130 %, on
+         rembourre avec des petits mots français : les distracteurs de `php` portent **19,6 mots
+         contre 18,1** pour la bonne réponse, et **4,56 lettres par mot contre 4,83**. La règle
+         « coche l'option qui dit la même chose en moins de mots » tranche sur **93,6 %** des
+         questions et **rend 39,0 %**.
+      3. Mineur, mais réel et déjà fermé : **le POINT interne** (une seule option écrite en deux
+         phrases) rendait 85,7 % sur 7 questions, et **« écarter la glose finale » rendait 100,0 %**
+         sur `lecon-03` q1 (trois distracteurs finissant par une incise, pas la bonne réponse).
+         Fermé **par déplacement pur** — mêmes mots, mêmes longueurs, donc rangs, ponctuation et
+         lexique inchangés : la stratégie est retombée à **0,0 % de couverture**.
+
+      ⚠️ **LA MESURE RÉFUTE LA THÈSE, et c'est le point à retenir.** Le rapport concluait que « les
+      trois cours en tête du site sur l'indice lexical retourné sont EXACTEMENT les trois traités par
+      la règle du `k` », donc que la règle **produit** l'indice. Balayage refait sur les 90 cours :
+
+      | | couverture | rendement |
+      |---|---:|---:|
+      | site (6 166 questions) | 60,4 % | **18,6 %** |
+      | `haskell` — **jamais traité**, plus haut du site | 65,2 % | **43,4 %** |
+      | `php` | 62,8 % | 43,2 % |
+      | `asm`, `go`, `lisp`, `c`, `dart` — **jamais traités** | 63–82 % | 36,5–42,1 % |
+      | `mobile` (règle du `k`) | 67,1 % | 31,0 % |
+      | `stats` (règle du `k`) | 56,9 % | 28,0 % |
+      | `data-eng`, `doc`, `os` — **traités** | 45–77 % | **1,1–4,4 %** |
+
+      Les cours en tête sont donc **majoritairement des cours jamais touchés**, et trois cours
+      traités sont à 1–4 %. **La règle du `k` ne fabrique pas l'indice ; elle ne le ferme pas
+      complètement.** Nuance qui change la correction à faire : il ne faut pas *abandonner* la règle,
+      il faut **compter le crédit `1/n` d'une égalité** au lieu de la seule désignation unique — dans
+      la mesure ET dans le cliquet.
+
+      **DETTE ÉCRITE, NON FAITE — trois chantiers d'outillage, chiffrés, à prendre dans une passe
+      dédiée** (les mêler à un cours en cours de traitement mêlerait deux refigeages) :
+      1. **Créditer les égalités** dans `mesure-lexique-qcm.js` et `verif-qcm-lexique.js`
+         (crédit `1/n`, pas `argMax` unique). Concerne les 90 cours, pas seulement les traités.
+      2. **Ajouter une fenêtre en NOMBRE DE MOTS** à `plan-rangs-qcm.js`, et la stratégie
+         « la plus dense » à `mesure-biais-qcm.js`. Elle rend 46,6 % sur `mobile`, 40,4 % sur `ruby`,
+         39,0 % sur `php`, 36,9 % sur `js` — c'est une dette de **toute la campagne**, pas de cette
+         vague. ⚠️ L'ajouter fera monter `pire` sur beaucoup de cours : **refiger dans le même
+         commit**, en écrivant que c'est une dimension neuve et non une régression.
+      3. **Étendre « les quatre ou aucune » au point interne, à la flèche et aux guillemets « »**
+         (15 questions concernées sur `php`, 12 à retoucher).
+
+      **TROIS QUESTIONS LAISSÉES HORS CIBLE, sciemment**, toutes dans le QCM bilan de `lecon-21`, et
+      toutes de la même nature : **`plan-rangs-qcm` exige une inégalité STRICTE de longueur et ne sait
+      pas récompenser une égalité.** q1 (« par quel SYMBOLE commence une variable ? ») a une bonne
+      réponse d'**un caractère** : l'outil réclame des distracteurs « plus courts que 1 », un
+      intervalle vide — les quatre options ont été mises à un caractère (`$`/`@`/`%`/`#`), ce qui rend
+      la bonne réponse indiscernable même si l'outil facture 3 caractères. q4 et q5 sont dans le même
+      cas. **Une égalité de longueur n'est pas un indice, c'en est le contraire** : c'est l'outil qui
+      doit apprendre à la lire.
+
+      **VÉRIFICATIONS** : `verif-html` 1 629 fichiers 0 problème, `verif-donnees` 25 contrôles
+      0 erreur, `verif-sorties` **449 blocs rejoués, 449 identiques**, chaîne `verif.js --rapide`
+      **80,5 s, les 53 vérificateurs verts**, `verif-rendu` 4 leçons × 3 largeurs × 2 thèmes
+      **0 erreur**, index `quiz`, `search`, `antisèches` et `pièges` régénérés `--fresh`,
+      0 BOM, 0 U+00A0 littérale, 0 `&nbsp;` dans un bloc `data-quiz`, 43 blocs JSON valides.
+
+      ⚠️ **EFFET DE BORD ASSUMÉ, la 11ᵉ fois** : détordre un cours périme les chiffres qu'une autre
+      leçon publie **sur le site**. `doc/lecon-03` citait 51,0 % et 3 110 manquements à sa propre
+      clause S3 ; la mesure du jour donne **49,9 % et 3 046**. Reperimé (10 substitutions),
+      `verif-normatif` repasse de **64/66 à 66/66**. ⚠️ Piège du jour : les 5 occurrences de
+      « 3 110 » étaient écrites avec une **espace insécable U+00A0**, invisible à un `grep "3 110"`
+      qui rendait « 1 occurrence » au lieu de 5.
+
+      **OÙ EN EST LA CIBLE DE B1** : le global « la plus longue » du site passe de **61,7 % à
+      60,9 %** (6 167 questions, 90 cours). La cible de B1 était **60,0 %** : elle est à
+      **0,9 point**. ⚠️ Ne pas en conclure que B4 est fini : **61 cours restent non traités**, et
+      les deux indices ci-dessus disent que la moyenne du site sur *une seule* dimension est le
+      mauvais endroit où décider.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 

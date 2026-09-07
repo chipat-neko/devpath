@@ -138,7 +138,7 @@ $ajouteRef = function (int $n) use (&amp;$total) {
 $ajouteRef(10);
 $ajouteRef(5);
 echo $total, PHP_EOL;            // 15  (modifié par référence)
-echo $ajouteValeur(100), PHP_EOL; // 115 (15 + 100)
+echo $ajouteValeur(100), PHP_EOL; // 100 (0 figé + 100)
 </code></pre></figure>
 
 <p>Une closure peut aussi être <strong>liée</strong> à un objet avec <code>bindTo()</code> (ou <code>Closure::bind()</code>), ce qui change la valeur de <code>$this</code> à l'intérieur. Pratique pour injecter un comportement dans une classe.</p>
@@ -162,7 +162,8 @@ $noms = ['ana', 'bob', 'cléo'];
 // Syntaxe « first-class callable » : strtoupper(...)
 $majuscules = array_map(strtoupper(...), $noms);
 print_r($majuscules);
-// Array ( [0] =&gt; ANA [1] =&gt; BOB [2] =&gt; CLÉO )
+// strtoupper ne modifie que les lettres ASCII : le é reste tel quel
+// Array ( [0] =&gt; ANA [1] =&gt; BOB [2] =&gt; CLéO )
 </code></pre></figure>
 
 <h2>Générateurs : produire des valeurs paresseusement</h2>
@@ -218,7 +219,7 @@ foreach (pairs() as $cle =&gt; $valeur) {
 // a=1 b=2 c=3 d=4
 </code></pre></figure>
 
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Un générateur ne se consomme qu'<strong>une seule fois</strong>. Après un <code>foreach</code> complet, il est épuisé&nbsp;: un second <code>foreach</code> sur le même objet générateur ne produit rien (ou lève une erreur si tu tentes de le rembobiner). Si tu dois reparcourir, rappelle la fonction pour obtenir un générateur frais.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Un générateur ne se consomme qu'<strong>une seule fois</strong>. Après un <code>foreach</code> complet, il est épuisé&nbsp;: un second <code>foreach</code> sur le même objet générateur lève une exception (<code>Cannot traverse an already closed generator</code>). Ce message vient de l'ouverture du parcours, qui refuse un générateur déjà fermé&nbsp;: <code>rewind()</code> n'est même pas appelé. La méthode <code>rewind()</code>, elle, a son propre message — <code>Cannot rewind a generator that was already run</code> — et ne vise qu'un générateur encore ouvert, avancé au-delà du premier <code>yield</code> (typiquement après un <code>break</code>). Si tu dois reparcourir, rappelle la fonction pour obtenir un générateur frais.</p></div></div>
 
 <h2>Les enums : modéliser un ensemble fini</h2>
 
@@ -545,9 +546,9 @@ try {
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Quelle différence de comportement obtiens-tu entre use ($x) et use (&$x) dans une closure ?","a":["use ($x) capture par valeur (une copie figée au moment de la définition) ; use (&$x) capture par référence (la closure lit et modifie la variable d'origine)","C'est l'inverse","Les deux capturent par référence","Aucune des deux ne capture $x"],"correct":0,"explain":"Sans l'esperluette, la closure travaille sur une copie de $x prise à la création. Avec &$x, elle partage la variable externe : toute modification se répercute des deux côtés."},
-  {"q":"Pourquoi un générateur économise-t-il la mémoire face à un tableau, et que se passe-t-il si tu le parcours deux fois ?","a":["Un générateur (yield) produit les valeurs une à une, à la demande, sans tout garder en mémoire comme un tableau ; le parcourir une seconde fois échoue, car un générateur n'est pas rembobinable une fois consommé","Il copie tout le tableau d'abord","Il est plus lent et plus gourmand","On peut le parcourir une infinité de fois"],"correct":0,"explain":"Au lieu de construire toute la collection, un générateur calcule chaque élément au fil de l'itération : l'empreinte mémoire reste minime. En revanche, il s'épuise : une fois itéré, on ne peut pas le reparcourir sans le recréer."},
-  {"q":"Quelles méthodes dois-tu implémenter pour que $obj['clé'] et count($obj) fonctionnent ?","a":["L'interface ArrayAccess (offsetGet/offsetSet/offsetExists/offsetUnset) pour l'accès par crochets, et l'interface Countable (count()) pour count()","__get et __set seulement","Une seule méthode toArray()","Aucune, c'est automatique"],"correct":0,"explain":"L'accès façon tableau exige d'implémenter ArrayAccess et ses quatre méthodes offset*. Pour que count() renvoie un nombre pertinent, l'objet doit implémenter Countable et sa méthode count()."}
+  {"q":"Quelle différence de comportement obtiens-tu entre use ($x) et use (&$x) dans une closure ?","a":["use ($x) capture par valeur (une copie figée au moment de la définition) ; use (&$x) capture par référence (la closure lit et modifie la variable d'origine)","use ($x) capture par référence (la closure écrit sur la variable externe) ; use (&$x) capture par valeur (une copie prise à la création)","use ($x) et use (&$x) capturent par référence (la closure suit les changements) ; seule la fonction fléchée fn copie la valeur (capture automatique)","use ($x) copie la variable à chaque appel de la closure (la copie change à tous les tours) ; use (&$x) fige la valeur une fois pour toutes au moment de la définition (une seule copie)"],"correct":0,"explain":"Sans l'esperluette, la closure travaille sur une copie de $x prise à la création. Avec &$x, elle partage la variable externe : toute modification se répercute des deux côtés."},
+  {"q":"Pourquoi un générateur économise-t-il la mémoire face à un tableau, et que se passe-t-il si tu le parcours deux fois ?","a":["Un générateur (yield) produit les valeurs une à une, à la demande, sans tout garder en mémoire comme un tableau ; le parcourir une seconde fois échoue, car un générateur n'est pas rembobinable une fois consommé","Un générateur (yield) garde toutes les valeurs en mémoire, mais il ne les produit qu'une à une, ce qui prend moins de place qu'un tableau ; le parcourir une deuxième fois rend exactement la même suite, valeur par valeur","Un générateur (yield) construit d'abord le tableau complet, puis le relit case par case, ce qui ne coûte que la moitié de la mémoire habituelle ; le parcourir une seconde fois marche toujours, car le tableau reste intact","Un générateur (yield) appelle sa fonction une fois par valeur lue, donc il est plus lent qu'un tableau, mais il reste économe ; le parcourir une deuxième fois rappelle la fonction, qui reprend du début"],"correct":0,"explain":"Au lieu de construire toute la collection, un générateur calcule chaque élément au fil de l'itération : l'empreinte mémoire reste minime. En revanche, il s'épuise : une fois itéré, on ne peut pas le reparcourir sans le recréer."},
+  {"q":"Quelles méthodes dois-tu implémenter pour que $obj['clé'] et count($obj) fonctionnent ?","a":["L'interface ArrayAccess (offsetGet/offsetSet/offsetExists/offsetUnset) pour l'accès par crochets, et l'interface Countable (count()) pour count()","L'interface ArrayAccess (offsetGet/offsetSet) pour count(), et l'interface Countable (offsetExists/offsetUnset) pour l'accès par crochets","La paire __get et __set (une seule paire) pour lire $obj['clé'], et la fonction statique cases() (venue de l'enum) pour count()","L'interface IteratorAggregate (getIterator) pour $obj['clé'], et l'interface Stringable (la méthode __toString) pour count()"],"correct":0,"explain":"L'accès façon tableau exige d'implémenter ArrayAccess et ses quatre méthodes offset*. Pour que count() renvoie un nombre pertinent, l'objet doit implémenter Countable et sa méthode count()."}
 ]
 </script>
 

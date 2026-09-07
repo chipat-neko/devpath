@@ -192,7 +192,7 @@ if ($statut &gt;= 200 &amp;&amp; $statut &lt; 300) {
 <figure class="code-block" data-file="guzzle.php"><pre><code class="language-php">&lt;?php
 require 'vendor/autoload.php';
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\TransferException;
 
 $client = new Client([
     'base_uri' =&gt; 'https://api.exemple.fr/',
@@ -206,8 +206,9 @@ try {
     ]);
     $data = json_decode((string) $reponse-&gt;getBody(), true);
     echo "Commande #{$data['id']} — statut " . $reponse-&gt;getStatusCode();
-} catch (RequestException $e) {
-    // 4xx/5xx, timeout, DNS… tout arrive ici
+} catch (TransferException $e) {
+    // 4xx/5xx, timeout, DNS… tout arrive ici : TransferException est la classe mère
+    // ATTENTION : RequestException ne couvre PAS ConnectException (timeout, DNS)
     echo 'Échec : ' . $e-&gt;getMessage();
 }</code></pre></figure>
 <p>Guzzle gère les redirections, les tentatives, l'asynchrone, et suit le standard <strong>PSR-18</strong> (interface commune des clients HTTP). Pour du code de production, c'est l'option recommandée&nbsp;; cURL reste précieux pour un petit script sans dépendance.</p>
@@ -279,11 +280,11 @@ try {
 </ol></div>
 <script type="application/json" data-quiz>
 [
-  {"q":"Pour transformer la réponse JSON d'une API en tableau associatif PHP, on écrit :","a":["json_decode($json, true)","json_encode($json)","json_decode($json)","json_parse($json)"],"correct":0,"explain":"json_decode lit du JSON ; le second argument true renvoie un tableau associatif plutôt qu'un objet. json_encode fait l'inverse (PHP → JSON)."},
-  {"q":"Quelle option cURL faut-il activer pour que curl_exec RENVOIE la réponse au lieu de l'afficher ?","a":["CURLOPT_RETURNTRANSFER => true","CURLOPT_POST => true","CURLOPT_TIMEOUT => 5","CURLOPT_HEADER => true"],"correct":0,"explain":"Sans CURLOPT_RETURNTRANSFER, curl_exec envoie la réponse directement sur la sortie et renvoie seulement true. Avec, elle est retournée sous forme de chaîne."},
-  {"q":"Pourquoi ne jamais appeler une API sans timeout ?","a":["Si l'API devient lente, chaque visiteur attend et les processus PHP saturent : tout le site tombe","Le JSON ne se décode pas sans timeout","cURL l'exige obligatoirement","Sinon la clé d'API fuite"],"correct":0,"explain":"Un service tiers lent, sans timeout, bloque chaque requête. Les processus PHP-FPM s'accumulent en attente et le site entier devient indisponible à cause d'un tiers."},
-  {"q":"Une API répond 503. Que faire ?","a":["C'est une erreur serveur (5xx) : réessayer plus tard, avec un délai croissant","Corriger l'URL ou la clé, l'erreur vient de moi","Décoder le corps, tout va bien","Ignorer, 503 signifie succès"],"correct":0,"explain":"5xx = souci côté serveur (500, 503). Réessayer plus tard (backoff) a du sens. Un 4xx, lui, vient de la requête (clé, URL, quota) et ne se règle pas en réessayant tel quel."},
-  {"q":"Où stocker la clé d'API utilisée dans l'en-tête Authorization ?","a":["Dans une variable d'environnement (getenv), hors du code versionné","En dur dans le fichier PHP","Dans le JSON de réponse","Dans le nom du fichier"],"correct":0,"explain":"Une clé écrite en dur finit dans Git puis est exposée. On la range dans une variable d'environnement (.env non versionné), comme un mot de passe de base de données."}
+  {"q":"Pour transformer la réponse JSON d'une API en tableau associatif PHP, on écrit :","a":["json_decode($json, true)","json_encode($json)","json_decode($json)","json_parse($json, true)"],"correct":0,"explain":"json_decode lit du JSON ; le second argument true renvoie un tableau associatif plutôt qu'un objet. json_encode fait l'inverse (PHP → JSON)."},
+  {"q":"Quelle option cURL faut-il activer pour que curl_exec RENVOIE la réponse au lieu de l'afficher ?","a":["CURLOPT_RETURNTRANSFER => true","CURLOPT_POSTFIELDS => true","CURLOPT_TIMEOUT => 30","CURLOPT_HEADER => true"],"correct":0,"explain":"Sans CURLOPT_RETURNTRANSFER, curl_exec envoie la réponse directement sur la sortie et renvoie seulement true. Avec, elle est retournée sous forme de chaîne."},
+  {"q":"Pourquoi ne jamais appeler une API sans timeout ?","a":["Si l'API devient lente, chaque visiteur attend et les processus PHP saturent : tout le site tombe","La réponse reste invalide : json_decode renvoie null et le script continue en silence sur cette erreur","Sans cette option, curl_exec renvoie false immédiatement : le client cURL bloque toute requête sans timeout","La clé d'API part alors en clair dans l'en-tête : le serveur du prestataire peut la lire et la garder"],"correct":0,"explain":"Un service tiers lent, sans timeout, bloque chaque requête. Les processus PHP-FPM s'accumulent en attente et le site entier devient indisponible à cause d'un tiers."},
+  {"q":"Une API répond 503. Que faire ?","a":["C'est une erreur serveur (5xx) : réessayer plus tard, avec un délai croissant","C'est une erreur du client (4xx) : corriger l'URL ou la clé, puis renvoyer immédiatement","Le code 503 dit succès (2xx) : décoder le corps, inutile de réessayer","C'est une redirection (3xx) : suivre la nouvelle adresse et décoder le corps"],"correct":0,"explain":"5xx = souci côté serveur (500, 503). Réessayer plus tard (backoff) a du sens. Un 4xx, lui, vient de la requête (clé, URL, quota) et ne se règle pas en réessayant tel quel."},
+  {"q":"Où stocker la clé d'API utilisée dans l'en-tête Authorization ?","a":["Dans une variable d'environnement (getenv), hors du code versionné","En dur dans le fichier PHP du projet (le plus simple), même s'il est versionné","Dans le JSON de la réponse (le serveur la renvoie), avec le reste de la configuration","Dans le nom du fichier (celui du script), sur le serveur"],"correct":0,"explain":"Une clé écrite en dur finit dans Git puis est exposée. On la range dans une variable d'environnement (.env non versionné), comme un mot de passe de base de données."}
 ]
 </script>
 

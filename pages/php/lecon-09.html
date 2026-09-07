@@ -193,7 +193,7 @@ interface Exportable
 
 interface Comparable
 {
-    public function comparer(self $autre): int;
+    public function comparer(Comparable $autre): int;
 }
 
 class Produit implements Exportable, Comparable
@@ -208,7 +208,7 @@ class Produit implements Exportable, Comparable
         return "{$this-&gt;nom};{$this-&gt;prix}";
     }
 
-    public function comparer(self $autre): int
+    public function comparer(Comparable $autre): int
     {
         return $this-&gt;prix &lt;=&gt; $autre-&gt;prix;
     }
@@ -219,7 +219,7 @@ echo $p-&gt;exporter();
 // Sortie : Stylo;1.5
 </code></pre></figure>
 
-<p>Dans <code>comparer(self $autre)</code>, le type <code>self</code> veut dire «&nbsp;un objet de la même classe&nbsp;»&nbsp;: ici, un autre <code>Produit</code>. L'opérateur <code>&lt;=&gt;</code> (le «&nbsp;spaceship&nbsp;») renvoie <code>-1</code>, <code>0</code> ou <code>1</code> selon que la gauche est inférieure, égale ou supérieure à la droite. Surtout, tu peux maintenant écrire une fonction qui accepte n'importe quel objet <code>Exportable</code>, sans savoir s'il s'agit d'un <code>Produit</code> ou d'autre chose&nbsp;: c'est tout l'intérêt d'un contrat.</p>
+<p>Dans <code>comparer(Comparable $autre)</code>, le type dit&nbsp;: «&nbsp;on compare à un autre objet qui respecte le même contrat&nbsp;». <strong>Écrire <code>self</code> à cette place ne marcherait pas</strong>&nbsp;: <code>self</code> ne signifie pas «&nbsp;un objet de la même classe&nbsp;» (ça, c'est <code>static</code>, et PHP ne l'accepte qu'en type de retour), mais «&nbsp;la classe où la méthode est écrite&nbsp;»&nbsp;— donc <code>Comparable</code> dans l'interface et <code>Produit</code> dans la classe. Comme un paramètre redéfini a le droit d'être plus <strong>large</strong> que celui du contrat, jamais plus étroit, PHP refuserait la classe dès la compilation&nbsp;: <em>Declaration of Produit::comparer(Produit $autre): int must be compatible with Comparable::comparer(Comparable $autre): int</em>. L'opérateur <code>&lt;=&gt;</code> (le «&nbsp;spaceship&nbsp;») renvoie <code>-1</code>, <code>0</code> ou <code>1</code> selon que la gauche est inférieure, égale ou supérieure à la droite. Surtout, tu peux maintenant écrire une fonction qui accepte n'importe quel objet <code>Exportable</code>, sans savoir s'il s'agit d'un <code>Produit</code> ou d'autre chose&nbsp;: c'est tout l'intérêt d'un contrat.</p>
 
 <h2>Les traits&nbsp;: partager des méthodes sans héritage</h2>
 <p>Parfois deux classes sans lien de parenté ont besoin du même code. Plutôt que de copier-coller, on utilise un <code>trait</code>&nbsp;: un bloc de méthodes qu'on «&nbsp;injecte&nbsp;» dans une classe avec <code>use</code>.</p>
@@ -273,6 +273,10 @@ class User
 <figure class="code-block" data-file="index.php"><pre><code class="language-php">&lt;?php
 
 use App\Models\User;
+
+// Le "use" ne fait que raccourcir le nom : il ne charge aucun fichier.
+// Sans autoload, la classe doit encore être chargée à la main.
+require __DIR__ . "/src/Models/User.php";
 
 $u = new User("Noah");
 echo $u-&gt;nom;
@@ -473,9 +477,9 @@ try {
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Quelle est la différence entre implements et extends, et combien de chacun une classe peut-elle avoir ?","a":["extends hérite d'une classe parente (une seule, héritage simple) ; implements adopte une ou plusieurs interfaces (contrats)","C'est l'inverse","On peut avoir plusieurs extends","Aucun des deux n'est limité"],"correct":0,"explain":"PHP n'autorise qu'un seul parent par extends (héritage simple), mais une classe peut implémenter plusieurs interfaces, séparées par des virgules, pour respecter plusieurs contrats à la fois."},
-  {"q":"Dans quel cas choisirais-tu un trait plutôt qu'une classe parente ?","a":["Pour partager du code (des méthodes) entre des classes sans relation d'héritage : réutilisation horizontale, utile quand l'héritage simple est déjà pris ou que la relation n'est pas « est-un »","Quand on veut un seul objet","Jamais, un trait est obsolète","Quand on a besoin de constantes uniquement"],"correct":0,"explain":"Un trait injecte des méthodes communes dans plusieurs classes indépendantes, contournant la limite de l'héritage simple. On l'utilise pour mutualiser un comportement transversal sans imposer une hiérarchie de parenté artificielle."},
-  {"q":"Si Composer renvoie « Class not found » alors que le fichier existe, quelles deux causes vérifies-tu en premier ?","a":["Que le namespace et le nom de classe correspondent au chemin/fichier (PSR-4, casse comprise), et que l'autoloader est à jour (composer dump-autoload)","Que la base de données est lancée","Que le mot de passe est correct","Que le port 8000 est libre"],"correct":0,"explain":"L'autoload PSR-4 traduit le namespace en chemin de fichier : la moindre faute de casse ou un namespace qui ne colle pas au dossier casse le chargement. Et après certains ajouts, il faut régénérer la table d'autoload avec composer dump-autoload."}
+  {"q":"Quelle est la différence entre implements et extends, et combien de chacun une classe peut-elle avoir ?","a":["extends hérite d'une classe parente (une seule, héritage simple) ; implements adopte une ou plusieurs interfaces (contrats)","extends hérite de plusieurs classes (une par contrat) ; implements accepte une seule classe, la parente (le contrat)","extends pose un contrat que la classe tient (des signatures) ; implements hérite d'une classe parente (une, pas deux)","extends et implements acceptent plusieurs noms (sans limite) ; une classe hérite de tout (interfaces, classes)"],"correct":0,"explain":"PHP n'autorise qu'un seul parent par extends (héritage simple), mais une classe peut implémenter plusieurs interfaces, séparées par des virgules, pour respecter plusieurs contrats à la fois."},
+  {"q":"Dans quel cas choisirais-tu un trait plutôt qu'une classe parente ?","a":["Pour partager du code (des méthodes) entre des classes sans relation d'héritage : réutilisation horizontale, utile quand l'héritage simple est déjà pris ou que la relation n'est pas « est-un »","Pour ranger toutes les classes d'un projet dans un même dossier (un trait par fichier) : le trait donne le chemin des classes filles, et évite ainsi de recopier les mêmes propriétés partout dans le projet","Quand la classe parente est déjà écrite et qu'on ne veut plus la toucher (le trait prend sa place) : le trait se crée avec new comme une classe, et donne ses méthodes par le mot-clé extends à la classe fille","Quand on a besoin de constantes communes et jamais de méthodes (le contrat reste vide) : un trait ne contient que des signatures, aucune ligne de code exécutable"],"correct":0,"explain":"Un trait injecte des méthodes communes dans plusieurs classes indépendantes, contournant la limite de l'héritage simple. On l'utilise pour mutualiser un comportement transversal sans imposer une hiérarchie de parenté artificielle."},
+  {"q":"Si Composer renvoie « Class not found » alors que le fichier existe, quelles deux causes vérifies-tu en premier ?","a":["Que le namespace et le nom de classe correspondent au chemin/fichier (PSR-4, casse comprise), et que l'autoloader est à jour (composer dump-autoload)","Que chaque fichier de classe est listé un à un dans composer.json, à la main (PSR-4 ne le voit pas sans ça), et que l'autoloader a bien été copié à la racine du projet (sans require)","Que le namespace suit la norme PSR-0 (une classe par dossier, sans préfixe), et que le dossier vendor a été copié à la main (sans dump-autoload)","Que la classe porte bien le mot-clé public (jamais private), et que le fichier se ferme par un antislash, comme le veut PSR-4 (sinon PHP l'ignore)"],"correct":0,"explain":"L'autoload PSR-4 traduit le namespace en chemin de fichier : la moindre faute de casse ou un namespace qui ne colle pas au dossier casse le chargement. Et après certains ajouts, il faut régénérer la table d'autoload avec composer dump-autoload."}
 ]
 </script>
 
