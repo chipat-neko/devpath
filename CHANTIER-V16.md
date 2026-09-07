@@ -4825,6 +4825,112 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       **Restent les dettes 1 et 3** (créditer `1/n` sur les égalités du lexique ; étendre
       « les quatre ou aucune » au point interne, à la flèche et aux guillemets).
 
+      ---
+
+      **LES DETTES 1 ET 3 SONT CLOSES (2026-09-07), dans la passe dédiée qu'elles réclamaient.**
+      Aucun contenu réécrit : cette passe outille et mesure. Deux commits, deux épreuves par
+      injection.
+
+      **DETTE 1 — LE CRÉDIT `1/n`, ET CE QU'IL RÉVÈLE : LE CLIQUET CERTIFIAIT « FERMÉ » UN
+      INDICE QUI RENDAIT LE DOUBLE DU HASARD.** Jusqu'ici les trois variantes lexicales
+      n'étaient comptées que lorsqu'elles désignaient **une seule** option. Une égalité à deux
+      valait 0 pour l'outil — et **50 % pour l'apprenant**, qui restreint son tirage.
+      Mesure du jour, refaite ici :
+
+      | cours | désignation unique (S/P/I) | RESTREINDRE (pire) |
+      |---|---|---:|
+      | `mobile` — marqué `traite` | 0,0 % / 0,0 % / 0,0 % | **50,0 %** |
+      | `stats` — marqué `traite` | 0,0 % / 0,0 % / 0,0 % | **49,4 %** |
+      | `php` | 0,0 % / 0,0 % / 0,0 % | **50,0 %** (56,4 % de couverture) |
+
+      Les **deux seuls cours** que ce cliquet déclarait fermés étaient les deux qu'il voyait le
+      moins bien. Sur le site, la couverture double presque : STRICTE 28,7 % → **55,6 %**,
+      PROPORTION 61,6 % → **91,4 %** (rendement 50,8 %), INVERSE 59,9 % → **90,2 %**. Moyenne du
+      pire par cours : 66,4 % → **56,6 %**.
+
+      ⚠️ **ET LA CAUSE N'EST PAS UNE FAUTE D'ÉCRITURE, C'EST LA RÈGLE ELLE-MÊME.** La règle du
+      `k` (`0 / 0 / k`) laisse l'ensemble {bonne réponse, distracteur à `k`} : deux éléments, la
+      bonne dedans, **50 % par construction**. Ce n'est pas un accident de vague, c'est
+      arithmétique — la prédiction a été écrite avant la mesure, et la mesure l'a rendue au
+      dixième près. La règle est donc révisée en **`k / k / k / k`** (les quatre options portent
+      le même nombre de mots étrangers), ce qui ferme les six dimensions. C'est
+      « les quatre ou aucune » de `data-eng`, transposée au lexique.
+
+      Câblage : `mesure-lexique-qcm.js` expose six dimensions (3 variantes × 2 lectures),
+      `verif-qcm-lexique.js` les surveille toutes, référence refigée dans le même commit
+      (dimension neuve, pas régression). Cible restreinte à **40 %** et non 60 % : la lecture
+      RESTREINDRE a un **plancher structurel à 50 %**, une cible à 60 % n'y fermerait rien.
+      Marqueur `traiteRestreint` **vide** aujourd'hui — `mobile`, `stats` et `php` sont **à
+      reprendre**, leur marque `traite` ne porte que sur la désignation unique.
+
+      **ET L'ÉPREUVE PAR INJECTION QUI MANQUAIT DEPUIS LA CRÉATION DU CLIQUET** :
+      `verif-qcm-lexique-mutations.js`, **6 cas, 6 vus**, contre-épreuve verte, fichiers
+      restaurés. Son 2ᵉ cas est le seul du dépôt à exiger que le verdict **nomme** une dimension
+      précise : il injecte 30 questions écrites selon l'ancienne règle `0 / 0 / k`, que les trois
+      dimensions historiques **ne peuvent pas voir**, et exige le motif `INVERSE/restr.`. Sans
+      cette exigence, il serait passé vert sur une branche ancienne. Le générateur vérifie
+      lui-même, option par option, le nombre de mots étrangers qu'il fabrique, et sort en code 2
+      s'il ne l'obtient pas. Inscrite dans `verif.js --mutations` : **13 → 14 épreuves**.
+
+      **DETTE 3 — LE POINT INTERNE REND 99,0 %, LE PLUS HAUT DU SITE.** Mesure faite avant tout
+      câblage, sur les 6 167 questions :
+
+      | marque | couverture | rendement (unique / restreint) |
+      |---|---:|---:|
+      | le **POINT INTERNE** (option écrite en deux phrases) | 5,0 % | **99,0 % / 94,5 %** |
+      | les **GUILLEMETS** français | 2,6 % | 76,1 % / 65,3 % |
+      | la **FLÈCHE** (`->`, `=>`) | 1,6 % | 75,0 % / 66,8 % |
+      | témoin : point-virgule | 13,7 % | 91,3 % / 71,7 % |
+      | témoin : parenthèse | 29,5 % | 92,5 % / 76,1 % |
+
+      **Sur les 308 questions où une seule option est écrite en deux phrases, c'est la bonne
+      réponse 305 fois.** C'est le rendement le plus élevé mesuré depuis le début de la campagne,
+      au-dessus du point-virgule et de la parenthèse, et aucune des 26 stratégies d'alors ne le
+      voyait. La cause, vérifiée sur échantillon avant le câblage, est un **réflexe de
+      rédaction** : la bonne réponse explique **puis conclut** — « … donc la branche 12 la capte
+      avant. **Il faut tester du plus restrictif au moins restrictif** » — pendant que les
+      distracteurs tiennent en une phrase. Ce n'est pas de la ponctuation décorative, c'est la
+      trace de la pensée complète.
+
+      Livré : `mesure-biais-qcm.js` **26 → 32 stratégies** ; les trois « la seule … » entrent
+      dans `EXPLOITABLES` (aucun des 90 cours ne dépasse **39,8 %** en réussite, donc personne ne
+      rougit — mais les 61 cours restants sont surveillés) ; le cliquet a signalé **deux cours**
+      à l'ajout, `react` (36,9 % → 39,8 %) et `sql` (33,2 % → 36,9 %), **deux cours déjà
+      détordus** où le point interne devient le pire indice ; référence refigée dans le même
+      commit. `verif-qcm-biais-mutations.js` passe de **9 à 10 cas** (60 questions en deux
+      phrases à longueur, ponctuation et nombre de mots **égaux**, motif exigé « deux phrases »),
+      **10 vus sur 10**. Le compte périmé de cette épreuve dans `verif.js` (`7 / 7`) est corrigé
+      à `10 / 10`, mesuré.
+
+      **L'OUTIL DE TRAVAIL QUI MANQUAIT** : `plan-rangs-qcm.js --marques`. Il classe chaque
+      question en *bonne SEULE* / *bonne partagée* / **ÉCARTABLE** / neutre et rend la fenêtre de
+      longueur de chaque distracteur. ⚠️ **Une incohérence de mon premier jet, corrigée avant
+      livraison** : il **comptait** les questions où seuls des distracteurs portent la marque
+      sans les **lister**. Or c'est le cas `mobile` à l'identique — trois distracteurs marqués
+      sur quatre options et pas la bonne réponse, il suffit de les **écarter** pour avoir juste à
+      tous les coups. Un outil qui ne surveille qu'un sens est vert pendant que la faille est
+      entière : la leçon avait déjà été écrite ici, elle a failli être rejouée dans l'outil censé
+      la fermer.
+
+      **LA DETTE RESTANTE, CHIFFRÉE** : **699 questions sur 6 167 (11,3 %)** sont à mettre en
+      forme sur ces trois marques, dans **88 cours sur 94**. Les plus chargés : `js` 66, `algo`
+      27, `projets-js` 24, `bdd` 23, `python` 22, `rust` 22. Sur `php`, l'outil rend **12**
+      questions — exactement le chiffre annoncé par la note de la dette, retrouvé
+      indépendamment. **Aucun contenu n'est réécrit ici** : la retouche d'une option est un
+      travail d'écriture qui demande sa relecture adversariale, donc elle appartient à la vague
+      d'un cours.
+
+      **À METTRE EN CONSIGNE POUR LE 30ᵉ COURS**, les deux règles neuves :
+      1. **lexique** — les quatre options portent le **même nombre** de mots étrangers à la page
+         (`k / k / k / k`), et non plus `0 / 0 / k` ;
+      2. **marques** — « les quatre ou aucune » vaut aussi pour le **point interne**, les
+         **guillemets** et la **flèche** ; et dans **les deux sens** (ne pas laisser trois
+         distracteurs marqués face à une bonne réponse qui ne l'est pas).
+
+      **CONTRÔLES** : `verif.js --rapide` **121,8 s, les 53 vérificateurs verts** (deux fois,
+      avant et après) ; `node --check` sur les 8 fichiers `js` touchés ; 0 CRLF et 0 BOM sur le
+      fichier neuf ; arbre de travail propre après les deux épreuves par injection.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
