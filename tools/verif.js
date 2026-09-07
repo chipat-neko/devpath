@@ -556,7 +556,7 @@ if (flag("mutations")) {
     /* 7 depuis B4 : le 7e cas eprouve « l'incise entre parentheses », entree dans
        EXPLOITABLES le 2026-09-04. Une branche de verificateur que rien n'eprouve
        ne vaut pas mieux qu'un verificateur absent. */
-    { nom: "qcmbiai ", fichier: "verif-qcm-biais-mutations.js", vues: "7 / 7" },
+    { nom: "qcmbiai ", fichier: "verif-qcm-biais-mutations.js", vues: "10 / 10" },
     /* Ajoutee le 2026-09-07, avec la lecture RESTREINDRE du cliquet lexical. Son
        2e cas est le seul du depot a exiger que le verdict NOMME une dimension
        precise (« INVERSE/restr. ») : il injecte l'ancienne regle d'ecriture

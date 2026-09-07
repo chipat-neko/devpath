@@ -156,7 +156,19 @@ var EXPLOITABLES = ["la plus longue", "la plus detaillee", "le mot technique exc
                     "la ponctuation finale unique", "la seule qui nie",
                     "la DEUXIEME plus longue", "la TROISIEME plus longue",
                     "ecarter les deux extremes", "ECARTER l'echo de la question",
-                    "la plus dense (mots longs)"];
+                    "la plus dense (mots longs)",
+                    /* Les trois marques typographiques de la dette 3 (2026-09-07).
+                       Mesure faite AVANT l'inscription : « la seule en deux phrases »
+                       rend 99,0 % sur 308 questions — le rendement le plus eleve du
+                       site, au-dessus du point-virgule (91,3 %) et de la parenthese
+                       (92,5 %) — les guillemets 76,1 %, la fleche 75,0 %. En REUSSITE
+                       par cours, en revanche, aucun des 90 cours ne depasse 39,8 % :
+                       personne ne rougit aujourd'hui, et ces trois lignes surveillent
+                       les 61 cours qui restent a detordre. Comme pour « la plus
+                       dense », la reference est refigee DANS LE MEME COMMIT : ce n'est
+                       pas une regression, c'est une dimension neuve. */
+                    "la seule en deux phrases", "la seule avec des guillemets",
+                    "la seule avec une fleche"];
 var CLEF_LONGUEUR = "la plus longue";
 
 /* L'AVANTAGE que « la plus longue » donne a l'apprenant n'est PAS son taux : c'est

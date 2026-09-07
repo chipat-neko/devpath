@@ -230,6 +230,48 @@ function questionsDenses(n) {
   }
   return out;
 }
+/* B4 (2026-09-07, dette 3) : le POINT INTERNE, sans biais de longueur ni de densite.
+   Les quatre options font EXACTEMENT le meme nombre de caracteres, portent la meme
+   ponctuation finale et le meme nombre de mots ; seule la bonne reponse est ecrite en
+   DEUX PHRASES — elle explique, puis elle conclut. C'est le reflexe de redaction que la
+   mesure du 2026-09-07 a chiffre a 99,0 % de rendement sur 308 questions du site, le
+   plus eleve jamais mesure par ce chantier, et qu'aucune des 26 strategies d'alors ne
+   voyait. Si le verdict ne nommait pas « deux phrases », le cas prouverait une branche
+   ancienne et laisserait la branche neuve sans preuve.
+   LES TROIS INVARIANTS SONT VERIFIES ICI MEME, avant injection. */
+function questionsDeuxPhrases(n) {
+  var bonne = "Le tampon se vide avant la lecture. La valeur rendue reste donc nulle";
+  var faux = [
+    "Le tampon se vide apres la lecture et la valeur rendue est donc doublee",
+    "Le tampon est copie avant la lecture, et la valeur rendue demeure vide",
+    "Le tampon est lu avant la remise a zero et la valeur rendue reste juste",
+  ].map(function (t) {
+    while (t.length < bonne.length) t += " la";
+    return t.slice(0, bonne.length);
+  });
+  function deuxPhrases(t) { return /[.!?][  ]+[A-ZÀ-ÖØ-Þ]/.test(t); }
+  var toutes = faux.concat([bonne]);
+  toutes.forEach(function (t) {
+    if (t.length !== bonne.length) {
+      console.error("epreuve invalide : les options ne sont pas de meme longueur");
+      process.exit(2);
+    }
+  });
+  if (toutes.filter(deuxPhrases).length !== 1 || !deuxPhrases(bonne)) {
+    console.error("epreuve invalide : la bonne reponse doit etre la SEULE en deux phrases");
+    process.exit(2);
+  }
+  var out = [];
+  for (var i = 0; i < n; i++) {
+    out.push({
+      q: "Question en deux phrases n° " + (i + 1) + " — quel enonce decrit le comportement ?",
+      a: [faux[0], faux[1], faux[2], bonne],
+      correct: 3,
+      explain: "Question injectee par une epreuve de mutation : elle ne doit jamais rester dans le depot.",
+    });
+  }
+  return out;
+}
 function pageAvec(questions) {
   var bloc = '<script type="application/json" data-quiz>' + JSON.stringify(questions) + '</script>\n  ';
   return pageOrig.replace('</body>', bloc + '</body>');
@@ -336,6 +378,13 @@ var MUTATIONS = [
       fs.writeFileSync(REF, refAvec(function (j) { j.cours.doc.traite = true; }));
     },
     1, /plus dense/],
+
+  ['60 questions en DEUX PHRASES, à longueur et ponctuation égales, doc marqué « traité »',
+    function () {
+      fs.writeFileSync(PAGE, pageAvec(questionsDeuxPhrases(60)));
+      fs.writeFileSync(REF, refAvec(function (j) { j.cours.doc.traite = true; }));
+    },
+    1, /deux phrases/],
 
   ['CONTRE-ÉPREUVE : 6 questions ÉQUILIBRÉES ajoutées au même endroit',
     function () { fs.writeFileSync(PAGE, pageAvec(questionsEquilibrees(6))); },

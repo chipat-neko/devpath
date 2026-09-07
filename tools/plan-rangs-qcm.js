@@ -187,7 +187,7 @@ function rangActuel(e) {
 
 var args = process.argv.slice(2);
 var cours = args.filter(function (a) { return a.indexOf("--") !== 0; })[0];
-if (!cours) { console.log("usage : node tools/plan-rangs-qcm.js <cours> [--json|--ponctuation|--incise]"); process.exit(1); }
+if (!cours) { console.log("usage : node tools/plan-rangs-qcm.js <cours> [--json|--ponctuation|--incise|--marques]"); process.exit(1); }
 var p = planifier(cours);
 if (!p) { console.error("cours introuvable : " + cours); process.exit(1); }
 
@@ -290,6 +290,101 @@ if (args.indexOf("--incise") !== -1) {
       });
       console.log("");
     });
+  }
+  process.exit(0);
+}
+
+/* ------------------------------------------------- le mode MARQUES
+   Ajoute le 2026-09-07 (B4, dette 3 laissee par le cours `php`). Meme raison que
+   --ponctuation et --incise : fermer une marque DEPLACE le biais sur la suivante.
+   Trois marques n'etaient couvertes par aucun outil, et la mesure faite avant de
+   les cabler dit que la premiere est la plus rentable du site :
+
+     le POINT INTERNE (l'option ecrite en DEUX PHRASES)   99,0 % de rendement
+     les GUILLEMETS francais « »                          76,1 %
+     la FLECHE (->, =>, →)                                75,0 %
+
+   99,0 % sur 308 questions, au-dessus du point-virgule (91,3 %) et de la parenthese
+   (92,5 %). La cause est un reflexe de redaction : la bonne reponse explique PUIS
+   conclut, les distracteurs tiennent en une phrase.
+
+   LA CIBLE N'EST PAS « ZERO MARQUE » — le cours `mobile` a prouve qu'une marque
+   supprimee partout RETOURNE l'indice. C'est « LES QUATRE OU AUCUNE » : ou toutes
+   les options portent la marque, ou aucune ne la porte. Pour le point interne, la
+   retouche la moins couteuse est de fondre la conclusion de la bonne reponse dans
+   sa premiere phrase, ou de conclure aussi les distracteurs.
+   Comme les deux autres modes, la fenetre de longueur rendue est celle du COTE
+   ACTUEL du distracteur, pour ne pas defaire le travail de rang. */
+var MARQUES_PLAN = [
+  { cle: "point interne", detecte: function (t) { return /[.!?][  ]+[A-ZÀ-ÖØ-Þ]/.test(String(t)); } },
+  { cle: "guillemets",    detecte: function (t) { return /[«»]/.test(String(t)); } },
+  { cle: "fleche",        detecte: function (t) { return /→|->|=>|⇒/.test(String(t)); } },
+];
+if (args.indexOf("--marques") !== -1) {
+  var lignesM = [], parMarque = {};
+  MARQUES_PLAN.forEach(function (m) {
+    parMarque[m.cle] = { seule: 0, partagee: 0, ecartable: 0, quatre: 0, absente: 0 };
+  });
+  p.lot.forEach(function (e) {
+    var k = e.q.correct || 0;
+    MARQUES_PLAN.forEach(function (m) {
+      var P = e.q.a.map(m.detecte), n = P.filter(Boolean).length, N = e.q.a.length;
+      var st = parMarque[m.cle];
+      if (n === 0) { st.absente++; return; }
+      if (n === N) { st.quatre++; return; }
+      /* ⚠️ LE SENS INVERSE COMPTE AUTANT, et l'oublier serait rejouer l'erreur du
+         cours `mobile` : si la bonne reponse ne porte PAS la marque, l'apprenant
+         ECARTE les n options qui la portent et tire parmi les N - n restantes. Avec
+         trois distracteurs marques sur quatre options, il a JUSTE A TOUS LES COUPS. */
+      var credit = P[k] ? 1 / n : 1 / (N - n);
+      if (P[k]) { if (n === 1) st.seule++; else st.partagee++; }
+      else { st.ecartable++; }
+      var bon = e.q.a[k].length;
+      lignesM.push({
+        fichier: e.fichier, bloc: e.bloc, bilan: e.bilan, question: e.num, marque: m.cle,
+        enonce: e.q.q, correcte: k, bonne: e.q.a[k], porteuses: n, bonnePorte: P[k],
+        longueurBonne: bon, credit: credit,
+        distracteurs: e.q.a.map(function (t, i) {
+          return { option: i, porte: P[i], longueur: t.length,
+                   fenetre: fenetre(bon, t.length > bon), texte: t };
+        }).filter(function (o) { return o.option !== k; })
+      });
+    });
+  });
+  /* le plus payant pour l'apprenant en premier : c'est l'ordre de travail */
+  lignesM.sort(function (a, b) { return b.credit - a.credit; });
+  if (args.indexOf("--json") !== -1) {
+    console.log(JSON.stringify({ cours: cours, questions: p.lot.length,
+      parMarque: parMarque, travaux: lignesM }, null, 1));
+  } else {
+    console.log("\nplan-rangs-qcm --marques — " + cours + " : " + p.lot.length + " questions");
+    console.log("  cible : LES QUATRE OU AUCUNE. Une question dont les quatre options portent");
+    console.log("  la marque est neutre ; une question ou aucune ne la porte l'est aussi.\n");
+    MARQUES_PLAN.forEach(function (m) {
+      var st = parMarque[m.cle];
+      console.log("    " + m.cle.padEnd(15) + " bonne SEULE : " + String(st.seule).padStart(3)
+        + "   bonne partagee : " + String(st.partagee).padStart(3)
+        + "   ECARTABLE (bonne sans la marque) : " + String(st.ecartable).padStart(3)
+        + "   neutres : " + String(st.quatre + st.absente).padStart(3));
+    });
+    console.log("");
+    lignesM.forEach(function (t) {
+      console.log("  " + t.fichier + (t.bilan ? " [BILAN]" : "") + " q" + t.question
+        + "   [" + t.marque + "]  " + t.porteuses + " option(s) sur " + (t.distracteurs.length + 1)
+        + " la portent" + (t.bonnePorte ? (t.porteuses === 1 ? "  — la bonne reponse est SEULE" : "")
+                                        : "  — la bonne ne la porte PAS : il suffit de les ECARTER")
+        + "   (credit de l'apprenant : " + (100 * t.credit).toFixed(0) + " %)");
+      console.log("      BONNE (ne pas toucher) : " + t.bonne);
+      t.distracteurs.forEach(function (d) {
+        console.log("      opt" + d.option + " : " + (d.porte ? "PORTE la marque" : "sans la marque")
+          + ", " + d.longueur + " car. (fenetre " + d.fenetre[0] + ".."
+          + (d.fenetre[1] === Infinity ? "inf" : d.fenetre[1]) + ")");
+        console.log("            " + d.texte);
+      });
+      console.log("");
+    });
+    var aFaire = lignesM.length;
+    console.log("  " + aFaire + " question(s) a mettre en forme sur " + p.lot.length + ".");
   }
   process.exit(0);
 }

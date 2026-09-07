@@ -204,6 +204,23 @@ function restreindre(q, porte) {
   return m.reduce(function (acc, x, i) { if (x) acc.push(i); return acc; }, []);
 }
 
+/* LA DESIGNATION UNIQUE : l'option SEULE a porter la marque. Si zero ou plusieurs
+   la portent, la strategie ne tranche pas. */
+function seule(q, porte) {
+  var m = q.a.map(porte);
+  if (m.filter(Boolean).length !== 1) return toutes(q);
+  return [m.indexOf(true)];
+}
+
+/* Les trois marques de la dette 3. Le point interne se definit par un point (ou un
+   « ! », ou un « ? ») SUIVI D'UNE ESPACE ET D'UNE MAJUSCULE : c'est ce qui distingue
+   deux phrases d'un point d'abreviation ou d'un `objet.methode()`. L'espace insecable
+   est acceptee au meme titre que l'espace ordinaire — sans quoi la mesure raterait en
+   silence les options composees a la francaise. */
+function aPointInterne(t) { return /[.!?][  ]+[A-ZÀ-ÖØ-Þ]/.test(String(t)); }
+function aGuillemets(t) { return /[«»]/.test(String(t)); }
+function aFleche(t) { return /→|->|=>|⇒/.test(String(t)); }
+
 /* Le rang de longueur d'une option, les ex aequo etant tous candidats : sans cela
    une egalite ferait rendre un choix arbitraire et la mesure vaudrait le hasard. */
 function parRang(q, rang) {
@@ -587,6 +604,60 @@ var STRATEGIES = [
       var s = n.reduce(function (acc, x, i) { if (x === mn) acc.push(i); return acc; }, []);
       return s.length === q.a.length ? toutes(q) : s;
     },
+  },
+  /* ⚠️ LES SIX STRATEGIES DE MARQUE TYPOGRAPHIQUE, ajoutees au point B4 (dette 3
+     laissee par le cours `php`, cablees le 2026-09-07). La consigne « les quatre ou
+     aucune » ne couvrait jusqu'ici que le point-virgule, la parenthese et les
+     deux-points. Trois marques restaient hors de tout outil, et la mesure faite
+     AVANT de les cabler dit que la premiere est la PLUS RENTABLE DU SITE :
+
+       marque                       couverture   rendement (unique / restreint)
+       le POINT INTERNE                  5,0 %      99,0 %  /  94,5 %
+       les GUILLEMETS francais           2,6 %      76,1 %  /  65,3 %
+       la FLECHE (-> ou =>)              1,6 %      75,0 %  /  66,8 %
+       temoin : point-virgule           13,7 %      91,3 %  /  71,7 %
+       temoin : parenthese              29,5 %      92,5 %  /  76,1 %
+
+     99,0 % sur 308 questions : c'est le rendement le plus eleve mesure depuis le
+     debut du chantier, AU-DESSUS du point-virgule et de la parenthese, et aucune
+     des 26 strategies precedentes ne le voyait. La cause est un reflexe de
+     redaction, verifie sur echantillon avant le cablage : la bonne reponse explique
+     puis CONCLUT — « … donc la branche 12 la capte avant. Il faut tester du plus
+     restrictif au moins restrictif » — pendant que les distracteurs tiennent en une
+     phrase. Sur les 308 questions ou une seule option est ecrite en deux phrases,
+     c'est la bonne reponse 305 fois.
+     LA REGLE QUI EN DECOULE : les quatre options, ou aucune, pour ces marques
+     aussi — et pour le point interne, la conclusion en seconde phrase se met sur
+     les distracteurs ou se fond dans la premiere. */
+  {
+    nom: "la seule en deux phrases",
+    quoi: "la seule option qui contient un point suivi d'une majuscule — elle explique PUIS conclut",
+    choisir: function (q) { return seule(q, aPointInterne); },
+  },
+  {
+    nom: "RESTREINDRE au point interne",
+    quoi: "tirer parmi les seules options ecrites en deux phrases",
+    choisir: function (q) { return restreindre(q, aPointInterne); },
+  },
+  {
+    nom: "la seule avec des guillemets",
+    quoi: "la seule option qui cite un terme entre guillemets francais",
+    choisir: function (q) { return seule(q, aGuillemets); },
+  },
+  {
+    nom: "RESTREINDRE aux guillemets",
+    quoi: "tirer parmi les seules options qui portent des guillemets francais",
+    choisir: function (q) { return restreindre(q, aGuillemets); },
+  },
+  {
+    nom: "la seule avec une fleche",
+    quoi: "la seule option qui montre une transformation par une fleche",
+    choisir: function (q) { return seule(q, aFleche); },
+  },
+  {
+    nom: "RESTREINDRE a la fleche",
+    quoi: "tirer parmi les seules options qui portent une fleche",
+    choisir: function (q) { return restreindre(q, aFleche); },
   },
   {
     nom: "COMBINE : tiret puis longueur",
