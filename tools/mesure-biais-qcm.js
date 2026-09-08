@@ -889,6 +889,19 @@ var STRATEGIES = [
   },
 ];
 
+/* -------------------------------------------------- les strategies, pour les autres
+   Ajoute le 2026-09-08 (B4, cours `lua`). `mesure-biais-inverse.js` ne surveillait le
+   SENS INVERSE que d'UNE strategie sur 43 : le cliquet etait vert pendant que « ecarter
+   l'option qui reprend le plus de mots de l'enonce » rendait 32,4 % sur la moitie de
+   `lua`. Pour qu'un second outil mesure les 43 sans en RECOPIER la definition (une copie
+   se perimerait au premier ajout), ce fichier s'exporte quand il est REQUIS au lieu
+   d'etre lance. Le `return` de tete est licite : Node enveloppe tout module CommonJS
+   dans une fonction. */
+if (require.main !== module) {
+  module.exports = { lireCorpus: lireCorpus, STRATEGIES: STRATEGIES, toutes: toutes, argMax: argMax };
+  return;
+}
+
 /* ---------------------------------------------------------------------- la mesure */
 var corpus = lireCorpus();
 /* --seul=<cours> : le tableau des 19 strategies RESTREINT a un seul cours, avec sa

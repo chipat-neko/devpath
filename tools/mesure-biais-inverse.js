@@ -89,6 +89,89 @@ function mesurer(cours) {
            inverse: inverse / tot, couverture: tranche / tot };
 }
 
+/* ------------------------------------------------------- le mode --toutes
+   Ajoute le 2026-09-08 (B4, cours `lua`). Cet outil ne surveillait que « le mot
+   technique exclusif » : UNE strategie sur 43. Le cours `lua` sortait de sa vague
+   d'ecriture avec toutes ses stratégies DIRECTES a 25 % — cliquet vert — pendant
+   qu'ecarter « l'option qui reprend le plus de mots de l'enonce » rendait 32,4 %
+   sur 34 de ses 72 questions : sur ces 34, la porteuse de l'echo etait fausse
+   33 fois. C'est la regle du `k` du cours `mobile` (fermer un indice a fond le
+   RETOURNE) appliquee a une deuxieme famille d'indices.
+
+   Les 43 strategies ne sont PAS recopiees : elles sont importees de
+   mesure-biais-qcm.js, qui s'exporte quand on le requiert. Une copie se perimerait
+   au premier ajout de strategie — c'est exactement la faute qu'a corrigee
+   `recense-chaine.js` sur la liste des etapes de verif.js.
+
+   SEUIL : une strategie qui tranche sur moins de 8 questions n'est pas mesurable
+   (a 8 questions l'ecart-type du pur hasard vaut deja 15 points). Elle est comptee
+   mais rangee sous « fenetres trop courtes », jamais alertee. */
+var TOUTES = process.argv.indexOf("--toutes") !== -1;
+var MIN_Q = 8;          /* en dessous, le bruit du hasard depasse le seuil tout seul */
+var SEUIL_INV = 0.28;   /* 3 points au-dessus de l'etalon : au-dela, c'est un indice */
+
+function mesurerToutes(liste) {
+  var moteur = require(path.join(__dirname, "mesure-biais-qcm.js"));
+  var corpus = moteur.lireCorpus();
+  var pertinents = liste.length ? liste : null;
+  console.log("\nmesure-biais-inverse --toutes — les 42 strategies, dans le sens INVERSE");
+  console.log("  etalon du hasard : " + pc(HASARD) + " · plafond theorique de l'inverse : 33,3 %");
+  console.log("  alerte des qu'une strategie tranche sur >= " + MIN_Q + " questions ET rend >= " + pc(SEUIL_INV) + "\n");
+  var alertes = 0, examinees = 0, courts = 0;
+  (pertinents || ["(tout le site)"]).forEach(function (c) {
+    var qs = pertinents ? corpus.filter(function (q) { return q.cours === c; }) : corpus;
+    if (!qs.length) { console.log("    " + c + " : introuvable ou sans QCM"); return; }
+    var lignes = [];
+    moteur.STRATEGIES.slice(1).forEach(function (s) {
+      var tranche = 0, dir = 0, inv = 0;
+      qs.forEach(function (q) {
+        var choix = s.choisir(q);
+        if (!choix.length) choix = moteur.toutes(q);
+        if (choix.length !== 1) return;   /* elle ne tranche pas : l'inverse ne dit rien */
+        tranche++;
+        if (choix[0] === q.k) dir++;
+        else inv += 1 / (q.a.length - 1); /* on ecarte la designee, on tire parmi les autres */
+      });
+      if (!tranche) return;
+      examinees++;
+      if (tranche < MIN_Q) { courts++; return; }
+      var part = tranche / qs.length, rInv = inv / tranche;
+      /* GLOBAL : ce que gagne VRAIMENT l'apprenant. Sur les questions ou la regle ne
+         tranche pas, il retombe au hasard. Sans cette colonne on lit « 33,3 % » et on
+         croit a un gain de 8,3 points la ou il vaut 2,5 — c'est la faute de la colonne
+         « reussite » qui NOIE un indice rare, prise a l'envers. */
+      lignes.push({ nom: s.nom, tranche: tranche, part: part,
+                    dir: dir / tranche, inv: rInv,
+                    global: rInv * part + HASARD * (1 - part) });
+    });
+    lignes.sort(function (a, b) { return b.inv - a.inv; });
+    var chaudes = lignes.filter(function (l) { return l.inv >= SEUIL_INV; });
+    alertes += chaudes.length;
+    console.log("  " + c + " — " + qs.length + " questions, " + lignes.length
+      + " strategies mesurables, " + chaudes.length + " au-dessus du seuil");
+    if (!chaudes.length) { console.log("      (rien au-dessus de " + pc(SEUIL_INV) + " ; pire : "
+      + (lignes[0] ? lignes[0].nom + " a " + pc(lignes[0].inv) : "aucune") + ")"); return; }
+    console.log("      strategie                             tranche   part    DIRECTE   INVERSE    GLOBAL");
+    chaudes.forEach(function (l) {
+      console.log("      " + (l.nom + "                                        ").slice(0, 36)
+        + ("     " + l.tranche).slice(-6)
+        + ("      " + pc(l.part)).slice(-8)
+        + ("        " + pc(l.dir)).slice(-10)
+        + ("        " + pc(l.inv)).slice(-10)
+        + ("         " + pc(l.global)).slice(-11));
+    });
+  });
+  console.log("\n  " + alertes + " alerte(s) · " + courts + " fenetre(s) trop courte(s) (< "
+    + MIN_Q + " questions tranchees), non mesurables.");
+  console.log("  Lecture : DIRECTE = choisir l'option designee ; INVERSE = l'ECARTER et tirer");
+  console.log("  parmi les trois autres. Une DIRECTE tres BASSE sur une large couverture est le");
+  console.log("  vrai defaut : elle offre une elimination sure. GLOBAL = ce que l'apprenant");
+  console.log("  gagne sur le cours ENTIER (hasard sur les questions non tranchees) : c'est CE");
+  console.log("  chiffre-la qui se compare aux 25,0 % de l'etalon, pas la colonne INVERSE.");
+  console.log("  Ce que l'on vise est 25 % dans les DEUX sens.\n");
+  process.exit(alertes ? 1 : 0);
+}
+
 var args = process.argv.slice(2).filter(function (a) { return a.indexOf("--") !== 0; });
 var liste = args;
 if (!liste.length) {
@@ -103,6 +186,10 @@ if (!liste.length) {
 }
 
 function pc(x) { return (x * 100).toFixed(1) + " %"; }
+
+/* place APRES la resolution de `liste` : sans nom de cours, --toutes prend les cours
+   marques `traite`, comme le mode par defaut de l'outil ; --site prend les 6 167. */
+if (TOUTES) mesurerToutes(process.argv.indexOf("--site") !== -1 ? [] : liste);
 
 console.log("\nmesure-biais-inverse — « le mot technique exclusif », et l'apprenant qui l'ÉCARTE");
 console.log("  étalon du hasard : " + pc(HASARD) + " · plafond théorique de l'inverse : 33,3 %\n");
