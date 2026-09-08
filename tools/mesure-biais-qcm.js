@@ -159,17 +159,46 @@ function ecarterMax(q, scores) {
    marque typographique de la reponse qui s'explique elle-meme. */
 function aTiret(t) { return /—|–| - |\(c'est-à-dire|, c'est-à-dire/.test(t); }
 
+/* Combien de mots longs (9 lettres et plus) chaque option porte-t-elle QU'AUCUNE
+   AUTRE option de la meme question n'emploie ? Sert aux deux strategies « le mot
+   technique exclusif » et « ECARTER le mot technique exclusif ». */
+function scoreMotExclusif(q) {
+  var mots = q.a.map(function (t) {
+    return new Set((t.toLowerCase().match(/[a-zà-ÿ][a-zà-ÿ-]{8,}/g) || []));
+  });
+  return mots.map(function (s, i) {
+    var n = 0;
+    s.forEach(function (m) {
+      var ailleurs = mots.some(function (o, j) { return j !== i && o.has(m); });
+      if (!ailleurs) n++;
+    });
+    return n;
+  });
+}
+
 /* La NEGATION. Attention au piege de mesure : « n' » doit etre cherche AVEC son
    apostrophe typographique comme avec l'apostrophe droite, sans quoi la moitie du
    corpus echappe a la regle -- c'est le meme defaut que « c'est-a-dire » sans
-   accent dans aTiret(), corrige le meme jour. */
-var NIE = /\b(ne|ni|non|pas|jamais|aucun|aucune|rien)\b|\bn[’']/i;
+   accent dans aTiret(), corrige le meme jour.
+
+   ⚠️ DEUXIEME PIEGE, trouve le 2026-09-08 (B4, cours `c`) par TROIS lots
+   d'ecriture independants : la limite \b de JavaScript est ASCII, donc une
+   lettre accentuee cree une frontiere de mot A L'INTERIEUR d'un mot. « chaine »
+   ecrit avec un i circonflexe declenchait \bne\b et comptait comme une negation.
+   Mesure refaite le 2026-09-08 (scratchpad/verif-nie2.js) : 306 options sur 24 669
+   changent de verdict, soit 1,24 % du corpus ; ABSOLUS et PRUDENTS n'en changent
+   AUCUNE, la correction n'y est qu'une precaution. C'est le meme defaut
+   que celui deja documente plus bas pour CAPITALES (« DEJA » accentue coupe
+   apres le J) -- la correction y avait ete faite, mais pas ici. Les limites sont
+   desormais des lookaround unicode, sur les trois regles de vocabulaire. */
+var LD = "(?<![\\p{L}\\p{N}])", LF = "(?![\\p{L}\\p{N}])";
+var NIE = new RegExp(LD + "(ne|ni|non|pas|jamais|aucun|aucune|rien)" + LF + "|" + LD + "n[’']", "iu");
 
 /* Les affirmations ABSOLUES sont la signature du distracteur expedie. Un
    apprenant qui les ecarte n'a rien compris mais elimine beaucoup. */
-var ABSOLUS = /\b(toujours|jamais|uniquement|seulement|aucun|aucune|impossible|obligatoirement|systematiquement|systématiquement|rien|tous les cas|n'existe pas)\b/i;
+var ABSOLUS = new RegExp(LD + "(toujours|jamais|uniquement|seulement|aucun|aucune|impossible|obligatoirement|systematiquement|systématiquement|rien|tous les cas|n'existe pas)" + LF, "iu");
 /* Les formulations PRUDENTES, symetrie de la precedente. */
-var PRUDENTS = /\b(souvent|generalement|généralement|en general|en général|peut|permet|selon|plutot|plutôt|principalement|notamment|le plus souvent)\b/i;
+var PRUDENTS = new RegExp(LD + "(souvent|generalement|généralement|en general|en général|peut|permet|selon|plutot|plutôt|principalement|notamment|le plus souvent)" + LF, "iu");
 
 /* Les SIGLES du metier, ecartes de la mesure des capitales d'emphase : « HTML »
    ou « JSON » dans une option n'est pas un cri, c'est le nom de la chose. */
@@ -311,20 +340,7 @@ var STRATEGIES = [
   {
     nom: "le mot technique exclusif",
     quoi: "l'option seule a porter un mot long qu'aucune autre n'emploie",
-    choisir: function (q) {
-      var mots = q.a.map(function (t) {
-        return new Set((t.toLowerCase().match(/[a-zà-ÿ][a-zà-ÿ-]{8,}/g) || []));
-      });
-      var score = mots.map(function (s, i) {
-        var n = 0;
-        s.forEach(function (m) {
-          var ailleurs = mots.some(function (o, j) { return j !== i && o.has(m); });
-          if (!ailleurs) n++;
-        });
-        return n;
-      });
-      return argMax(score);
-    },
+    choisir: function (q) { return argMax(scoreMotExclusif(q)); },
   },
   {
     /* AJOUTE EN B4 (2026-09-04). B1 avait cru faire le tour des indices et en a
@@ -636,6 +652,28 @@ var STRATEGIES = [
       var n = q.a.map(function (t) { return (t.match(/[A-Za-zÀ-ÿ0-9_]+/g) || []).length; });
       return ecarterMax(q, n.map(function (x) { return -x; }));
     },
+  },
+  /* ⚠️ L'INVERSE DU MOT TECHNIQUE EXCLUSIF, ajoutee au point B4 (cours `c`,
+     2026-09-08). TROISIEME fois que le meme motif se produit — apres les deux
+     « ECARTER » de `stats` et les deux de densite de `kotlin` — et, comme les deux
+     fois precedentes, ce sont les RELECTEURS qui l'ont vu avant l'outil : trois des
+     six lots d'ecriture de `c` ont signale, chacun sur son lot, que l'indice etait
+     passe SOUS l'etalon du hasard et que rien ne le mesurait.
+
+     Le mecanisme est mecanique, et il est le NOTRE : la consigne (4) demande que
+     deux distracteurs au moins portent du vocabulaire du meme registre que la bonne
+     reponse. Comme la bonne reponse est intouchable, ce sont les distracteurs qui
+     recoivent le vocabulaire neuf, et c'est un DISTRACTEUR qui finit seul a porter
+     un mot long que personne d'autre n'emploie. Mesure sur `c` detordu avant
+     cablage : « le mot technique exclusif » 19,2 % — donc l'ecarter payait.
+
+     Comme pour les quatre precedentes : ajouter cette strategie fait remonter
+     `pire` sur des cours deja traites. Ce n'est PAS une regression, c'est une
+     dimension neuve, et la reference est refigee dans le meme commit. */
+  {
+    nom: "ECARTER le mot technique exclusif",
+    quoi: "tirer parmi les options qui ne portent PAS de mot long exclusif",
+    choisir: function (q) { return ecarterMax(q, scoreMotExclusif(q)); },
   },
   /* ⚠️ LES SIX STRATEGIES DE MARQUE TYPOGRAPHIQUE, ajoutees au point B4 (dette 3
      laissee par le cours `php`, cablees le 2026-09-07). La consigne « les quatre ou
