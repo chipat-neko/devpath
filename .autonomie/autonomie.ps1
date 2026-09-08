@@ -101,7 +101,12 @@ $rapport = Join-Path $proj 'VERIF-FINALE.md'
 # CHAINE DE CHANTIERS (2026-08-21) : l'autonomie enchaine les plans dans l'ordre,
 # sans intervention. Chaque plan est traite jusqu'a sa derniere case, puis on passe
 # au suivant. Ajouter un chantier = ajouter son fichier a cette liste.
-$CHAINE = @('CHANTIER-V12.md', 'CHANTIER-V13.md', 'CHANTIER-V14.md', 'CHANTIER-V15.md', 'CHANTIER-V16.md')
+# V17 EST PLACE AVANT V16, ET CE N EST PAS UNE ERREUR. Le V16 reecrit les QCM cours
+# par cours ; l audit du 2026-09-08 a montre que js/quiz-index.js, l index que lit la
+# page d examen, n etait PAS regenere et que le garde-fou cense le detecter etait VERT.
+# Chaque cours detordu restait donc devinable la ou l apprenant est evalue. Le V17
+# repare les instruments, puis la chaine revient au V16 la ou il s etait arrete.
+$CHAINE = @('CHANTIER-V12.md', 'CHANTIER-V13.md', 'CHANTIER-V14.md', 'CHANTIER-V15.md', 'CHANTIER-V17.md', 'CHANTIER-V16.md')
 
 # Renvoie le premier plan de la chaine qui a encore une case a cocher, ou $null
 # si tout est fini.

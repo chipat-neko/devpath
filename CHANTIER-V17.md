@@ -1,0 +1,313 @@
+# Chantier V17 — les garde-fous qui mentent
+
+Plan de travail de l'autonomie. **Source de vérité : ce fichier.** Chaque réveil lit ce plan, prend la
+**première case non cochée**, la traite entièrement, la coche avec un compte rendu chiffré, puis passe
+à la suivante. Le chantier est fini quand il ne reste aucune case `- [ ]`.
+
+**⚠️ CE PLAN PASSE AVANT `CHANTIER-V16.md`, qui n'est pas terminé (8 cases sur 22).** Ce n'est pas un
+caprice d'ordre : le V16 réécrit les QCM cours par cours, et l'audit du 2026-09-08 a montré que
+`js/quiz-index.js` — l'index que lit la page d'examen — n'était **pas** régénéré, et que le garde-fou
+censé le détecter était **vert**. Chaque cours détordu restait donc devinable là où l'apprenant est
+évalué. Continuer le V16 sans réparer ses instruments, c'est produire du travail qui ne se voit pas.
+
+---
+
+## Ce qui fonde ce chantier
+
+Un audit indépendant à six dimensions, mené le 2026-09-08 par 59 agents dont la moitié avaient pour
+consigne de **démolir** les constats de l'autre moitié : **52 constats produits, 34 réfutés, 18
+retenus après reproduction par exécution.**
+
+Le site publié est sain sur l'essentiel — 0 lien mort sur 26 117, 0 divergence sur 449 blocs de sortie
+rejoués, 0 erreur sur 25 invariants de données, les deux moteurs embarqués fonctionnent réseau coupé.
+Ce chantier ne traite donc pas le contenu : **il traite les instruments.**
+
+Le fil qui relie presque tous les constats retenus tient en une phrase :
+
+> **Un contrôle qui ne peut pas échouer est pire que pas de contrôle : il occupe la place.**
+
+Quatre exemples mesurés, qui donnent le ton :
+
+| Le contrôle | Ce qu'il affirmait | Ce qui était vrai |
+|---|---|---|
+| `verif-donnees` I18 | « index dérivés non périmés OK » | `quiz-index.js` périmé de 18 212 octets, 71 entrées fausses |
+| cliquet `verif-qcm-biais` sur lua | code 0, donc vert | un retour de 25 % à 88,9 % serait resté vert |
+| `$replanifFaite` dans le wrapper | commit annonçant « trois cas, testés » | variable jamais affectée : la panne est retombée 5 jours après |
+| `verif-clic.js` | « concordent partout » | avait cliqué 19 blocs sur 73, sans le dire |
+
+---
+
+## Règles permanentes
+
+- **Un point à la fois**, mené jusqu'à la mesure. Une case = un point clos et prouvé.
+- **RÈGLE FONDATRICE, elle prime sur tout : NE JAMAIS DÉCLARER UN CORRECTIF SANS L'AVOIR EXÉCUTÉ.**
+  Le 2026-09-02, une correction du wrapper a été commitée avec le message « trois cas, TESTÉS » ; les
+  trois cas avaient été testés dans une **transcription** du code, pas dans le code. La variable
+  n'était affectée nulle part et la panne est revenue à l'identique le 2026-09-07. Quand tu répares un
+  fichier, c'est **ce fichier** que tu exécutes ou que tu fais analyser, jamais une copie retapée.
+- **UN GARDE-FOU SE PROUVE EN LUI DONNANT UNE FAUTE À TROUVER.** Pour chaque contrôle que tu corriges
+  ou ajoutes dans ce chantier, tu **injectes une faute** dans une copie jetable, tu vérifies qu'il
+  rougit, tu vérifies qu'il redevient vert une fois la faute retirée, et tu écris les deux résultats
+  dans le compte rendu. Un contrôle non éprouvé par injection ne compte pas comme fait.
+- **Un commit par point**, avec la mesure dans le message.
+- `node tools/verif.js --rapide` vert avant de cocher ; `--complet` sur les points qui touchent la chaîne.
+- **Contrainte fondatrice** : 100 % `file://`, aucun serveur, aucun module ES, aucun build, aucune
+  dépendance installée. **INTERDIT** de réintroduire une URL vers `cdnjs.cloudflare.com`,
+  `fonts.googleapis.com`, `fonts.gstatic.com`.
+- **NE JAMAIS TOUCHER** au mojibake volontaire de `pages/formats/lecon-06.html`,
+  `pages/html/lecon-15.html`, `pages/r/lecon-06.html`, `pages/perl/lecon-13.html`.
+- **En cas de doute réel : ne force pas.** Laisse la case décochée en écrivant ce qui bloque.
+
+---
+
+## PHASE A — Les instruments d'abord
+
+Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
+
+- [ ] **A1 · L'index des QCM, et le garde-fou qui le laissait passer.** `js/quiz-index.js` sert les
+      questions de `pages/examen.html` (`examen.html:95` ; `js/examen.js:242` construit les options
+      depuis `q.a` sans jamais relire les pages). Mesure de l'audit : index périmé de **18 212 octets**,
+      **71 entrées divergentes**, toutes du cours `lua` — biais « la plus longue » à **88,9 % dans
+      l'index publié contre 25,0 % dans les leçons corrigées**. Un apprenant de `lua` qui coche la plus
+      longue avait encore **64 justes sur 72** à l'examen. Régénérer, puis **réparer le garde-fou** :
+      `build-index.js:891-895` ne sort en code 1 que si des entrées sont *reprises*, et la clé de reprise
+      (l.505-511) est `fold(q.q)` — **l'énoncé seul**. Réécrire un distracteur conserve la clé : jamais
+      repris, donc jamais rouge. `verif-donnees.js:675-688` ne lit que le code de sortie et cherche
+      `(\d+) entrée\(s\) REPRISE` ; la ligne « different du fichier cible » que `--strict` imprime
+      pourtant n'est lue par personne. **Éprouver par injection** : modifier un distracteur dans une
+      leçon, vérifier que I18 rougit.
+
+- [ ] **A2 · Les deux cliquets du biais, qui ne peuvent pas rougir.** `verif-qcm-biais.js` et
+      `verif-qcm-lexique.js` sortent en code 0 sur `lua` en imprimant « refiger avec `--ecrire` ».
+      Calcul de l'audit sur les formules de l'outil (`PLANCHER 0,05`, `TOL 0,01`, `traite:false`) : un
+      retour de 25,0 % à **88,9 % serait vert**, une dégradation à 70,0 % serait verte ; seul ≥ 89,9 %
+      rougirait. Et `verif.js --rapide` **avale** ces lignes : il n'affiche que `qcmbiai OK` et
+      `qcmlexi OK`. Refermer le cliquet sur `lua` (`--ecrire` + `traite:true`), puis corriger la règle
+      pour qu'une **dégradation** rougisse toujours, et faire remonter le détail dans `verif.js`.
+      **Éprouver par injection** : dégrader volontairement un cours traité, vérifier que ça rougit.
+
+- [ ] **A3 · `verif-clic.js` : le seul outil qui clique vraiment, hors chaîne et instable.** Il n'est
+      appelé par **aucun mode** (`grep -n "clic" tools/verif.js` ne rend rien). Pire, sa couverture
+      varie : la même commande sur six pages a rendu **67, 19, 73, 73** blocs cliqués sur quatre
+      exécutions, en imprimant « concordent partout » et en sortant 0 à chaque fois — le run à 19 n'a
+      jugé que 26 % des blocs. Cause mesurée : les Chrome de test survivent (`proc.kill()` l.236 ne tue
+      que le lanceur ; 8 processus `*chrome-verif-clic*` encore vivants après les lancements) et l'outil
+      réutilise un **port fixe unique** (`PORT = 9351`, l.57) et un seul `--user-data-dir`. Corriger :
+      port et répertoire uniques par lancement, attente d'un **état** (nombre de `.code-block__try`
+      stable sur deux relevés) et non d'une durée, **impression du nombre de blocs attendus à côté des
+      cliqués**, et un écart qui rougit. Puis le verser dans la chaîne.
+
+- [ ] **A4 · Le garde-fou anti-orphelins ne police que le préfixe `verif-`.**
+      `tools/verif-chaine-declaree.js` a `SOUMIS = ["verificateur","mutation"]` et `recense-chaine.js`
+      décide la famille au préfixe. Résultat : **69 fichiers lancés par au moins un mode, 56 soumis,
+      13 étapes de la chaîne non policées** — et l'outil sort 0 en imprimant « OK ». L'exposition réelle
+      mesurée est de **quatre** fichiers sans aucun appelant : `preuves/exos-texte.js`, `exos-code.js`,
+      `decodeur.js`, `capture-erreurs.js`, tous capables de rougir, aucun déclaré dans
+      `hors-chaine.json`. `exos-texte.js` est l'outil qui avait trouvé les 13 exercices dont le champ
+      `accept` appartenait à un autre énoncé ; **rien ne le relance.** Corriger `famille()` / `SOUMIS` :
+      est un vérificateur tout fichier que `verif.js` lance, plus tout fichier capable de rendre un code
+      non nul.
+
+- [ ] **A5 · `verif.js` confond « je n'ai pas pu mesurer » et « j'ai trouvé une faute ».** Distinguer
+      les deux dans la sortie et dans le code de retour : un outil qui n'a rien pu mesurer doit le dire,
+      jamais passer pour vert ni pour rouge. Mesurer combien d'étapes sont concernées avant de corriger.
+
+- [ ] **A6 · `--rapide` montre 1 signalement, `--complet` en montre 6.** Cinq contrôles ne sont jamais
+      joués par le mode que l'on lance le plus souvent — et trois des six signalements de `--complet`
+      **ne se reproduisent pas** quand on lance l'outil seul, ce qui est un second problème. Établir
+      quels contrôles doivent entrer dans `--rapide` (le mode par défaut de toutes les passes), et
+      traiter l'instabilité des trois signalements non reproductibles.
+
+---
+
+## PHASE B — Ce que l'apprenant voit casser
+
+Un bouton « Tester » qui rend une erreur est pire qu'une absence de bouton : le panneau **promet** un
+résultat avant le clic.
+
+- [ ] **B1 · Les blocs SQL : 124 sur 303 en erreur (40,9 %).** Par cours : `sql` 128/215, `bdd` 50/70,
+      **`data-eng` 1/17**, `securite` 0/1. Causes mesurées : 51 « no such column », 39 « no such table »,
+      21 « near … ». Trois tentatives de démolition ont échoué : le vérificateur ne diverge pas du
+      navigateur (`js/runner.js:331-341` fait exactement la même chose), les boutons existent bien
+      (8 boutons cliqués dans un vrai Chrome sur `data-eng`, 8 erreurs), et ce ne sont pas des erreurs
+      pédagogiques (sur `pages/sql/lecon-10.html`, 11 erreurs sur 13 portent sur une colonne `points`
+      que `runner.js:201` ne déclare pas ; sur les 124, **2 seulement** démontrent une contrainte).
+      Commencer par `data-eng`. Descendre le cliquet de `tools/verif-sql-attendu.json` — calé sur 124
+      depuis le 2026-08-26, donc **vert avec 124 boutons morts** — à chaque lot. Une case par cours.
+
+- [ ] **B2 · Les blocs JavaScript : 451 sur 2 011 en erreur (22,4 %).** Mesure indépendante avec la
+      règle `BROWSER_ONLY` de `js/runner.js:51` : 518 erreurs, dont **67 volontaires et annoncées en
+      commentaire** — le chiffre défendable est donc 451. Causes : 92 `import statement outside a
+      module`, 34 `await is only valid in async`, 34 `test is not defined`, 31 `Unexpected token
+      'export'`, 13 `Unexpected token ':'` (du TypeScript annoncé `javascript`). Cours : `js` 156,
+      `nodejs` 88, `tests` 51, `vue` 40, `projets-js` 37. Cas net : `pages/nodejs/lecon-03.html`, **5
+      blocs sur 6 sont des `package.json`** (`data-file="package.json"` + `class="language-javascript"`)
+      — un fichier JSON avec un bouton « Tester ». Corriger en deux temps : (a) élargir `BROWSER_ONLY`
+      aux lignes commençant par `import` ou `export` et aux blocs `data-file` en `.json` ; (b) rendre
+      autonomes, ou débrancher, les fragments qui dépendent d'un bloc précédent. `CHANTIER-V14.md:497`
+      en recense déjà 64 : **le gisement réel est sept fois plus gros.** Une case par lot de cours.
+
+- [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
+      `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
+      ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf
+      `tools/preuves/rejoue-*.js` couvrent cpp, rust, go, java, php, c, csharp, elixir, bash — **178
+      programmes, 309 lignes comparées, 0 divergence** — et `recense-chaine.js --json` les classe
+      `dansChaine:false`. **Test décisif déjà fait par l'audit**, en bac à sable : une sortie falsifiée
+      dans `pages/cpp/lecon-01.html` (`// n = 7` → `// n = 8`) est vue par `rejoue-cpp.js`
+      (`1 divergent(s)`, EXIT=1) et **invisible** à `verif-exemples.js` (`"blocs":0`) comme à
+      `verif-sorties.js` (EXIT=0). Verser les neuf dans `--complet`, ou les déclarer dans
+      `hors-chaine.json` avec leur raison. **Nuance à écrire dans le compte rendu** : ce ne sont pas des
+      compilateurs (g++, gcc, rustc, go, javac, php, elixir sont absents de la machine) mais des
+      transpositions JS écrites à la main — les brancher attrape une sortie **éditée**, pas un bloc neuf
+      non transposé.
+
+- [ ] **B4 · Les deux preuves du seul fonctionnement qui compte sont hors chaîne.** L'audit a retenu que
+      les preuves « page ouverte en `file://` » ne sont lancées par aucun mode. Les identifier, les
+      verser, et mesurer ce qu'elles trouvent.
+
+---
+
+## PHASE C — Les chiffres publiés devenus faux
+
+Le site publie ses propres mesures. Il change. Un chiffre publié qui ne correspond plus est un mensonge
+affiché à l'apprenant — et l'audit a montré que la cause est presque toujours **la retouche à la main**.
+
+- [ ] **C1 · `pages/doc/lecon-03.html` : quatre statistiques fausses, dont deux hors de tout contrôle.**
+      `verif-normatif.js` sort en 1 avec « 64 contrôles OK, 2 en échec ». Mesure du jour
+      (`tools/doc/mesures/conformite-quiz.js`) : S3 = 3 507 / 6 103 conformes (57,5 %), **2 596
+      manquements (42,5 %)**. La page publie `2 657 fois — 43,5 %` (l.878), `2 423 / 6 103 — 39,7 %`
+      (l.871), et pour S4 `18 / 89 cours — 20,2 %` (l.872) contre **34/89 = 38,2 %** mesuré. Les deux
+      derniers ne sont surveillés par **aucun** des 66 contrôles. Aggravation : le tableau est
+      arithmétiquement impossible — **2 423 + 2 657 = 5 080 ≠ 6 103**, alors que
+      `conformite-quiz.js:153` définit `conformes = valides - echecs`, somme toujours égale au total.
+      `git log -S` date le 2 423 de `ff848e4` (page alors cohérente : 2 423 + 3 680 = 6 103) et le
+      2 657 de `2637f82`, dont le diff ne touche que **7 lignes, exactement celles que les deux
+      contrôles surveillent**. **Correctif : régénérer, pas rustiner.** `tools/doc/corps/l3.html:110,117`
+      ne contient aucun chiffre, seulement des marqueurs `@@NORMNB:…@@` remplis par
+      `tools/doc/gen.js:365-367`. Lancer `gen.js`, puis **ajouter à `verif-normatif.js` un verdict sur
+      `s3.conformes`, sur `s4` en valeur, et un contrôle d'addition** (conformes + échecs = corpus).
+      Deux autres phrases de la même page sont écrites à la main et fausses (« le rang 1 s'établit à
+      38,4 % » sur 1 835 questions ; « la plus longue 0 fois, la deuxième 39 fois, soit 60,9 % » sur
+      64 questions) : les régénérer aussi.
+
+- [ ] **C2 · `pages/doc/cours.html` annonce 74 leçons, la mesure dit 82.** `grep -n "74 leçons"` → l.96,
+      dans un callout visible ; `tools/doc/mesures/mentions-doc.js` → **82 leçons, 36 cours, 1 536
+      leçons parcourues** ; et `pages/doc/lecon-01.html` porte la phrase identique avec **82**.
+      `git show 785940f` montre les deux pages cohérentes à l'écriture : c'est une dérive du corpus, pas
+      deux définitions. Cause structurelle : `gen.js` n'écrit que `lecon-<num>.html`, `tools/doc/corps/`
+      ne contient que `l1..l4.html` — **`cours.html` n'a aucun gabarit et n'est lu par aucun outil**.
+      Le mécanisme protège la leçon et laisse dériver la page lue en premier. Passer `cours.html` sous
+      `gen.js`, ou étendre le contrôle de péremption de `verif-doc.js` à ce fichier.
+
+- [ ] **C3 · Les deux études de cas dont le bloc de sortie a dérivé.** `pages/etude-inconnu.html` :
+      **cinq** valeurs ont dérivé, pas trois (13174 → 13175 blocs, 6519.3 → 6543.4 Ko, 10610 → 10609,
+      « neutralisation 27.8 % » → 27.9 %, `ruby(225)` → `ruby(224)`), et `10610` apparaît **4 fois**
+      (l.79, 112, 150, 227). `tools/preuves/etude-inconnu.js` annonce « fautes : 0 » : il ne compare que
+      le tableau des marqueurs, **jamais les totaux**. `pages/etude-recherche.html` : 45958 → 46027 mots,
+      928606 → 929902 couples, 4.08 → 4.09 Mo — la page était **exacte à son assemblage** (vérifié en
+      recomptant l'index au commit `e61edec`), écart réel de +0,15 %. Réassembler les deux
+      (`assembler.js`, `mesures.js`) **et étendre les deux preuves aux blocs de mesures**, sans quoi
+      elles rederiveront au prochain commit de contenu.
+
+- [ ] **C4 · `pages/examen.html` annonce « plus de 3000 questions » ; la banque en contient 6 151.**
+      Corriger, et rattacher l'annonce à une mesure plutôt qu'à un nombre écrit à la main.
+
+- [ ] **C5 · Le contrôle des compteurs affichés (I19) ne regarde que 4 fichiers alors que les compteurs
+      vivent dans 8.** Étendre, et éprouver par injection.
+
+---
+
+## PHASE D — La machinerie de l'autonomie
+
+Huit constats retenus sur le wrapper et sa surveillance. Aucun n'a touché un apprenant ; tous ont coûté
+des heures de travail perdues ou invisibles.
+
+- [ ] **D1 · `Get-HeureReset` reporte au lendemain au maximum, alors qu'une limite HEBDOMADAIRE peut se
+      remettre à zéro six jours plus tard.** L'API donne la date exacte
+      (`tools/usage-anthropic.js reset`) : s'en servir toujours, et ne garder le message texte que comme
+      repli. Éprouver sur les quatre formes réelles trouvées dans les transcrits.
+
+- [ ] **D2 · Le verrou de pause d'usage peut poser une reprise DÉJÀ PASSÉE**, auquel cas il ne diffère
+      plus rien. Vérifier que la date calculée est dans le futur, sinon reporter au prochain créneau
+      utile, et le journaliser.
+
+- [ ] **D3 · La réparation horaire de `sante-autonomie.ps1` écrase le report d'usage par un réveil dans
+      2 minutes**, et ignore la pause décidée par le wrapper. Les deux mécanismes doivent se parler : la
+      surveillance ne doit pas défaire ce que le verrou vient de décider.
+
+- [ ] **D4 · `sante-autonomie.ps1` écrit « réparé : réactivation IMPOSSIBLE » et sort en code 0** quand
+      la réparation a échoué. Un rapport qui se contredit dans sa propre phrase. Corriger le texte **et**
+      le code de sortie.
+
+- [ ] **D5 · Le `Replace` du plan courant corrompt le prompt envoyé à chaque réveil** : le plan y est
+      décrit deux fois, avec des noms différents. Le modèle reçoit donc une consigne contradictoire à
+      chaque passe. Réécrire la substitution proprement, et **relire le prompt final** avant envoi.
+
+- [ ] **D6 · Les deux prompts annoncent des chiffres périmés que le modèle est censé reprendre**
+      (« 83 cours, 1463 lecons » alors que la mesure du jour donne 90 cours et 1 540 leçons). Soit les
+      calculer au lancement, soit ne plus en citer aucun.
+
+- [ ] **D7 · Le drapeau `.autonomie/verif-finale.ok` n'est jamais supprimé.** Trois occurrences dans le
+      wrapper, aucune suppression, et les 21 versions du fichier depuis le 2026-08-02 sont identiques
+      sur ce point. Reproduit sur copie : drapeau vieux de 180 jours + chaîne re-terminée → extinction
+      **sans passe de sécurité**. Nuance mesurée à conserver : la branche n'a **jamais** été prise en
+      ~10 créations du drapeau, donc le risque est théorique mais armé. Dater le drapeau et le refuser
+      si `$CHAINE` a changé, ou le supprimer dès qu'un plan retrouve une case décochée.
+
+- [ ] **D8 · `autonomie.ps1` ne regarde jamais le marqueur d'arrêt volontaire au démarrage.** Un
+      lancement manuel repart donc même quand un arrêt a été demandé — c'est exactement ce qui s'est
+      produit le 2026-09-08 à 19:09:08, neuf secondes après un `ARRET MANUEL`. Lire le marqueur au
+      démarrage et refuser de partir, sauf drapeau explicite.
+
+- [ ] **D9 · `journal.log` n'a aucune rotation** et reçoit l'intégralité de la sortie du modèle : 640 Ko,
+      6 693 lignes, 726 réveils. Poser une rotation, et vérifier qu'elle ne casse pas la lecture de
+      `sante-autonomie.ps1`. **Piège connu à respecter** : ne jamais ouvrir ce fichier avec un `tail -f`
+      — sous Windows cela le verrouille et `Add-Content` échoue en silence.
+
+- [ ] **D10 · Le verrou anti-chevauchement peut prendre un PID recyclé pour la passe précédente** et
+      sauter les réveils jusqu'au plafond de 6 h. Ajouter une vérification de l'heure de démarrage du
+      processus, pas seulement de son nom.
+
+---
+
+## PHASE E — Reprendre le V16 en connaissance de cause
+
+- [ ] **E1 · La nouvelle faille des QCM : le POINT INTERNE.** L'audit l'a mesurée à **98,9 % de
+      rendement** (282 justes sur 285) sur une couverture de 4,6 % — « la seule option en deux
+      phrases ». C'est la plus forte jamais mesurée sur ce site, et elle est **fabriquée par la
+      correction elle-même** : en étoffant les distracteurs, on écrit parfois une bonne réponse en deux
+      phrases là où les autres n'en ont qu'une. Écrire la consigne qui la ferme, la verser dans le
+      cadrage de B4 du V16, et vérifier sur les 38 cours déjà traités qu'elle n'y est pas déjà installée.
+
+- [ ] **E2 · Le verdict sur B4, écrit noir sur blanc dans le V16.** L'audit a établi que **B4 ne peut
+      pas être cochée** : la cible du plan est **par cours** (longueur ≤ 40 %, aucune stratégie
+      exploitable > 60 %), pas globale, et le V16 déclare lui-même la cible globale « hors de portée de
+      ce chantier ». État mesuré : **38 cours à ≤ 40 %** (3 243 questions, moyenne pondérée 22,7 %) et
+      **52 cours au-dessus** (2 924 questions, 47,4 % du corpus, moyenne pondérée 91,5 %), dont **0**
+      dont la pire stratégie exploitable reste sous 60 %. Le 55,4 % global est bas **seulement** parce
+      que les cours traités compensent les autres — le piège « un indice de lot vaut 100 % sur le lot et
+      25 % sur le site ». Inscrire ce constat dans `CHANTIER-V16.md` pour que la case ne soit pas cochée
+      par erreur, avec la liste des 52 cours restants classés par nocivité (questions × taux).
+
+---
+
+## PHASE F — Contrôle final
+
+- [ ] **F1 · Non-régression.** Les vérificateurs verts en `--rapide`, `--complet` et `--strict`.
+- [ ] **F2 · Chaque garde-fou corrigé, éprouvé par injection.** Reprendre un par un les contrôles
+      touchés par ce chantier, leur donner une faute, vérifier qu'ils rougissent. Publier le tableau.
+- [ ] **F3 · Mesure globale.** Blocs SQL et JS en erreur : **124 et 451 au départ**, combien à
+      l'arrivée ? Outils hors chaîne : combien au départ, combien à l'arrivée ? Chiffres publiés faux :
+      combien restent ?
+- [ ] **F4 · Ce qui n'a pas été fait.** Lister et expliquer, sans arrondir. Reprendre aussi les cinq
+      angles morts que l'audit s'est reconnus : aucune exécution réelle sur neuf langages (les
+      compilateurs sont absents de la machine), le rendu visuel jamais regardé, 344 blocs `.txt` sur 793
+      confrontés à rien, le mode `--mutations` jamais lancé, et `verif-clic.js` passé sur 8 leçons
+      seulement.
+
+---
+
+## Fin de chantier
+
+Quand toutes les cases sont cochées, l'autonomie enchaîne sur `CHANTIER-V16.md`, qui reprend là où il
+s'était arrêté — avec, cette fois, des instruments qui savent échouer.
