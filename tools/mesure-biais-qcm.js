@@ -270,6 +270,10 @@ function fragmentsIdentifiants(q) {
 function aPointInterne(t) { return /[.!?][  ]+[A-ZÀ-ÖØ-Þ]/.test(String(t)); }
 function aGuillemets(t) { return /[«»]/.test(String(t)); }
 function aFleche(t) { return /→|->|=>|⇒/.test(String(t)); }
+/* La VIRGULE DECIMALE : un chiffre, une virgule, un chiffre. Trouvee sur le cours
+   `a11y` (2026-09-08), ou la bonne reponse « 4,5:1 » etait la SEULE des quatre a en
+   porter une, face a « 1:1 », « 2:1 » et « 21:1 exige ». */
+function aVirguleDecimale(t) { return /\d,\d/.test(String(t)); }
 
 /* Le rang de longueur d'une option, les ex aequo etant tous candidats : sans cela
    une egalite ferait rendre un choix arbitraire et la mesure vaudrait le hasard. */
@@ -779,6 +783,47 @@ var STRATEGIES = [
         return frags.some(function (fr) { return s.indexOf(fr) !== -1; });
       });
     },
+  },
+  /* ⚠️ LA VIRGULE DECIMALE, ajoutee au point B4 (cours `a11y`, 2026-09-08).
+     Trouvee par la relecture adversariale du QCM bilan — c'est la CINQUIEME fois
+     qu'un indice arrive par la relecture avant l'outil, et la premiere fois qu'il
+     porte sur des options NUMERIQUES, que les 37 strategies precedentes traitaient
+     comme du texte.
+
+     Le cas d'origine : « Quelle est la limite de contraste AA ? » avec pour options
+     « 4,5:1 », « 1:1 », « 2:1 », « 21:1 exige ». Reperer la virgule suffit — sans
+     rien savoir des WCAG. La cause est un reflexe de redaction, pas un hasard : un
+     seuil normatif s'ecrit avec une decimale, un distracteur invente s'ecrit en
+     nombre rond parce que c'est plus rapide a poser.
+
+     Mesure faite AVANT le cablage, sur tous les blocs data-quiz du site : la regle
+     tranche sur 103 questions et rend 55,3 % ; en tirage restreint, 148 questions et
+     49,1 %. Sur les cours a fort contenu chiffre, elle est SURE : `crypto` 100,0 %
+     (7 q), `observabilite` 100,0 % (4 q), `distribue` 86,7 % (15 q), `neurones`
+     66,7 % (15 q). Couverture faible, rendement double de l'etalon : le profil exact
+     d'un indice rare et sur.
+
+     ⚠️ MESUREE ET REFUTEE le meme jour, donc NON cablee : « prendre le plus grand
+     nombre » sur les questions dont les quatre options sont des nombres courts rend
+     23,3 % sur 30 questions, et sa variante inverse 11,1 % sur 27 — l'etalon est a
+     25,0 %. C'etait un artefact LOCAL, fabrique par la correction du bilan d'`a11y`
+     (serie 1,5 / 2,5 / 3,5 / 4,5 dont la bonne reponse etait le maximum), pas un
+     biais du site. La serie a ete cassee dans la lecon ; la strategie n'entre pas
+     dans l'outil. Une trouvaille sur un cours n'est un indice du site que si la
+     mesure du site le dit.
+
+     LA REGLE QUI EN DECOULE : quand la bonne reponse porte une decimale, les trois
+     distracteurs en portent une aussi — et la serie ne doit etre ni reguliere ni
+     ordonnee autour de la bonne reponse. */
+  {
+    nom: "la seule avec une virgule decimale",
+    quoi: "la seule option qui ecrit un nombre a decimale — le reflexe du seuil normatif",
+    choisir: function (q) { return seule(q, aVirguleDecimale); },
+  },
+  {
+    nom: "RESTREINDRE a la virgule decimale",
+    quoi: "tirer parmi les seules options qui portent un nombre a decimale",
+    choisir: function (q) { return restreindre(q, aVirguleDecimale); },
   },
   {
     nom: "COMBINE : tiret puis longueur",
