@@ -147,7 +147,7 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
       `git status` propre.
       *Non-régression* : `node tools/verif.js --rapide` → **tout est vert, 95,8 s**.
 
-- [ ] **A3 · `verif-clic.js` : le seul outil qui clique vraiment, hors chaîne et instable.** Il n'est
+- [x] **A3 · `verif-clic.js` : le seul outil qui clique vraiment, hors chaîne et instable.** Il n'est
       appelé par **aucun mode** (`grep -n "clic" tools/verif.js` ne rend rien). Pire, sa couverture
       varie : la même commande sur six pages a rendu **67, 19, 73, 73** blocs cliqués sur quatre
       exécutions, en imprimant « concordent partout » et en sortant 0 à chaque fois — le run à 19 n'a
@@ -157,6 +157,48 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
       port et répertoire uniques par lancement, attente d'un **état** (nombre de `.code-block__try`
       stable sur deux relevés) et non d'une durée, **impression du nombre de blocs attendus à côté des
       cliqués**, et un écart qui rougit. Puis le verser dans la chaîne.
+
+      **FAIT le 2026-09-08.** *L'instabilité a été REPRODUITE, et par sa cause.* Deux exécutions
+      successives sur les six mêmes pages, machine propre (0 processus `*chrome-verif-clic*` vivant),
+      donnent **48 et 48** : le phénomène ne se voit pas isolément. Deux exécutions **en parallèle** sur
+      les trois mêmes pages donnent **18 blocs contre 11, les deux en code 0**, chacune imprimant
+      « concordent partout » — le run à 11 n'a jugé que 61 % des blocs sans le dire. La cause du plan
+      est donc confirmée : port fixe et profil partagé, deux instances qui se prennent l'une pour
+      l'autre.
+      *Quatre corrections* : (1) port **dynamique** par lancement (`--remote-debugging-port=0`, lu dans
+      `DevToolsActivePort`) et `--user-data-dir` **unique par page**, effacé ensuite, plus un balayage
+      du dossier au démarrage (67 profils s'accumulaient) ; (2) `proc.kill()` → **mort de l'arbre**
+      (`taskkill /T /F`) : 0 Chrome de test survivant après un arrêt en cours de route, vérifié ;
+      (3) la cible CDP est choisie **sur son URL** et non « la première page trouvée » ; (4) attente
+      d'un **ÉTAT** (`readyState complete`, puis nombre de `.code-block__try` stable sur deux relevés)
+      au lieu des 1 400 ms en dur.
+      *La couverture est désormais dite.* Le nombre de blocs **attendus** est calculé à part, sur le
+      SOURCE (figure `code-block` + `<pre>` + `code.language-javascript`, hors `BROWSER_ONLY` — cette
+      expression est **lue dans `js/runner.js`**, jamais recopiée). Trois verdicts distincts :
+      0 = tout concorde, 1 = divergence, **2 = mesure incomplète**. ⚠️ Un premier jet cherchait
+      `code-block__bar` dans le HTML et comptait **0 bloc attendu sur 48** : la barre est posée par
+      `js/main.js` à l'affichage, elle n'est pas dans le source.
+      *Le filtre des pages était trop large* : « un bloc JS suivi quelque part d'un `.txt` » retenait
+      89 pages, et sur les six premières, **48 blocs cliqués et ZÉRO jugé** (voisins absents ou
+      illustrations). On applique maintenant la règle d'appariement de la comparaison elle-même :
+      **89 pages → 75, sans perdre une seule page appariable** (mesuré : les 14 écartées n'en
+      contiennent aucune).
+      *Épreuves par injection, trois, toutes exécutées* :
+      — **deux instances en parallèle après correction : 18 = 18 des deux côtés**, code 0 (contre 18 et
+      11 avant) ;
+      — **divergence réelle** : `sortie-recursion.txt` de `compilation/lecon-08` passé de 2000 à 9999 →
+      **code 1**, « la page imprime 9999 / le clic donne 2000 » ;
+      — **trou de couverture** : une figure JS injectée avec `data-runner="skip"` (runner.js ne pose pas
+      de bouton) → **code 2**, « 8 bloc(s) cliqué(s) sur 9 attendu(s) » ;
+      — retour au vert après restauration : 8 sur 8, code 0.
+      *Versé dans la chaîne* : étape `clic` du mode **`--complet`** (hors `--rapide` : il ouvre 75 pages
+      une par une). Son entrée de `tools/hors-chaine.json` est retirée — et le garde-fou l'a exigé
+      lui-même : tant qu'elle était là, `verif-chaine-declaree.js` sortait en **code 1**
+      (« déclaration périmée »), il repasse à **0** une fois l'entrée retirée.
+      *Coût mesuré* : **13,0 s/page sur 12 pages** (156 s, 77 blocs sur 77 attendus), et le balayage
+      complet des 75 pages tient en une exécution — chiffre reporté ci-dessous une fois rendu. Option
+      `--chrono` ajoutée (une ligne par page) et durée moyenne + page la plus lente imprimées dans le
+      résumé : la question « où part le temps » ne se pose plus à l'aveugle.
 
 - [ ] **A4 · Le garde-fou anti-orphelins ne police que le préfixe `verif-`.**
       `tools/verif-chaine-declaree.js` a `SOUMIS = ["verificateur","mutation"]` et `recense-chaine.js`

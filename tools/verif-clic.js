@@ -39,11 +39,33 @@
  * qui, au clic, ne produit rien ou lève une ReferenceError : c'est un fragment qui
  * dépend d'un bloc précédent, pas un programme dont on puisse comparer la sortie.
  *
+ * CE QUI A ÉTÉ RÉPARÉ LE 2026-09-08 (chantier V17, point A3), et pourquoi il fallait
+ * le réparer avant de verser cet outil dans la chaîne : **sa couverture variait sans
+ * qu'il le dise**. L'audit a relevé 67, 19, 73 puis 73 blocs cliqués sur quatre
+ * exécutions de la même commande, chacune imprimant « concordent partout » et sortant
+ * en 0 — le run à 19 n'avait jugé que 26 % des blocs. Reproduit ici en lançant deux
+ * instances en parallèle sur les trois mêmes pages : **18 blocs contre 11, les deux en
+ * code 0**. Cause : un PORT FIXE unique (9351) et un seul `--user-data-dir`, plus un
+ * `proc.kill()` qui ne tue que le lanceur, donc des Chrome de test qui survivent et
+ * qu'une exécution suivante trouve à sa place sur le même port.
+ * Quatre corrections :
+ *   1. port DYNAMIQUE par lancement (`--remote-debugging-port=0`, lu dans le fichier
+ *      `DevToolsActivePort` du profil) et `--user-data-dir` UNIQUE par page, effacé
+ *      à la fin : deux exécutions ne peuvent plus se confondre ;
+ *   2. la cible CDP est choisie sur son URL, pas sur « la première page trouvée » :
+ *      un Chrome étranger sur le même port ne peut plus être pris pour le bon ;
+ *   3. on attend un ÉTAT et non une durée : `readyState complete` puis un nombre de
+ *      boutons `.code-block__try` STABLE sur deux relevés ;
+ *   4. le nombre de blocs ATTENDUS est calculé à part, depuis le SOURCE des pages, et
+ *      imprimé à côté du nombre de blocs cliqués. **Un écart rougit** (code 2 : rien
+ *      n'a été mesuré sur ces blocs, ce n'est ni un « OK » ni une divergence).
+ *
  * USAGE
  *   node tools/verif-clic.js                       # les leçons à risque (bloc JS + bloc .txt)
  *   node tools/verif-clic.js pages/x/lecon-01.html # des pages précises
  *   node tools/verif-clic.js --tout                # toutes les leçons portant un bloc JS
- * Code de sortie : 1 s'il existe au moins une divergence.
+ * Code de sortie : 1 s'il existe au moins une divergence, 2 si la mesure n'a pas pu
+ * être faite en entier (page non ouverte, blocs non cliqués), 0 si tout concorde.
  */
 
 var cp = require('child_process');
@@ -54,9 +76,12 @@ var crypto = require('crypto');
 var fs = require('fs');
 
 var RACINE = path.resolve(__dirname, '..');
-var PORT = 9351;
 var args = process.argv.slice(2);
 var TOUT = args.indexOf('--tout') !== -1;
+/* --chrono : une ligne par page (durée, blocs). Sert à savoir OÙ part le temps —
+   la question a été posée le 2026-09-08, quand un balayage complet s'est révélé
+   quatre fois plus lent que l'extrapolation faite sur six pages. */
+var CHRONO = args.indexOf('--chrono') !== -1;
 var explicites = args.filter(function (a) { return a.indexOf('--') !== 0; });
 
 var CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
@@ -74,6 +99,25 @@ process.on('uncaughtException', function (e) {
 });
 
 /* ------------------------------------------------------------ choix des pages --- */
+/* Une page mérite d'être ouverte si elle contient au moins un bloc JS suivi, à trois
+   éléments au plus, d'un bloc `.txt` que `estLaSortieDe` reconnaît comme SA sortie.
+   C'est exactement le critère de la comparaison : ouvrir une page qui n'en contient
+   aucun coûte un démarrage de Chrome pour ne rien juger. */
+function aUneSortieAppariable(html) {
+  var figs = [], re = /<figure class="code-block"([^>]*)>([\s\S]*?)<\/figure>/g, m;
+  while ((m = re.exec(html))) {
+    var at = /data-file="([^"]*)"/.exec(m[1]);
+    figs.push({ file: at ? at[1] : '', js: /class="[^"]*language-javascript/.test(m[2]) });
+  }
+  for (var i = 0; i < figs.length; i++) {
+    if (!figs[i].js) continue;
+    for (var k = i + 1; k <= i + 3 && k < figs.length; k++) {
+      if (!/\.txt$/.test(figs[k].file)) continue;
+      if (estLaSortieDe(figs[k].file, figs[i].file)) return true;
+    }
+  }
+  return false;
+}
 function lecons() {
   var out = [];
   var base = path.join(RACINE, 'pages');
@@ -84,14 +128,94 @@ function lecons() {
       if (!/^lecon-\d+\.html$/.test(f)) return;
       var h = fs.readFileSync(path.join(dir, f), 'utf8');
       if (h.indexOf('language-javascript') < 0) return;
-      /* à risque : un bloc JS suivi d'un bloc de sortie .txt */
-      var aRisque = /language-javascript[\s\S]{0,40000}?<figure class="code-block" data-file="[^"]*\.txt"/.test(h);
-      if (TOUT || aRisque) out.push(path.relative(RACINE, path.join(dir, f)).replace(/\\/g, '/'));
+      /* « à risque » voulait dire : un bloc JS suivi QUELQUE PART d'un bloc .txt. Trop
+         large — mesuré le 2026-09-08 : sur les six premières pages ainsi retenues,
+         48 blocs cliqués et ZÉRO jugé, les 48 étant soit sans sortie voisine, soit
+         voisins d'une illustration. On applique donc ici la règle d'appariement que
+         la comparaison appliquera de toute façon (`estLaSortieDe`, à trois éléments
+         de distance) : 89 pages retenues -> 75, et AUCUNE page appariable perdue
+         (vérifié : la différence est de 14 pages, toutes non appariables). */
+      if (TOUT || aUneSortieAppariable(h)) out.push(path.relative(RACINE, path.join(dir, f)).replace(/\\/g, '/'));
     });
   });
   return out;
 }
 var PAGES = explicites.length ? explicites : lecons();
+
+/* --------------------------------------------- un Chrome ISOLÉ par page ouverte --- */
+/* Le port fixe et le profil partagé étaient la cause mesurée de la couverture qui
+   variait. On donne à chaque lancement son propre répertoire de profil et on laisse
+   Chrome choisir son port (`--remote-debugging-port=0`), qu'il écrit lui-même dans
+   `DevToolsActivePort`. Deux exécutions simultanées ne peuvent donc plus se prendre
+   l'une pour l'autre. */
+var RACINE_PROFILS = path.join(RACINE, 'scratchpad', '.chrome-verif-clic');
+/* Sous Windows, Chrome garde encore des poignées de fichiers quelques centaines de
+   millisecondes après la mort de son arbre : la suppression du profil échoue alors
+   sans conséquence, et les répertoires s'accumulent (67 relevés après un passage de
+   75 pages). On balaie donc l'ancien au DÉMARRAGE, où plus rien ne les tient. Le
+   dossier est sous `scratchpad/`, ignoré par git. */
+try { fs.rmSync(RACINE_PROFILS, { recursive: true, force: true }); } catch (e) { /* verrouillé : sans effet */ }
+function profilNeuf(n) {
+  var d = path.join(RACINE_PROFILS, String(process.pid) + '-' + n);
+  fs.rmSync(d, { recursive: true, force: true });
+  fs.mkdirSync(d, { recursive: true });
+  return d;
+}
+/* `proc.kill()` ne tuait que le LANCEUR : Chrome se ré-exécute dans des processus
+   fils, qui survivaient (8 encore vivants après les lancements de l'audit) et
+   répondaient sur le port fixe à l'exécution suivante. On tue l'arbre entier. */
+function tuerArbre(proc) {
+  try {
+    if (process.platform === 'win32') cp.execFileSync('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { stdio: 'ignore' });
+    else proc.kill('SIGKILL');
+  } catch (e) { /* déjà mort */ }
+}
+async function attendrePort(profil, attendre) {
+  for (var t = 0; t < 60; t++) {
+    await attendre(200);
+    var f = path.join(profil, 'DevToolsActivePort');
+    if (!fs.existsSync(f)) continue;
+    var p = parseInt(String(fs.readFileSync(f, 'utf8')).split('\n')[0], 10);
+    if (p > 0) return p;
+  }
+  return 0;
+}
+
+/* ------------------------------------- combien de blocs DEVRAIENT être cliqués ? --- */
+/* Le compte attendu est relevé sur le DISQUE, indépendamment du navigateur : c'est la
+   seule façon de voir qu'une page ne s'est pas ouverte, ou qu'un bouton n'a pas été
+   posé. On applique la règle de `js/runner.js` (init) : une `figure.code-block` qui
+   porte une barre d'outils et un `code.language-javascript` reçoit un bouton, SAUF si
+   son code déclenche BROWSER_ONLY. Cette expression n'est pas RECOPIÉE ici — elle est
+   LUE dans `js/runner.js` à chaque exécution : une copie se périmerait en silence, et
+   c'est précisément le défaut que ce chantier ferme.
+   ⚠️ La barre d'outils N'EST PAS dans le source : `js/main.js` (enhanceCodeBlocks) la
+   pose sur toute `.code-block` qui contient un `<pre>`. Le critère disque est donc
+   « une figure code-block, un <pre>, un code.language-javascript, hors BROWSER_ONLY ».
+   Un premier jet qui cherchait `code-block__bar` dans le HTML comptait 0 bloc sur 48. */
+var BROWSER_ONLY = (function () {
+  var src = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
+  var m = /var BROWSER_ONLY = \/([\s\S]*?)\/;\s*\n/.exec(src);
+  if (!m) return null;
+  try { return new RegExp(m[1]); } catch (e) { return null; }
+})();
+function decode(s) {
+  return String(s).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+}
+function blocsAttendusDe(page) {
+  var html = fs.readFileSync(path.join(RACINE, page), 'utf8');
+  var re = /<figure class="code-block"[\s\S]*?<\/figure>/g, m, n = 0;
+  while ((m = re.exec(html))) {
+    var f = m[0];
+    if (f.indexOf('<pre') < 0) continue;
+    var c = /<code[^>]*class="[^"]*language-javascript[^"]*"[^>]*>([\s\S]*?)<\/code>/.exec(f);
+    if (!c) continue;
+    if (BROWSER_ONLY && BROWSER_ONLY.test(decode(c[1]))) continue;
+    n++;
+  }
+  return n;
+}
 
 /* ------------------------------------------------------------------- CDP nu ----- */
 var attendre = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
@@ -165,24 +289,55 @@ function estUnFragment(vu) {
 (async function () {
   console.log('verif-clic.js — ' + PAGES.length + ' page(s) · Chrome headless · le bouton « Tester » est cliqué pour de vrai\n');
   var total = 0, divergents = 0, sansSortie = 0, illustrations = 0, fragments = 0, pagesKO = [];
+  /* Ce que la mesure DEVAIT couvrir, relevé sur le disque avant d'ouvrir quoi que ce soit. */
+  var attendus = 0;
+  PAGES.forEach(function (pg) { attendus += blocsAttendusDe(pg); });
+  var nonMesurees = [];   // pages qu'on n'a pas pu ouvrir : ni vertes ni rouges, NON MESURÉES
 
+  var chronos = [];
   for (var p = 0; p < PAGES.length; p++) {
+    var tPage = Date.now();
     var page = PAGES[p];
-    var url = 'file:///' + path.resolve(RACINE, page).replace(/\\/g, '/');
-    var proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + PORT, '--disable-gpu',
+    var url = 'file:///' + path.resolve(RACINE, page).split(path.sep).join('/');
+    var profil = profilNeuf(p);
+    var proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=0', '--disable-gpu',
       '--allow-file-access-from-files', '--no-first-run', '--disable-extensions',
-      '--user-data-dir=' + path.join(RACINE, 'scratchpad', '.chrome-verif-clic'), url], { stdio: 'ignore' });
+      '--user-data-dir=' + profil, url], { stdio: 'ignore' });
+    var port = await attendrePort(profil, attendre);
+    if (!port) {
+      console.log('  ' + page + ' : Chrome n\'a pas ouvert de port de débogage — NON MESURÉE');
+      nonMesurees.push(page); tuerArbre(proc); fs.rmSync(profil, { recursive: true, force: true }); continue;
+    }
+    /* La cible est choisie sur son URL : un Chrome étranger ne peut plus être pris
+       pour le bon, ce qui était la moitié de l'instabilité mesurée. */
     var cible = null;
     for (var t = 0; t < 40 && !cible; t++) {
-      await attendre(300);
+      await attendre(250);
       try {
-        var liste = await get('http://127.0.0.1:' + PORT + '/json/list');
-        cible = liste.find(function (x) { return x.type === 'page' && x.webSocketDebuggerUrl; });
+        var liste = await get('http://127.0.0.1:' + port + '/json/list');
+        cible = liste.find(function (x) {
+          return x.type === 'page' && x.webSocketDebuggerUrl &&
+            decodeURI(String(x.url)).toLowerCase() === decodeURI(url).toLowerCase();
+        });
       } catch (e) { /* Chrome démarre encore */ }
     }
-    if (!cible) { console.log('  ' + page + ' : Chrome n\'a pas répondu'); proc.kill(); continue; }
+    if (!cible) {
+      console.log('  ' + page + ' : Chrome n\'a pas rendu CETTE page — NON MESURÉE');
+      nonMesurees.push(page); tuerArbre(proc); fs.rmSync(profil, { recursive: true, force: true }); continue;
+    }
     var cx = connecter(cible.webSocketDebuggerUrl);
-    await attendre(1400);
+    /* On attend un ÉTAT, jamais une durée : document complet, puis un nombre de boutons
+       stable sur deux relevés. Une attente en dur de 1 400 ms lisait une page à moitié
+       initialisée sans jamais le dire. */
+    var stable = 0, precedent = -1;
+    for (var ww = 0; ww < 40; ww++) {
+      await attendre(250);
+      var n = await cx.evaluer('(()=>{try{if(document.readyState!=="complete")return -1;' +
+        'return document.querySelectorAll("figure.code-block .code-block__try").length}catch(e){return -1}})()');
+      n = typeof n === 'number' ? n : -1;
+      if (n >= 0 && n === precedent) { stable++; if (stable >= 2) break; } else stable = 0;
+      precedent = n;
+    }
 
     var brut = await cx.evaluer('JSON.stringify([...document.querySelectorAll("figure.code-block")]' +
       '.map((f,i)=>({i,file:f.dataset.file||"",js:!!f.querySelector("code.language-javascript"),bouton:!!f.querySelector(".code-block__try")})))');
@@ -232,19 +387,45 @@ function estUnFragment(vu) {
       }
     }
     if (lignesPage.length) console.log(lignesPage.join('\n'));
+    chronos.push({ page: page, s: (Date.now() - tPage) / 1000, blocs: execs.length });
+    if (CHRONO) console.log('  ' + ((Date.now() - tPage) / 1000).toFixed(1) + ' s  ' +
+      ('   ' + execs.length).slice(-3) + ' bloc(s)  ' + page);
     cx.sock.destroy();
-    proc.kill();
-    await attendre(500);
+    tuerArbre(proc);
+    await attendre(300);
+    try { fs.rmSync(profil, { recursive: true, force: true }); } catch (e) { /* Chrome tient encore un fichier */ }
   }
 
   console.log('\n=== RÉSUMÉ ===');
-  console.log('  pages ouvertes ..................... ' + PAGES.length);
-  console.log('  blocs cliqués ...................... ' + total);
+  if (chronos.length) {
+    var somme = chronos.reduce(function (a, c) { return a + c.s; }, 0);
+    var pire = chronos.slice().sort(function (a, b) { return b.s - a.s; })[0];
+    console.log('  durée .............................. ' + somme.toFixed(0) + ' s pour ' +
+      chronos.length + ' page(s), soit ' + (somme / chronos.length).toFixed(1) + ' s/page' +
+      '   (la plus lente : ' + pire.s.toFixed(0) + ' s, ' + pire.blocs + ' blocs, ' + pire.page + ')');
+  }
+  console.log('  pages demandées .................... ' + PAGES.length +
+    (nonMesurees.length ? '   dont ' + nonMesurees.length + ' NON MESURÉE(S)' : ''));
+  console.log('  blocs attendus (lus dans le source)  ' + attendus);
+  console.log('  blocs cliqués ...................... ' + total +
+    (total === attendus ? '   (couverture complète)' : '   ÉCART DE ' + (attendus - total) + ' BLOC(S)'));
   console.log('  DIVERGENTS ......................... ' + divergents);
   console.log('  sans bloc de sortie à comparer ..... ' + sansSortie + '  (solutions, fragments : non jugés)');
   console.log('  bloc .txt voisin = illustration ..... ' + illustrations + '  (schéma, arbre dessiné : non jugé)');
   console.log('  fragments (rien produit / erreur) ... ' + fragments + '  (dépendent d un bloc précédent : non jugés)');
   if (divergents) console.log('\n  pages à corriger : ' + pagesKO.join(', '));
-  else console.log('\n  Ce que la page imprime et ce que l\'apprenant obtient au clic concordent partout.');
-  process.exit(divergents ? 1 : 0);   /* 1 = divergence ; un plantage technique sort en 2, cf. plus bas */
+
+  /* TROIS verdicts distincts, et c'est tout l'objet de la réparation : une couverture
+     incomplète n'est PAS un « OK ». L'outil imprimait « concordent partout » après
+     avoir jugé 26 % des blocs. */
+  if (total !== attendus || nonMesurees.length) {
+    console.log('\n  MESURE INCOMPLÈTE — ' + total + ' bloc(s) cliqué(s) sur ' + attendus + ' attendu(s)' +
+      (nonMesurees.length ? ', ' + nonMesurees.length + ' page(s) non ouverte(s) : ' + nonMesurees.join(', ') : '') + '.');
+    console.log('  Ce n\'est ni un « tout concorde » ni une divergence : ces blocs n\'ont pas été jugés.');
+    process.exit(2);
+  }
+  if (divergents) process.exit(1);
+  console.log('\n  Ce que la page imprime et ce que l\'apprenant obtient au clic concordent partout' +
+    ' (' + total + ' bloc(s) sur ' + attendus + ' attendu(s)).');
+  process.exit(0);
 })();

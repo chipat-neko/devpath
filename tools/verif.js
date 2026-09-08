@@ -529,6 +529,26 @@ if (COMPLET) {
     quoi: "les verificateurs VOIENT-ILS une faute ? 9 fautes injectees, 9 attendues rouges",
     lent: true,
   });
+  /* LE SEUL OUTIL QUI CLIQUE VRAIMENT (point A3 du chantier V17). `verif-exemples.js`
+     et `verif-sorties.js` executent le code dans Node ; le site, lui, l'execute dans un
+     Web Worker de navigateur, dont la pile est bien plus courte. Ce seul ecart avait
+     laisse passer un exemple faux, tous verificateurs verts (compilation/lecon-08 :
+     « 10000 / PLAFOND » annonce, « 6970 / Maximum call stack size exceeded » au clic).
+     Il etait DECLARE HORS CHAINE depuis le 2026-09-03 pour trois raisons mesurees —
+     port fixe, profil unique qui grossit, Chrome survivants — toutes corrigees au
+     point A3 : port dynamique, profil neuf par page et efface apres, arbre tue.
+     Sa couverture est desormais IMPRIMEE (blocs attendus lus dans le source, en face
+     des blocs cliques) et un ecart sort en code 2 : une mesure incomplete ne peut plus
+     se lire comme un « tout concorde », ce qu'elle faisait apres avoir juge 26 % des
+     blocs. Il ne peut tenir qu'ici : il ouvre 75 pages une par une. */
+  ETAPES.push({
+    nom: "clic   ",
+    fichier: "verif-clic.js",
+    args: [],
+    quoi: "le bouton « Tester » est clique pour de vrai : la sortie du Worker face au bloc publie",
+    lent: true,
+    pourquoiLent: "il ouvre 75 pages dans Chrome, une par une",
+  });
 }
 
 /* =========================================================================== *
