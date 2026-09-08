@@ -5478,6 +5478,32 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       60 %. Les plus nocifs par questions devinables : `dataviz` (68 q, 95,6 %), `lua` (72 q,
       88,9 %), `swift` (66 q, 95,2 %), `typescript` (68 q, 92,7 %), `scala` (68 q, 91,9 %).
 
+      **LE 35ᵉ COURS EST MESURÉ ET SA CONSIGNE EST ÉCRITE — la prochaine passe démarre sur
+      l'écriture, pas sur le diagnostic.** `dataviz`, 68 questions sur 14 leçons :
+
+      | indice | réussite | rendement |
+      |---|---:|---:|
+      | la plus longue (couverture **100 %**, pas un ex æquo) | **95,6 %** | 95,6 % |
+      | la plus détaillée | 71,0 % | **97,6 %** |
+      | RESTREINDRE à la parenthèse (32 questions) | 60,3 % | **97,0 %** |
+      | RESTREINDRE aux deux-points | 51,5 % | **96,0 %** |
+      | le mot technique exclusif | 51,0 % | 65,1 % |
+      | ECARTER la moins bavarde | 39,2 % | **100 %** |
+      | l'écho de l'énoncé | 40,0 % | 59,3 % |
+      | point-virgule (unique et restreint) | 30,5 % | **100 %** |
+
+      Rangs **65 / 3 / 0 / 0** (cible 17/17/17/17), **66 questions à retoucher, 8 789 caractères** ;
+      indice lexical **55 exploitables sur 68**, 59 à mettre en forme. Le **point interne**, la
+      **flèche** et la **virgule décimale** sont à **0 %** : la consigne interdit de les ouvrir.
+
+      Consigne réutilisable : `scratchpad/CONSIGNE-DATAVIZ.md`. Elle porte les deux acquis du
+      34ᵉ cours — la **règle du `w` énoncée comme indépendante du `k`**, et le **coût de 0,68
+      réécriture de rattrapage par correction de fond**, mis en tête de l'interdit « un distracteur
+      ne doit jamais devenir vrai » : chaque distracteur juste du premier coup économise **1,68**
+      réécriture. Elle liste aussi **onze énoncés vrais du domaine** (l'axe des barres qui part de
+      zéro, l'aire de la bulle et non son rayon, l'histogramme qui n'est pas un diagramme en barres,
+      le paradoxe de Simpson…) à ne surtout pas employer comme distracteurs.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
