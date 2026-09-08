@@ -5656,7 +5656,47 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       92,6 %), `swift` (66 q, 95,2 %), `scala` (68 q, 91,9 %), `pandas` (65 q, 93,8 %),
       `haskell` (66 q, 92,4 %).
 
-      ⚠️ **CE QUE CETTE PASSE N'A PAS FAIT, ET QUI EST UN VRAI CHANTIER — les FIGURES de `dataviz`.**
+      **LES HUIT FIGURES SONT CORRIGÉES — 8 sur 8, chacune relue depuis la page.** Elles avaient
+      d'abord été mesurées et laissées décochées ; la même passe est revenue les fermer. Le principe
+      de vérification est le même partout : après écriture, on **redéduit les valeurs depuis les
+      pixels du fichier** et on les compare aux données de la leçon.
+
+      | leçon | ce que la figure faisait | après |
+      |---|---|---:|
+      | `lecon-05` aire empilée | le total culminait en **octobre** (max réel : août, 16 100) ; la bande médiathèque variait de 0,0071 à 0,0086 px/entrée | échelle unique 0,013043 ; **culmine en août** ; pire écart **1,77 %** |
+      | `lecon-05` banking | l'étiquette « pentes ~45° = lecture honnête » était posée **sous le panneau aplati** (6,6° de moyenne) ; et l'aria annonçait « exactement la même courbe » pour deux séries différentes | étiquette au centre, réécrite ; deux panneaux retracés depuis **une** série, écart **0,73 %** |
+      | `lecon-05` trois courbes | trois échelles (0,0167 / 0,0350 / 0,0376) et **deux axes tronqués** (origines implicites 824 et 1 479) sous **un seul axe gradué** | recalculées sur l'échelle de l'axe ; pire écart **1,64 %** |
+      | `lecon-04` empilées | juillet dessiné à **la moitié** de l'échelle de juin et irrégulier ; piscine juillet/juin = **0,387** dans l'empilé contre **1,161** dans le groupé d'à côté | échelle unique 0,010857 ; pire écart relatif **−67 % → 1,80 %** |
+      | `lecon-08` treemap | Voirie à **48,1 %** de l'aire pour **31 %** annoncés, dans la seule leçon qui enseigne l'encodage par l'**aire** | cadre re-pavé ; pire écart **17,1 → 0,06 point** |
+      | `lecon-09` indexées à 100 | la série des entrées tracée **sous** la base alors que ses indices vont de 100 à 110 — la forme était juste, **le signe inversé** | 1,2 px par point d'indice ; relu : 100,0 / 104,2 / 100,0 / 107,5 / 105,8 / **110,0** |
+      | `lecon-10` gris + accent | la série accentuée était **la plus haute** des six et elle **montait**, alors que le code donne Docks = 2 800 = le **minimum** | accent et étiquette sur la série la plus basse (moyenne y **211,1**, la plus grande) |
+      | `lecon-12` choroplèthe | **six** remplissages pour une légende qui n'en déclare que **quatre**, et le Parc (3,3) peint **plus foncé** que le Centre (3,6) | bornes déplacées (1,5 tombait dans deux classes) ; **6/6** polygones conformes |
+
+      **LES DEUX ÉCARTS DE RÉCIT, dont un ALIGNEMENT REFUSÉ par la mesure.**
+      - `lecon-06` appelait **22 min « la moyenne »** à l'ouverture et dans le récap, alors que la
+        leçon démontre ensuite que 22 est la **médiane** et 26 la moyenne — son propre bloc
+        `data-exos` attend « mediane 22.0 moyenne 26.0 ». Trois passages remis à 26.
+      - `lecon-14` annonçait des données « **cohérentes avec tout le cours** » : elles ne le sont pas
+        (la série mensuelle de la piscine existe en **quatre** versions, et le nombre d'équipements
+        ne donne pas les taux de la carte de `lecon-12`). **C'est l'affirmation qui a été corrigée,
+        pas les données — et c'est un choix mesuré, pas un renoncement** : aligner `equip_bruts` sur
+        la carte de `lecon-12` donnerait 43 / 20 / 28 / 7 / 32 / 11, où l'effectif brut **ne suit
+        plus la population** (Centre 43 devant Coteaux 28, alors que Coteaux est le plus peuplé) —
+        et la démonstration de `lecon-14`, « colorier l'effectif brut, c'est dessiner la
+        population », tomberait. **On échangerait une incohérence documentée contre une leçon
+        fausse.** C'est la première fois de ce chantier qu'une correction est refusée par le calcul
+        de ce qu'elle casserait ailleurs.
+
+      **Contrôles de cette seconde moitié** : `verif.js --rapide` **26 étapes tout vert (57,8 s)** ;
+      `verif-html` **0 grave, 0 attention** ; `verif-donnees` **0 erreur** ; `verif-rendu` **48
+      mesures, 0 erreur** sur les 8 pages touchées ; indice lexical toujours **0 exploitable sur
+      68** et rangs **17/17/17/17** malgré neuf fichiers modifiés ; **0 atteinte** à un intouchable.
+
+      ---
+
+      *(Ce qui suit était le relevé initial, laissé pour mémoire : c'est lui qui a servi de plan.)*
+
+      ⚠️ **CE QUE LA PREMIÈRE MOITIÉ DE LA PASSE N'AVAIT PAS FAIT — les FIGURES de `dataviz`.**
       Les quatre relecteurs ont trouvé, au-delà des dix défauts corrigés ci-dessus, **huit SVG dont
       la géométrie ne code pas les données annoncées**. Ils sont **mesurés mais pas corrigés** :
       chacun demande de recalculer un pavage ou une polyligne, et la passe était déjà pleine. Ils
