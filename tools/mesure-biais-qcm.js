@@ -605,6 +605,38 @@ var STRATEGIES = [
       return s.length === q.a.length ? toutes(q) : s;
     },
   },
+  /* ⚠️ LES DEUX STRATEGIES INVERSES DE DENSITE, ajoutees au point B4 (cours `kotlin`,
+     2026-09-08). MEME MOTIF QUE LES DEUX « ECARTER » AJOUTEES SUR `stats`, sur une
+     dimension neuve : les deux strategies de densite ci-dessus sont DIRECTIONNELLES,
+     et notre propre campagne les pousse SOUS l'etalon du hasard.
+
+     Pourquoi : pour tenir la fenetre de longueur, un ecrivain rembourre ses
+     distracteurs de vocabulaire long, si bien que la bonne reponse (intouchable)
+     n'est presque jamais la plus dense. Mesure sur `kotlin` detordu : « la plus
+     dense » 17,3 %, « la moins bavarde » 19,2 % — nettement sous 25,0 %. Un taux
+     sous le hasard n'est pas un indice ferme, c'est un indice INVERSE exploitable,
+     et aucune des 32 strategies precedentes ne le voyait.
+
+     QUATRE relecteurs adversariaux sur six l'ont signale independamment le meme
+     jour, chacun sur son lot, avant que l'outil ne sache le mesurer. C'est la
+     relecture qui a trouve le trou de l'outil, pas l'outil.
+
+     ⚠️ Ajouter ces deux strategies fait remonter `pire` sur beaucoup de cours d'un
+     coup. Ce n'est PAS une regression : c'est une dimension neuve. La reference est
+     donc refigee dans LE MEME COMMIT, en le disant. */
+  {
+    nom: "ECARTER la plus dense",
+    quoi: "tirer parmi les options qui ne portent PAS les mots les plus longs en moyenne",
+    choisir: function (q) { return ecarterMax(q, q.a.map(densiteMots)); },
+  },
+  {
+    nom: "ECARTER la moins bavarde",
+    quoi: "tirer parmi les options qui ne comptent PAS le MOINS de mots",
+    choisir: function (q) {
+      var n = q.a.map(function (t) { return (t.match(/[A-Za-zÀ-ÿ0-9_]+/g) || []).length; });
+      return ecarterMax(q, n.map(function (x) { return -x; }));
+    },
+  },
   /* ⚠️ LES SIX STRATEGIES DE MARQUE TYPOGRAPHIQUE, ajoutees au point B4 (dette 3
      laissee par le cours `php`, cablees le 2026-09-07). La consigne « les quatre ou
      aucune » ne couvrait jusqu'ici que le point-virgule, la parenthese et les
