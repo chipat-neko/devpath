@@ -149,7 +149,7 @@
 <h2>snprintf&nbsp;: formater sans déborder</h2>
 <p><code>snprintf(dst, n, format, …)</code> écrit <strong>au plus</strong> <code>n</code> octets, zéro terminal compris&nbsp;: elle ne dépasse jamais. Mieux, sa valeur de retour est le nombre de caractères qui <em>auraient</em> été écrits sans la limite&nbsp;: si ce retour est <code>&gt;= n</code>, il y a eu <strong>troncature</strong>, et tu le sais.</p>
 <figure class="diagram">
-  <svg viewBox="0 0 640 195" role="img" aria-label="snprintf reçoit un tampon de huit cases et le format Bonjour, plus le nom Alexandre. Elle remplit au plus sept caractères utiles puis pose le zéro terminal en huitième case : le tampon contient Bonjou puis zéro, tronqué. Sa valeur de retour vaut la longueur complète voulue, quinze, qui est supérieure ou égale à huit : ce retour supérieur à la taille est le signal de troncature.">
+  <svg viewBox="0 0 640 195" role="img" aria-label="snprintf reçoit un tampon de huit cases et le format Bonjour, plus le nom Alexandre. Elle remplit au plus sept caractères utiles puis pose le zéro terminal en huitième case : le tampon contient Bonjour puis zéro, tronqué. Sa valeur de retour vaut la longueur complète voulue, dix-sept, qui est supérieure ou égale à huit : ce retour supérieur à la taille est le signal de troncature.">
     <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">snprintf : ne dépasse jamais, et signale la troncature</text>
     <text class="d-tag" x="320" y="42" text-anchor="middle" font-size="10">snprintf(buf, 8, "Bonjour %s", "Alexandre")</text>
     <rect class="d-box" x="150" y="58" width="36" height="30" rx="3" /><text class="d-text" x="168" y="78" text-anchor="middle" font-size="11">B</text>
@@ -158,10 +158,11 @@
     <rect class="d-box" x="258" y="58" width="36" height="30" rx="3" /><text class="d-text" x="276" y="78" text-anchor="middle" font-size="11">j</text>
     <rect class="d-box" x="294" y="58" width="36" height="30" rx="3" /><text class="d-text" x="312" y="78" text-anchor="middle" font-size="11">o</text>
     <rect class="d-box" x="330" y="58" width="36" height="30" rx="3" /><text class="d-text" x="348" y="78" text-anchor="middle" font-size="11">u</text>
-    <rect class="d-accent" x="366" y="58" width="36" height="30" rx="3" /><text class="d-text" x="384" y="78" text-anchor="middle" font-size="10">\0</text>
-    <text class="d-mut" x="430" y="78" font-size="8">7 utiles + '\0' garanti</text>
-    <text class="d-mut" x="150" y="112" font-size="9">→ buf = "Bonjou" (tronqué mais valide, jamais de débordement)</text>
-    <rect class="d-frame" x="150" y="130" width="340" height="34" rx="6" /><text class="d-text" x="168" y="151" font-size="10">retour = 15</text><text class="d-mut" x="270" y="151" font-size="9">(longueur voulue) ≥ 8 ⇒ troncature</text>
+    <rect class="d-box" x="366" y="58" width="36" height="30" rx="3" /><text class="d-text" x="384" y="78" text-anchor="middle" font-size="11">r</text>
+    <rect class="d-accent" x="402" y="58" width="36" height="30" rx="3" /><text class="d-text" x="420" y="78" text-anchor="middle" font-size="10">\0</text>
+    <text class="d-mut" x="446" y="78" font-size="8">7 utiles + '\0' garanti</text>
+    <text class="d-mut" x="150" y="112" font-size="9">→ buf = "Bonjour" (tronqué mais valide, jamais de débordement)</text>
+    <rect class="d-frame" x="150" y="130" width="340" height="34" rx="6" /><text class="d-text" x="168" y="151" font-size="10">retour = 17</text><text class="d-mut" x="270" y="151" font-size="9">(longueur voulue) ≥ 8 ⇒ troncature</text>
     <text class="d-mut" x="320" y="184" text-anchor="middle" font-size="9">if (r &lt; 0 || (size_t)r &gt;= sizeof buf) { /* tronqué : gérer */ }</text>
   </svg>
   <figcaption><code>snprintf</code> garantit un <code>'\0'</code> final (dès que <code>n &gt; 0</code>) et te dit, par son retour, si la chaîne a été coupée.</figcaption>
@@ -171,7 +172,7 @@
 int main(void) {
     char buf[8];
     int r = snprintf(buf, sizeof buf, "Bonjour %s", "Alexandre");
-    printf("buf=\"%s\"  retour=%d\n", buf, r);   // buf="Bonjou"  retour=15
+    printf("buf=\"%s\"  retour=%d\n", buf, r);   // buf="Bonjour"  retour=17
 
     if (r &lt; 0 || (size_t)r &gt;= sizeof buf) {
         printf("attention : chaine tronquee (il fallait %d octets)\n", r + 1);
@@ -259,7 +260,7 @@ int main(void) {
 }</code></pre></figure>
 
 <h2>Cas réel&nbsp;: la valeur de config trop longue</h2>
-<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un service lisait son fichier de configuration avec, pour chaque ligne, <code>char valeur[32]; strcpy(valeur, apres_egal);</code>. Pendant des mois, tout allait bien&nbsp;: les valeurs étaient courtes. Le jour où un administrateur a mis un <em>chemin</em> de 90 caractères (<code>log_path=/var/log/...</code>), le <code>strcpy</code> a écrit 58 octets au-delà du tampon, écrasant une variable voisine sur la pile&nbsp;: le service plantait de façon <strong>aléatoire</strong>, parfois plusieurs minutes après le démarrage, impossible à reproduire en test. Le correctif a tenu en une ligne&nbsp;: <code>snprintf(valeur, sizeof valeur, "%s", apres_egal);</code> plus un test du retour pour prévenir la troncature. Morale&nbsp;: un tampon de taille fixe rencontre <em>toujours</em>, un jour, une entrée plus grande que prévu.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Un service lisait son fichier de configuration avec, pour chaque ligne, <code>char valeur[32]; strcpy(valeur, apres_egal);</code>. Pendant des mois, tout allait bien&nbsp;: les valeurs étaient courtes. Le jour où un administrateur a mis un <em>chemin</em> de 90 caractères (<code>log_path=/var/log/...</code>), le <code>strcpy</code> a écrit 59 octets au-delà du tampon (90 caractères plus le zéro terminal, moins les 32 octets disponibles), écrasant une variable voisine sur la pile&nbsp;: le service plantait de façon <strong>aléatoire</strong>, parfois plusieurs minutes après le démarrage, impossible à reproduire en test. Le correctif a tenu en une ligne&nbsp;: <code>snprintf(valeur, sizeof valeur, "%s", apres_egal);</code> plus un test du retour pour prévenir la troncature. Morale&nbsp;: un tampon de taille fixe rencontre <em>toujours</em>, un jour, une entrée plus grande que prévu.</p></div></div>
 
 <h2>Antisèche</h2>
 <figure class="cheat-table">
