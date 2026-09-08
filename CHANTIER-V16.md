@@ -5140,6 +5140,131 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       5 081 et 84,8 % au cadrage de B4. **1 424 questions rendues, 25,5 points gagnés.** La case
       reste **décochée** : 59 cours restent au-dessus de 60 %.
 
+      ---
+
+      **32ᵉ COURS DÉTORDU — `c` (2026-09-08) : 94,4 % → 25,4 %.** Le cours était le **pire du
+      site sur la longueur**, et avec une couverture de 100 % : pas une égalité, la règle
+      « coche la plus longue » tranchait sur chacune de ses 71 questions. Six lots écrits en
+      parallèle sur des fichiers disjoints, consigne unique `scratchpad/CONSIGNE-C.md`.
+      **207 distracteurs réécrits sur 213.**
+
+      **Mesures reproduites ici** : « la plus longue » **94,4 % → 25,4 %** ; la plus détaillée
+      82,2 % → 25,1 % ; RESTREINDRE à la parenthèse 71,9 % → 25,0 % ; l'incise 70,5 % → 25,0 % ;
+      le point-virgule 59,9 % → 25,0 % ; l'écho 57,6 % → 25,0 % ; ÉCARTER la moins bavarde
+      47,5 % → 24,9 % ; le point interne 34,5 % → 25,0 %. **Rangs 67/1/3/0 → 18/18/18/17**, la
+      cible exacte, **0 question à retoucher sur 71** ; indice lexical **0 exploitable et 0 à
+      mettre en forme**.
+
+      ⚠️ **LA VAGUE A ÉTÉ ÉCRITE PAR UN RÉVEIL QUE LA LIMITE DE SESSION A COUPÉ**, juste après
+      le commit des leçons : **la relecture adversariale n'avait pas eu lieu**, et l'outil
+      corrigé pendant cette passe n'était pas commité. Le réveil suivant a soldé les deux. La
+      leçon d'organisation : *un lot d'écriture non relu est une dette qui ne se voit dans aucun
+      vérificateur* — les six cliquets étaient verts sur un cours qui contenait une bonne réponse
+      contraire à la norme du langage.
+
+      **LA DÉMOLITION : 6 relecteurs en lecture seule, 284 options jugées une à une, 21
+      trouvailles, toutes revérifiées avant correction.** Aucun compilateur C n'étant installé,
+      la preuve est **normative ou refaite au calcul**, jamais « de tête ».
+
+      **UN DISTRACTEUR DEVENU VRAI — et c'est la NORME qui tranche** (`lecon-08` q3, union à
+      champs `int i` / `double d`). Le distracteur disait « c'est un comportement **défini**, les
+      octets de l'entier sont réinterprétés en double ». **C'est exactement ce que dit C11
+      6.5.2.3 note 97** : le *type punning* par union est **légal en C** (c'est le C++ qui
+      l'interdit), et les octets non écrits « take unspecified values » (6.2.6.1 p7). Le
+      distracteur était devenu vrai sur la partie même que la question interroge.
+
+      **ET DONC LA BONNE RÉPONSE ÉTAIT FAUSSE** : elle annonçait « comportement indéfini » —
+      **la règle du C++ enseignée dans un cours de C**. Le résultat juste est « valeur **non
+      spécifiée** ». Indice interne que personne n'avait relevé : l'`explain` de la même question
+      disait déjà « résultat non défini », et le corps hedgeait « en général » ; c'est le QCM qui
+      durcissait. Bonne réponse, explication et **les deux passages du corps** réécrits.
+
+      **DEUXIÈME BONNE RÉPONSE FAUSSE** (`lecon-13` q3) : « `char *` a une taille de 1 octet ».
+      `sizeof(char *)` vaut **8** sur une cible 64 bits — et **la leçon 15 du même cours
+      l'affiche**. Ce qui vaut 1, c'est le type *pointé*. Réécrite en « `sizeof(char)` vaut
+      exactement 1 ».
+
+      **CINQ DÉFAUTS DE CORPS PROUVÉS PAR CALCUL** : `snprintf(buf, 8, "Bonjour %s",
+      "Alexandre")` — le schéma annonçait `buf="Bonjou"` et `retour=15` ; « Bonjour Alexandre »
+      fait **17** caractères et `buf[8]` garde les **7** premiers, donc `buf="Bonjour"` et
+      `retour=17`, corrigé en **quatre endroits** (le SVG, son `aria-label`, le commentaire du
+      code, et **la case manquante du dessin**) ; un `strcpy` de 90 caractères dans un `char[32]`
+      écrit **59** octets au-delà, pas 58 — *le 58 s'obtenait en oubliant le zéro terminal, l'octet
+      même que la leçon apprend à ne pas oublier* ; « l'outil `compter` en une soixantaine de
+      lignes » pour un bloc qui en compte **40** (33 non vides) ; « sept cœurs inactifs sur huit,
+      c'est gâcher **la moitié** de la puissance » → les sept huitièmes ; « chaque cran double la
+      **capacité** » alors que doubler les octets **élève au carré** le nombre de valeurs
+      (2⁸ → 2¹⁶, ×256).
+
+      **QUATRE ENDROITS OÙ LA LEÇON SE CONTREDIT ELLE-MÊME** : le schéma de `qsort` affichait
+      `*(int*)a - *(int*)b`, **l'expression que la même page interdit vingt lignes plus bas**
+      (débordement signé = UB), que son antisèche interdit, que son récap interdit et que son
+      propre code évite ; `definitely lost` justifié par « **aucun** pointeur n'a perdu
+      l'adresse » — c'est la définition de *still reachable*, et la leçon **plus son glossaire**
+      énoncent l'inverse deux fois ; la solution de l'exercice 2 de `lecon-16` lit `t[0]` sans
+      tester `n` quand la leçon pose **deux fois** que le premier cas frontière est l'entrée vide
+      (`assert(n > 0)` ajouté) ; l'antisèche donne `pthread_join` « obligatoire » quand la même
+      page rappelle dix lignes plus haut qu'un thread **détaché** ne se joint pas.
+
+      **AUTRES** : un bloc `data-file="main.c"` dont **tout** le contenu était à la portée fichier
+      (initialiseur non constant, `printf` hors fonction, `stdio.h` manquant) ; `%ld` sur un
+      `ptrdiff_t` → `%td` (faux sous Windows LLP64) ; `*NULL` « plante net » présenté comme
+      garanti alors que c'est un UB — *la leçon 05 du même cours hedge correctement* ; un « cas
+      réel » affirmant qu'un `printf("%d", double)` affichait le **bon** montant, impossible sur
+      toute ABI courante ; un lien de secours d'exercice vers une section **qui n'existe pas** ;
+      et un `explain` attribuant la fermeture de `stdin` au « programme appelant » quand c'est
+      `exit` qui ferme tous les flux (C11 7.22.4.4 p2).
+
+      ⚠️ **CORRIGER LE CORPS ROUVRE L'INDICE LEXICAL, et le cliquet l'a vu.** Retirer « la
+      moitié » du paragraphe des cœurs a rendu **étranger** le mot « moitié » d'un distracteur de
+      la même page : `c` est passé de **6,7 % à 33,3 %** en stratégie restreinte. Trois questions
+      à reprendre, dont **deux nées de mes propres corrections de QCM**. *Le vocabulaire d'un
+      distracteur dépend du corps de la leçon : toucher l'un déplace l'autre.* Après réécriture :
+      0 exploitable, 0 à mettre en forme.
+
+      **OUTIL — DEUX DETTES SOLDÉES.** (1) **35ᵉ stratégie, « ÉCARTER le mot technique
+      exclusif »** : trois des six lots d'écriture avaient signalé, chacun sur le sien, que
+      l'indice était passé **sous** l'étalon du hasard — **troisième fois** que la relecture voit
+      un indice inverse avant l'outil. Mesure : sur `c`, le sens direct 19,2 %, l'inverse 27,0 %
+      (rendement 33,3 %) ; **sur le site entier l'inverse ne rend que 18,2 %**, donc c'est bien le
+      sens direct qui reste l'indice général. (2) **La limite de mot `\b` de JavaScript est
+      ASCII** : une lettre accentuée crée une frontière **à l'intérieur** d'un mot, et « chaîne »
+      déclenchait `\bne\b`, comptant comme une négation. **306 options sur 24 669 changent de
+      verdict (1,24 %)** ; `ABSOLUS` et `PRUDENTS` n'en changent aucune. Les trois règles passent
+      en *lookaround* unicode.
+
+      **OUTIL NEUF, réclamé par le compte rendu de `kotlin` : `mesure-explain-orpheline.js`.**
+      Le premier jet, heuristique, a été **jeté le jour même** : mis à l'épreuve sur les deux cas
+      historiques de `kotlin` restaurés depuis git, **il n'en voyait aucun** (l'un ne porte aucun
+      marqueur de réfutation, l'autre cite un nom enseigné dans huit leçons du cours). Remplacé
+      par une mesure **différentielle** — le dépôt est sous git, donc l'état d'avant la vague est
+      disponible : pour chaque question dont une option a changé et dont l'`explain` est resté
+      **identique**, l'outil cherche les jetons que l'explication partage avec une option
+      **effacée** et qu'on ne retrouve dans aucune option actuelle. **Épreuve : 2 orphelines
+      rendues, exactement les deux cas historiques, 0 autre.** ⚠️ Un piège Windows a failli le
+      faire passer pour vert : `execSync` passe par `cmd.exe`, où **`^` est le caractère
+      d'échappement** — `--depuis=fba15d8^` y devenait `fba15d8`, l'outil comparait le cours à
+      lui-même et annonçait « 0 option a changé » sur une vague qui en avait réécrit 207, **sans
+      lever la moindre erreur**. Corrigé par `execFileSync` plus un garde-fou explicite.
+      **Mesure sur `c` : 70 questions à risque, 0 explication orpheline** — la vague n'a pas
+      reproduit le défaut de `kotlin`.
+
+      ⚠️ **LE PIÈGE STRUCTUREL, 6ᵉ FOIS** : détordre `c` a périmé les chiffres que `doc/lecon-03`
+      **publie** (47,7 % → **46,7 %**, 2 913 → **2 849** manquements à S3) ; `verif-normatif`
+      64/66 → **66/66**. Et le remplacement a lui-même introduit le défaut que la mémoire du
+      projet décrit : sur les 5 occurrences, quatre portaient `&nbsp;` et **une, dans un champ
+      `explain`, une espace ordinaire** — un motif uniforme y aurait affiché l'entité
+      littéralement à l'apprenant.
+
+      **CONTRÔLES** : `verif-html` **0 grave / 0 attention** ; `verif-donnees` **0 erreur /
+      25 contrôles** ; 43 blocs JSON valides, 0 BOM ; `verif-qcm-biais` et `verif-qcm-lexique`
+      **verts** ; index régénérés en `--fresh` avec les six cibles — **I18 était au rouge**, deux
+      entrées périmées (une antisèche et un piège de `c`) reprises de l'ancien index.
+
+      **ÉTAT DU SITE** : **6 167 questions, 3 606 devinables par la longueur, 58,5 %** — contre
+      5 081 et 84,8 % au cadrage de B4. **1 475 questions rendues, 26,3 points gagnés.** La case
+      reste **décochée** : **55 cours** restent au-dessus de 60 %.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
