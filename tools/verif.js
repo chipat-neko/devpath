@@ -26,14 +26,39 @@
                                     #   mis a l epreuve par 9 + 13 fautes injectees
      node tools/verif.js --strict   # 51 etapes, code 1 des qu'un outil signale quoi que ce soit
      node tools/verif.js --lister   # la liste des etapes du mode demande, sans rien lancer
-     node tools/verif.js --mutations  # les 14 epreuves par injection, et rien d'autre : elles
+     node tools/verif.js --mutations  # les 16 epreuves par injection, et rien d'autre : elles
                                     #   MODIFIENT des fichiers avant de les restaurer, et le mode
                                     #   verifie lui-meme que le depot ressort comme il est entre
+
+     node tools/verif.js --seules=qcm,fraicheur  # ne lancer que les etapes dont le nom de
+                                    #   fichier contient l'un de ces motifs (les memes que
+                                    #   `--lister` imprime). Un motif qui ne designe aucune
+                                    #   etape mais qui existe sous tools/ est lance quand meme :
+                                    #   c'est ainsi qu'on fait juger un outil hors chaine par
+                                    #   la meme mecanique de verdict.
 
    Note : en mode rapide, « exemples » n'execute que JavaScript (pur Node, ~1 s) ;
    Python (via l'interpreteur, ~35 s) n'est joue qu'en mode complet.
 
-   CODE DE SORTIE : 0 si tout va bien, 1 si un outil a signale un probleme.
+   TROIS ETATS, ET TROIS CODES DE SORTIE (point A5 du chantier V17, 2026-09-08).
+   Un verificateur du projet rend TROIS choses differentes, et cette chaine n'en
+   lisait que deux :
+       0  la mesure a eu lieu, rien a signaler                  -> OK
+       1  la mesure a eu lieu, une faute a ete trouvee          -> SIGNALE
+       2  RIEN N'A PU ETRE MESURE : donnees illisibles, moteur introuvable,
+          Chrome absent, interpreteur manquant, reference absente -> NON MESURE
+   Le troisieme cas etait repeint : en VERT pour les cinq etapes marquees
+   `sautable` (leur code 2 etait converti en 0, et la chaine annoncait « tout est
+   vert » alors que l'etape n'avait rien regarde), en ROUGE pour les vingt-cinq
+   autres etapes qui savent sortir en 2 (« un verificateur a signale quelque
+   chose », alors qu'aucune faute n'avait ete trouvee : c'est l'outil qui etait
+   en panne). Les deux repeintures mentent, et la premiere est celle qui coute :
+   c'est exactement la forme du defaut qui fonde ce chantier -- un controle vert
+   qui n'a rien regarde. Un processus tue par un signal, ou qui n'a pas pu
+   demarrer, est traite comme un code 2 : lui non plus n'a rien mesure.
+
+   CODE DE SORTIE : 0 tout mesure et propre · 1 au moins une faute signalee ·
+   2 aucune faute, mais au moins une etape n'a rien pu mesurer.
    Pense a l'appeler avant un commit, et systematiquement en fin de chantier.
    ============================================================================= */
 "use strict";
@@ -79,7 +104,9 @@ var ETAPES = [
   /* Les exercices type:"python" sont juges dans le navigateur par CPython 3.12
      (Pyodide, ~3 s par page : trop lent pour tourner a chaque passe). Celui-ci rejoue
      la SOLUTION PUBLIEE avec le CPython de la machine, avec la regle exacte du site.
-     `sautable` : code 2 = aucun interpreteur installe, ce n'est pas un echec. */
+     `sautable` : son code 2 s'explique par l'absence de l'interpreteur sur la
+     machine. Depuis le point A5 il n'est plus repeint en vert : l'etape est
+     comptee NON MESUREE, comme toute autre etape qui sort en 2. */
   { nom: "python ", fichier: "verif-python-exos.js", args: [], quoi: "exercices Python : la solution publiee produit son run.expect", sautable: true },
   /* Le decodeur d'erreurs (phase C) affirme, pour chaque entree, LE MESSAGE EXACT que
      produit le moteur. Une affirmation que rien n'execute est precisement ce qui a
@@ -93,7 +120,9 @@ var ETAPES = [
      modele juste d'un modele qui a l'air juste. Celui-ci monte le MEME scenario dans
      un vrai depot git temporaire et compare : empreintes de blobs, d'arbres et de
      commits, rev-parse, merge-base, et `git status --porcelain`.
-     `sautable` : code 2 = git absent de la machine, ce n'est pas un echec. */
+     `sautable` : son code 2 s'explique par l'absence de git sur la machine.
+     Depuis le point A5 il n'est plus repeint en vert : l'etape est comptee NON
+     MESUREE, comme toute autre etape qui sort en 2. */
   { nom: "gitmodl", fichier: "verif-git-modele.js", args: [], quoi: "modele de depot : memes empreintes que le vrai git", sautable: true },
   /* Les COMMANDES (point D2) rendent en plus un TEXTE que l'apprenant va lire et
      croire. Cette etape rejoue 32 scenarios des deux cotes et compare, apres
@@ -606,6 +635,14 @@ if (flag("mutations")) {
   /* Ordre : de la plus courte a la plus longue, pour qu'un defaut se voie vite.
      Les durees sont celles du releve A1, refaites par ce mode a chaque passage. */
   var EPREUVES = [
+    /* Ajoutee le 2026-09-08 avec les trois etats du verdict (point A5). C'est la
+       seule epreuve qui juge la CHAINE elle-meme et non un verificateur : elle lui
+       donne des etapes dont elle connait le code de sortie (0, 1, 2, 3) et exige le
+       bon etat, la bonne cause imprimee et le bon code global. Son 5e cas rejoue la
+       regression historique sur une vraie etape `sautable` : avant ce point, un
+       code 2 y etait converti en 0 et la chaine annoncait « tout est vert » pour
+       une etape qui n'avait rien regarde. */
+    { nom: "verdict ", fichier: "verif-verdict-mutations.js", vues: "6 / 6" },
     { nom: "mth-chif", fichier: "maths/module-5/verif-chiffres-mutations.js", vues: "toutes" },
     /* 7 depuis B4 : le 7e cas eprouve « l'incise entre parentheses », entree dans
        EXPLOITABLES le 2026-09-04. Une branche de verificateur que rien n'eprouve
@@ -730,7 +767,15 @@ if (flag("mutations")) {
       restaures.push(f + (g.status === 0 ? "" : " (ECHEC)"));
     });
     var expire = r.error && r.error.code === "ETIMEDOUT";
-    var etat = expire ? "EXPIRE" : r.status === 0 ? "OK" : "SIGNALE";
+    /* Meme distinction qu'en mode ordinaire (point A5) : une epreuve qui sort en 2
+       n'a PAS trouve son verificateur aveugle, elle n'a pas pu tourner du tout --
+       fichier de reference absent, git introuvable, moteur qui ne demarre pas. La
+       compter « SIGNALE » revenait a lire un outil en panne comme un angle mort
+       trouve, et donc a chercher un defaut la ou il n'y en a pas. */
+    var etat = expire ? "EXPIRE"
+      : r.status === 0 ? "OK"
+      : (r.status === 2 || r.status === null || r.status === undefined) ? "NON MESURE"
+      : "SIGNALE";
     if (restaures.length) etat = "SALE";
     bilan.push({ e: e, etat: etat, duree: duree, code: r.status, restaures: restaures, tues: tues,
       sortie: (r.stdout || "") + (r.stderr || "") });
@@ -748,13 +793,47 @@ if (flag("mutations")) {
     lignes.slice(-1).forEach(function (l) { console.log("            " + l.trim().slice(0, 100)); });
   });
   console.log("=".repeat(70));
-  var mauvais = bilan.filter(function (b) { return b.etat !== "OK"; });
+  var mauvais = bilan.filter(function (b) { return b.etat !== "OK" && b.etat !== "NON MESURE"; });
+  var muettes = bilan.filter(function (b) { return b.etat === "NON MESURE"; });
   var final = etatDepot() || [];
   var restant = final.filter(function (l) { return referenceDepart.indexOf(l) === -1 && !/^\?\?/.test(l); });
   console.log("  total : " + ((Date.now() - t0Total) / 1000).toFixed(1) + " s · " +
-    (mauvais.length ? mauvais.length + " epreuve(s) en defaut" : "les " + bilan.length + " epreuves ont vu leurs fautes"));
+    (mauvais.length || muettes.length
+      ? [mauvais.length ? mauvais.length + " epreuve(s) en defaut" : "",
+         muettes.length ? muettes.length + " epreuve(s) N'ONT RIEN PU MESURER" : ""].filter(Boolean).join(" · ")
+      : "les " + bilan.length + " epreuves ont vu leurs fautes"));
   console.log("  depot a la sortie : " + (restant.length ? "SALE — " + restant.map(cheminDe).join(", ") : "propre, comme au depart"));
-  process.exit(mauvais.length || restant.length ? 1 : 0);
+  process.exit(mauvais.length || restant.length ? 1 : muettes.length ? 2 : 0);
+}
+
+/* --seules=motif1,motif2 : ne garder que les etapes dont le nom de fichier contient
+   l'un des motifs. Ajoute au point A5 pour une raison precise : l'epreuve par
+   injection du verdict (`verif-verdict-mutations.js`) doit pouvoir faire juger UNE
+   etape temoin par cette chaine-ci, sans en payer les cinquante autres. Un motif qui
+   ne designe aucune etape du mode mais qui existe sous tools/ devient une etape a la
+   volee : c'est ce qui permet de faire passer un outil declare hors chaine par la
+   meme mecanique de verdict, sans le recopier ailleurs.
+   Un motif qui ne designe rien du tout est une erreur d'appel, pas un mode vide :
+   la chaine sort en 2 (rien n'a pu etre mesure) plutot que d'annoncer « tout est
+   vert » apres n'avoir rien lance -- c'est le defaut meme que ce point ferme. */
+var argSeules = (args.filter(function (a) { return a.indexOf("--seules=") === 0; })[0] || "").slice(9);
+if (argSeules) {
+  var motifsE = argSeules.split(",").map(function (m) { return m.trim(); }).filter(Boolean);
+  var gardees = ETAPES.filter(function (e) {
+    return motifsE.some(function (m) { return e.fichier.indexOf(m) !== -1; });
+  });
+  motifsE.forEach(function (m) {
+    if (gardees.some(function (e) { return e.fichier.indexOf(m) !== -1; })) return;
+    var fs2 = require("fs");
+    if (fs2.existsSync(path.join(TOOLS, m.split("/").join(path.sep)))) {
+      gardees.push({ nom: "adhoc  ", fichier: m, args: [], quoi: "outil lance a la demande (hors liste du mode)" });
+    }
+  });
+  if (!gardees.length) {
+    console.log("verif.js — aucune etape ne correspond a --seules=" + argSeules + " : RIEN N'A ETE MESURE.");
+    process.exit(2);
+  }
+  ETAPES = gardees;
 }
 
 /* --lister : rendre la liste des etapes du mode demande, une par ligne, sans rien
@@ -769,6 +848,43 @@ if (flag("lister")) {
 
 console.log("verif.js — " + ETAPES.length + " verificateur(s)" + (RAPIDE ? " (mode rapide : le rendu est saute)" : "") + "\n");
 
+/* =========================================================================== *
+ * LES TROIS ETATS D'UNE ETAPE (point A5 du chantier V17).
+ *
+ * Toute la chaine lisait `r.status !== 0` : « il a signale quelque chose ». Les
+ * outils du projet, eux, distinguent depuis toujours DEUX echecs differents --
+ * 1 = « j'ai mesure et j'ai trouve une faute », 2 = « je n'ai RIEN pu mesurer »
+ * (donnees illisibles, moteur introuvable, Chrome absent, reference manquante).
+ * Mesure du 2026-09-08 : 30 des 62 etapes de la chaine savent sortir en 2, dont
+ * 25 qui n'etaient pas declarees `sautable` -- leur panne se lisait « faute
+ * trouvee » -- et 5 qui l'etaient, dont le code 2 etait converti en 0 : la chaine
+ * imprimait « tout est vert » pour une etape qui n'avait rien regarde.
+ *
+ * `status === null` : le processus a ete tue (signal, plafond) ou n'a pas pu
+ * demarrer. Il n'a rien mesure non plus, et le dire vaut mieux que l'appeler
+ * « faute trouvee ».
+ * ========================================================================== */
+var LIBELLE = { ok: "OK  ", signale: "SIGNALE", nonmesure: "NON MESURE" };
+function classer(r) {
+  if (r.status === 0) return "ok";
+  if (r.status === 2 || r.status === null || r.status === undefined) return "nonmesure";
+  return "signale";
+}
+/* POURQUOI rien n'a pu etre mesure : on prend la premiere ligne de l'outil qui
+   l'explique (les 30 etapes concernees impriment toutes un motif avant de sortir),
+   sinon la derniere ligne non vide, sinon le signal ou l'erreur de lancement. */
+function causeDe(r, sortie) {
+  if (r.status !== 2) {
+    if (r.error) return "l'etape n'a pas pu etre lancee : " + (r.error.code || r.error.message);
+    if (r.signal) return "processus tue par " + r.signal + " : aucune mesure rendue";
+    if (r.status === null || r.status === undefined) return "processus interrompu sans code de sortie";
+  }
+  var l = sortie.split("\n").map(function (x) { return x.trim(); }).filter(Boolean);
+  var motif = l.filter(function (x) {
+    return /introuvable|illisible|impossible|ARR[EÊ]T|abandon|n'a pas pu|n'a pas repondu|aucune? (mesure|reference|lecon|fichier)|rien (n'a ete|de mesure)|MESURE INCOMPL/i.test(x);
+  })[0];
+  return (motif || l[l.length - 1] || "l'outil est sorti en 2 sans rien expliquer").slice(0, 160);
+}
 var resultats = [];
 var debutTotal = Date.now();
 
@@ -787,14 +903,19 @@ ETAPES.forEach(function (e) {
   });
   var duree = ((Date.now() - t0) / 1000).toFixed(1);
   var sortie = (r.stdout || "") + (r.stderr || "");
-  resultats.push({ e: e, code: e.sautable && r.status === 2 ? 0 : r.status, saute: e.sautable && r.status === 2, duree: duree, sortie: sortie });
-  var saute = e.sautable && r.status === 2;
-  var etat = r.status === 0 ? "OK  " : saute ? "SAUTE" : "SIGNALE";
-  process.stdout.write("          -> " + etat + "  en " + duree + " s\n\n");
+  var etat = classer(r);
+  /* `sautable` ne repeint plus rien : il ne sert qu'a NOMMER la cause attendue
+     (« l'outil externe n'est pas installe sur cette machine »), pour qu'on ne
+     confonde pas une machine sans git avec un verificateur en panne. */
+  var cause = causeDe(r, sortie);
+  if (etat === "nonmesure" && e.sautable) cause = "outil externe absent, cause prevue — " + cause;
+  resultats.push({ e: e, etat: etat, code: r.status, cause: cause, duree: duree, sortie: sortie });
+  process.stdout.write("          -> " + LIBELLE[etat] + "  en " + duree + " s\n\n");
 });
 
 /* ------------------------------------------------------------------ verdict */
-var enEchec = resultats.filter(function (r) { return r.code !== 0; });
+var enEchec = resultats.filter(function (r) { return r.etat === "signale"; });
+var nonMesures = resultats.filter(function (r) { return r.etat === "nonmesure"; });
 console.log("=".repeat(70));
 resultats.forEach(function (r) {
   /* on remonte la ou les lignes de bilan de chaque outil, pas tout son rapport.
@@ -806,15 +927,34 @@ resultats.forEach(function (r) {
   var lignes = r.sortie.split("\n").filter(function (l) {
     return /ERREURS|erreur\(s\)|sous le standard|Aucun probl|aucune erreur|probleme|maigre|redondance|divergen|Aucune divergence|n'a empire|marques traites|marque traite|PROGRESSE|reference perimee/i.test(l) && l.trim();
   });
-  console.log("  " + r.e.nom + "  " + (r.saute ? "SAUTE" : r.code === 0 ? "OK" : "SIGNALE") + "   (" + r.duree + " s)");
+  console.log("  " + r.e.nom + "  " + LIBELLE[r.etat].trim() + "   (" + r.duree + " s)");
+  /* Une etape qui n'a rien mesure doit DIRE pourquoi, sur la ligne meme du bilan :
+     sans cela elle se lit comme une etape ordinaire et on la survole. */
+  if (r.etat === "nonmesure") console.log("            cause : " + r.cause);
   lignes.slice(-2).forEach(function (l) { console.log("            " + l.trim().slice(0, 100)); });
 });
 console.log("=".repeat(70));
+/* LE VERDICT EN TROIS LIGNES, ET JAMAIS DEUX MOTS POUR TROIS ETATS. « tout est vert »
+   n'est imprime que si TOUTES les etapes ont pu mesurer : c'est la phrase que les
+   comptes rendus recopient, et elle affirmait jusqu'ici la sante du site alors qu'une
+   etape avait pu ne rien regarder du tout. */
 console.log("  total : " + ((Date.now() - debutTotal) / 1000).toFixed(1) + " s · " +
-  (enEchec.length ? enEchec.length + " verificateur(s) ont signale quelque chose" : "tout est vert"));
+  (enEchec.length || nonMesures.length
+    ? [enEchec.length ? enEchec.length + " verificateur(s) ont signale quelque chose" : "",
+       nonMesures.length ? nonMesures.length + " n'ont RIEN PU MESURER" : ""]
+      .filter(Boolean).join(" · ")
+    : "tout est vert (" + resultats.length + " etape(s), toutes mesurees)"));
 
 if (enEchec.length) {
   console.log("\n  Pour le detail, relance l'outil concerne :");
   enEchec.forEach(function (r) { console.log("    node tools/" + r.e.fichier + " " + r.e.args.join(" ")); });
 }
-process.exit(enEchec.length ? 1 : 0);
+if (nonMesures.length) {
+  console.log("\n  RIEN N'A ETE MESURE par ces etapes — ce n'est ni un « OK » ni une faute trouvee,");
+  console.log("  c'est un trou dans la couverture. A traiter comme tel :");
+  nonMesures.forEach(function (r) {
+    console.log("    " + r.e.fichier + " — " + r.cause);
+  });
+}
+/* 1 prime sur 2 : quand une faute est trouvee, c'est elle qu'on va lire en premier. */
+process.exit(enEchec.length ? 1 : nonMesures.length ? 2 : 0);

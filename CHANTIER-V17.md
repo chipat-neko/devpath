@@ -253,9 +253,57 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
       **75 dans un mode, 9 hors chaîne dont 9 déclarés** » — contre 57 dans un mode sur 63 soumis avant
       le point.
 
-- [ ] **A5 · `verif.js` confond « je n'ai pas pu mesurer » et « j'ai trouvé une faute ».** Distinguer
-      les deux dans la sortie et dans le code de retour : un outil qui n'a rien pu mesurer doit le dire,
-      jamais passer pour vert ni pour rouge. Mesurer combien d'étapes sont concernées avant de corriger.
+- [x] **A5 · `verif.js` confondait « je n'ai pas pu mesurer » et « j'ai trouvé une faute ».** — FAIT le
+      2026-09-08.
+      **MESURE D'ABORD, avant toute correction** (script d'inventaire exécuté, la liste des étapes étant
+      demandée à `verif.js --lister` mode par mode, jamais recopiée) : la chaîne compte **62 étapes**
+      tous modes confondus, dont **30 savent sortir en code 2**, c'est-à-dire « rien n'a pu être
+      mesuré ». Sur ces 30 : **5 étaient déclarées `sautable`** (`verif-python-exos`, les quatre bacs à
+      sable Git) et leur code 2 était **converti en 0** par `code: e.sautable && r.status === 2 ? 0 :
+      r.status` — la chaîne imprimait **« tout est vert »** pour une étape qui n'avait rien regardé ;
+      **25 ne l'étaient pas** (`verif-donnees`, `verif-contenu`, `verif-sql-exos`, `verif-qcm-biais`,
+      `verif-qcm-lexique`, `verif-rendu`, `verif-clic`, `verif-stockage`, `verif-execution`…) et leur
+      panne se lisait **« un vérificateur a signalé quelque chose »**, c'est-à-dire une faute du site
+      qui n'existait pas. Les 30 causes ont été relues une par une dans le source : **toutes** sont bien
+      des « je n'ai pas pu mesurer » (data.js illisible, moteur `TEST_REGEX`/`JUGE_SQL` introuvable dans
+      `js/lecon.js`, SQLite qui ne charge pas, Chrome muet, référence de cliquet absente, page générée
+      manquante) — la convention 0/1/2 est **homogène dans tout le dépôt**, elle n'était pas lue.
+      **CE QUI EST FAIT.** `tools/verif.js` classe désormais chaque étape en **trois** états : `OK`
+      (code 0), `SIGNALE` (code 1, ou tout autre code non nul autre que 2), `NON MESURE` (code 2, ou
+      processus tué / non démarré : `status === null`). L'état non mesuré **imprime sa cause** sur la
+      ligne du bilan, puis un bloc final `RIEN N'A ETE MESURE par ces etapes` qui nomme chaque étape et
+      son motif. **« tout est vert » n'est plus imprimé que si toutes les étapes ont mesuré** (la phrase
+      dit maintenant combien : « tout est vert (27 etape(s), toutes mesurees) »). **Codes de retour** :
+      **0** tout mesuré et propre · **1** au moins une faute · **2** aucune faute mais au moins une
+      étape muette. `sautable` ne repeint plus rien : il ne sert qu'à **nommer** la cause attendue
+      (« outil externe absent, cause prevue — … »), pour ne pas confondre une machine sans git avec un
+      vérificateur en panne. **Le mode `--mutations` reçoit la même distinction** : une épreuve sortant
+      en 2 n'a pas trouvé un vérificateur aveugle, elle n'a pas pu tourner — elle est comptée
+      `NON MESURE` et le mode sort en 2 (elle comptait « en défaut », ce qui envoyait chercher un défaut
+      inexistant). Ajout au passage de **`--seules=motif1,motif2`**, qui restreint la chaîne à quelques
+      étapes (et accepte un outil hors chaîne existant sous `tools/`, jugé par la même mécanique) ; un
+      motif qui ne désigne rien sort en **2**, jamais en « vert après n'avoir rien lancé ».
+      **ÉPREUVE PAR INJECTION** — nouveau `tools/verif-verdict-mutations.js`, **la seule épreuve du
+      dépôt qui juge la CHAÎNE et non un vérificateur**, versée au mode `--mutations` (16 épreuves au
+      lieu de 15). Elle écrit un témoin jetable `tools/_canari-verdict.tmp.js` qui sort sur un code
+      **connu**, le fait juger par `verif.js --seules=`, puis rejoue la **régression historique** sur
+      une vraie étape `sautable`. **6 cas, 6 vus, dépôt propre, 7,8 s** :
+      1. témoin en 0 → `OK`, chaîne code 0 · 2. témoin en 1 → `SIGNALE`, code 1, sans « tout est vert »
+      · 3. témoin en 2 → `NON MESURE`, **code 2**, sans « tout est vert » · 4. le bloc « RIEN N'A ETE
+      MESURE » nomme l'étape et sa cause · 5. témoin en 3 → `SIGNALE` (un code non nul autre que 2
+      reste une faute) · 6. `verif-python-exos.js` muté pour sortir en 2 → `NON MESURE` **code 2** là où
+      l'ancien code rendait **« OK » et 0**, puis octets restaurés → **retour au vert, code 0**.
+      **PREUVE QUE L'ÉPREUVE PEUT ROUGIR** (elle ne compte pas sinon) : la repeinture d'avant le point
+      A5 réinjectée dans `verif.js` → **5 / 6 cas vus, « MANQUE : étape `sautable` sortant en 2 »,
+      code 1**, `verif.js` restauré **à l'octet près**. Même épreuve pour la branche `--mutations` :
+      l'épreuve mutée pour sortir en 2 → le mode imprime **« 1 epreuve(s) N'ONT RIEN PU MESURER »** et
+      sort en **2**, dépôt propre, fichier restauré à l'octet près.
+      **NON-RÉGRESSION** : `verif.js --rapide` **27 étapes, toutes vertes, 105,5 s** (avant le point :
+      27 étapes vertes, 106,8 s — **liste d'étapes identique**, comparée ligne à ligne) · le garde-fou
+      d'A4, `verif-chaine-declaree.js`, reste **vert** en intégrant l'épreuve neuve : **85 outils soumis
+      (48 vérificateurs, 16 épreuves par injection, 20 preuves), 76 dans un mode, 9 hors chaîne dont 9
+      déclarés** · `node --check tools/verif.js` et `tools/verif-verdict-mutations.js` OK · `git status`
+      propre hors les deux fichiers du point.
 
 - [ ] **A6 · `--rapide` montre 1 signalement, `--complet` en montre 6.** Cinq contrôles ne sont jamais
       joués par le mode que l'on lance le plus souvent — et trois des six signalements de `--complet`
