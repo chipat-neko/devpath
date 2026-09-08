@@ -5680,6 +5680,31 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       9 400 ; `lecon-05` : 11 200 ; `lecon-13` : 8 100 en juillet ; `lecon-14` : 8 100 en juin) —
       dans un bloc que `lecon-14` présente comme « **cohérent avec tout le cours** ».
 
+
+      **LE 36ᵉ COURS EST MESURÉ ET SA CONSIGNE EST ÉCRITE — la prochaine passe démarre sur
+      l'écriture, pas sur le diagnostic.** `lua`, 72 questions sur 18 leçons :
+
+      | indice | réussite | rendement |
+      |---|---:|---:|
+      | la plus longue (couverture **100 %**, pas un ex æquo) | **88,9 %** | 88,9 % |
+      | **la ponctuation forte en UNION** (37 questions) | **63,5 %** | **100 %** |
+      | la plus détaillée | 75,7 % | **98,0 %** |
+      | RESTREINDRE à la parenthèse | 62,3 % | **97,3 %** |
+      | l'écho de l'énoncé | 51,0 % | 78,1 % |
+      | le point-virgule (seul et restreint) | 49,4 % | **100 %** |
+      | RESTREINDRE aux deux-points | 44,6 % | **100 %** |
+      | la barre oblique (5 questions) | 28,8 % | 80,0 % |
+
+      Rangs **64 / 3 / 3 / 2** (cible 18/18/18/18), **63 questions à retoucher, 14 613 caractères**
+      — le plus gros volume d'un cours depuis le début de B4 ; indice lexical **59 exploitables sur
+      72**, 62 à mettre en forme. La **virgule décimale** est à **0 %** : la consigne interdit de
+      l'ouvrir. L'**approximateur** tranche déjà sur 2 questions à 100 %.
+
+      Consigne réutilisable : `scratchpad/CONSIGNE-LUA.md`. Elle porte les trois acquis du 35ᵉ
+      cours : **la ponctuation forte en UNION mise en n° 2** (c'est le plus gros indice du cours
+      après la longueur), la consigne de **constituer le dictionnaire de la page AVANT de rédiger**
+      (un écrivain a perdu un tour complet faute de l'avoir fait), et l'avertissement sur les
+      **outils de mesure écrits à la volée**, à tester sur un cas qu'ils doivent trouver.
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
