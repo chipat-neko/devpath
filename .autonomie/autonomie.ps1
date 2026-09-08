@@ -325,7 +325,16 @@ try {
       Set-ScheduledTask -TaskName 'Syntaxe-Autonomie' -Trigger $tLim -ErrorAction Stop | Out-Null
     } catch { try { & schtasks /Change /TN 'Syntaxe-Autonomie' /DISABLE | Out-Null } catch {} }
     try { Set-Content -Path (Join-Path $dir 'limite-hebdo.txt') -Value $txt -Encoding utf8 } catch {}
-    $arretDemande = $true
+    # $replanifFaite, PAS $arretDemande. Corrige le 2026-09-08 apres un audit : la
+    # correction du 2026-09-02 avait cree la variable, reecrit le bloc final et annonce
+    # « trois cas TESTES » -- mais laisse CETTE ligne intacte. J avais teste une
+    # simulation des trois branches, jamais le code reel : $replanifFaite n etait
+    # affectee NULLE PART. La panne est donc retombee a l identique le 2026-09-07 a
+    # 03:59:57, ou le journal a ecrit « CHANTIER TERMINE : verification finale VERTE »
+    # sur un chantier a 8/22, sans qu aucune verification n ait tourne. Une reparation
+    # declaree verte sans avoir ete executee est exactement le defaut que ce projet
+    # combat -- ici commis sur le garde-fou lui-meme.
+    $replanifFaite = $true
   }
   elseif ($sortie -match "hit your session limit") {
     # LIMITE DE SESSION : inutile de reessayer avant l'heure dite. On reporte le
