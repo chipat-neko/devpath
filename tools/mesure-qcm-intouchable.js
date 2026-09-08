@@ -9,12 +9,19 @@
    d'avant. Eprouve par injection sur le cours iac (bonne reponse allongee + explication
    changee) : 2 atteintes injectees, 2 vues.
 
-   Usage : node tools/mesure-qcm-intouchable.js <cours>
+   Usage : node tools/mesure-qcm-intouchable.js <cours> [<ref-git>]
            (code 1 si une atteinte est trouvee)
+
+   L'argument <ref-git> a ete ajoute le 2026-09-08 (B4, cours `lua`) : la reference
+   etait figee a HEAD, donc une vague d'ecriture DEJA COMMITEE ne pouvait plus etre
+   auditee du tout -- l'outil se comparait a elle-meme et rendait 0 atteinte, ce qui
+   ressemble a un succes. C'est arrive : le reveil precedent a ete coupe apres son
+   commit. Passer le commit d'AVANT la vague retablit la mesure.
 */
 "use strict";
 var fs = require("fs"), path = require("path"), cp = require("child_process");
 var cours = process.argv[2];
+var REF = process.argv[3] || "HEAD";
 var dir = path.join(__dirname, "..", "pages", cours);
 function extrait(src) {
   var re = /<script[^>]*type="application\/json"[^>]*data-quiz(?:-bilan)?[^>]*>([\s\S]*?)<\/script>/g, m, out = [];
@@ -25,8 +32,8 @@ var pbs = [], nq = 0, nd = 0, chg = 0;
 fs.readdirSync(dir).filter(function (f) { return /^lecon-\d+\.html$/.test(f); }).sort().forEach(function (f) {
   var rel = "pages/" + cours + "/" + f;
   var avant, apres;
-  try { avant = extrait(cp.execSync("git show HEAD:" + rel, { encoding: "utf8", maxBuffer: 1 << 26 })); }
-  catch (e) { pbs.push(rel + " : introuvable dans HEAD"); return; }
+  try { avant = extrait(cp.execSync("git show " + REF + ":" + rel, { encoding: "utf8", maxBuffer: 1 << 26 })); }
+  catch (e) { pbs.push(rel + " : introuvable dans " + REF); return; }
   apres = extrait(fs.readFileSync(rel, "utf8"));
   if (avant.length !== apres.length) { pbs.push(rel + " : nombre de blocs QCM change (" + avant.length + " -> " + apres.length + ")"); return; }
   avant.forEach(function (blocA, b) {
