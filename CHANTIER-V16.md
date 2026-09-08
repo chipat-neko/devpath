@@ -5013,6 +5013,24 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       ils sont nés conformes en V13, jamais audités — les verrouiller sans relecture adversariale
       serait certifier ce qu'on n'a pas mesuré. **À trancher en B5, pas en passant.**
 
+      ⚠️⚠️ **ET LA MESURE FAITE POUR TRANCHER A RENDU AUTRE CHOSE : `distribue` EST RETOURNÉ.**
+      « La plus longue » y vaut **5,6 %** (rendement **4,8 %** sur 91,3 % de couverture) — très
+      au-dessous du hasard. Le cours a été écrit **après** le constat de B1, avec la consigne
+      anti-longueur, et il l'a appliquée **trop loin** : c'est la leçon de `mobile` (« fermer un
+      indice à fond le RETOURNE ») retrouvée sur un cours **NEUF, jamais détordu**. Conséquence
+      mesurée : **« la plus détaillée » rend 80,6 % sur 52,2 % des questions** (réussite globale
+      **56,8 %**), et « RESTREINDRE aux deux-points » **73,1 %**. Deux indices **au-dessus de la
+      cible de 60 %** — invisibles au cliquet, parce que le contrôle « le pire indice reste sous
+      la cible » **ne s'applique qu'aux cours marqués `traite`**.
+
+      **CE QUE ÇA APPREND POUR LES 59 COURS RESTANTS** : écrire un cours neuf « en évitant que la
+      bonne réponse soit la plus longue » ne suffit pas — **ça déplace le biais vers le détail**.
+      Un cours neuf doit passer la **même** batterie qu'un cours détordu, et le cliquet devrait
+      contrôler le pire indice **sur tous les cours, pas seulement sur les cours marqués**. C'est
+      un correctif d'outillage à part entière, à traiter avec F3 plutôt qu'ici. `neurones` et
+      `offensive` sont sains de ce côté (pire rendement à couverture utile : 85,7 % sur 10,1 % pour
+      les guillemets d'`offensive`, réussite globale 32,0 %).
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
