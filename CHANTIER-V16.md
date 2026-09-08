@@ -5322,6 +5322,19 @@ appliquer un détecteur automatique à l'aveugle — il signalerait deux pages s
 - [ ] **F3 · Mesure globale.** Vérificateurs dans la chaîne : **24 hors chaîne au départ**, combien
       à l'arrivée ? Biais des QCM : **88,8 % au départ**. Cours marqués en fraîcheur : **6 sur 94**
       au départ.
+
+      **DETTE SOLDÉE PAR AVANCE (2026-09-08) — l'explication orpheline.** Le compte rendu de
+      `kotlin` réclamait ici « un contrôle *l'`explain` ne cite pas une option absente*, bon
+      marché et inexistant », et supposait que le défaut attendait « probablement dans les
+      30 cours déjà traités ». **Outil livré (`tools/mesure-explain-orpheline.js`) et
+      supposition RÉFUTÉE par la mesure** : sur **25 cours** dont la vague est identifiable dans
+      git, **2 104 questions** ont une option changée sous un `explain` intouché, et il reste
+      **un seul signalement — bénin** (`rust/lecon-13` nomme `borrow_mut` pour expliquer un
+      mécanisme, il ne réfute pas une option absente). `kotlin` était un cas isolé. Les 6 autres
+      cours traités (`git`, `java`, `ocaml`, `php`, `react`, `sql`) n'ont pas de vague repérable
+      au motif employé et **ne sont pas mesurés** : mieux vaut ne rien mesurer que mesurer contre
+      la mauvaise référence. **Reste à faire ici : brancher l'outil dans la chaîne** (il rend un
+      code de sortie 1) et lui écrire son épreuve par mutation, comme les autres cliquets.
 - [ ] **F4 · Ce qui n'a pas été fait.** Lister et expliquer, sans arrondir — comme l'a fait le F5
       du V15, dont ce chantier entier est issu.
 
