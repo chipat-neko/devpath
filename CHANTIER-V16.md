@@ -5353,6 +5353,101 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       **32 cours verrouillés**. La case reste **décochée** : **54 cours** restent au-dessus de
       60 %.
 
+      ---
+
+      **34ᵉ COURS DÉTORDU — `a11y` (2026-09-08) : 94,2 % → 23,9 %.** Écriture en **UNE seule
+      vague** (six lots sur fichiers disjoints, consigne `scratchpad/CONSIGNE-A11Y.md`), puis
+      **quatre passes de correction** dont trois n'étaient pas prévues. Le cours est le premier
+      dont la clôture a demandé **116 distracteurs réécrits** — 202 par la vague, puis 116 par les
+      quatre passes ci-dessous, sur 207.
+
+      | passe | ce qu'elle ferme | distracteurs |
+      |---|---|---:|
+      | 1 · fond | distracteurs VRAIS, doublons, indices de lot | **63** |
+      | 2 · lexique | l'indice lexical **rouvert par la passe 1** | **43** |
+      | 3 · règle du `w` | la bonne réponse seule la plus fournie en mots longs | **4** |
+      | 4 · rangs | distribution 18/19/17/15 → 18/17/17/17 | **5** |
+
+      **CE QUE LES QUATRE RELECTURES ADVERSARIALES ONT RENDU** (45 défauts sur 69 questions ;
+      `CONTRA-A11Y-R1..R4.md`). Les six qui comptent, toutes **prouvées contre la norme**, pas
+      contre une intuition :
+
+      1. **`lecon-07` q3 — une SECONDE BONNE RÉPONSE.** « Un décor CSS ne porte pas d'attribut
+         `alt`, et sans `alt` l'arbre d'accessibilité reste vide pour lui » : les **deux**
+         propositions sont vraies, et ensemble elles répondent correctement à l'énoncé.
+      2. **`lecon-12` q2 — AccName réfute le distracteur.** « Le message pointe l'identifiant du
+         champ avec un attribut `for` » : un second `<label for>` est du HTML valide et l'étape
+         **2C de AccName CONCATÈNE tous les `label` associés** — le message *serait* annoncé.
+         L'`explain` intouchable ne réfutait que « la couleur ou le placeholder ».
+      3. **`lecon-05` q2 — le distracteur dit vrai par calcul.** « Un rouge saturé fatigue la
+         perception, et le contraste ne tient plus » : `#ff0000` sur `#ffffff` donne **4,00:1**,
+         sous le seuil AA de 4,5:1. L'affirmation est exacte.
+      4. **`lecon-14` q1 — le distracteur énonce la thèse de la clef.** « Ces outils ne mesurent
+         donc ni le contraste, ni la pertinence » : « ne mesurent pas la pertinence » est mot pour
+         mot ce que la bonne réponse et son `explain` affirment.
+      5. **`lecon-13` q3 — un sigle réel détourné.** Deux options collaient **APG** (*ARIA
+         Authoring Practices Guide*, W3C, document **externe**) à une notice **interne** au projet.
+         Un outil qui compte les majuscules ne verra jamais qu'un sigle désigne autre chose que
+         ce qu'il désigne.
+      6. **`lecon-06` q1 — deux options qui s'AUTO-DÉNONCENT.** L'énoncé demande ce qu'est un audit
+         **complet** ; les options annonçaient leur propre lacune (« avec le clavier en moins »,
+         « sans écoute — clavier exclu »). L'apprenant les élimine sans rien savoir du sujet.
+
+      **DEUX INDICES DE FORME QU'AUCUNE DES 37 STRATÉGIES NE MESURE**, tous deux sur des options
+      **numériques**, tous deux à 100 % sur leur question :
+      - **la seule option qui porte une virgule** — `lecon-05` q1 : `4,5:1` contre `1:1`, `2:1`,
+        `21:1 exigé`. Repérer la virgule suffit.
+      - **le maximum d'une suite régulière** — bilan B7 : `1,5 / 2,5 / 3,5 / 4,5`, la bonne
+        réponse étant la plus grande. C'est le relecteur du bilan qui a signalé que la correction
+        du premier fabriquait le second. Séries corrigées en cassant la régularité (`6,5:1`).
+      *Ces deux motifs ne sont outillés nulle part : à verser au F3.*
+
+      **LA LEÇON MÉCANIQUE DE CE COURS — corriger le FOND rouvre le LEXIQUE, et de combien.** Le
+      cours sortait de la vague à **0 exploitable / 0 à mettre en forme**. Les 63 corrections de
+      fond l'ont remis à **21 exploitables et 29 à mettre en forme sur 69** — parce qu'un
+      distracteur réécrit pour cesser d'être vrai emploie forcément d'autres mots, et que la règle
+      du `k` compte les mots étrangers à la page. Le constat était déjà écrit pour le cours `c` ;
+      il est ici **chiffré** : **une passe de fond de 63 options a coûté 43 options de plus**, soit
+      **0,68 réécriture de rattrapage par correction de fond**. Toute estimation de coût d'un
+      cours doit porter ce facteur.
+
+      **ET LA RÈGLE DU `w` NE SE DÉDUIT PAS DU `k`.** Trois questions tenaient le `k` (mêmes
+      nombres de mots étrangers partout) et restaient exploitables : la bonne réponse y était la
+      **seule option la plus fournie en mots longs**, ce qui suffit à la stratégie PROPORTION.
+      C'est `w`, pas `k`, qui ferme PROPORTION — et les deux se referment dans des directions
+      indépendantes.
+
+      **MESURES FINALES, toutes exécutées :**
+
+      | | avant | après |
+      |---|---:|---:|
+      | « la plus longue » | 94,2 % | **23,9 %** |
+      | pire des 37 stratégies | 94,2 % | **26,8 %** |
+      | meilleure (plancher) | — | **22,0 %** |
+      | rangs 0/1/2/3 | 65 / 1 / 3 / 0 | **18 / 17 / 17 / 17** |
+      | indice lexical (exploitables) | 60 / 69 | **0 / 69** |
+      | questions trahies par 5 indices ou plus | — | **0** |
+
+      **Contrôles** : `mesure-qcm-intouchable a11y` **« Aucune atteinte »** (207 distracteurs, 64
+      réécrits dans le lot final ; `q` / `correct` / `explain` / bonne réponse intacts) ;
+      `mesure-explain-orpheline --depuis=ef157ee` **aucune explication orpheline** ; `verif-html`
+      **0 grave, 0 attention** sur 1 629 fichiers ; `verif-donnees` **0 erreur** sur 25 contrôles ;
+      `verif.js --rapide` **26 étapes, tout vert (52,1 s)** ; cliquets refigés, `a11y` marqué
+      `traite` (**33 cours verrouillés**) ; index `quiz` et `search` régénérés.
+
+      ⚠️ **`doc/lecon-03` s'est repérimé une 10ᵉ fois**, comme à chaque cours détordu :
+      **45,6 % → 44,6 %** et **2 785 → 2 723** manquements à S3, **11 mentions** corrigées — dont
+      **la BONNE RÉPONSE d'un QCM** (« près de cinq cas sur dix » → « près de quatre »), seul cas
+      où toucher une bonne réponse est obligatoire. Le séparateur est une **INSÉCABLE U+00A0
+      littérale** : un `grep "2 785"` avec une espace ordinaire rend **zéro résultat** et laisse
+      croire que le chiffre n'est pas dans la page. `verif-normatif` **63/66 → 66/66**.
+
+      **ÉTAT DU SITE** : **6 167 questions, 3 507 devinables par la longueur, 56,9 %** — contre
+      5 081 et 84,8 % au cadrage de B4. **1 574 questions rendues, 27,9 points gagnés**,
+      **33 cours verrouillés**. La case reste **décochée** : **53 cours** restent au-dessus de
+      60 %. Les plus nocifs par questions devinables : `dataviz` (68 q, 95,6 %), `lua` (72 q,
+      88,9 %), `swift` (66 q, 95,2 %), `typescript` (68 q, 92,7 %), `scala` (68 q, 91,9 %).
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
