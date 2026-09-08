@@ -209,12 +209,13 @@ end
 end
 
 -- diviser(10, 0)
--- script.lua:9: division par zero   &lt;- ligne 9 = appel, pas le error
+-- script.lua:8: division par zero   &lt;- ligne 8 = l'appel, pas le error
 
 -- assert : raccourci tres courant
 local fichier = assert(io.open("config.lua", "r"))
--- si io.open echoue, assert leve son 2e retour comme message :
--- config.lua: No such file or directory</code></pre></figure>
+-- si io.open echoue, assert leve son 2e retour comme message, prefixe
+-- de la position de l'appel (assert delegue a error avec level 1) :
+-- script.lua:12: config.lua: No such file or directory</code></pre></figure>
 <p><code>assert(v, msg)</code> renvoie ses arguments si <code>v</code> est vrai (ni <code>nil</code> ni <code>false</code>), sinon lève une erreur avec <code>msg</code>. C'est le compagnon idéal des fonctions Lua qui renvoient <code>nil, message</code> en cas d'échec (comme <code>io.open</code>)&nbsp;: tu transformes un échec silencieux en erreur explicite en une ligne.</p>
 
 <h2>Capturer sans planter : pcall</h2>
@@ -264,16 +265,17 @@ print(ok)     -- false
 print(trace)
 -- Erreur : script.lua:6: quelque chose a casse
 -- stack traceback:
---     script.lua:6: in function 'etape_interne'
+--     script.lua:6: in function &lt;script.lua:5&gt;   (appelee par xpcall, une
+--     fonction C : Lua ne peut pas retrouver son nom, il donne sa position)
 --     ...
 
--- Lua 5.4 : xpcall accepte aussi des arguments apres le gestionnaire
+-- Depuis Lua 5.2 : xpcall accepte aussi des arguments apres le gestionnaire
 local ok2 = xpcall(risque, gestionnaire, -1)</code></pre></figure>
 <p>En production — un serveur, un mod de jeu — c'est le combo gagnant&nbsp;: chaque boucle ou chaque requête tourne sous <code>xpcall</code>, tu journalises la trace, et le reste du programme continue de tourner.</p>
 
 <h2>Pièges fréquents</h2>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Reprendre une coroutine <code>"dead"</code> ne plante pas&nbsp;: <code>resume</code> renvoie simplement <code>false, "cannot resume dead coroutine"</code>. Si tu ne vérifies pas le premier retour, tu boucleras sur des valeurs <code>nil</code> sans comprendre pourquoi. Avec <code>coroutine.wrap</code>, là, ça lève bien une erreur — d'où l'intérêt de vérifier le statut quand tu utilises <code>resume</code>.</p></div></div>
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>N'utilise pas <code>assert</code> pour les erreurs <em>attendues</em> (un fichier absent, une saisie invalide). Le message passé à <code>assert</code> est <strong>évalué à chaque appel</strong>, même quand la condition est vraie&nbsp;: une concaténation coûteuse en argument ralentit ton code pour rien. Surtout, une erreur prévisible se gère avec un <code>if</code> et un retour <code>nil, message</code>, pas en faisant remonter une exception. Garde <code>assert</code> pour les invariants «&nbsp;ça ne devrait jamais arriver&nbsp;».</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>N'utilise pas <code>assert</code> pour les erreurs <em>attendues</em> (une saisie invalide, un fichier optionnel). La nuance compte&nbsp;: un fichier de configuration <strong>obligatoire</strong> dont l'absence est un bug de déploiement, comme plus haut, se garde très bien par un <code>assert</code>&nbsp;; une saisie que l'utilisateur peut rater, non. Le message passé à <code>assert</code> est <strong>évalué à chaque appel</strong>, même quand la condition est vraie&nbsp;: une concaténation coûteuse en argument ralentit ton code pour rien. Surtout, une erreur prévisible se gère avec un <code>if</code> et un retour <code>nil, message</code>, pas en faisant remonter une exception. Garde <code>assert</code> pour les invariants «&nbsp;ça ne devrait jamais arriver&nbsp;».</p></div></div>
 
 <h2>Pour aller plus loin</h2>
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les coroutines sont la brique de base des <em>boucles d'événements</em> coopératives. Des bibliothèques comme <strong>Copas</strong> ou <strong>OpenResty</strong> (Nginx + Lua) s'en servent pour gérer des milliers de connexions réseau sur un seul fil&nbsp;: chaque connexion est une coroutine qui <code>yield</code> en attendant des données. Dans les jeux, le même principe anime les scripts de quêtes et les dialogues qui «&nbsp;attendent&nbsp;» une frame sans bloquer le moteur.</p></div></div>

@@ -176,7 +176,7 @@ print(ok, resultat)                   --&gt; true   9</code></pre></figure>
 
 <p>Que se passe-t-il si le code invité tente quelque chose d'interdit&nbsp;? Comme <code>os</code> n'est pas dans son environnement, <code>os</code> vaut <code>nil</code>&nbsp;: l'accès échoue proprement, capturé par <code>pcall</code>.</p>
 
-<figure class="code-block" data-file="bac-a-sable.lua"><pre><code class="language-lua">local malveillant = load('os.execute("rm -rf /")', "x", "t", bac)
+<figure class="code-block" data-file="bac-a-sable.lua"><pre><code class="language-lua">local malveillant = load('os.execute("rm -rf /")', "=x", "t", bac)
 local ok, err = pcall(malveillant)
 print(ok)    --&gt; false
 print(err)   --&gt; x:1: attempt to index a nil value (global 'os')
@@ -215,7 +215,7 @@ local strict = setmetatable({}, {
   end,
 })
 
-local chunk = load("y = 10", "test", "t", strict)
+local chunk = load("y = 10", "=test", "t", strict)
 local ok, err = pcall(chunk)
 print(ok, err)   --&gt; false   test:1: création de globale interdite : y</code></pre></figure>
 
@@ -245,7 +245,7 @@ print(ok, err)   --&gt; false   test:1: création de globale interdite : y</code
       <tr><td><code>_G</code></td><td>table de toutes les globales</td><td><code>_G.print == print</code></td></tr>
       <tr><td><code>_ENV</code></td><td>environnement vu par un chunk (≥ 5.2)</td><td><code>x</code> ≡ <code>_ENV.x</code></td></tr>
       <tr><td><code>load(t)</code></td><td>compile une chaîne en fonction</td><td><code>load("return 1")()</code></td></tr>
-      <tr><td><code>load(t, n, m, env)</code></td><td>… avec un environnement imposé</td><td><code>load(c, "x", "t", bac)</code></td></tr>
+      <tr><td><code>load(t, n, m, env)</code></td><td>… avec un environnement imposé</td><td><code>load(c, "=x", "t", bac)</code></td></tr>
       <tr><td>mode <code>"t"</code></td><td>texte seulement (refuse le bytecode)</td><td>sécurité</td></tr>
       <tr><td><code>pcall</code></td><td>exécute en isolant les erreurs</td><td><code>pcall(chunk)</code></td></tr>
       <tr><td><code>setfenv</code></td><td>équivalent en Lua 5.1 / LuaJIT</td><td><code>setfenv(f, bac)</code></td></tr>
@@ -293,7 +293,7 @@ print(ok, err)   --&gt; false   test:1: création de globale interdite : y</code
 [
   {"type":"text","accept":["_G","_g"],"placeholder":"la table qui contient toutes les variables globales : …","hints":["print en fait partie.","Deux caractères, commence par un tiret bas.","x = 1 revient à ….x = 1."],"link":{"href":"lecon-17.html","label":"Revoir « _G »"}},
   {"type":"text","accept":["load"],"placeholder":"la fonction qui compile une chaîne de code en une fonction exécutable : …","hints":["Elle renvoie nil + message si la syntaxe est fausse.","Quatre lettres.","Son 4e argument fixe l'environnement."],"link":{"href":"lecon-17.html","label":"Revoir « Compiler du texte »"}},
-  {"type":"text","accept":["_ENV","_env"],"placeholder":"la variable, propre à chaque chunk, à travers laquelle il voit ses globales : …","hints":["Introduite en Lua 5.2.","print(x) équivaut à ….print(x)... presque : à ….x pour une globale x.","Quatre caractères après le tiret bas."],"link":{"href":"lecon-17.html","label":"Revoir « _ENV »"}}
+  {"type":"text","accept":["_ENV","_env"],"placeholder":"la variable, propre à chaque chunk, à travers laquelle il voit ses globales : …","hints":["Introduite en Lua 5.2.","print(x) équivaut à ….print(x)... presque : à ….x pour une globale x.","Quatre caractères, commence par un tiret bas."],"link":{"href":"lecon-17.html","label":"Revoir « _ENV »"}}
 ]
 </script>
 
@@ -303,16 +303,16 @@ print(f())   --&gt; 27</code></pre></figure></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Crée un bac à sable qui n'expose que <code>print</code> et <code>math</code>. Exécute dedans un code qui affiche <code>math.pi</code>, puis vérifie qu'un code essayant <code>io.write("x")</code> échoue via <code>pcall</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-lua">local bac = { print = print, math = math }
 
-local ok1 = pcall(load("print(math.pi)", "ok", "t", bac))
+local ok1 = pcall(load("print(math.pi)", "=ok", "t", bac))
 print("autorisé :", ok1)          --&gt; 3.1415926535898  puis  autorisé : true
 
-local ok2, err = pcall(load('io.write("x")', "ko", "t", bac))
+local ok2, err = pcall(load('io.write("x")', "=ko", "t", bac))
 print("bloqué :", ok2, err)
 -- bloqué : false   ko:1: attempt to index a nil value (global 'io')</code></pre></figure></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Synthèse</span></div><p>Écris <code>calculette(expr)</code> qui évalue en toute sécurité une expression arithmétique donnée en chaîne, en n'exposant que <code>math</code>. La fonction renvoie <code>résultat</code> ou <code>nil, message</code> si l'expression est invalide.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-lua">local function calculette(expr)
   local bac = { math = math }                 -- rien d'autre n'est exposé
-  local chunk, err = load("return " .. expr, "calc", "t", bac)
+  local chunk, err = load("return " .. expr, "=calc", "t", bac)
   if not chunk then return nil, err end        -- erreur de syntaxe
   local ok, resultat = pcall(chunk)            -- erreur d'exécution éventuelle
   if not ok then return nil, resultat end
