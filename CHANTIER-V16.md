@@ -5265,6 +5265,94 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       5 081 et 84,8 % au cadrage de B4. **1 475 questions rendues, 26,3 points gagnés.** La case
       reste **décochée** : **55 cours** restent au-dessus de 60 %.
 
+      ---
+
+      **33ᵉ COURS DÉTORDU — `solidity` (2026-09-08) : 97,1 % → 23,5 %**, en **UNE seule vague**,
+      **204 distracteurs sur 204 réécrits**, rangs **67/1/0/0 → 17/17/17/17** (cible exacte).
+      C'était le cours le plus nocif restant. **Les 36 stratégies tiennent entre 19,1 % et
+      26,7 %** — aucune au-dessus de la bande. Lexique **61 exploitables / 66 à mettre en forme
+      → 0 / 0** ; intouchable : aucune atteinte ; explication orpheline : 68 questions à risque,
+      **0**.
+
+      **Choix assumé, écrit plutôt que tu** : `plan-rangs-qcm` compte encore **4 questions « à
+      retoucher » pour 4 caractères**. Ce sont des **ex aequo de longueur** entre la bonne réponse
+      et un distracteur. Je ne les casse pas : « la plus longue » est déjà à **23,5 %, sous
+      l'étalon du hasard**, et un lot a mesuré que casser une égalité peut au contraire **créer**
+      un indice (« écarter les deux extrêmes » monte quand deux distracteurs sont à égalité).
+
+      **19 DÉFAUTS DE CORPS signalés par les lots** (ils avaient interdiction de les corriger),
+      chacun revérifié avant correction — aucun compilateur Solidity n'étant installé, la preuve
+      est **langagière ou interne à la page** :
+
+      - **le défaut fondateur** (`lecon-15`) : `MonNFT` n'override que `_baseURI()`, jamais
+        `tokenURI` ; l'implémentation OpenZeppelin colle le `tokenId` derrière la base, donc
+        `tokenURI(7)` vaut `ipfs://…/7` **sans** `.json` — que la leçon annonçait **deux fois** ;
+      - **l'exemple qui commet la faute qu'il dénonce** (`lecon-11`) : le proxy déclare
+        `address public implementation;` en **slot 0**, exactement là où `delegatecall` fera
+        écrire la première variable de la logique. C'est la collision de slots que la section
+        **suivante** présente comme catastrophique, et l'**EIP-1967** — la parade réelle du
+        métier — n'était mentionnée **nulle part** (`grep` : 0) ;
+      - **l'ordre que le compilateur n'impose pas** (`lecon-03`), affirmé en **cinq endroits** :
+        la grammaire range visibilité, mutabilité, modificateurs et `virtual`/`override` en
+        répétition **non ordonnée** ; seul `returns` vient en dernier ;
+      - **le schéma qui annonce six couches et en dessine cinq** (`lecon-12`) : la sixième boîte
+        avait une **hauteur nulle**, était **hors du `viewBox`** et n'avait aucun texte. Un
+        lecteur d'écran entendait six couches, un œil en voyait cinq ;
+      - cinq autres : « memory et calldata détruits à la fin de la **transaction** » quand la
+        même figure dit « l'appel » ; « l'ERC-20 stocke **toute** la comptabilité dans une seule
+        ligne » (il impose aussi le mapping imbriqué des autorisations) ; le schéma de réentrance
+        qui nommait `fallback()` là où un `call{value:…}("")` a une calldata **vide** et appelle
+        donc `receive()` ; CryptoKitties présenté comme « un contrat ERC-721 » alors que le jeu
+        est sorti **avant** l'EIP-721, proposé par sa propre équipe ; un exercice qui appelait
+        `contrat.admin()` quand la leçon définit `fonctionAdmin()` ;
+      - **un conseil périmé** (`lecon-14`) : `increaseAllowance`/`decreaseAllowance` données comme
+        « le remède moderne » alors qu'elles ont été **retirées d'OpenZeppelin v5** — la leçon est
+        écrite en `pragma ^0.8.20` et en style OZ v5.
+
+      ⚠️ **LA CRAINTE DU MATIN NE S'EST PAS RÉALISÉE** : sur `c`, corriger le corps avait rouvert
+      l'indice lexical (6,7 % → 33,3 %). Après ces corrections-ci : **0 exploitable, 0 à mettre en
+      forme**, les deux cliquets verts. *Le risque est réel mais pas systématique — il se mesure,
+      il ne se suppose pas.*
+
+      **OUTIL : 36ᵉ STRATÉGIE, l'ÉCHO DE FRAGMENT D'IDENTIFIANT** — et c'est la première fois
+      qu'un **lot d'écriture** trouve un indice **dans son propre travail**, l'outille, le mesure
+      sur tout le site puis le ferme chez lui. C'est un angle mort de **tokenisation** :
+      « l'écho de la question » découpe l'énoncé en mots, si bien que `vm.expectRevert`,
+      `customElements` ou `totalDepenses` sont **un seul jeton** et que leurs **morceaux** ne sont
+      jamais cherchés dans les options — alors que la bonne réponse est précisément celle qui
+      explique l'identifiant et en reprend un morceau en clair. **201 questions tranchées (3,3 %),
+      rendement 39,0 % ; 47 bonnes sur 98 en désignation unique (48,0 %).**
+      **Et la mesure par cours dit de ne PAS lancer de chantier** : le plus exposé est
+      `powershell` à **31,0 %**, aucun cours n'atteint 40 %. L'indice est **diffus** — sûr et rare,
+      jamais concentré. Câblé pour être **surveillé**, pas pour déclencher une réécriture.
+
+      ⚠️ **LE PIÈGE STRUCTUREL, 7ᵉ FOIS** : `doc/lecon-03` repérimé (46,7 % → **45,6 %**, 2 849 →
+      **2 785**), `verif-normatif` 64/66 → **66/66**. Le motif naïf a **encore** rendu
+      « 0 occurrence » sans erreur : le nombre porte une espace insécable **U+00A0 littérale**, et
+      l'outil d'écriture **normalise** cette espace dans un script — il faut l'échapper
+      explicitement (` `).
+
+      **CE QUE LES SIX LOTS ONT RAPPORTÉ ET QUE PERSONNE NE MESURE ENCORE** (leur section « ce que
+      je n'ai pas pu tenir », la plus rentable du protocole depuis `mobile`) : la **paire
+      quasi-miroir** (deux options exactement opposées ⇒ l'apprenant restreint à 2 et gagne 50 %,
+      et **aucune** stratégie ne compare les options **entre elles**) ; les **deux options qui
+      disent la même chose**, que **notre propre règle « les quatre ou aucune » fabrique** en
+      poussant à dupliquer les marques ; l'**option hors catégorie**, structurellement inévitable
+      quand la bonne réponse appartient à un ensemble fermé de trois ; le **sigle inventé** (l'outil
+      compte les majuscules, il ne vérifie jamais que le sigle désigne quelque chose) ; l'**identité**
+      du mot étranger et non son nombre (trois distracteurs partageant le même mot absent, cliquet
+      vert) ; la **plausibilité sémantique**, que la règle du `k` **dégrade** mécaniquement quand
+      `k` est élevé ; la **distribution des rangs par LOT** (9 questions ne se divisent pas par 4 :
+      plancher 3/2/2/2, soit 33,3 % sur un rang) ; et le fait que **`mesure-lexique-qcm --liste` ne
+      marque une question que si une variante désigne la BONNE réponse** — donc reste muet quand
+      elle désigne à coup sûr un **distracteur**. *Aucun de ces points n'est traité ici : ils sont
+      écrits pour être outillés en F3, avec leur mécanisme.*
+
+      **ÉTAT DU SITE** : **6 167 questions, 3 556 devinables par la longueur, 57,7 %** — contre
+      5 081 et 84,8 % au cadrage de B4. **1 525 questions rendues, 27,1 points gagnés**,
+      **32 cours verrouillés**. La case reste **décochée** : **54 cours** restent au-dessus de
+      60 %.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
