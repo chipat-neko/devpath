@@ -246,6 +246,27 @@ function seule(q, porte) {
    deux phrases d'un point d'abreviation ou d'un `objet.methode()`. L'espace insecable
    est acceptee au meme titre que l'espace ordinaire — sans quoi la mesure raterait en
    silence les options composees a la francaise. */
+/* Les MORCEAUX des identifiants de l'enonce : ce que la tokenisation « par mots »
+   ne peut pas voir. On decoupe `vm.expectRevert` en `expect` et `revert`, `setUp` en
+   `set` et `up`, `customElements` en `custom` et `elements` — et on ECARTE les
+   morceaux qui sont deja des jetons entiers de l'enonce, sans quoi on mesurerait
+   deux fois l'echo ordinaire. */
+function fragmentsIdentifiants(q) {
+  var texte = String(q == null ? "" : q);
+  var entiers = new Set((texte.toLowerCase().match(/[a-zà-ÿ][a-zà-ÿ-]{3,}/g) || []));
+  var out = new Set();
+  (texte.match(/[A-Za-z_][A-Za-z0-9_]*(?:[._][A-Za-z0-9_]+)+|[a-z]+[A-Z][A-Za-z0-9]*/g) || [])
+    .forEach(function (id) {
+      id.split(/[._]/).forEach(function (part) {
+        (part.match(/[A-Z]?[a-z]{3,}|[A-Z]{4,}/g) || []).forEach(function (frag) {
+          var f = frag.toLowerCase();
+          if (f.length >= 4 && !entiers.has(f)) out.add(f);
+        });
+      });
+    });
+  return Array.from(out);
+}
+
 function aPointInterne(t) { return /[.!?][  ]+[A-ZÀ-ÖØ-Þ]/.test(String(t)); }
 function aGuillemets(t) { return /[«»]/.test(String(t)); }
 function aFleche(t) { return /→|->|=>|⇒/.test(String(t)); }
@@ -728,6 +749,36 @@ var STRATEGIES = [
     nom: "RESTREINDRE a la fleche",
     quoi: "tirer parmi les seules options qui portent une fleche",
     choisir: function (q) { return restreindre(q, aFleche); },
+  },
+  /* ⚠️ L'ECHO DE FRAGMENT D'IDENTIFIANT, ajoutee au point B4 (cours `solidity`,
+     2026-09-08). Trouvee par un lot d'ecriture DANS SON PROPRE TRAVAIL, outillee par
+     lui, puis rejouee ici avant cablage — c'est la QUATRIEME fois qu'un indice arrive
+     par la relecture avant l'outil.
+
+     Le mecanisme est un angle mort de tokenisation. « l'echo de la question » decoupe
+     l'enonce par /[a-zà-ÿ][a-zà-ÿ-]{3,}/ sur le texte en minuscules : un identifiant
+     du metier — `vm.expectRevert`, `setUp()`, `customElements`, `ArrayBuffer`,
+     `totalDepenses` — y devient UN SEUL jeton. Ses MORCEAUX ne sont donc jamais
+     cherches dans les options. Or la bonne reponse est precisement celle qui EXPLIQUE
+     l'identifiant, donc celle qui en reemploie un morceau en clair : « A quoi sert
+     vm.expectRevert ? » -> « ... doit echouer (revert) ».
+
+     Mesure du jour sur les 6 167 questions : la regle tranche sur 201 questions
+     (3,3 %) et rend 39,0 % ; en designation unique, 47 bonnes reponses sur 98
+     (48,0 %). Couverture faible, rendement nettement au-dessus de l'etalon : c'est le
+     profil d'un indice rare et sur, celui que la colonne « reussite » noie et que la
+     colonne RENDEMENT montre. */
+  {
+    nom: "l'echo de FRAGMENT d'identifiant",
+    quoi: "tirer parmi les options qui reprennent un MORCEAU d'un identifiant de l'enonce",
+    choisir: function (q) {
+      var frags = fragmentsIdentifiants(q.q);
+      if (!frags.length) return toutes(q);
+      return restreindre(q, function (t) {
+        var s = String(t).toLowerCase();
+        return frags.some(function (fr) { return s.indexOf(fr) !== -1; });
+      });
+    },
   },
   {
     nom: "COMBINE : tiret puis longueur",
