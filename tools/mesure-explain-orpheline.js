@@ -36,8 +36,14 @@
 
    USAGE
      node tools/mesure-explain-orpheline.js --depuis=<ref-git> [--seul=<cours>]
-     node tools/mesure-explain-orpheline.js --depuis=fba15d8^ --seul=c
+     node tools/mesure-explain-orpheline.js --depuis=fba15d8~1 --seul=c
+     node tools/mesure-explain-orpheline.js --depuis=HEAD --travail --seul=solidity
      node tools/mesure-explain-orpheline.js --depuis=<ref> --json
+
+   ⚠️ Ecrire `~1`, PAS `^` : voir le piege cmd.exe documente plus bas. Le drapeau
+   `--travail` autorise la comparaison HEAD <-> arbre de travail, qui est le cas
+   d'une vague d'ecriture pas encore commitee ; sans lui, une reference qui resout
+   sur HEAD est refusee, parce que c'est la signature du piege.
 
    Il rend un code de sortie 1 si au moins un orphelin est trouve, pour servir de
    controle dans la chaine apres chaque vague d'ecriture.
@@ -110,9 +116,11 @@ if (!SHA_REF) {
   console.error("reference git introuvable : " + DEPUIS);
   process.exit(2);
 }
-if (SHA_REF === SHA_HEAD) {
+if (SHA_REF === SHA_HEAD && args.indexOf("--travail") === -1) {
   console.error("la reference " + DEPUIS + " est HEAD : il n'y a rien a comparer.");
   console.error("(sous Windows, ecrire ~1 plutot que ^ : cmd.exe mange l'accent circonflexe)");
+  console.error("Si tu veux VRAIMENT comparer HEAD a l'arbre de travail — le cas d'une vague");
+  console.error("d'ecriture pas encore commitee — ajoute --travail, qui le dit explicitement.");
   process.exit(2);
 }
 

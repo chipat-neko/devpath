@@ -174,6 +174,14 @@ var ETAPES = [
      cours detordu rouvre la faille en silence. Prouve capable d'echouer par
      injection (un mot invente dans les distracteurs d'une lecon le fait rougir). */
   { nom: "qcmlexi", fichier: "verif-qcm-lexique.js", args: [], quoi: "l'indice lexical des QCM n'a empire nulle part (cliquet)" },
+  /* Le defaut que NOTRE PROPRE PROTOCOLE fabrique, et qu'aucun des 53 verificateurs
+     ne voyait : les vagues de B4 remplacent les DISTRACTEURS en masse et declarent
+     l'`explain` intouchable — or l'explain CITE les distracteurs pour les refuter.
+     Deux cas prouves sur `kotlin`, trouves par la relecture. Le controle compare
+     l'etat d'AVANT chaque vague (retrouve dans git) a celui d'aujourd'hui, et sur
+     l'arbre de travail pendant une vague en cours. ⚠️ Il coute ~37 s : mode complet
+     seulement. Prouve capable d'echouer par verif-explain-orpheline-mutations. */
+  { nom: "explorp", fichier: "verif-explain-orpheline.js", args: [], quoi: "aucun explain ne commente une option EFFACEE par une vague (cliquet)", lent: true },
   /* Un caractere de controle ecrit par accident est INVISIBLE a la relecture :
      un « \b » devenu un vrai backspace dans une expression reguliere avait fait
      afficher « 0 » a deux compteurs, et seule une capture d'ecran l'avait montre. */
@@ -224,7 +232,9 @@ var ETAPES = [
  * exemples 11,3 s — et les retirer viderait le mode de son interet. Le seuil
  * d'une minute est donc ecarte par la mesure, pas atteint.
  * ===================================================================== */
-var HORS_RAPIDE = ["verif-git-commandes.js", "verif-git-graphe.js", "verif-git-scenarios.js"];
+var HORS_RAPIDE = ["verif-git-commandes.js", "verif-git-graphe.js", "verif-git-scenarios.js",
+  /* ~37 s : il rejoue `git show` sur les 20 lecons de chacun des 25 cours traites. */
+  "verif-explain-orpheline.js"];
 if (RAPIDE) {
   ETAPES = ETAPES.filter(function (e) { return HORS_RAPIDE.indexOf(e.fichier) === -1; });
 }
@@ -564,6 +574,12 @@ if (flag("mutations")) {
        cette exigence, le cas serait passe vert sur une branche ancienne et la
        branche neuve serait restee sans preuve. */
     { nom: "qcmlexi ", fichier: "verif-qcm-lexique-mutations.js", vues: "6 / 6" },
+    /* Ajoutee le 2026-09-08 avec le cliquet des explications orphelines. Deux de ses
+       quatre cas ne sont pas des mutations mais des REJEUX du reel : les deux
+       orphelines historiques de `kotlin`, restaurees depuis git. C'est cette epreuve
+       qui a fait jeter le premier jet de l'outil — il n'en voyait aucune. Le 4e cas
+       eprouve le garde-fou du piege cmd.exe (« ^ » mange, comparaison a soi-meme). */
+    { nom: "explorp ", fichier: "verif-explain-orpheline-mutations.js", vues: "4 / 4" },
     { nom: "fraich  ", fichier: "fraicheur/verif-fraicheur-mutations.js", vues: "13 / 13" },
     { nom: "fr-affi ", fichier: "fraicheur/verif-affichage-mutations.js", vues: "14 / 14" },
     { nom: "mth-inj ", fichier: "maths/preuve-injection.js", vues: "13 / 13" },
