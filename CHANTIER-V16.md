@@ -5745,6 +5745,195 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       après la longueur), la consigne de **constituer le dictionnaire de la page AVANT de rédiger**
       (un écrivain a perdu un tour complet faute de l'avoir fait), et l'avertissement sur les
       **outils de mesure écrits à la volée**, à tester sur un cas qu'ils doivent trouver.
+
+      ---
+
+      **36ᵉ COURS DÉTORDU — `lua` (2026-09-08) : 88,9 % → 25,0 %.** La vague d'écriture avait été
+      passée par un réveil **coupé juste après son commit** ; cette passe-ci a fait le reste :
+      **quatre relectures adversariales**, la correction des défauts de fond, puis la fermeture
+      d'un indice **qu'aucun des 43 outils ne voyait**.
+
+      ⚠️⚠️ **LE PLUS GROS ACQUIS N'EST PAS LE COURS, C'EST L'ANGLE MORT QU'IL A RÉVÉLÉ : NOUS NE
+      MESURIONS LE SENS INVERSE QUE D'UNE STRATÉGIE SUR 43.** `mesure-biais-inverse.js` ne
+      regardait que « le mot technique exclusif ». Or `lua` sortait de sa vague avec **toutes ses
+      stratégies directes à 25 %** — les deux cliquets au vert — pendant qu'**écarter l'option qui
+      reprend le plus de mots de l'énoncé** rendait **32,4 % sur 34 de ses 72 questions** : sur ces
+      34, la porteuse de l'écho était fausse **33 fois**. C'est la règle du `k` du cours `mobile`
+      (« fermer un indice à fond le RETOURNE ») appliquée à une **deuxième famille d'indices**, et
+      cette fois c'est **notre propre consigne** qui l'avait fabriquée (voir plus bas).
+
+      **Mode `--toutes` livré**, qui mesure les 42 stratégies dans le sens inverse. Il n'est pas
+      né d'une intuition : sa colonne DIRECTE tombe **au dixième près** sur la colonne RENDEMENT de
+      `mesure-biais-qcm --seul=lua` (2,9 / 9,7 / 12,7 / 13,0 %) et ses couvertures aussi
+      (47,2 / 43,1 / 76,4 / 95,8 %) — **deux chemins de code indépendants qui concordent**. Les
+      stratégies ne sont pas recopiées : `mesure-biais-qcm.js` s'exporte quand on le **requiert**,
+      parce qu'une copie se périmerait au premier ajout.
+
+      **ET LE CHIFFRE QUI CHANGE LA LECTURE DE TOUT LE CHANTIER B4 : 118 ALERTES SUR LES 34 COURS
+      MARQUÉS `traite`.** Ce n'est donc pas un défaut de `lua`, c'est un **résidu du chantier
+      entier** :
+
+      | cours | stratégie | tranche | DIRECTE | INVERSE |
+      |---|---|---:|---:|---:|
+      | `csharp` | l'écho de la question | 37 (48,1 %) | **0,0 %** | **33,3 %** (le plafond) |
+      | `html` | la plus détaillée | 55 (34,4 %) | **0,0 %** | **33,3 %** |
+      | `cpp` | la plus détaillée | 32 (41,6 %) | **0,0 %** | **33,3 %** |
+      | `git` | le mot technique exclusif | 53 (66,3 %) | 7,5 % | 30,8 % |
+      | `doc` | le mot technique exclusif | 40 (62,5 %) | 12,5 % | 29,2 % |
+
+      ⚠️ **Colonne GLOBAL ajoutée pour ne pas surestimer d'un facteur trois.** Un inverse à 33,3 %
+      ne vaut pas +8,3 points : sur les questions où la règle ne tranche pas, l'apprenant retombe
+      au hasard. Sur `lua`, l'écho valait **28,5 % au total**, pas 32,4 %. C'est la faute de la
+      colonne « réussite » qui NOIE un indice rare, **prise à l'envers** — et c'est ce chiffre-là
+      qui se compare aux 25,0 % de l'étalon. **Contre-épreuve** sur un cours NON traité
+      (`typescript`) : ses alertes inverses portent sur « la moins bavarde » et « la troisième plus
+      longue », c'est-à-dire le biais de longueur **dit à l'envers**, pas celui que la correction
+      fabrique. Les deux causes ne se confondent pas.
+
+      **LA RÈGLE DE L'ÉCHO ÉTAIT MAL FORMULÉE, ET C'EST ELLE QUI A FABRIQUÉ L'INDICE.** Le point (8)
+      de la consigne de `lua` disait : *« fais reprendre les mots de la question par UN seul
+      distracteur »*. Un seul distracteur qui fait écho, la bonne réponse qui n'en fait pas : ce
+      distracteur devient le **maximum strict**, et l'écarter ne se trompe jamais. **La bonne
+      formulation est celle de l'incise, apprise sur `java` : AUTANT de mots d'écho que la bonne
+      réponse, jamais plus** — la bonne réponse doit rester **parmi les maxima**. Ni « la seule à
+      faire écho » (indice direct), ni « aucun distracteur ne fait écho » (indice inversé).
+      **C'est la troisième fois qu'une formulation molle coûte un cours** (après « pas la seule à
+      porter l'incise » sur `java` et « au moins un distracteur porte la marque » sur `data-eng`).
+
+      **DEUX AUTRES OUTILS, nés de deux fautes de cette passe :**
+      - `mesure-qcm-intouchable.js` **se comparait à lui-même**. Sa référence était figée à `HEAD` :
+        une vague déjà commitée était donc **inauditable**, et l'outil rendait « aucune atteinte »,
+        ce qui ressemble à un succès. C'est exactement ce qui est arrivé, le réveil précédent ayant
+        été coupé après son commit. Avec l'argument `<ref-git>`, la vague de `lua` se mesure enfin :
+        **216 distracteurs, 201 réécrits, AUCUNE atteinte**. Sans l'argument, le même appel rendait
+        **0 réécriture et 0 atteinte**.
+      - `mesure-qcm-marques.js` (neuf) dit **quelle option a gagné ou perdu quelle marque**, avant
+        que la moyenne du cours ne le noie. La règle « les quatre ou aucune » ne se vérifiait
+        qu'après coup, sur le cours entier ; une passe qui retouche 50 options pour fermer UN indice
+        peut en ouvrir un autre sans que personne le voie. Éprouvé sur deux références du même
+        cours : contre le commit d'avant la vague il voit **204 options réécrites et 156 mouvements
+        de marque** ; contre `HEAD`, sur la passe de fermeture de l'écho, **26 réécritures et AUCUN
+        mouvement**. Un outil qui ne trouve rien partout ne prouverait rien.
+
+      **43 DÉFAUTS DE FOND, rendus par quatre relecteurs et tous prouvés par exécution** (Lua n'est
+      pas installé : chaque extrait a été rejoué en JavaScript sous Node 24.16 en respectant la
+      sémantique Lua, et chaque affirmation confrontée à un passage contradictoire de la même page).
+
+      **DEUX BONNES RÉPONSES ÉTAIENT FAUSSES**, toutes deux sur la lecture seule (`lecon-20` q3 et
+      **bilan q12**) : « lui donner une métatable dont `__newindex` lève une erreur » ne rend **pas**
+      une table en lecture seule — `__newindex` ne se déclenche que pour une clé **absente**, donc
+      réécrire une clé existante passe sans rien déclencher. **Le code de la leçon elle-même** rend
+      bien un proxy VIDE (`setmetatable({}, {__index = t, ...})`) : les deux réponses disaient donc
+      le contraire de la fonction `figer()` enseignée quarante lignes plus haut.
+
+      Les sorties annoncées fausses, chacune recalculée : `string.find("scripting","ip")` rend
+      **4 5**, pas 3 4 ; `gsub` avec table rend le nombre de **correspondances** (2), pas de
+      remplacements (1) ; `censurer("…caché")` ne rend pas cinq étoiles, parce que `%a` suit l'ASCII
+      et que `#"caché"` vaut **6 OCTETS** ; un `table.sort` par longueur sur `poire`/`pomme` est un
+      **ex æquo** qu'un tri non stable ne départage pas ; `fib(40)` naïf fait **331 160 281** appels
+      et non « des milliards » (formule validée par compteur sur `fib(30)` = 2 692 537) ; **quatre**
+      sorties d'erreur de `lecon-17` oubliaient que Lua **décore** un `chunkname` nu en
+      `[string "x"]:1:` ; et `for i, v in ipairs, t, 0 do` **BOUCLE SANS FIN** — `ipairs` est une
+      fabrique, elle rend sa fonction auxiliaire à chaque tour, jamais `nil`.
+
+      Sept **versions attribuées à la mauvaise** (integer/float et `math.type` sont de 5.3, `goto`
+      de 5.2, les opérateurs binaires de 5.3, les arguments de `xpcall` de 5.2, la déduction
+      `__le` ← `__lt` survit jusqu'en 5.3 incluse) ; **deux exercices qui validaient une réponse que
+      leur propre leçon déclare fausse** (`false` accepté à une question qui dit « à part false » ;
+      `%d-` et `%d*` acceptés alors qu'ils reconnaissent la chaîne **vide**) ; huit contradictions
+      ou renvois faux ; et trois **explications orphelines**, dont une qui expliquait `pairs` sous
+      une question dont la réponse est `ipairs`.
+
+      ⚠️ **ET LE PIÈGE S'EST REFERMÉ, ENCORE : corriger les bonnes réponses a ROUVERT l'indice
+      lexical, de 0,0 % à 100,0 % en STRICTE.** Mes nouvelles rédactions ne portaient plus aucun mot
+      étranger à la page pendant que les distracteurs en gardaient un. Refermé en **10
+      substitutions**. **La règle tient : remesurer TOUS les indices après CHAQUE correction, y
+      compris celles de FOND.**
+
+      **LA FERMETURE DE L'ÉCHO A DEMANDÉ DEUX VOLÉES, ET C'EST LA DEUXIÈME QUI PORTE LA LEÇON.**
+      La première a appliqué la règle de l'incise (« autant que la bonne réponse, jamais plus ») :
+      **39 distracteurs, 50 mots d'écho retirés**. Elle a bien fermé le sens inversé — 32,4 % →
+      26,2 % en GLOBAL — **mais elle a laissé 30,7 % dans le sens DIRECT**, et la raison est
+      arithmétique : la bonne réponse restait ex æquo au maximum avec **un seul** distracteur, et
+      qui restreint son tirage à ces deux options vaut **50 %**. Relevé de départ : **1 question**
+      à ensemble maximal de taille 1, **10** de taille 2, **10** de taille 3, 51 de taille 4.
+
+      **LA TROISIÈME FORMULATION EST UNE ÉGALITÉ, PAS UNE INÉGALITÉ : LES QUATRE OPTIONS PORTENT LE
+      MÊME NOMBRE DE MOTS D'ÉCHO.** Avec un ensemble maximal de taille `s` contenant la bonne
+      réponse, le crédit vaut `1/s` ; il ne vaut l'étalon `1/4` **que** si `s = 4`. Toute autre
+      valeur est un cadeau. Seconde volée : **33 distracteurs réécrits par ÉCHANGE de mots**
+      (remplacer un mot du distracteur par celui que l'énoncé emploie pour la même chose), jamais
+      par ajout — c'est ce qui garde la longueur.
+
+      **C'est exactement la forme des deux autres règles du chantier** — « par marque : les quatre
+      ou aucune », et `k / k / k / k` sur les mots étrangers à la page. **Trois familles d'indices,
+      trois fois la même leçon : une INÉGALITÉ laisse toujours une lecture exploitable ; seule
+      l'ÉGALITÉ ferme les deux sens.** C'est aussi la quatrième fois qu'une formulation molle coûte
+      un cours, après `java` (« pas la seule à porter l'incise »), `data-eng` (« au moins un
+      distracteur porte la marque ») et `mobile` (le cliquet à sens unique).
+
+      **MESURES FINALES, toutes exécutées :**
+
+      | | avant | après 1ʳᵉ volée | après 2ᵉ volée |
+      |---|---:|---:|---:|
+      | « la plus longue » | **88,9 %** | 25,0 % | **24,3 %** |
+      | « l'écho de la question » (direct) | 51,0 % | 30,7 % | **25,0 %** |
+      | « ÉCARTER l'écho » (inverse, GLOBAL) | 28,5 % | 26,2 % | **25,0 %** |
+      | questions où l'écho tranche | 34 | 10 | **0 sur 72** |
+      | pire indice du cliquet | 88,9 % | 26,6 % | **27,1 %** |
+      | rangs de longueur | 64 / 3 / 3 / 2 | 18/18/18/18 | **18 / 18 / 18 / 18** |
+      | indice lexical | 59 expl. / 62 à mettre en forme | 0 / 0 | **0 / 0** |
+      | marques déplacées | — | 0 sur 39 | **0 sur 33** |
+      | atteintes à un intouchable | — | 0 | **0** |
+
+      **L'écho est le premier indice du chantier ramené à l'étalon EXACT dans les deux sens, sur
+      72 questions sur 72.** Les deux alertes qui restent sur `lua` (« le mot technique exclusif »
+      à 27,8 % et « la moins bavarde » à 27,5 % en GLOBAL) appartiennent à la famille présente sur
+      les **35 cours traités** ; elles ne sont pas propres à ce cours.
+
+      ⚠️ **TROIS PIÈGES DE MESURE RENDUS PAR LES ÉCRIVAINS, tous mis en consigne :**
+      - **Un mot d'écho de 6 lettres et plus change aussi le `w`** (le compte de mots longs) :
+        l'échanger peut faire tomber la seule option qui tenait la règle. C'est arrivé **deux fois
+        sur la même question** (`lecon-05` q2), une fois dans chaque sens.
+      - **L'apostrophe compte dans la longueur d'un mot** : `d'accès` fait 7 caractères et compte
+        donc comme mot long, alors que `accès` seul (5) est neutre pour `mesure-lexique-qcm`.
+      - **Une tolérance de ±4 caractères ne suffit pas quand la bonne réponse est à moins de 4** :
+        il faut vérifier le **RANG**, pas le delta. Une version à +3 a fait passer les rangs de
+        18/18/18/18 à **18/17/19/18** avant d'être corrigée.
+
+      ⚠️ **ET UNE COLLISION DE COORDINATION, la deuxième du chantier après celle des dossiers
+      temporaires partagés :** deux correcteurs (moi et un écrivain) ont réparé **la même
+      régression en parallèle**, l'un par « ensuite » (+8 caractères, hors fenêtre), l'autre par
+      « garde » → « laisse » (+1) ; le second a retiré le premier, sans dommage. **Un seul agent
+      par fichier ne suffit pas quand l'outil de mesure, lui, balaie tout le cours** — c'est la
+      mesure globale qui appelle deux agents sur le même point.
+
+      **Contrôles** : `verif.js --rapide` **24 étapes, tout vert (94,2 s)** ; `verif-html` **0 grave,
+      0 attention** sur 1 629 fichiers ; `verif-donnees` **0 erreur** sur 26 contrôles ;
+      `verif-normatif` **66/66** ; épreuves par injection **10/10** (biais) et **6/6** (lexique),
+      aucune ne s'appuie sur `lua` ; 41 blocs JSON valides, 0 BOM, 0 CRLF ; index dérivés
+      régénérés avec `--fresh` (quiz 6 151, flashcards 11 586, antisèches 1 577, pièges 1 908,
+      recherche 1 614) ; cliquets refigés, **`lua` marqué `traite` — 35 cours verrouillés**.
+
+      ⚠️ **`doc/lecon-03` s'est repérimé une 12ᵉ fois**, comme à chaque cours : **43,5 % → 42,5 %**
+      et **2 657 → 2 596** manquements à la clause S3, **10 mentions** corrigées (5 taux, 5
+      effectifs), séparateur insécable U+00A0. `verif-normatif` **64/66 → 66/66**.
+
+      **ÉTAT DU SITE** : **6 167 questions**, **35 cours verrouillés**, **50 cours** restent
+      au-dessus de 60 %. Les plus nocifs par questions devinables, remesurés :
+      `swift` (66 q, 95,2 %, 63 devinables), `typescript` (68 q, 92,6 %, 63), `scala` (68 q,
+      91,9 %, 63), `pandas` (65 q, 93,8 %, 61), `haskell` (66 q, 92,4 %, 61), `crypto` (68 q,
+      89,7 %, 61). La case reste **décochée**.
+
+      **LE 37ᵉ COURS EST MESURÉ ET SA CONSIGNE EST ÉCRITE** : `swift`, 66 questions sur 18 leçons.
+      Longueur **95,2 %** (couverture 97,0 %), la plus détaillée **85,2 %** (rendement 100 %), le
+      mot technique exclusif **77,9 %** (90,4 %), la ponctuation forte en union **77,3 %** (100 %,
+      46 questions), l'incise **69,7 %** (95,2 %), le point-virgule **68,2 %** (100 %), l'écho
+      **58,3 %** (86,2 %). Rangs **64 / 2 / 0 / 0** pour une cible de 17/17/16/16 ; **63 questions
+      à retoucher, 17 810 caractères** — le plus gros volume d'un cours depuis le début de B4,
+      devant `lua` (14 613). Indice lexical **26 exploitables sur 66**, et sa variante INVERSE rend
+      déjà **75,7 %**. Consigne : `scratchpad/CONSIGNE-SWIFT.md`, qui porte la **règle de l'écho
+      dans sa troisième formulation** et les trois pièges de mesure ci-dessus.
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
