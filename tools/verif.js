@@ -753,9 +753,14 @@ ETAPES.forEach(function (e) {
 var enEchec = resultats.filter(function (r) { return r.code !== 0; });
 console.log("=".repeat(70));
 resultats.forEach(function (r) {
-  /* on remonte la ou les lignes de bilan de chaque outil, pas tout son rapport */
+  /* on remonte la ou les lignes de bilan de chaque outil, pas tout son rapport.
+     V17/A2 (2026-09-08) : les deux CLIQUETS du biais des QCM n'etaient captes par
+     aucun de ces motifs — `--rapide` n'affichait donc que « qcmbiai OK » et
+     « qcmlexi OK », sans jamais dire combien de cours sont verrouilles ni ce qui
+     a bouge. Un cliquet muet est un cliquet qu'on cesse de lire : on ajoute ses
+     lignes de bilan (cours traites, « n'a empire », progres non figes). */
   var lignes = r.sortie.split("\n").filter(function (l) {
-    return /ERREURS|erreur\(s\)|sous le standard|Aucun probl|aucune erreur|probleme|maigre|redondance|divergen|Aucune divergence/i.test(l) && l.trim();
+    return /ERREURS|erreur\(s\)|sous le standard|Aucun probl|aucune erreur|probleme|maigre|redondance|divergen|Aucune divergence|n'a empire|marques traites|marque traite|PROGRESSE|reference perimee/i.test(l) && l.trim();
   });
   console.log("  " + r.e.nom + "  " + (r.saute ? "SAUTE" : r.code === 0 ? "OK" : "SIGNALE") + "   (" + r.duree + " s)");
   lignes.slice(-2).forEach(function (l) { console.log("            " + l.trim().slice(0, 100)); });

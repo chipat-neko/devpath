@@ -104,7 +104,7 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
       — injection retirée → **I18 OK, 25 contrôles, 0 erreur**. Les deux sens sont prouvés.
       *Non-régression* : `node tools/verif.js --rapide` → **tout est vert, 95,6 s**.
 
-- [ ] **A2 · Les deux cliquets du biais, qui ne peuvent pas rougir.** `verif-qcm-biais.js` et
+- [x] **A2 · Les deux cliquets du biais, qui ne peuvent pas rougir.** `verif-qcm-biais.js` et
       `verif-qcm-lexique.js` sortent en code 0 sur `lua` en imprimant « refiger avec `--ecrire` ».
       Calcul de l'audit sur les formules de l'outil (`PLANCHER 0,05`, `TOL 0,01`, `traite:false`) : un
       retour de 25,0 % à **88,9 % serait vert**, une dégradation à 70,0 % serait verte ; seul ≥ 89,9 %
@@ -112,6 +112,40 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
       `qcmlexi OK`. Refermer le cliquet sur `lua` (`--ecrire` + `traite:true`), puis corriger la règle
       pour qu'une **dégradation** rougisse toujours, et faire remonter le détail dans `verif.js`.
       **Éprouver par injection** : dégrader volontairement un cours traité, vérifier que ça rougit.
+
+      **FAIT le 2026-09-08.** *Reprise de la mesure d'abord, et elle corrige l'audit sur un point* :
+      `lua` a été refigé depuis (référence du 2026-09-08 : `longueur 24,31 %`, `pire 27,08 %`,
+      **`traite: true`**, 35 cours traités sur 90). Le premier geste demandé était donc **déjà fait**.
+      Et le chiffre « un retour à 88,9 % serait vert » **ne se reproduit plus dans cet état** : mesuré
+      par injection réelle sur `dataviz` (68 questions, traité, 25,0 %), la sensibilité du cliquet est
+      de **2 questions sur 68** — 1 bonne réponse allongée passe (25,0 % → 26,5 %, sous le `PLANCHER`
+      de 5 points), **2 rougissent**. Ce n'est pas 65 points de latitude, c'est 2,9 % du cours.
+      *Mais la CAUSE que l'audit décrit était intacte, et c'est elle qui est corrigée* : ce qui rendait
+      `lua` invisible n'était pas le plancher, c'était **la référence périmée**. Les deux cliquets
+      imprimaient « X cours ont PROGRESSÉ → refiger avec `--ecrire` » **en code 0** : tant que le gain
+      n'est pas figé, la référence protège l'**ancien** niveau, donc le retour en arrière reste vert.
+      Même famille de bug que l'index périmé du point A1.
+      *Correctif 1* — `verif-qcm-biais.js` : **cinquième cas d'échec, « référence périmée »**. Un progrès
+      non figé est désormais une faute (code 1) qui dit « refige dans le même commit ». `--ecrire`
+      n'en rougit jamais (il refige d'abord). Vérifié avant inscription : la liste est **vide** au
+      2026-09-08 — la règle ne fait rougir personne le jour de son entrée.
+      *Correctif 2* — `verif-qcm-lexique.js` : **quatrième échec**, même règle (`--ecrire` refige avant
+      le calcul, donc `progres` y est vide par construction).
+      *Correctif 3* — `verif.js` : le filtre des lignes de bilan ne captait **aucune** ligne des deux
+      cliquets, d'où le `qcmbiai OK` nu. Motifs ajoutés (`n'a empire`, `marques traites`, `PROGRESSE`,
+      `reference perimee`). `--rapide` affiche maintenant « cible : longueur 40.0 %… **cours marqués
+      traités : 35** » et le verdict complet des deux cliquets.
+      *Épreuves par injection, trois, toutes exécutées* :
+      — **le cas `lua` de l'audit rejoué à l'identique** (ligne de référence remise à `88,89 % /
+      traite:false`, telle que `git show 5acd3e3~1` la donne, contenu actuel inchangé à 24,3 %) :
+      ancienne règle → 0 problème, **code 0** ; nouvelle règle → **code 1**, « [reference perimee] cours
+      lua … un retour en arrière resterait vert ».
+      — **dégradation réelle d'un cours traité** : 8 bonnes réponses de `dataviz` allongées d'un suffixe
+      → `verif-qcm-biais` **code 1** (« longueur 25,0 % → 33,8 % », écart au hasard 0,0 → 8,8 points ;
+      et « pire indice 26,5 % → 36,4 % »), `verif-qcm-lexique` **code 1** (« INVERSE 0,0 % → 100,0 % »).
+      — **retour au vert** : `dataviz` et la référence restaurés depuis copie → les deux cliquets OK,
+      `git status` propre.
+      *Non-régression* : `node tools/verif.js --rapide` → **tout est vert, 95,8 s**.
 
 - [ ] **A3 · `verif-clic.js` : le seul outil qui clique vraiment, hors chaîne et instable.** Il n'est
       appelé par **aucun mode** (`grep -n "clic" tools/verif.js` ne rend rien). Pire, sa couverture

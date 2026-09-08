@@ -382,6 +382,29 @@ if (progres.length) {
   console.log("  -> refiger avec --ecrire pour que le gain soit verrouille (et passer `traite` a true si la cible est atteinte).");
 }
 
+/* 5 — REFERENCE PERIMEE (V17/A2, 2026-09-08). C'est le trou par lequel `lua` est
+   passe, et il faut le nommer exactement : le cours avait ete ramene a 24,3 % dans
+   les lecons, mais la reference portait encore 88,9 % avec `traite: false`. Le
+   cliquet imprimait « X cours ont PROGRESSE -> refiger avec --ecrire » EN CODE 0 :
+   tant que le gain n'etait pas fige, un retour a 88,9 % ne remontait au-dessus
+   d'AUCUNE reference et restait vert. Un cliquet qui protege un niveau perime ne
+   protege rien -- c'est la meme famille de bug que l'index perime du point A1.
+   Un progres n'est donc plus une remarque : c'est un ECHEC, qui dit « refige avant
+   de commiter ». Les mesures etant deterministes (aucun tirage), `progres` non vide
+   signifie forcement que le CONTENU a bouge depuis le dernier refigeage : ce n'est
+   jamais du bruit. Verifie avant de l'inscrire, comme pour toute regle ajoutee ici :
+   au 2026-09-08 la liste est VIDE, donc la regle ne fait rougir personne le jour de
+   son entree. `--ecrire` refige d'abord, donc ne rougit jamais de ce chef. */
+if (!ECRIRE && progres.length) {
+  progres.forEach(function (p) {
+    fautes.push({ quoi: "reference perimee", cours: p.cours,
+      dit: "le cours a PROGRESSE (longueur " + pc(p.de) + " -> " + pc(p.a) + ", pire indice "
+        + (typeof p.pireDe === "number" ? pc(p.pireDe) : "?") + " -> " + pc(p.pireA)
+        + ") sans que le gain soit fige : la reference protege encore l'ANCIEN niveau, donc un retour en arriere resterait vert",
+      faire: "node tools/verif-qcm-biais.js --ecrire (et passer `traite` a true si la cible est atteinte)" });
+  });
+}
+
 if (ECRIRE) {
   fs.writeFileSync(REF, JSON.stringify(referenceNeuve(ref), null, 2) + "\n", "utf8");
   console.log("\nreference refigee : tools/qcm-biais-reference.json");

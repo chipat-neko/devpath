@@ -272,6 +272,19 @@ if (progres.length) {
 }
 
 var echecs = 0;
+/* QUATRIEME echec (V17/A2, 2026-09-08) : REFERENCE PERIMEE. Meme trou que dans
+   `verif-qcm-biais.js`, et meme raison de le fermer : tant qu'un gain n'est pas
+   fige, la reference protege l'ANCIEN niveau, donc le retour en arriere reste
+   vert. Ici `--ecrire` refige AVANT le calcul, donc `progres` y est vide par
+   construction : ce cas ne rougit jamais sur un refigeage. Verifie avant
+   inscription : la liste est VIDE au 2026-09-08. */
+if (progres.length) {
+  echecs += progres.length;
+  console.log("\nECHEC — " + progres.length + " cours ont progresse SANS que le gain soit fige :");
+  progres.forEach(function (l) { console.log("    " + l); });
+  console.log("  La reference protege encore l'ancien niveau : un retour en arriere resterait VERT.");
+  console.log("  -> node tools/verif-qcm-lexique.js --ecrire, dans le meme commit que la correction.");
+}
 if (regressions.length) {
   echecs += regressions.length;
   console.log("\nECHEC — l'indice lexical a EMPIRE sur " + regressions.length + " cours :");
