@@ -5400,7 +5400,37 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       - **le maximum d'une suite régulière** — bilan B7 : `1,5 / 2,5 / 3,5 / 4,5`, la bonne
         réponse étant la plus grande. C'est le relecteur du bilan qui a signalé que la correction
         du premier fabriquait le second. Séries corrigées en cassant la régularité (`6,5:1`).
-      *Ces deux motifs ne sont outillés nulle part : à verser au F3.*
+      **Les deux ont été MESURÉS sur le site le jour même, et un seul a survécu.**
+
+      | motif | tranche sur | rendement | verdict |
+      |---|---:|---:|---|
+      | la seule avec une **virgule décimale** | 1,3 % (80 q) | **55,4 %** | **câblé — 38ᵉ stratégie** |
+      | le **plus grand** nombre (options courtes) | 0,4 % (30 q) | 23,3 % | **réfuté** |
+      | le **plus petit** nombre (options courtes) | 0,4 % (27 q) | 11,1 % | **réfuté** |
+
+      La virgule décimale est **sûre là où le contenu est chiffré** : `crypto` **100,0 %** (7 q),
+      `observabilite` **100,0 %** (4 q), `distribue` 84,6 % (15 q), `neurones` 66,7 % (15 q). La
+      cause n'est pas un hasard mais un réflexe de rédaction : un seuil normatif s'écrit avec une
+      décimale, un distracteur inventé s'écrit en nombre rond parce que c'est plus rapide à poser.
+      **Épreuve par injection faite** : « (seuil 4,5) » ajouté aux 3 premières bonnes réponses de
+      `go/lecon-01` fait passer le rendement de 0,0 % à **100,0 %**, `git checkout` le ramène à
+      0,0 % au caractère près.
+
+      ⚠️ **Le « plus grand nombre » était un artefact que MA PROPRE correction avait fabriqué** —
+      la série `1,5 / 2,5 / 3,5 / 4,5` du bilan `a11y`. Mesuré sur le site : **23,3 %, l'étalon
+      est à 25,0 %**. La série a été cassée dans la leçon, la stratégie n'entre pas dans l'outil.
+      **Une trouvaille sur un cours n'est un indice du site que si la mesure du site le dit** —
+      c'est la troisième fois que ce chantier écarte une prise adversariale par la mesure.
+
+      ⚠️ **ET CE QUE LE CÂBLAGE RÉVÈLE SUR LE CLIQUET LUI-MÊME, à trancher en F3.** Refiger la
+      référence après l'ajout ne change le `pire` d'**aucun** cours. `crypto` et `observabilite`
+      sont à **100 % de rendement** sur cet indice et `verif-qcm-biais` reste **vert**, parce qu'il
+      juge sur la colonne « réussite » (29,4 % et 29,0 %) — que la faible couverture noie dans le
+      hasard. C'est **la leçon du cours `doc` transposée au GARDE-FOU** : la colonne « réussite »
+      noie les indices rares, on l'a corrigé dans la *mesure* le 2026-09-06, on ne l'a jamais
+      corrigé dans le *cliquet*. **Question ouverte : le cliquet doit-il surveiller le RENDEMENT
+      des stratégies à faible couverture ?** Le faire passerait probablement plusieurs cours déjà
+      marqués `traite` au rouge — c'est précisément pourquoi la décision n'est pas prise ici.
 
       **LA LEÇON MÉCANIQUE DE CE COURS — corriger le FOND rouvre le LEXIQUE, et de combien.** Le
       cours sortait de la vague à **0 exploitable / 0 à mettre en forme**. Les 63 corrections de
