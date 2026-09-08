@@ -5504,6 +5504,182 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       zéro, l'aire de la bulle et non son rayon, l'histogramme qui n'est pas un diagramme en barres,
       le paradoxe de Simpson…) à ne surtout pas employer comme distracteurs.
 
+      ---
+
+      **35ᵉ COURS DÉTORDU — `dataviz` (2026-09-08) : 95,6 % → 25,0 %.** Écriture en **UNE seule
+      vague** (six lots sur fichiers disjoints), puis **quatre relectures adversariales**, puis
+      **une passe de correction** et **deux passes de résidus**. **202 distracteurs réécrits sur
+      204** par la vague, **101** de plus par les passes de correction.
+
+      **ZÉRO DISTRACTEUR DEVENU VRAI SUR 204** — quatre relecteurs indépendants les ont passés un
+      à un contre la norme du domaine, avec exécution sous Python/numpy/matplotlib. C'est la
+      troisième fois d'affilée. En revanche ils ont rendu **quatre indices de forme qu'aucun des
+      38 outils ne mesurait**, et **dix défauts de corps** (section suivante).
+
+      **CE QUE LES RELECTEURS ONT TROUVÉ, ET CE QUE LA MESURE DU SITE EN A GARDÉ.** C'est la
+      partie qui vaut pour les 52 cours restants : *une trouvaille de lot n'est un indice du site
+      que si la mesure du site le dit*, et cette fois la règle a coupé dans les deux sens.
+
+      | prise adversariale | sur le lot | **mesuré sur les 6 167 questions** | verdict |
+      |---|---:|---:|---|
+      | la **barre oblique** `/` | 2/2 | **79,7 %** de rendement, 434 questions | **câblée — 39ᵉ** |
+      | la **ponctuation forte en UNION** (`:` ou `;` ou tiret cadratin) | 0/12 | **91,7 %**, **1 689 questions** | **câblée — 40ᵉ** |
+      | l'**approximateur** (`~`, « environ », « près de ») | 2/2 à 100 % | 65,0 %, 103 questions | fermé sur le cours, **non câblé** |
+      | le **« ne » non élidé** (`ne` plein contre `n'`) | **83,3 %**, 6 offertes | **23,5 %** en écarter, 34,9 % en désignation unique | **RÉFUTÉ** |
+
+      **LA PLUS GROSSE DES DEUX EST LA PONCTUATION FORTE EN UNION, et elle dit quelque chose sur
+      notre propre consigne.** L'outil mesurait chaque marque **isolément** : il ne voyait donc pas
+      la question où la bonne réponse porte un `:` pendant qu'un distracteur porte un `;` — celle-là
+      échappe aux deux mesures séparées et reste désignable d'un coup d'œil. Mais la mesure **par
+      cours** montre que notre règle « par marque, ou les quatre options la portent, ou aucune » la
+      **ferme déjà**, sans qu'on l'ait jamais visée :
+
+      | | cours | questions tranchées | rendement pondéré |
+      |---|---:|---:|---:|
+      | cours marqués `traite` | 20 | 165 | **46,1 %** |
+      | cours non traités | 56 | 1 516 | **96,9 %** |
+      | `dataviz` après la vague | — | **0** | — |
+
+      Rien de neuf à mettre en consigne, donc — mais **un chiffre neuf pour mesurer ce qui reste**,
+      et la confirmation qu'une règle par marque implique l'union.
+
+      ⚠️ **Le « ne » non élidé est le contre-exemple, et il est instructif.** Un relecteur l'a mesuré
+      à **83,3 % de rendement avec 6 questions offertes** sur ses 16 questions ; sur le site il est
+      **sous le hasard**. C'est un indice que **notre propre vague d'écriture a fabriqué sur ce
+      cours** — il a donc été fermé sur `dataviz` (0 offerte) sans entrer dans l'outil. La stratégie
+      « la seule qui nie » y était aveugle : **les quatre options niaient**, la différence n'était
+      pas la négation mais **l'élision**.
+
+      **DEUX INDICES DE PLUS, FERMÉS SANS ÊTRE CÂBLÉS :**
+      - **Le NOM D'OUTIL ou de PALETTE** (`matplotlib`, `tab10`, `RdBu`, `viridis`, `jet`,
+        `polyfit`, `Tufte`) : **0 bonne réponse sur 68** en portait un, contre **17 distracteurs sur
+        204**. La règle « écarter l'option qui nomme un outil » n'avait donc **jamais tort** —
+        58,3 % sur les 4 questions de `lecon-10`, noyée à 28,3 % sur le cours. Fermé : **0 sur 68**.
+      - **L'ANCRAGE NARRATIF du QCM bilan** : les distracteurs étaient rembourrés avec le décor du
+        cours (le stade, la piscine, les Docks, un nom de mois) alors qu'**aucun des 12 énoncés du
+        bilan n'en parle**. Écarter toute option qui nomme le décor : **38,9 % contre 25,0 %,
+        p = 0,0176, 6 questions couvertes sur 12 et zéro contre-exemple**. Combiné à deux règles
+        voisines (« ne ment jamais », « selon Tufte ») : **45,8 %, dont deux questions à 100 %**.
+        C'est un **tic de lot** — la même règle sur les 56 QCM de leçon rend 25,9 % avec deux
+        contre-exemples. Fermé.
+
+      **ET LA SEULE ATTEINTE VOLONTAIRE À UN INTOUCHABLE DE TOUT LE CHANTIER B4.** La bonne réponse
+      de la **question 2 du bilan** était la copie **octet pour octet** de celle de `lecon-01` q3
+      (« La position sur une échelle commune ou la longueur (barres, points alignés) », test
+      d'identité stricte = `true`). Un apprenant qui avait fait le QCM de la leçon 1 gagnait la
+      question au caractère près. Reformulée sans changer le sens. `mesure-qcm-intouchable` signale
+      **exactement une atteinte, et c'est celle-là**.
+
+      **DIX DÉFAUTS DE CORPS, TOUS PROUVÉS PAR EXÉCUTION** (numpy 2.5.2 et Node 24 sont installés) :
+
+      1. **`lecon-01` — le schéma d'Anscombe démontrait l'INVERSE de sa leçon.** Il dessinait
+         **8 / 7 / 7 / 6 points** au lieu de onze, et surtout quatre jeux aux statistiques
+         **différentes** : pentes **0,618 / 0,360 / 0,872 / 0,648**, corrélations **0,906 / 0,535 /
+         0,945 / 0,696** — sous une légende qui dit « les quatre jeux ont la même moyenne, la même
+         corrélation et la **même droite** ». Redessiné avec les **44 vrais points de 1973** à
+         échelle commune ; **relu depuis la page** : pente **0,780** et r **0,816** sur les quatre.
+      2. **`lecon-02` — trois chiffres incompatibles pour une seule échelle.** Le SVG pose
+         `pos = valeur / 8100 × 160`, mais son étiquette place 4050 à **100 px** (c'est **80**), la
+         figcaption dit « mi-hauteur (100 px) » d'une plage de 160 — **arithmétiquement impossible**
+         — et l'`aria-label` annonce une plage de **200 px**. Seule la solution d'exercice était
+         juste. Quatre mentions alignées sur 80 px et 160 px.
+      3. **`lecon-07` — la pente de la droite de régression, fausse en quatre endroits.** Le code de
+         la leçon, **exécuté tel quel**, imprime `Pente : 10.6 € par m²` ; la leçon annonçait
+         **+14 €/m²** et **950 €** à 55 m² (la droite donne **764,4 €**). Et le nuage, décrit comme
+         « un ruban assez large », relation « modérée », a **r = 0,997** — les points dessinés dans
+         le SVG sont les mêmes données (r mesuré : **−0,9974**).
+      4. **`lecon-12` — le jeu de données contredisait la démonstration de sa propre leçon.** La
+         leçon enseigne qu'une carte d'effectifs bruts redessine la population ; ses chiffres
+         donnaient **Parc 1900 > Centre 1850 > Coteaux 1720**, donc « les Coteaux sont foncés » était
+         faux et le petit Parc arrivait premier. Corrigé en **2050 / 1700 / 1250** : le classement
+         BRUT est désormais **exactement** celui de la population, et le classement des TAUX
+         **exactement son inverse**. Les **huit polygones** du SVG suivent, relus depuis la page.
+      5. **`lecon-13` — la canicule d'août accrochée à un pic de juillet**, et un **+38 %**
+         introuvable dans la série (contre juin : +12,5 % ; contre la moyenne : +73 %). Remplacé par
+         **+73 % sur la moyenne**, et le code corrigé **calcule lui-même** l'étiquette qu'il affiche.
+      6. **`lecon-11` — `alpha=0.1` empilé dix fois rend 65,1 %**, pas l'opacité pleine, qui n'est
+         jamais atteinte (100 points : 99,997 %).
+      7. **`lecon-10`** — « dans une salle de dix hommes il y en a **presque toujours** un » vaut
+         **56,6 %** ; et `RdBu` présenté comme « bleu/orange » alors que la même page écrit
+         « rouge → blanc → bleu ».
+      8. **`lecon-14`** — titre-message « la piscine draine **deux fois plus** que le stade » pour
+         **8100/5600 = 1,45** ; et le « cas réel » se contredisait (327 000 → 935 000 = **+186 %**
+         présenté comme devenant « une variation modérée » une fois l'axe remis à zéro).
+      9. **`lecon-06`** — deux renvois au diagramme en barres « de la leçon 1 » : c'est la **4**.
+      10. **`lecon-01`** — la solution de l'exercice 3 oubliait la Piscine parmi les équipements qui
+          dépassent le repère à 4050.
+
+      **LA LEÇON MÉCANIQUE DE CE COURS — la fermeture des RÉSIDUS rouvre le LEXIQUE, comme la
+      correction de fond.** Le cours sortait de la passe de correction à **0 exploitable / 0 à
+      mettre en forme** ; ma passe de fermeture des trois indices résiduels (14 options) l'a remis à
+      **2 exploitables et 4 à mettre en forme**, et déplacé les rangs à **17/17/18/16**. Il a fallu
+      une **seconde passe de 6 options** pour revenir à 0 et à 17/17/17/17. Le facteur de 0,68
+      rattrapage par correction, mesuré sur `a11y`, **vaut aussi pour les corrections de forme**,
+      pas seulement pour celles de fond.
+
+      ⚠️ **ET UN PIÈGE DE MESURE NEUF, qui a failli me faire corriger deux fois la même chose : en
+      JavaScript, `\b` devant « à » ne matche JAMAIS.** `\b` est une frontière entre `\w` et
+      non-`\w`, et « à » n'est pas `\w` : le motif `/\bà peu près\b/` est **toujours faux**. Mon
+      détecteur d'approximateur déclarait donc la correction non appliquée alors qu'elle l'était.
+      C'est le même genre de cécité silencieuse que `mesure-qcm-longueurs` aveugle à 184 questions
+      pendant cinq cours — **un outil de mesure écrit à la volée doit être testé sur un cas qu'il
+      DOIT trouver**.
+
+      **MESURES FINALES, toutes exécutées :**
+
+      | | avant | après |
+      |---|---:|---:|
+      | « la plus longue » | 95,6 % | **25,0 %** |
+      | pire des 42 stratégies | 95,6 % | **26,5 %** |
+      | meilleure (plancher) | — | **22,1 %** |
+      | rangs 0/1/2/3 | 65 / 3 / 0 / 0 | **17 / 17 / 17 / 17** |
+      | questions à retoucher | 66 / 68 | **0 / 68** |
+      | indice lexical (exploitables) | 55 / 68 | **0 / 68** |
+      | distracteurs devenus vrais | — | **0 sur 204** |
+
+      **Contrôles** : `verif.js --rapide` **26 étapes, tout vert (52,9 s)** ; `verif-html` **0 grave,
+      0 attention** sur 1 629 fichiers ; `verif-donnees` **0 erreur** sur 25 contrôles ;
+      `mesure-qcm-intouchable` **1 atteinte, la volontaire** ; cliquets refigés, `dataviz` marqué
+      `traite` (**34 cours verrouillés**) ; index dérivés régénérés avec `--fresh --only`.
+      **Épreuve par injection des deux stratégies neuves** : la ponctuation forte passe de **0
+      question tranchée à 3 à 100,0 %**, la barre oblique de **2 à 6 à 100,0 %**, et `git checkout`
+      ramène aux valeurs d'origine.
+
+      ⚠️ **`doc/lecon-03` s'est repérimé une 11ᵉ fois** : **44,6 % → 43,5 %** et **2 723 → 2 657**
+      manquements à S3, **10 mentions** corrigées, séparateur **insécable U+00A0**.
+      `verif-normatif` **64/66 → 66/66**.
+
+      **ÉTAT DU SITE** : **6 167 questions, 3 460 devinables par la longueur, 56,1 %** — contre
+      5 081 et 84,8 % au cadrage de B4. **1 621 questions rendues, 28,7 points gagnés**,
+      **34 cours verrouillés**. La case reste **décochée** : **52 cours** restent au-dessus de
+      60 %. Les plus nocifs par questions devinables : `lua` (72 q, 88,9 %), `typescript` (68 q,
+      92,6 %), `swift` (66 q, 95,2 %), `scala` (68 q, 91,9 %), `pandas` (65 q, 93,8 %),
+      `haskell` (66 q, 92,4 %).
+
+      ⚠️ **CE QUE CETTE PASSE N'A PAS FAIT, ET QUI EST UN VRAI CHANTIER — les FIGURES de `dataviz`.**
+      Les quatre relecteurs ont trouvé, au-delà des dix défauts corrigés ci-dessus, **huit SVG dont
+      la géométrie ne code pas les données annoncées**. Ils sont **mesurés mais pas corrigés** :
+      chacun demande de recalculer un pavage ou une polyligne, et la passe était déjà pleine. Ils
+      valent une case à eux seuls, et **quatre d'entre eux enseignent le contraire de leur leçon** :
+
+      | leçon | ce que la figure fait | ce que la leçon annonce |
+      |---|---|---|
+      | `lecon-05` aire empilée | le total culmine en **octobre** ; la bande piscine d'octobre (4 300) est dessinée **108 px** contre 68 px en juin (8 100) | « culmine en été porté par la piscine » |
+      | `lecon-05` banking | le panneau étiqueté « pentes ~45° » a des pentes de **6,6°** en moyenne ; le panneau **dénoncé** est celui dont les pentes encadrent 45° | la règle de Cleveland que la q4 réclame |
+      | `lecon-05` trois courbes | trois échelles différentes (0,0167 / 0,0350 / 0,0376 px par entrée) et **deux axes tronqués** | un graphique de comparaison |
+      | `lecon-04` empilées | les segments de juillet sont à **la moitié** de l'échelle des segments de juin ; piscine juillet/juin = **0,387** dans l'empilé contre **1,161** dans le groupé d'à côté | la faute que la leçon dénonce |
+      | `lecon-08` treemap | Voirie occupe **48,1 %** de l'aire pour **31 %** annoncés ; Espaces verts 6,7 % pour 13 % | « l'aire de chaque bloc dit son poids » |
+      | `lecon-10` gris + accent | la série accentuée « Docks » est **la plus haute** des six et elle **monte** ; le code donne Docks = 2800 = le **minimum** | « les Docks décrochent » |
+      | `lecon-09` indexées à 100 | la série des entrées est tracée **sous** la base 100 alors que ses indices vont de 100 à **110** — la forme est juste, **seul le signe est inversé** | « l'alternative honnête » |
+      | `lecon-12` choroplèthe | six remplissages pour une légende qui n'en déclare que **quatre**, et le Parc (3,3) peint **plus foncé** que le Centre (3,6) — luminance WCAG 65,5 contre 82,1 | la faute que la leçon enseigne à éviter |
+
+      Deux écarts de récit relevés en plus, moins graves mais réels : `lecon-06` appelle **22 min**
+      « la moyenne » à deux endroits alors que la leçon démontre que c'est la **médiane** (moyenne =
+      26 min, vérifié par `statistics.mean`), et le fil rouge « fréquentation mensuelle de la
+      piscine » existe en **quatre versions différentes** selon la leçon (`lecon-03`/`04` : max
+      9 400 ; `lecon-05` : 11 200 ; `lecon-13` : 8 100 en juillet ; `lecon-14` : 8 100 en juin) —
+      dans un bloc que `lecon-14` présente comme « **cohérent avec tout le cours** ».
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
