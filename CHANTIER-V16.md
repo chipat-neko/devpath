@@ -4931,6 +4931,88 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       avant et après) ; `node --check` sur les 8 fichiers `js` touchés ; 0 CRLF et 0 BOM sur le
       fichier neuf ; arbre de travail propre après les deux épreuves par injection.
 
+      ---
+
+      **30ᵉ COURS DÉTORDU — `ocaml` (2026-09-08) : 91,3 % → 25,3 %.** Le travail d'écriture était
+      resté **dans l'arbre de travail, non commité** : le réveil du 2026-09-07 s'est arrêté sur la
+      limite d'usage hebdomadaire à 100 %, en plein milieu. **Leçon de chaîne : un lot d'écriture
+      non commité ne survit à rien.** Rien n'était perdu (18 leçons modifiées, JSON valide partout),
+      mais la relecture adversariale, elle, n'avait pas été faite — c'est la moitié qui compte.
+
+      **Mesures reproduites avant de conclure** (aucune n'a été reprise du réveil précédent) :
+      « la plus longue » **91,3 % → 25,3 %**, pire indice **28,3 %** (« écarter les deux extrêmes »,
+      couverture 8,0 %) ; rangs **19 / 19 / 19 / 18** et **0 question à retoucher** ; incise
+      **25,0 %** ; ponctuation, point interne, guillemets, flèche : **0 question à mettre en forme
+      sur 75** ; indice lexical **STRICTE 33,3 % → 0,0 %**, **0 exploitable sur 75** ; `mesure-qcm-
+      intouchable` **0 atteinte** — **215 distracteurs réécrits sur 225**, question / `correct` /
+      `explain` / bonne réponse intacts.
+
+      **LA RELECTURE ADVERSARIALE : 6 agents, 75 questions, 225 options jugées une à une — et pour
+      la TROISIÈME fois d'affilée, ZÉRO distracteur devenu vrai, ZÉRO bonne réponse fausse.** La
+      consigne réutilisable (`scratchpad/CONSIGNE-OCAML.md`, qui portait dès le départ le `k/k/k/k`,
+      les marques dans les deux sens et la fenêtre de longueur) tient donc sur un langage **que la
+      machine ne peut pas exécuter** : OCaml n'est pas installé, tout a été jugé par la norme.
+
+      **En revanche les agents ont rendu NEUF défauts de CORPS, tous hors QCM** — la démolition
+      paie encore, mais elle a changé de cible : ce ne sont plus les distracteurs qui cassent, c'est
+      ce qui les entoure. Les six corrigés, prouvés par la norme :
+      1. `lecon-08` — `ocaml -i pile.ml` : **le toplevel n'a pas d'option `-i`**, il exécuterait le
+         fichier comme un script. C'est `ocamlc -i` qui imprime la signature inférée.
+      2. `lecon-08` — « une généricité **sans coût à l'exécution** » : faux pour OCaml, les foncteurs
+         ne sont **pas** monomorphisés (l'application construit un bloc de module à l'exécution).
+         Au passage, « a inspiré les *traits* de Rust » retiré : les traits viennent des classes de
+         types de Haskell.
+      3. `lecon-09` — **dans un `<svg>`, une syntaxe qui n'existe pas** : `for x … do … done`, alors
+         qu'OCaml exige `for i = a to b`. Le code de la leçon, lui, utilise `Array.iter`. C'est le
+         défaut fondateur retrouvé une fois de plus **dans un schéma**, invisible à tout outil qui
+         lit les blocs de code (déjà vu sur `ruby`).
+      4. `lecon-15` — `type 'a Seq.t = unit -> 'a node` : **on ne définit pas un type sous un nom
+         qualifié**. La définition réelle est `type 'a t` *dans* le module `Seq`.
+      5. `lecon-13` — l'exercice interactif accepte `Sub (Int 10, Int 4)` alors que **le type `expr`
+         de la leçon n'a pas de constructeur `Int`** (il a `Nombre of float`), et que la solution
+         rédigée trois lignes plus bas écrit `Sub (Nombre 10., Nombre 4.)`.
+      6. `lecon-17` — « OCaml **définit** `let+` et `and+` » : le langage **réserve la syntaxe**, il
+         ne fournit rien ; c'est au lecteur de les définir — ce que la q3 de la même leçon exige.
+      Plus trois corrections mineures : l'indice « **trois** chevrons » pour `>>=` qui en porte deux
+      (`lecon-12`), `Atomic` daté « module d'OCaml 5 » alors qu'il existe **depuis 4.12**
+      (`lecon-12`), et l'exercice de `lecon-10` qui attendait `assert` — un mot-clé que la leçon
+      **n'enseignait nulle part** (ajouté au corps plutôt que retiré de l'exercice).
+
+      **UN DISTRACTEUR CORRIGÉ, ET C'EST UNE CONTRADICTION INTERNE AU COURS** : le QCM bilan
+      demandait « quel mot-clé crée une liaison ? » avec `val x` en distracteur — or `val mutable
+      n = 0` **crée bien une liaison d'instance**, et c'est la `lecon-14` **du même cours** qui
+      l'enseigne. Remplacé par `set x`, qui n'existe pas en OCaml. Coût nul sur la forme : même
+      longueur (5 caractères), et `val`/`set` sont sous le seuil des mots longs, donc **aucune
+      mesure n'a bougé** — vérifié après coup.
+
+      **DEUX RÉSERVES ASSUMÉES, écrites plutôt que tues** : (a) `lecon-15` q2 demande combien de
+      fois `Lazy.force` **recalcule** un thunk — au sens strict la réponse est *zéro*, et le
+      distracteur « Zéro fois » n'est faux que par sa justification (« le cache est déjà prêt »,
+      faux avant le premier forçage). Corriger demanderait de toucher l'énoncé, donc de créer une
+      atteinte à l'intouchable pour un gain douteux ; (b) `lecon-18` bilan q4, « add et mul » :
+      `Float.add` et `Float.mul` existent depuis 4.07, seul « (partout) » rend l'option fausse.
+      Toute réécriture passait au-dessus de la bonne réponse et **déplaçait son rang** — refusé.
+
+      ⚠️ **LE PIÈGE DU RÉVEIL PRÉCÉDENT S'EST REPRÉSENTÉ, ET IL EST STRUCTUREL** : détordre `ocaml`
+      a **repérimé les chiffres que `doc/lecon-03` publie sur le site** — 49,9 % → **48,8 %** et
+      3 046 → **2 976 manquements à S3** — et `verif-normatif` est passé à **64/66**. C'est la
+      **5ᵉ** fois. Le nombre « 3 046 » était écrit avec une **espace insécable U+00A0 littérale** :
+      le premier motif de remplacement a rendu **0 occurrence sans erreur**, exactement le piège
+      déjà rencontré sur `java`. Après correction : **66/66**.
+
+      **CONTRÔLES** : `verif.js --rapide` **60,5 s, tout vert** (relancé après les corrections) ;
+      `verif-html` **0 sur 1 629 fichiers** ; `verif-donnees` **0 erreur / 25 contrôles** ; 129 blocs
+      `data-quiz` / `data-quiz-bilan` / `data-exos` du cours **tous en JSON valide** ; 0 BOM ; 0 URL
+      de CDN ; index régénérés en `--fresh` avec les **six** cibles, `pieges` comprise (le piège de
+      `csharp` : `--only` sans `pieges` laisse cet index périmé en silence) ; les deux cliquets
+      refigés et **`ocaml` marqué `traite`** dans les deux références — **29 cours verrouillés**.
+
+      **ÉTAT DU SITE APRÈS CE COURS** : **6 167 questions, 3 763 devinables par la longueur, 61,0 %**
+      — contre 5 081 et 84,8 % au cadrage de B4. **1 318 questions rendues, 23,8 points gagnés.**
+      Restent 3 cours sous la cible mais **non marqués** (`distribue`, `neurones`, `offensive`) :
+      ils sont nés conformes en V13, jamais audités — les verrouiller sans relecture adversariale
+      serait certifier ce qu'on n'a pas mesuré. **À trancher en B5, pas en passant.**
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 

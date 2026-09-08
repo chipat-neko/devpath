@@ -125,13 +125,15 @@ if (liste) {
     var nq = 0;
     questionsDe(src).forEach(function (q) {
       nq++; tot++;
-      var sortie = [], nAbs = [], part = [];
+      var sortie = [], nAbs = [], part = [], nMots = [];
       q.a.forEach(function (o, i) {
         var w = mots(o), abs = w.filter(function (x) { return !page.has(x); });
         nAbs.push(abs.length);
+        nMots.push(w.length);
         part.push(w.length ? (w.length - abs.length) / w.length : 1);
         sortie.push("      opt" + i + (i === q.correct ? " (BONNE) " : "         ") +
-                    abs.length + " etranger(s)" + (abs.length ? " : " + abs.join(", ") : ""));
+                    abs.length + " etranger(s) / " + w.length + " mot(s) long(s)" +
+                    (abs.length ? " : " + abs.join(", ") : ""));
       });
       var zeros_ = [];
       nAbs.forEach(function (v, i) { if (v === 0) zeros_.push(i); });
@@ -141,11 +143,29 @@ if (liste) {
       var pire = argMax(nAbs);
       var expI = pire.length === 1 && pire[0] === q.correct;
 
-      /* CONFORME = la forme des distracteurs suit la regle du k */
+      /* CONFORME = la forme des distracteurs suit la regle du k ET celle du w.
+         ⚠️ La regle du k SEULE ne ferme PAS la variante PROPORTION, et c'est
+         arithmetique : a k egal, la part de mots presents (w - k) / w CROIT avec w.
+         Donc si la bonne reponse porte a elle seule le plus de mots longs, elle
+         reste designee — avec des k parfaitement egaux. Trouve le 2026-09-07 par
+         trois ecrivains du cours `ocaml`, independamment, alors que cet outil
+         affichait « 0 question a mettre en forme » et comptait 3 exploitables
+         SANS LES LISTER (le meme defaut que `plan-rangs-qcm --marques` avait la
+         veille : compter sans nommer laisse le travail invisible).
+         REGLE DU w : ou les quatre options portent le meme nombre de mots longs,
+         ou au moins un distracteur en porte STRICTEMENT PLUS que la bonne reponse.
+         (Sans objet quand k = 0 : toutes les parts valent alors 1.) */
       var k = nAbs[q.correct];
       var dist = nAbs.filter(function (v, i) { return i !== q.correct; })
                      .sort(function (x, y) { return x - y; });
-      var conforme = dist[0] === k && dist[1] === k && dist[2] === k;
+      var kEgaux = dist[0] === k && dist[1] === k && dist[2] === k;
+      var wc = nMots[q.correct], wSup = 0, wEgaux = 0;
+      nMots.forEach(function (v, i) {
+        if (i === q.correct) return;
+        if (v > wc) wSup++; else if (v === wc) wEgaux++;
+      });
+      var wOK = k === 0 || wSup > 0 || wEgaux === nMots.length - 1;
+      var conforme = kEgaux && wOK;
 
       /* EXPLOITABLE : l'une des trois variantes designe la bonne reponse seule,
          OU la RESTREINT a un ensemble strictement plus petit que les 4 options
@@ -156,14 +176,20 @@ if (liste) {
       var cI = credit(pire, q.correct, nOpt);
       var expR = (cS !== null && cS > 0.25) || (cP !== null && cP > 0.25) || (cI !== null && cI > 0.25);
 
-      if (expS || expP || expI || expR) exploitables++;
-      if (conforme) return;
+      var exploitable = expS || expP || expI || expR;
+      if (exploitable) exploitables++;
+      if (conforme && !exploitable) return;
       aFaire++;
       var etiq = (expS ? "[STRICTE] " : "") + (expP ? "[PROPORTION] " : "") + (expI ? "[INVERSE] " : "") +
                  (expR ? "[RESTREINT] " : "");
       console.log("  " + f + " q" + nq + "  " + etiq + String(q.q).slice(0, 52));
       console.log("      k = " + k + "  ->  distracteurs vises : " + k + " / " + k + " / " + k +
-                  "   (aujourd'hui " + dist.join(" / ") + ")");
+                  "   (aujourd'hui " + dist.join(" / ") + ")" + (kEgaux ? "  [k DEJA TENU]" : ""));
+      if (!wOK) {
+        console.log("      w = " + wc + " mots longs pour la BONNE reponse, la plus fournie a elle seule" +
+                    "  ->  un distracteur doit en porter " + (wc + 1) + " ou plus, ou les quatre " + wc +
+                    "  (regle du w : c'est ELLE qui ferme PROPORTION, pas le k)");
+      }
       sortie.forEach(function (l) { console.log(l); });
     });
   });
