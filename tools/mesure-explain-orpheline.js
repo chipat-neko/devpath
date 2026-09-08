@@ -171,7 +171,10 @@ cours.forEach(function (c) {
     var avantHtml = auGit(DEPUIS, relatif);
     if (avantHtml == null) return;
     var avant = questionsDe(avantHtml);
-    var apres = questionsDe(fs.readFileSync(path.join(PAGES, c, f), "utf8"));
+    var html = fs.readFileSync(path.join(PAGES, c, f), "utf8");
+    var apres = questionsDe(html);
+    /* le corps de LA PAGE, sans ses blocs JSON : ce que l'apprenant a sous les yeux */
+    var corpsPage = normalise(html.replace(/<script[^>]*type="application\/json"[^>]*>[\s\S]*?<\/script>/g, " "));
     stats.questions += apres.length;
     apres.forEach(function (na) {
       /* appariement par ENONCE (les questions ne sont pas touchees par la vague),
@@ -211,8 +214,17 @@ cours.forEach(function (c) {
       var codeActuel = [];
       jetonsCode(na.q).forEach(function (j) { codeActuel.push(j); });
       na.a.forEach(function (o) { jetonsCode(o).forEach(function (j) { codeActuel.push(j); }); });
+      /* ⚠️ ET LE CORPS DE LA PAGE, troisieme filtre, mesure sur les 25 cours deja
+         traites : une explication a le droit d employer le vocabulaire que SA PAGE
+         enseigne (`localStorage` dans la lecon js sur les canaux entre onglets,
+         `HTTP` dans la lecon nodejs sur les couches). Sur les 3 cas durs rendus par
+         la mesure, 2 venaient de la. Le temoin est le corps de LA PAGE, jamais celui
+         du cours : `mutableListOf`, l un des deux cas historiques, est enseigne dans
+         huit lecons de `kotlin` mais absent du corps de la page du bilan -- un temoin
+         a l echelle du cours effacerait le defaut qu on cherche. */
       var fantomesCode = fantomes.filter(function (j) {
         if (!codeExplain.has(j) || j.length < 4) return false;
+        if (corpsPage.indexOf(j) !== -1) return false;
         return !codeActuel.some(function (k) { return k !== j && k.indexOf(j) !== -1; });
       });
 
