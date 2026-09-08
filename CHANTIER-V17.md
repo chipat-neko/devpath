@@ -200,7 +200,7 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
       `--chrono` ajoutée (une ligne par page) et durée moyenne + page la plus lente imprimées dans le
       résumé : la question « où part le temps » ne se pose plus à l'aveugle.
 
-- [ ] **A4 · Le garde-fou anti-orphelins ne police que le préfixe `verif-`.**
+- [x] **A4 · Le garde-fou anti-orphelins ne police que le préfixe `verif-`.**
       `tools/verif-chaine-declaree.js` a `SOUMIS = ["verificateur","mutation"]` et `recense-chaine.js`
       décide la famille au préfixe. Résultat : **69 fichiers lancés par au moins un mode, 56 soumis,
       13 étapes de la chaîne non policées** — et l'outil sort 0 en imprimant « OK ». L'exposition réelle
@@ -210,6 +210,48 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
       `accept` appartenait à un autre énoncé ; **rien ne le relance.** Corriger `famille()` / `SOUMIS` :
       est un vérificateur tout fichier que `verif.js` lance, plus tout fichier capable de rendre un code
       non nul.
+
+      **FAIT le 2026-09-08.** *Mesure reprise d'abord* : **70 fichiers lancés par au moins un mode, 63
+      soumis, 13 étapes de la chaîne non policées** — le chiffre du plan (69/56/13) s'est reproduit à
+      l'unité près sur les étapes non policées, les deux autres ayant bougé parce que le point A3 venait
+      d'ajouter `verif-clic.js`.
+      *L'exposition réelle est plus large que les quatre annoncés.* En remplaçant le critère du NOM par
+      celui du COMPORTEMENT — un fichier qui sait sortir en code non nul porte un verdict, lu dans son
+      source — on trouve **huit** outils capables de rougir que personne ne lançait :
+      `preuves/decodeur.js`, `exos-code.js`, `exos-texte.js`, `git-commandes.js`, `git-graphe.js`,
+      `git-modele.js`, `git-scenarios.js`, et `preuve-hors-reseau.js`. ⚠️ `preuves/capture-erreurs.js`,
+      cité par le plan, ne contient **aucun** `process.exit` non nul : il ne peut pas rougir, il n'est
+      donc pas concerné (constat corrigé, pas reporté).
+      *Deux corrections.* (1) `recense-chaine.js` : nouvelle famille **`preuve`** — tout fichier de
+      `tools/preuves/` ou nommé `preuve-*.js` **et** capable de sortir en code non nul (20 fichiers ; les
+      neuf `rejoue-*.js` et les deux pilotes, qui ne font qu'imprimer un relevé, restent hors du
+      garde-fou, à raison). (2) `verif-chaine-declaree.js` : `SOUMIS` gagne `preuve`, **et surtout tout
+      ce que `verif.js` lance est policé d'office, quelle que soit sa famille** — le filtre par famille
+      s'appliquait avant tout, si bien que les 13 étapes ci-dessus n'étaient surveillées par rien.
+      *Les huit ont été réglés, pas décrits* : **cinq branchés** dans `--complet`
+      (`git-modele`, `git-commandes`, `git-graphe`, `git-scenarios`, `decodeur`), après les avoir
+      exécutées : **les cinq en code 0, 32,0 s au total** — 13, 13, 18 et 26 valeurs comparées pour les
+      quatre premières, et 55/55 messages retrouvés en premier plus 3 messages inventés correctement
+      refusés pour le décodeur. **Trois déclarés** dans `hors-chaine.json` avec leur raison mesurée :
+      `exos-code.js` et `exos-texte.js` **sortent en 0 sans rien mesurer quand on les lance nus**
+      (« aucune page : passer des chemins », vérifié par exécution) — les brancher tels quels aurait
+      ajouté à la chaîne une étape verte qui ne vérifie rien, exactement le défaut que ce chantier
+      combat ; `preuve-hors-reseau.js` est le pilote paramétré des quatre preuves git, et sort en 2 sans
+      argument.
+      *Épreuves par injection, deux, et la comparaison avec l'ancien code a été JOUÉE, pas raisonnée*
+      (l'ancien `recense-chaine.js` et l'ancien garde-fou ont été extraits de `HEAD` et exécutés tels
+      quels) :
+      — **faute 1, un vérificateur orphelin** : un `preuves/zz-injection-a4.js` capable de rougir, lancé
+      par personne, non déclaré → **nouveau garde-fou : code 1**, il le nomme ; **ancien garde-fou, même
+      faute : code 0 et « OK — tout vérificateur est soit dans un mode, soit déclaré »** ;
+      — **faute 2, une déclaration périmée** : `preuves/sql-lecon.js` (qui EST dans la chaîne) ajouté à
+      `hors-chaine.json` → **nouveau : code 1, « déclaré hors chaîne, mais verif.js le lance en (defaut)
+      --complet --strict »** ; **ancien : code 0 et « OK »** — la règle 3 était donc muette elle aussi
+      dès que le fichier n'avait pas le préfixe `verif-` ;
+      — **retour au vert** après retrait des deux fautes et règlement des huit : **code 0**, « 84 outils
+      soumis (48 vérificateurs, 15 épreuves par injection, 20 preuves, + 1 étape d'une autre famille),
+      **75 dans un mode, 9 hors chaîne dont 9 déclarés** » — contre 57 dans un mode sur 63 soumis avant
+      le point.
 
 - [ ] **A5 · `verif.js` confond « je n'ai pas pu mesurer » et « j'ai trouvé une faute ».** Distinguer
       les deux dans la sortie et dans le code de retour : un outil qui n'a rien pu mesurer doit le dire,

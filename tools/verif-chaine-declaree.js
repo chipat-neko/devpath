@@ -11,14 +11,22 @@
    d'ecrire un nouveau verif-*.js et d'oublier de le brancher.
 
    CE QU'IL EXIGE, et il echoue sur chacun de ces quatre cas :
-     1. un verificateur ou une epreuve par injection que `verif.js` ne lance dans
-        AUCUN mode, et qui n'est pas declare dans `tools/hors-chaine.json` ;
+     1. un verificateur, une epreuve par injection ou une PREUVE que `verif.js` ne
+        lance dans AUCUN mode, et qui n'est pas declare dans `tools/hors-chaine.json` ;
      2. une declaration dont la RAISON est vide, absente, ou plus courte que
         40 caracteres — « TODO » n'est pas une raison ;
      3. une declaration PERIMEE : l'outil est entre dans un mode entre-temps, la
         dette est payee, la ligne doit disparaitre (sinon la liste devient un
         cimetiere qu'on ne relit plus) ;
      4. une declaration ORPHELINE : le fichier declare n'existe plus.
+
+   CE QUI A CHANGE AU POINT A4 DU CHANTIER V17. Il ne policait que deux familles
+   decidees au PREFIXE du nom de fichier. Mesure : 70 fichiers lances par au moins un
+   mode, 63 soumis, et SEPT outils capables de rougir que personne ne lancait, tous
+   sous `tools/preuves/` — invisibles parce qu'ils ne s'appellent pas `verif-*`.
+   L'ancien garde-fou, mis en presence d'un huitieme fabrique pour l'occasion, a
+   imprime « OK » et rendu 0. Depuis A4 : la famille se decide sur le COMPORTEMENT
+   (sortir en code non nul), et tout ce que `verif.js` lance est police d'office.
 
    Il ne lit PAS le source de verif.js a la grep : il demande a
    `recense-chaine.js --json`, qui demande lui-meme a `verif.js --lister` la liste
@@ -54,11 +62,28 @@ var recens;
 try { recens = JSON.parse(r.stdout); }
 catch (e) { console.error("verif-chaine-declaree : recensement illisible — " + e.message); process.exit(2); }
 
-/* Les deux familles qui doivent etre couvertes. Les generateurs, les mesures et
-   les scripts d'appoint n'ont rien a faire dans un mode de verification : ce
-   garde-fou ne leur demande rien. */
-var SOUMIS = ["verificateur", "mutation"];
-var outils = recens.tools.filter(function (t) { return SOUMIS.indexOf(t.famille) !== -1; });
+/* QUI EST SOUMIS — deux regles, et la seconde a ete ajoutee au point A4 du
+   chantier V17 parce que la premiere laissait un trou mesure.
+
+   1. LES FAMILLES QUI PORTENT UN VERDICT. « verificateur » et « mutation » ne
+      suffisaient pas : la famille « preuve » (tout fichier de `tools/preuves/` ou
+      `preuve-*.js` capable de sortir en code non nul) echappait a tout, et la
+      mesure du point A4 y a trouve SEPT outils sans aucun appelant — dont
+      `exos-texte.js`, celui qui avait trouve les 13 exercices dont le champ
+      `accept` appartenait a un autre enonce. Rien ne les relancait, et cet
+      outil-ci imprimait « OK ».
+
+   2. TOUT CE QUE `verif.js` LANCE EST POLICE, quelle que soit sa famille. Avant
+      A4, le filtre par famille s'appliquait AVANT tout : 70 fichiers etaient
+      lances par au moins un mode, 63 seulement etaient soumis — 13 etapes de la
+      chaine (les `preuves/etude-*.js`, `build-sources-worker.js`…) n'etaient
+      surveillees par rien. Le jour ou l'une d'elles sort d'un mode, elle tombe
+      dans un angle mort au lieu de rougir ici. Un garde-fou qui ne connait pas
+      la moitie de ce qu'il garde n'en garde aucune. */
+var SOUMIS = ["verificateur", "mutation", "preuve"];
+var outils = recens.tools.filter(function (t) {
+  return SOUMIS.indexOf(t.famille) !== -1 || t.dansChaine;
+});
 
 /* ------------------------------------------------------- les declarations ecrites */
 var CHEMIN = path.join(TOOLS, "hors-chaine.json");
@@ -128,9 +153,11 @@ var dedans = outils.filter(function (t) { return t.dansChaine; }).length;
 var dehors = outils.length - dedans;
 var declares = clefs.filter(function (f) { return parFichier[f] && !parFichier[f].dansChaine; }).length;
 
+function combien(f) { return recens.tools.filter(function (t) { return t.famille === f; }).length; }
+var horsFamille = outils.filter(function (t) { return SOUMIS.indexOf(t.famille) === -1; }).length;
 console.log("verif-chaine-declaree — " + outils.length + " outils soumis au garde-fou " +
-  "(" + recens.tools.filter(function (t) { return t.famille === "verificateur"; }).length + " verificateurs, " +
-  recens.tools.filter(function (t) { return t.famille === "mutation"; }).length + " epreuves par injection)");
+  "(" + combien("verificateur") + " verificateurs, " + combien("mutation") + " epreuves par injection, " +
+  combien("preuve") + " preuves, + " + horsFamille + " etape(s) lancee(s) d'une autre famille)");
 Object.keys(recens.parMode).forEach(function (m) {
   console.log("  verif.js " + (m === "(defaut)" ? "(sans option)" : m) + " lance " + recens.parMode[m].length + " etape(s)");
 });

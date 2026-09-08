@@ -529,6 +529,30 @@ if (COMPLET) {
     quoi: "les verificateurs VOIENT-ILS une faute ? 9 fautes injectees, 9 attendues rouges",
     lent: true,
   });
+  /* LES CINQ PREUVES QUE PERSONNE NE LANCAIT (point A4 du chantier V17). Elles
+     etaient hors de tous les modes, et le garde-fou `verif-chaine-declaree.js` ne
+     les VOYAIT pas : il decidait la famille au prefixe du nom, et aucune ne
+     s'appelle `verif-*`. Toutes les cinq ouvrent une page en file://, SANS
+     `--allow-file-access-from-files` et DNS coupe — c'est la condition de
+     l'apprenant, celle qu'aucune execution dans Node ne reproduit. Mesure du
+     2026-09-08, les cinq lancees a la suite : 32,0 s au total, les cinq en code 0
+     (git-modele 2,4 s / 13 valeurs, git-commandes 0,9 s / 13 valeurs, git-graphe
+     16,5 s / 18 valeurs, git-scenarios 9,7 s / 26 valeurs, decodeur 2,5 s / 55
+     messages retrouves en premier et 3 messages inventes refuses). */
+  [
+    ["gitmod ", "preuves/git-modele.js",
+     "le modele de depot joue DANS CHROME : 13 empreintes contre celles de Node"],
+    ["gitcmd ", "preuves/git-commandes.js",
+     "les commandes du bac a sable jouees DANS CHROME, comparees a un vrai git"],
+    ["gitgraf", "preuves/git-graphe.js",
+     "la page du bac a sable pilotee au clavier : le SVG, les trois zones, le defilement"],
+    ["gitscen", "preuves/git-scenarios.js",
+     "les neuf situations guidees : vrais clics, indices un par un, chemins alternatifs"],
+    ["decodwb", "preuves/decodeur.js",
+     "le decodeur juge PAR LA PAGE : message exact, trace entiere, noms de l'apprenant"],
+  ].forEach(function (p) {
+    ETAPES.push({ nom: p[0], fichier: p[1], args: [], quoi: p[2], lent: true });
+  });
   /* LE SEUL OUTIL QUI CLIQUE VRAIMENT (point A3 du chantier V17). `verif-exemples.js`
      et `verif-sorties.js` executent le code dans Node ; le site, lui, l'execute dans un
      Web Worker de navigateur, dont la pile est bien plus courte. Ce seul ecart avait

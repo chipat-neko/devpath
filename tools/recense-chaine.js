@@ -73,11 +73,34 @@ if (fs.existsSync(DECLARE)) {
 }
 
 /* ------------------------------------------------------------------ familles */
+/* PEUT-IL ROUGIR ? (point A4 du chantier V17.) Jusqu'ici la famille se decidait au
+   SEUL PREFIXE du nom. Un fichier qui rend un code non nul mais qui ne s'appelle pas
+   `verif-*` n'etait donc soumis a rien : la mesure du point A4 en a trouve SEPT sous
+   `tools/preuves/`, dont `exos-texte.js` — l'outil qui avait trouve les 13 exercices
+   dont le champ `accept` appartenait a un autre enonce. Rien ne les relancait, et le
+   garde-fou imprimait « OK ».
+   Le critere n'est plus le nom mais le COMPORTEMENT : un fichier qui sait sortir en
+   code non nul porte un verdict, donc il doit etre soit lance, soit declare. On le lit
+   dans son source, on ne le devine pas. */
+var ROUGIT = /process\.exit\(\s*[1-9]/;
+var ROUGIT2 = /process\.exitCode\s*=\s*[1-9]/;
+function peutRougir(f) {
+  try {
+    var s = fs.readFileSync(path.join(TOOLS, f.split("/").join(SEP)), "utf8");
+    return ROUGIT.test(s) || ROUGIT2.test(s);
+  } catch (e) { return false; }
+}
+
 function famille(f) {
   var base = f.split("/").pop();
   if (base === "verif.js" || base === "recense-chaine.js") return "chaine";
   if (/-mutations\.js$/.test(base) || /^preuve-injection\.js$/.test(base)) return "mutation";
   if (/^verif-/.test(base) || /^verif-verite\.js$/.test(base)) return "verificateur";
+  /* Les PREUVES : `tools/preuves/` et les `preuve-*.js` de la racine. Le dossier dit
+     l'intention (prouver quelque chose) ; `peutRougir` dit si l'intention est armee.
+     Un `rejoue-*.js` qui ne fait qu'imprimer un releve ne porte aucun verdict : il
+     reste « autre », et le garde-fou ne lui demande rien. */
+  if ((/^preuves\//.test(f) || /^preuve-/.test(base)) && peutRougir(f)) return "preuve";
   if (/^wf-/.test(base)) return "generateur";
   if (/^build-/.test(base)) return "generateur";
   if (/^mesure-/.test(base) || /^releve-/.test(base) || /^sonde-/.test(base) ||
@@ -112,9 +135,12 @@ var verifs = lignes.filter(function (l) { return l.famille === "verificateur"; }
 var horsVerifs = verifs.filter(function (l) { return !l.dansChaine; });
 var mutations = lignes.filter(function (l) { return l.famille === "mutation"; });
 var horsMut = mutations.filter(function (l) { return !l.dansChaine; });
+var preuves = lignes.filter(function (l) { return l.famille === "preuve"; });
+var horsPreuves = preuves.filter(function (l) { return !l.dansChaine; });
 
 console.log("\n  verificateurs           : " + verifs.length + "  (hors chaine : " + horsVerifs.length + ")");
 console.log("  epreuves par injection  : " + mutations.length + "  (hors chaine : " + horsMut.length + ")");
+console.log("  preuves (code non nul)  : " + preuves.length + "  (hors chaine : " + horsPreuves.length + ")");
 console.log("  generateurs / mesures   : " + lignes.filter(function (l) { return l.famille === "generateur" || l.famille === "mesure"; }).length);
 
 function bloc(titre, sel) {
@@ -128,8 +154,10 @@ function bloc(titre, sel) {
 }
 bloc("-- verificateurs --", function (l) { return l.famille === "verificateur"; });
 bloc("-- epreuves par injection --", function (l) { return l.famille === "mutation"; });
+bloc("-- preuves --", function (l) { return l.famille === "preuve"; });
 
 var aRegler = horsVerifs.filter(function (l) { return !l.declare; }).length +
-              horsMut.filter(function (l) { return !l.declare; }).length;
+              horsMut.filter(function (l) { return !l.declare; }).length +
+              horsPreuves.filter(function (l) { return !l.declare; }).length;
 console.log("\n  a regler (ni dans un mode, ni declare hors chaine) : " + aRegler);
 process.exit(0);
