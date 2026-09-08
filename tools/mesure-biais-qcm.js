@@ -158,6 +158,10 @@ function ecarterMax(q, scores) {
 /* Le tiret d'explication : « — », « – », ou un « - » entoure d'espaces. C'est la
    marque typographique de la reponse qui s'explique elle-meme. */
 function aTiret(t) { return /—|–| - |\(c'est-à-dire|, c'est-à-dire/.test(t); }
+/* L'UNION des ponctuations fortes (40e strategie, cours `dataviz`). On ne reprend PAS
+   aTiret : celui-ci accepte « - » entoure d'espaces et « c'est-a-dire », deux formes qui
+   ne sont pas des marques de separation forte et qui diluent la mesure. */
+function aPonctuationForte(t) { return /[;:]|—|–/.test(t); }
 
 /* Combien de mots longs (9 lettres et plus) chaque option porte-t-elle QU'AUCUNE
    AUTRE option de la meme question n'emploie ? Sert aux deux strategies « le mot
@@ -611,6 +615,53 @@ var STRATEGIES = [
     nom: "RESTREINDRE aux deux-points",
     quoi: "tirer parmi les seules options qui portent un « : »",
     choisir: function (q) { return restreindre(q, function (t) { return /:/.test(t); }); },
+  },
+  /* ⚠️ LES DEUX STRATEGIES AJOUTEES AU POINT B4 (cours `dataviz`, 2026-09-08), toutes
+     deux trouvees par des relecteurs adversariaux et toutes deux REMESUREES ICI sur les
+     6 167 questions du site avant d'etre ecrites. Une troisieme prise du meme jour, « le
+     « ne » non elide », a ete REFUTEE par la mesure du site (23,5 % en ECARTER, 34,9 %
+     en designation unique) alors qu'elle valait 83,3 % sur le lot d'un relecteur : c'est
+     la troisieme fois que ce chantier ecarte une trouvaille de lot par la mesure globale.
+
+     39e — LA BARRE OBLIQUE. Elle n'etait couverte par aucune des 38 strategies : l'outil
+     comptait le point-virgule, les deux-points, le tiret, les guillemets, la fleche, le
+     point interne et la virgule decimale, jamais le « / ». Couverture 7,0 % (434
+     questions), RENDEMENT 79,7 %. Cause : la bonne reponse est celle qui doit nommer une
+     alternative ou un couple (« la plage / range », « et/ou », « lecture / ecriture »),
+     et le raccourci typographique ne vient sous la plume que la ou il y a deux choses a
+     nommer d'un coup.
+
+     40e — LA PONCTUATION FORTE EN UNION (« : » OU « ; » OU tiret cadratin). C'est la
+     plus large des deux, et de loin : couverture 27,4 % (1 689 questions), RENDEMENT
+     91,7 % — le plus haut du site apres le point interne. L'outil mesurait chaque marque
+     ISOLEMENT ; il ne voyait donc pas la question ou la bonne reponse porte un « : »
+     pendant qu'un distracteur porte un « ; », qui echappe aux deux mesures separees et
+     reste pourtant designable d'un coup d'oeil.
+     ⚠️ ET LA MESURE PAR COURS DIT QUE NOTRE CONSIGNE LA FERME DEJA, sans qu'on l'ait
+     jamais visee : la regle « par marque, ou les quatre options la portent, ou aucune »
+     implique l'union. Rendement pondere des 20 cours deja marques `traite` : 46,1 % sur
+     165 questions tranchees ; des 56 cours non traites : 96,9 % sur 1 516. Sur
+     `dataviz`, fraichement detordu : 0 question tranchee. Rien de neuf a mettre en
+     consigne, donc — mais un chiffre neuf pour mesurer ce qui reste a faire. */
+  {
+    nom: "la seule avec une barre oblique",
+    quoi: "la seule option qui porte un « / » — 79,7 % de rendement sur le site",
+    choisir: function (q) { return seule(q, function (t) { return /\//.test(t); }); },
+  },
+  {
+    nom: "RESTREINDRE a la barre oblique",
+    quoi: "tirer parmi les seules options qui portent un « / »",
+    choisir: function (q) { return restreindre(q, function (t) { return /\//.test(t); }); },
+  },
+  {
+    nom: "la seule avec une PONCTUATION FORTE",
+    quoi: "la seule option qui porte « : » ou « ; » ou un tiret cadratin — l'UNION",
+    choisir: function (q) { return seule(q, aPonctuationForte); },
+  },
+  {
+    nom: "RESTREINDRE a la ponctuation forte",
+    quoi: "tirer parmi les seules options qui portent une ponctuation forte",
+    choisir: function (q) { return restreindre(q, aPonctuationForte); },
   },
   /* ⚠️ LES DEUX STRATEGIES DE DENSITE, ajoutees au point B4 (cours `php`, 2026-09-07).
      ELLES MESURENT CE QUE LA FENETRE 70-130 % FABRIQUE. La consigne d'ecriture impose
