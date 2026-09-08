@@ -5031,6 +5031,115 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       `offensive` sont sains de ce côté (pire rendement à couverture utile : 85,7 % sur 10,1 % pour
       les guillemets d'`offensive`, réussite globale 32,0 %).
 
+      ---
+
+      **31ᵉ COURS DÉTORDU — `kotlin` (2026-09-08) : 90,0 % → 25,3 %**, en **UNE seule vague**
+      d'écriture (la consigne `scratchpad/CONSIGNE-KOTLIN.md`, préparée par le réveil précédent,
+      portait dès le départ le `k/k/k/k`, la règle du `w`, les marques dans les deux sens et la
+      formulation corrigée de l'incise). Le cours était le plus **nocif** restant : 75 questions
+      × 90,0 % = **67,5 questions devinables**, devant `c` (67,0) et `solidity` (66,0).
+
+      **Mesures reproduites ici, aucune reprise du plan** : « la plus longue » **90,0 % → 25,3 %**
+      (rendement 91,8 % → 26,0 %) ; pire indice **26,7 %** (« écarter les deux extrêmes »,
+      couverture 5,3 %) ; rangs **68 / 3 / 3 / 1 → 19 / 19 / 19 / 18**, la cible exacte, et
+      **0 question à retoucher sur 75** ; « la plus détaillée » 69,7 % → 25,3 % ; le mot technique
+      exclusif 67,7 % → 22,7 % ; l'incise 65,2 % → 24,3 % ; l'écho 55,7 % → 20,4 % ; RESTREINDRE
+      `;` / `:` / `(` **50,0 / 53,0 / 67,4 % → 25,0 %, aucune ne tranche plus** ; indice lexical
+      **0 exploitable et 0 à mettre en forme sur 75**. **220 distracteurs réécrits sur 225.**
+      Site : **60,1 % → 59,3 %**.
+
+      **LA DÉMOLITION : 6 relecteurs en LECTURE SEULE, 225 options jugées une à une — ZÉRO
+      distracteur devenu vrai pour la 4ᵉ fois d'affilée.** Toutes leurs trouvailles ont été
+      re-vérifiées avant correction ; deux ont été écartées, et **une a été INFIRMÉE par son
+      propre relecteur** (`UIDevice.systemName()` / `systemVersion` : c'est mot pour mot la ligne
+      du modèle officiel JetBrains — un relecteur qui se contredit lui-même vaut mieux qu'une
+      correction faite de confiance).
+
+      **LE DÉFAUT FONDATEUR, PROUVÉ PAR CALCUL** (`lecon-10`) : `sumOf { it.aire() }` sur
+      `[Cercle(1.0), Rectangle(2.0,3.0), Cercle(2.0)]` rend π + 6 + 4π = 21,707963… → `%.2f` =
+      **21,71**. La leçon annonçait **22,57**, et **se réfutait elle-même trois lignes plus bas**
+      en imprimant 3,14 + 6,00 + 12,57.
+
+      **DEUX BONNES RÉPONSES FAUSSES** (atteintes à l'intouchable assumées, listées par l'outil) :
+      `lecon-12` q1 expliquait par « sans `open` sur Animal et `override` dans Chien » — or le
+      corps écrit `open class Animal`, et surtout **`open`/`override` ne s'appliquent pas à une
+      fonction d'extension** ; le vrai mécanisme, la **résolution statique**, est enseigné par la
+      même leçon deux paragraphes plus haut. `lecon-09` q3 citait « ex. EnCours, Inactif » comme
+      exemples d'`object` sans données, alors que le corps déclare `data class EnCours(val
+      pourcent: Int)` et qu'`Inactif` **n'existe nulle part dans le cours**.
+
+      ⚠️ **DEUX EXPLICATIONS DEVENUES ORPHELINES PAR NOTRE PROPRE VAGUE — et aucun outil ne les
+      mesure.** `lecon-19` q2 réfutait `JSON.stringify`, `lecon-21` bilan q5 commentait
+      `mutableListOf` : deux options remplacées la veille. **L'`explain` est classée
+      « intouchable », donc personne ne la relit — mais elle CITE les distracteurs.** C'est une
+      régression que seule la relecture pouvait voir, et elle attend probablement dans les
+      30 cours déjà traités. **À outiller en F3** : un contrôle « l'`explain` ne cite pas une
+      option absente » est bon marché et n'existe pas.
+
+      **TROIS DISTRACTEURS QUASI-VRAIS** du QCM bilan corrigés : `setOf(…)` (qui **est** une
+      collection en lecture seule), « Android (seul) » (Kotlin **est** pleinement interopérable
+      avec Android — c'est le sujet de la leçon 15), « String (avec un !) » (le type plateforme
+      `String!` est précisément ce qui peut être nul, leçon 14).
+
+      **SEPT AUTRES DÉFAUTS DE CORPS**, chacun re-vérifié : `filter` décrit comme un **tri**
+      (`lecon-06`, contredit par le mémo de la même page) ; « quatre listes d'un million
+      d'éléments » contredit par **son propre schéma** qui chiffre 333 333 (`lecon-07`) ;
+      `println(l)` annoncé `[a, b]` alors que **`toString()` vient d'`Any` et n'est pas délégué
+      par `by`** (`lecon-11`) ; « Boucle arrêtée proprement » après un `delay` annulé — `delay`
+      lève `CancellationException`, la ligne n'est jamais atteinte (`lecon-13`, corrigé par un
+      `finally`, ce qui est en plus meilleur pédagogiquement) ; l'ordre de `assertEquals` annoncé
+      *(obtenu, attendu)* quand la signature est `(expected, actual)` **et que la même leçon dit
+      l'inverse trois fois** (`lecon-16`) ; « Cette dernière leçon » sur la leçon 15 d'un cours
+      qui en compte 21 ; et **un exercice auto-corrigé qui ACCEPTAIT `mutableStateOf`** alors que
+      le QCM de la même page enseigne que c'est faux (`lecon-15`).
+
+      **15 MASQUES D'EXERCICE FAUX** corrigés (le nombre de `?` ne correspondait pas à la réponse
+      attendue — et dans **trois** cas un autre indice du **même** exercice donnait le compte
+      exact : « Trois lettres » face à deux `?`). ⚠️ **Mon premier jet en a CASSÉ DEUX qui étaient
+      justes** (`@Jvm??????` fait bien 10 caractères, comme `@JvmStatic`) : le piège du motif trop
+      large, vu par le re-contrôle et restauré. ⚠️ **La mesure du même défaut sur tout le site
+      n'est PAS publiable** : un masque ne couvre pas toujours toute la réponse
+      (`obj[Symbol.????????]`), et le contrôle naïf rendait 46,1 % de faux positifs. **Il faudrait
+      un vrai outil ; le chiffre n'est pas écrit ici plutôt qu'écrit faux.**
+
+      **OUTIL : DEUX STRATÉGIES NEUVES** dans `mesure-biais-qcm` (**32 → 34**). **Quatre relecteurs
+      sur six** ont signalé indépendamment, chacun sur son lot, que « la plus dense » et « la moins
+      bavarde » tombent **sous** le hasard — et un taux sous le hasard n'est pas un indice fermé,
+      c'est un indice **inverse**. Câblées et mesurées : **« ÉCARTER la moins bavarde » rend
+      72,1 % sur le site** (couverture 8,0 %, réussite 34,3 %). *C'est la relecture qui a trouvé le
+      trou de l'outil, pas l'outil.*
+
+      ⚠️⚠️ **ET LA MESURE FAITE POUR TRANCHER RETOURNE LA CRAINTE DES RELECTEURS.** Ils
+      soupçonnaient la campagne de fabriquer cet indice. C'est l'inverse : il vient du **biais
+      d'origine**, et nos vagues le **ferment**.
+
+      | rendement de « ÉCARTER la moins bavarde » | cours |
+      |---|---|
+      | 100,0 % · 100,0 % · 94,1 % | `nosql`, `solidity`, `cobol` — **non traités** |
+      | 33,3 % · 28,6 % · 0,0 % · 0,0 % | `ocaml`, `kotlin`, `os`, `data-eng` — **détordus** |
+
+      Sur `cobol` la stratégie atteint **58,2 % de réussite globale**, à 1,8 point de la cible de
+      B1. **Un cours non traité pouvait donc être deviné à près de 60 % par une règle que rien ne
+      mesurait**, et la seule raison pour laquelle ce n'était pas visible est que les
+      32 stratégies étaient presque toutes directionnelles dans le même sens.
+
+      **CONTRÔLES** : `verif.js --rapide` **69,0 s** ; `verif-html` **0 grave / 0 attention** ;
+      `verif-donnees` **0 erreur / 25 contrôles** ; **55 blocs JSON** valides ; 0 BOM ; 0 URL de
+      CDN dans le site (les 33 occurrences trouvées sont dans un profil Chrome jetable de
+      `scratchpad/`, non versionné) ; les deux épreuves par injection **10/10** et **6/6**, arbre
+      restauré ; index régénérés en `--fresh` avec les **six** cibles ; les deux cliquets refigés
+      et `kotlin` marqué `traite` — **30 cours verrouillés**.
+
+      ⚠️ **LE PIÈGE STRUCTUREL, 5ᵉ FOIS** : détordre `kotlin` a périmé les chiffres que
+      `doc/lecon-03` **publie sur le site** (48,8 % → **47,7 %**, 2 976 → **2 913** manquements à
+      S3) et `verif-normatif` est passé à **64/66**. Le nombre était écrit avec une **espace
+      insécable U+00A0 littérale**, exactement comme sur `java` et `ocaml` : un motif naïf rend
+      « 0 occurrence » sans erreur. Après correction : **66/66**.
+
+      **ÉTAT DU SITE** : **6 167 questions, 3 657 devinables par la longueur, 59,3 %** — contre
+      5 081 et 84,8 % au cadrage de B4. **1 424 questions rendues, 25,5 points gagnés.** La case
+      reste **décochée** : 59 cours restent au-dessus de 60 %.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
