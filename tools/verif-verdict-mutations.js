@@ -121,6 +121,51 @@ poser(3);
 juger('temoin sortant en 3 -> SIGNALE (un code non nul autre que 2 reste une faute)', 1, 'SIGNALE',
   'NON MESURE', chaine('_canari-verdict.tmp.js'));
 
+/* ---------------------------------------------------------------- cas 7 a 9 */
+/* LA TRACE ET LA COUVERTURE ANNONCÉE (point A6 du chantier V17, 2026-09-09).
+ * Deux comportements ajoutés le même jour, pour la même raison mesurée : le
+ * 2026-09-09, `--complet` a rendu 5 SIGNALE + 1 NON MESURE, et trois de ces
+ * signalements ont disparu quand on a relancé l'outil seul — sans qu'aucune trace
+ * ne permette de savoir ce qui avait été signalé. Pendant ce temps `--rapide`,
+ * le mode que lance chaque passe, imprimait « tout est vert » sur 27 des 62
+ * étapes sans le dire.
+ *   · cas 7 : une étape qui SIGNALE laisse un fichier de trace, nommé dans le
+ *     verdict, et ce fichier contient bien la sortie de l'outil ;
+ *   · cas 8 : une étape VERTE n'écrit rien (le journal ne garde que ce qu'on aura
+ *     besoin de relire) ;
+ *   · cas 9 : un mode partiel DIT combien d'étapes de la chaîne il n'a pas jouées.
+ */
+poser(1);
+var r7 = chaine('_canari-verdict.tmp.js');
+var mTrace = /trace : (\S+)/.exec(r7.sortie);
+var contenuOk = false;
+if (mTrace) {
+  try {
+    contenuOk = fs.readFileSync(path.join(RACINE, mTrace[1]), 'utf8')
+      .indexOf('temoin du verdict : je sors en 1') !== -1;
+  } catch (e) { contenuOk = false; }
+}
+if (!mTrace || !contenuOk) echecs++;
+CAS.push({ nom: 'trace', vu: !!(mTrace && contenuOk) });
+console.log('  ' + (mTrace && contenuOk ? 'VU     ' : 'MANQUE ') +
+  'une etape SIGNALE laisse une trace relisible');
+console.log('           fichier annonce : ' + (mTrace ? mTrace[1] : 'AUCUN') +
+  ' · sortie de l\'outil dedans : ' + (contenuOk ? 'oui' : 'NON'));
+
+poser(0);
+var r8 = chaine('_canari-verdict.tmp.js');
+var pasDeTrace = r8.sortie.indexOf('trace : ') === -1;
+if (!pasDeTrace) echecs++;
+CAS.push({ nom: 'vert sans trace', vu: pasDeTrace });
+console.log('  ' + (pasDeTrace ? 'VU     ' : 'MANQUE ') + 'une etape VERTE n\'ecrit aucune trace');
+
+var couv = /CE VERDICT NE PORTE QUE SUR (\d+) DES (\d+) ETAPES/.exec(r8.sortie);
+var couvOk = !!couv && Number(couv[2]) > Number(couv[1]);
+if (!couvOk) echecs++;
+CAS.push({ nom: 'couverture annoncee', vu: couvOk });
+console.log('  ' + (couvOk ? 'VU     ' : 'MANQUE ') + 'un mode partiel DIT ce qu\'il n\'a pas joue');
+console.log('           annonce : ' + (couv ? couv[1] + ' des ' + couv[2] + ' etapes jouees' : 'AUCUNE'));
+
 try { fs.unlinkSync(CANARI); } catch (e) { /* rien */ }
 
 /* ------------------------------------------------------------- cas 5 et 6 */

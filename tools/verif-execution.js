@@ -54,12 +54,17 @@ var http = require("http");
 var path = require("path");
 var crypto = require("crypto");
 var cp = require("child_process");
+var portChrome = require('./lib/port-chrome.js');
 
 var RACINE = path.resolve(__dirname, "..");
 var Interpreteur = require(path.join(RACINE, "js", "interpreteur.js"));
 var EXEMPLES = require(path.join(RACINE, "js", "execution-exemples.js"));
 var PAGE = path.join(RACINE, "pages", "execution.html");
-var PORT = 9333;
+/* Le port n'est plus ecrit en dur : Chrome le choisit et l'annonce dans son
+   profil (point A6 du chantier V17). Six paires d'outils partageaient un meme
+   numero, et un port deja pris fait mesurer LA PAGE D'UN AUTRE sans rien dire.
+   Voir tools/lib/port-chrome.js. */
+var PORT = 0;
 
 var CHROME = ["C:/Program Files/Google/Chrome/Application/chrome.exe",
   "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
@@ -207,10 +212,14 @@ function numeroDePas(position) {
      qu'elle n'en a pas BESOIN. Ce sont deux affirmations differentes, et c'est la
      seconde que le chantier demande — celle qui tiendrait chez un apprenant hors ligne.
      Meme drapeau que verif-stockage.js et preuves/sql-lecon.js. */
-  var proc = cp.spawn(CHROME, ["--headless=new", "--remote-debugging-port=" + PORT, "--disable-gpu",
+  var profilCh = profil;
+  portChrome.oublier(profilCh);
+  var proc = cp.spawn(CHROME, ["--headless=new", "--remote-debugging-port=0", "--disable-gpu",
     "--no-first-run", "--no-default-browser-check", "--disable-extensions",
     "--host-resolver-rules=MAP * ~NOTFOUND",
-    "--user-data-dir=" + profil, url], { stdio: "ignore" });
+    "--user-data-dir=" + profilCh, url], { stdio: "ignore" });
+  try { PORT = await portChrome.attendre(profilCh); }
+  catch (ePort) { console.log(ePort.message); try { proc.kill(); } catch (e2) {} process.exit(2); }
 
   var cible = null;
   for (var t = 0; t < 40 && !cible; t++) {

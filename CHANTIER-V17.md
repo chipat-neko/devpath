@@ -305,11 +305,118 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
       déclarés** · `node --check tools/verif.js` et `tools/verif-verdict-mutations.js` OK · `git status`
       propre hors les deux fichiers du point.
 
-- [ ] **A6 · `--rapide` montre 1 signalement, `--complet` en montre 6.** Cinq contrôles ne sont jamais
+- [x] **A6 · `--rapide` montre 1 signalement, `--complet` en montre 6.** Cinq contrôles ne sont jamais
       joués par le mode que l'on lance le plus souvent — et trois des six signalements de `--complet`
       **ne se reproduisent pas** quand on lance l'outil seul, ce qui est un second problème. Établir
       quels contrôles doivent entrer dans `--rapide` (le mode par défaut de toutes les passes), et
       traiter l'instabilité des trois signalements non reproductibles.
+      **FAIT (2026-09-09).**
+
+      **LA MESURE, REFAITE D'ABORD.** `--rapide` : **27 étapes, 108,6 s, tout vert — zéro signalement**
+      (le plan en annonçait 1 : il ne se reproduit plus). `--complet` : **62 étapes, 4 955,9 s**
+      (82,6 min), **5 SIGNALE + 1 NON MESURE**. L'écart entre les deux modes était donc bien réel, et
+      plus grand qu'annoncé : **35 étapes sur 62** ne tournaient jamais dans le mode des passes.
+
+      **LE TRI DES SIX, chacun relancé seul.** C'est ce tri qui a tout décidé :
+
+      | étape | dans la chaîne | relancée seule | ce que c'était |
+      |---|---|---|---|
+      | `lexique` | SIGNALE en 1,9 s | **verte** | instrument |
+      | `py-lec` | SIGNALE en 31,4 s | **verte** | instrument |
+      | `sql-lec` | SIGNALE, 40 blocs / 4 résultats | SIGNALE, 41 blocs / 25 résultats / 3 « MOTEUR KO » | instrument |
+      | `mth-prg` | SIGNALE en 4,2 s | SIGNALE : « 0 lien au lieu de 13 », titre et badge **vides** | instrument |
+      | `mutants` | SIGNALE en 282,6 s | **SIGNALE à l'identique** | **VRAI — voir A8** |
+      | `clic` | NON MESURE, 498 / 513 blocs | NON MESURE, **512 / 513** | **VRAI — voir A9** |
+
+      **PREMIÈRE CAUSE, DÉMONTRÉE PAR EXPÉRIENCE (et non déduite) : le port de débogage écrit en dur.**
+      Vingt-six outils lançaient Chrome sur un numéro fixe, et **six paires partageaient le même** :
+      9341 (`verif-bilan` · `execution-ancres`), 9357 (`verif-lexique-clic` · `verif-affichage` ·
+      `preuve-hors-reseau` · `exos-code`), 9359 (`python-lecon` · `exos-texte`), 9362 (`decodeur` ·
+      `etude-moteur-exos`), 9366 (`erreurs-sql` · `etude-inconnu`), 9367 (`decodeur-lecons` ·
+      `etudes-hub`). Quand le port est déjà pris, le second Chrome démarre **sans DevTools** et l'outil
+      mesure **la page d'un autre**. Expérience faite : un Chrome posé sur `about:blank` au port 9357,
+      puis `verif-lexique-clic.js` lancé → **« 1 contrôle OK, 11 en échec » en 2,0 s**, avec la ligne
+      « OK aucune erreur JavaScript pendant les clics » — **la signature exacte** du signalement de la
+      chaîne. Remède : `tools/lib/port-chrome.js`, la mécanique que `verif-clic.js` avait déjà adoptée
+      au V16/A3 (`--remote-debugging-port=0`, port lu dans `DevToolsActivePort`) — **plus aucun numéro
+      à réserver**. **Épreuve** : le même squatteur en place, l'outil corrigé rend **12 contrôles OK,
+      0 échec, code 0**. **22 outils convertis**, tous rejoués un par un : **22 / 22 en code 0**, dont
+      trois qui étaient rouges (`sql-lecon` 73 s, `mth-prg` 4 s, `lexique` sous squatteur). Il ne reste
+      **aucun** `--remote-debugging-port=` en dur sous `tools/`.
+
+      **SECONDE CAUSE, prise sur le fait pendant ce point même : le délai d'attente EN DUR.** Le mode
+      rapide neuf a fait rougir `lexique` une fois de plus — et la **trace** ajoutée le matin a permis
+      de la lire : « les 147 entrées du lexique sont rendues — **rendu 0** », page vide. Le port était
+      pourtant dynamique : la cause était `await attendre(1200)` après la navigation. Sur une machine
+      occupée, la page n'a pas fini de se construire, et l'outil accuse le site d'un défaut qu'il n'a
+      pas. Corrigé sur les deux outils où le symptôme a été mesuré (`verif-lexique-clic.js`,
+      `maths/module-5/verif-cours-progression.js`) : on attend un **état** (`readyState complete` + le
+      conteneur), plafond 15 s, et l'expiration sort en **2 — rien n'a pu être mesuré**, jamais en 1.
+      **Épreuve par injection** sur les deux : plafond ramené à zéro → « RIEN N A PU ETRE MESURE »,
+      **code 2** ; plafond restauré → **code 0**. Effet secondaire mesuré : `lexique` passe de 4,0 s à
+      **0,78 s**, `mth-prg` de 4,2 s à **3,1 s** — on n'attend plus pour rien.
+
+      **QUELS CONTRÔLES ENTRENT DANS `--rapide` : la règle, et elle est chiffrée.** Le critère
+      implicite était « tout ce qui ne pilote pas Chrome » — personne ne l'avait choisi, et il laissait
+      dehors des contrôles de **trois secondes** pendant qu'il en gardait à seize. Nouvelle règle,
+      écrite dans `tools/verif.js` : **une étape entre dans tous les modes si elle coûte ≤ 10 s et ne
+      modifie aucun fichier du dépôt**. Le seuil n'est pas rond par hasard : la distribution mesurée se
+      coupe d'elle-même — treize étapes entre 1,9 et 8,0 s, la suivante à 12,9 s, puis les balayages
+      (rendu 1 748 s, clic 1 585 s). **Les treize entrantes** (48,2 s en tout) : `git-commandes`-preuve
+      1,9 · `git-modele` 2,3 · `decodeur` 3,0 · `erreurs-sql` 3,0 · les cinq études 3,0 · `lexique` 4,0
+      · `cours-progression` 4,0 · `etude-inconnu` 7,0 · `execution` 8,0. **Trois d'entre elles
+      n'étaient jouées que par `--complet`, c'est-à-dire presque jamais.**
+      **Mesure du mode rapide : 27 étapes / 108,6 s → 40 étapes / 151,1 s, tout vert.**
+
+      **ET LE MODE DIT MAINTENANT CE QU'IL NE JOUE PAS.** `--rapide` imprimait « tout est vert » sans
+      jamais préciser sur quoi. Il imprime désormais : « **CE VERDICT NE PORTE QUE SUR 40 DES 62
+      ÉTAPES DE LA CHAÎNE : 22 ne sont pas jouées par ce mode. Elles ne sont ni vertes ni rouges — elles
+      n'ont pas tourné** », suivi de leurs noms. La liste n'est pas recopiée : elle est **demandée** à
+      `--complet --lister`, et un garde-fou signale toute étape jouée qui n'existerait plus dans
+      `--complet`.
+
+      **LA TRACE, sans quoi ce point n'aurait pas pu être traité.** La chaîne jetait la sortie de
+      chaque étape (deux lignes retenues sur des motifs) : un signalement non reproductible était donc
+      **illisible**. Toute étape non verte écrit désormais sa sortie entière sous
+      `scratchpad/.verif-journal/<horodatage>/`, et le verdict en donne le chemin. Le vert n'écrit
+      rien. **C'est cette trace qui a livré la seconde cause, deux heures après avoir été écrite.**
+
+      **ÉPREUVE PAR INJECTION** (`verif-verdict-mutations.js`, +3 cas) : **9 / 9 cas vus**, dépôt
+      propre. **Preuve que l'épreuve peut rougir** : `tracer()` neutralisé et le bloc de couverture
+      désactivé dans `verif.js` → **7 / 9, « 2 verdicts faux »**, les deux cas neufs nommés ; fichier
+      restauré à l'octet près → **9 / 9**.
+      **NON-RÉGRESSION** : `verif-chaine-declaree.js` **vert** (85 outils soumis, 76 dans un mode, 9
+      hors chaîne déclarés ; il lit bien 40 / 53 / 62 / 16) · `node --check` sur les 25 fichiers
+      touchés · zéro `cdnjs`/`fonts.googleapis`/`fonts.gstatic` introduit · aucune étape fantôme entre
+      `--rapide` et `--complet`.
+
+- [ ] **A7 · Dix-sept outils sortent en 0 — « tout va bien » — quand Chrome est introuvable.** Mesuré
+      le 2026-09-09 en cherchant la cause d'A6 : `if (!CHROME) { console.log('Chrome introuvable, rien
+      de mesuré.'); process.exit(0); }` dans 17 fichiers (`preuve-hors-reseau`, `verif-clic`,
+      `verif-lexique-clic`, `verif-bilan`, `verif-cours-progression`, `python-lecon`, `sql-lecon`,
+      `exos-code`, `exos-texte`, les six `etude-*`, `etudes-hub`). C'est **exactement le défaut qui
+      fonde ce chantier** : un contrôle vert qui n'a rien regardé — et le point A5 vient précisément
+      d'installer l'état qui manque (code 2 = NON MESURÉ). Sur une machine sans Chrome, la chaîne
+      annonce aujourd'hui « tout est vert » pour **17 étapes qui n'ont pas ouvert une seule page**.
+      Passer ces sorties en 2, et **l'éprouver** en rendant le chemin de Chrome introuvable sur une
+      copie jetable (la chaîne doit alors dire NON MESURÉ, pas OK).
+
+- [ ] **A8 · Une mutation SURVIVANTE : `verif-exemples.js` reste vert sur une sortie de commentaire
+      faussée.** `node tools/verif-chaine-mutations.js` le 2026-09-09 : **9 mutations injectées, 8
+      vues, 1 survivante** — « une sortie annoncée en commentaire qui ne correspond plus à ce que le
+      code produit » (98,8 s). Reproduit à l'identique en chaîne et hors chaîne. C'est **le défaut
+      fondateur du chantier V17 lui-même** — l'exemple faux qu'aucun outil ne rattrape — et il est
+      aujourd'hui **mesuré**, plus seulement raconté. Trouver ce que la mutation change exactement,
+      pourquoi `verif-exemples.js` ne le voit pas, corriger l'outil, et exiger **9 / 9**.
+
+- [ ] **A9 · `verif-clic.js` ne juge jamais tous les blocs, et l'écart varie.** Deux mesures du
+      2026-09-09 : **498 / 513** blocs cliqués dans la chaîne (1 584,7 s), **512 / 513** relancé seul
+      (1 081 s). L'outil a raison de sortir en 2 plutôt que d'annoncer « tout concorde » (c'est l'acquis
+      du V17/A3), mais il **ne peut pas être vert**, donc `--complet` ne peut jamais l'être non plus :
+      un mode qui ne peut pas être vert cesse d'être lu. Identifier le ou les blocs perdus — la mesure
+      dit qu'ils ne sont pas toujours les mêmes — et rendre la couverture soit complète, soit
+      **explicitement bornée** (un bloc qu'on décide de ne pas juger doit être nommé et compté à part,
+      comme le sont déjà les 51 « sans bloc de sortie à comparer »).
 
 ---
 

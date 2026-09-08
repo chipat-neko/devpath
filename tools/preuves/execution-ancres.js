@@ -51,13 +51,18 @@ var http = require("http");
 var path = require("path");
 var crypto = require("crypto");
 var cp = require("child_process");
+var portChrome = require('../lib/port-chrome.js');
 
 var VERBEUX = process.argv.indexOf("-v") !== -1;
 var RACINE = path.resolve(__dirname, "..", "..");
 var Interpreteur = require(path.join(RACINE, "js", "interpreteur.js"));
 var EXEMPLES = require(path.join(RACINE, "js", "execution-exemples.js"));
 var PAGE = path.join(RACINE, "pages", "execution.html");
-var PORT = 9341;
+/* Le port n'est plus ecrit en dur : Chrome le choisit et l'annonce dans son
+   profil (point A6 du chantier V17). Six paires d'outils partageaient un meme
+   numero, et un port deja pris fait mesurer LA PAGE D'UN AUTRE sans rien dire.
+   Voir tools/lib/port-chrome.js. */
+var PORT = 0;
 
 var CHROME = ["C:/Program Files/Google/Chrome/Application/chrome.exe",
   "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
@@ -186,10 +191,14 @@ async function attendrePret(cx, id, veutErreur) {
   var profil = fs.mkdtempSync(path.join(os.tmpdir(), "syntaxe-ancres-"));
   /* --host-resolver-rules : aucun nom de domaine ne se resout. Une URL de CDN
      qui reviendrait dans la page se verrait ici, et pas six mois plus tard. */
-  var proc = cp.spawn(CHROME, ["--headless=new", "--remote-debugging-port=" + PORT, "--disable-gpu",
+  var profilCh = profil;
+  portChrome.oublier(profilCh);
+  var proc = cp.spawn(CHROME, ["--headless=new", "--remote-debugging-port=0", "--disable-gpu",
     "--no-first-run", "--no-default-browser-check", "--disable-extensions",
     "--host-resolver-rules=MAP * ~NOTFOUND",
-    "--user-data-dir=" + profil, "about:blank"], { stdio: "ignore" });
+    "--user-data-dir=" + profilCh, "about:blank"], { stdio: "ignore" });
+  try { PORT = await portChrome.attendre(profilCh); }
+  catch (ePort) { console.log(ePort.message); try { proc.kill(); } catch (e2) {} process.exit(2); }
 
   var cible = null;
   for (var t = 0; t < 40 && !cible; t++) {

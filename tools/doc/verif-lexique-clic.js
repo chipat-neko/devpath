@@ -23,9 +23,14 @@ const net = require('net');
 const crypto = require('crypto');
 const cp = require('child_process');
 const profilChrome = require('../lib/profil-chrome.js');
+const portChrome = require('../lib/port-chrome.js');
 
 const RACINE = path.join(__dirname, '..', '..');
-const PORT = 9357;
+/* Le port n'est plus ecrit en dur : Chrome le choisit et l'annonce (point A6 du
+   chantier V17). Avec 9357 en dur, un autre Chrome deja pose sur ce port faisait
+   rendre a cet outil « 1 controle OK, 11 en echec » en 2,0 s -- sur la page d'un
+   autre. Voir tools/lib/port-chrome.js. */
+let PORT = 0;
 const MOTS = require('./vocab/mots.json');
 const compte = require('./vocab/gen-lexique-compte.js');
 
@@ -96,9 +101,12 @@ function verdict(cond, libelle, detail) {
 (async function () {
   const url = 'file:///' + path.join(RACINE, 'pages', 'lexique.html').replace(/\\/g, '/');
   console.log('verif-lexique-clic.js — pages/lexique.html ouverte dans Chrome, filtres cliqués\n');
-  const proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + PORT, '--disable-gpu',
+  const profil = profilChrome.neuf('lexique');
+  const proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=0', '--disable-gpu',
     '--allow-file-access-from-files', '--no-first-run', '--disable-extensions',
-    '--user-data-dir=' + profilChrome.neuf('lexique'), url], { stdio: 'ignore' });
+    '--user-data-dir=' + profil, url], { stdio: 'ignore' });
+  try { PORT = await portChrome.attendre(profil); }
+  catch (e) { console.log(e.message); proc.kill(); process.exit(2); }
   let cible = null;
   for (let t = 0; t < 40 && !cible; t++) {
     await attendre(300);
@@ -109,7 +117,29 @@ function verdict(cond, libelle, detail) {
   }
   if (!cible) { console.log('Chrome n a pas répondu.'); proc.kill(); process.exit(2); }
   const cx = connecter(cible.webSocketDebuggerUrl);
-  await attendre(1200);
+  /* ON ATTEND UN ÉTAT, PAS UNE DURÉE (point A6 du chantier V17, 2026-09-09).
+     Ici dormait `await attendre(1200)`. Sur une machine occupée — la chaîne entière
+     en train de tourner — la page n'avait pas fini de se construire au bout de ces
+     1,2 s, et l'outil rendait « 1 contrôle OK, 11 en échec » : douze faux rouges,
+     dont un « les 147 entrées du lexique sont rendues — rendu 0 » qui désignait un
+     bug du site qui n'existait pas. Mesuré deux fois le 2026-09-09, dans deux
+     passages de `verif.js` — et vert dès qu'on relançait l'outil seul.
+     On attend donc que la page soit CHARGÉE et que son conteneur existe. S'il
+     n'apparaît pas, rien n'a pu être mesuré : c'est un code 2, jamais un code 1.
+     Le conteneur VIDE, lui, reste une faute — c'est bien ce qu'on vient mesurer. */
+  let prete = false;
+  for (let t = 0; t < 150 && !prete; t++) {
+    await attendre(100);
+    try {
+      prete = await cx.evaluer('document.readyState === "complete" && !!document.getElementById("lx-entries")');
+    } catch (e) { prete = false; }
+  }
+  if (!prete) {
+    console.log('verif-lexique-clic.js — pages/lexique.html n a pas fini de se charger en 15 s :');
+    console.log('  RIEN N A PU ETRE MESURE (ce n est pas une faute du site).');
+    proc.kill();
+    process.exit(2);
+  }
 
   const total = compte.total();
 

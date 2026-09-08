@@ -18,8 +18,13 @@
  * Code de sortie 1 si une entrée diverge ou si Chrome a émis une requête distante.
  */
 var cp = require('child_process'), path = require('path'), http = require('http'), fs = require('fs');
+var portChrome = require('../lib/port-chrome.js');
 var RACINE = path.resolve(__dirname, '..', '..');
-var PORT = 9366;
+/* Le port n'est plus ecrit en dur : Chrome le choisit et l'annonce dans son
+   profil (point A6 du chantier V17). Six paires d'outils partageaient un meme
+   numero, et un port deja pris fait mesurer LA PAGE D'UN AUTRE sans rien dire.
+   Voir tools/lib/port-chrome.js. */
+var PORT = 0;
 var CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
               'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
               process.env.LOCALAPPDATA + '/Google/Chrome/Application/chrome.exe']
@@ -33,9 +38,13 @@ function get(u) {
 }
 (async function () {
   console.log('erreurs-sql.js — les entrées SQL du décodeur, rejouées dans sql.js (file://, DNS coupé)\n');
-  var proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + PORT, '--disable-gpu',
+  var profilCh = path.join(RACINE, 'scratchpad', '.chrome-sql-err');
+  portChrome.oublier(profilCh);
+  var proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=0', '--disable-gpu',
     '--no-first-run', '--disable-extensions', '--host-resolver-rules=MAP * ~NOTFOUND',
-    '--user-data-dir=' + path.join(RACINE, 'scratchpad', '.chrome-sql-err'), 'about:blank'], { stdio: 'ignore' });
+    '--user-data-dir=' + profilCh, 'about:blank'], { stdio: 'ignore' });
+  try { PORT = await portChrome.attendre(profilCh); }
+  catch (ePort) { console.log(ePort.message); try { proc.kill(); } catch (e2) {} process.exit(2); }
   var cible = null;
   for (var t = 0; t < 40 && !cible; t++) {
     await dodo(300);

@@ -19,9 +19,14 @@ var net = require('net');
 var crypto = require('crypto');
 var fs = require('fs');
 var profilChrome = require('../../lib/profil-chrome.js');
+var portChrome = require('../../lib/port-chrome.js');
 
 var RACINE = path.join(__dirname, '..', '..', '..');
-var PORT = 9341;
+/* Le port n'est plus ecrit en dur : Chrome le choisit et l'annonce dans son
+   profil (point A6 du chantier V17). Six paires d'outils partageaient un meme
+   numero, et un port deja pris fait mesurer LA PAGE D'UN AUTRE sans rien dire.
+   Voir tools/lib/port-chrome.js. */
+var PORT = 0;
 var PAGES = process.argv.slice(2).filter(function (a) { return a.indexOf('--') !== 0; });
 if (!PAGES.length) PAGES = ['pages/maths/lecon-13.html', 'pages/maths/lecon-06.html'];
 
@@ -120,9 +125,13 @@ function scoreLu(texte, sur) {
   for (var p = 0; p < PAGES.length; p++) {
     var page = PAGES[p];
     var url = 'file:///' + path.resolve(RACINE, page).replace(/\\/g, '/');
-    var proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + PORT, '--disable-gpu',
+    var profilCh = profilChrome.neuf('bilan');
+    portChrome.oublier(profilCh);
+    var proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=0', '--disable-gpu',
       '--allow-file-access-from-files', '--no-first-run', '--disable-extensions',
-      '--user-data-dir=' + profilChrome.neuf('bilan'), url], { stdio: 'ignore' });
+      '--user-data-dir=' + profilCh, url], { stdio: 'ignore' });
+    try { PORT = await portChrome.attendre(profilCh); }
+    catch (ePort) { console.log(ePort.message); try { proc.kill(); } catch (e2) {} process.exit(2); }
     var cible = null;
     for (var i = 0; i < 60 && !cible; i++) {
       await attendre(250);

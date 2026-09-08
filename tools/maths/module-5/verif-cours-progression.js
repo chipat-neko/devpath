@@ -22,9 +22,14 @@ var net = require('net');
 var crypto = require('crypto');
 var fs = require('fs');
 var profilChrome = require('../../lib/profil-chrome.js');
+var portChrome = require('../../lib/port-chrome.js');
 
 var RACINE = path.join(__dirname, '..', '..', '..');
-var PORT = 9337;
+/* Le port n'est plus ecrit en dur : Chrome le choisit et l'annonce dans son
+   profil (point A6 du chantier V17). Six paires d'outils partageaient un meme
+   numero, et un port deja pris fait mesurer LA PAGE D'UN AUTRE sans rien dire.
+   Voir tools/lib/port-chrome.js. */
+var PORT = 0;
 /* Paramétrable depuis la ligne de commande, pour servir à d'autres cours que
    « maths » sans se recopier :
      node tools/maths/module-5/verif-cours-progression.js --cours=doc --terminees=1 --attendues=1
@@ -107,9 +112,13 @@ function connecter(wsUrl) {
 (async function () {
   console.log('verif-cours-progression.js — la page de cours avec une progression SEMÉE\n');
   var url = 'file:///' + path.resolve(RACINE, PAGE).replace(/\\/g, '/');
-  var proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + PORT, '--disable-gpu',
+  var profilCh = profilChrome.neuf('progression');
+  portChrome.oublier(profilCh);
+  var proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=0', '--disable-gpu',
     '--allow-file-access-from-files', '--no-first-run', '--disable-extensions',
-    '--user-data-dir=' + profilChrome.neuf('progression'), url], { stdio: 'ignore' });
+    '--user-data-dir=' + profilCh, url], { stdio: 'ignore' });
+  try { PORT = await portChrome.attendre(profilCh); }
+  catch (ePort) { console.log(ePort.message); try { proc.kill(); } catch (e2) {} process.exit(2); }
 
   var cible = null;
   for (var i = 0; i < 60 && !cible; i++) {
@@ -135,7 +144,29 @@ function connecter(wsUrl) {
   await cdp.evaluer('localStorage.setItem("syntaxe-progress", JSON.stringify(' +
     JSON.stringify(paquet) + ')); "sémé"');
   await cdp.naviguer(url);
-  await attendre(1400);
+  /* ON ATTEND UN ETAT, PAS UNE DUREE (point A6 du chantier V17, 2026-09-09).
+     Ici dormait `await attendre(1400)`. Le 2026-09-09, cet outil a rendu « liens de
+     lecon : 0 au lieu de 13 · la barre affiche (rien) · le badge ne mentionne pas
+     les 13 lecons : «  » » — titre vide, badge vide, TOUT vide : la page n'avait
+     simplement pas fini de se recharger. Un rouge qui accuse le site d'un defaut
+     qu'il n'a pas est pire qu'un silence. On attend donc que le rechargement soit
+     termine et que le conteneur des modules existe ; s'il n'apparait pas, RIEN n'a
+     pu etre mesure (code 2). Un conteneur present mais VIDE reste une faute : c'est
+     precisement ce que cet outil vient mesurer. */
+  var prete = false;
+  for (var tP = 0; tP < 150 && !prete; tP++) {
+    await attendre(100);
+    try {
+      prete = await cdp.evaluer('document.readyState === "complete" && ' +
+        '!!document.querySelector("[data-course-modules]")');
+    } catch (e) { prete = false; }
+  }
+  if (!prete) {
+    console.log('verif-cours-progression.js — ' + PAGE + ' n a pas fini de se recharger en 15 s :');
+    console.log('  RIEN N A PU ETRE MESURE (ce n est pas une faute du site).');
+    proc.kill();
+    process.exit(2);
+  }
 
   var vu = await cdp.evaluer('(function () {' +
     ' var liens = Array.from(document.querySelectorAll("[data-course-modules] a[href]"));' +

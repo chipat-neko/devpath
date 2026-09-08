@@ -65,6 +65,7 @@
 
 var cp = require("child_process");
 var path = require("path");
+var fs = require("fs");
 
 var args = process.argv.slice(2);
 function flag(n) { return args.indexOf("--" + n) !== -1; }
@@ -241,6 +242,55 @@ var ETAPES = [
   { nom: "mth-e4 ", fichier: "maths/module-4/verif-expect.js", args: [], quoi: "module 4 : la solution publiee produit bien son run.expect" },
   { nom: "mth-e5 ", fichier: "maths/module-5/verif-expect.js", args: [], quoi: "module 5 : la solution publiee produit bien son run.expect" },
 ];
+
+/* ===================================================================== *
+ * QUI ENTRE DANS `--rapide` : LA REGLE, ET SA MESURE (point A6, 2026-09-09).
+ *
+ * Le mode rapide s'etait constitue sur un critere implicite — « tout ce qui ne
+ * pilote pas Chrome » — que personne n'avait choisi et que rien ne justifiait.
+ * Il laissait dehors des controles de TROIS SECONDES pendant qu'il en gardait a
+ * seize. Or c'est ce mode, et lui seul, que lance chaque passe avant de cocher
+ * une case : ce qu'il ne joue pas n'est joue par personne.
+ *
+ * LA REGLE EST DESORMAIS LE COUT MESURE, et rien d'autre :
+ *     une etape entre dans TOUS les modes si elle coute 10 s ou moins
+ *     et si elle ne modifie aucun fichier du depot.
+ * Le seuil de 10 s n'est pas un chiffre rond choisi au hasard : c'est le point ou
+ * la distribution mesuree le 2026-09-09 se coupe d'elle-meme. Treize etapes
+ * tiennent entre 1,9 et 8 s ; la suivante est a 12,9 s, et au-dela on trouve les
+ * balayages (rendu 1 748 s, clic 1 585 s, git-commandes 180 s).
+ *
+ * LES TREIZE, mesurees seules, machine au repos, APRES le passage au port
+ * dynamique du meme point : git-commandes-preuve 1,9 · git-modele 2,3 · decodeur
+ * 3,0 · erreurs-sql 3,0 · etude-journal 3,0 · etude-moteur-exos 3,0 ·
+ * etude-recherche 3,0 · etude-reecriture 3,0 · etude-euclide 3,0 · lexique 4,0 ·
+ * cours-progression 4,0 · etude-inconnu 7,0 · execution 8,0 — 48,2 s en tout.
+ * Trois d'entre elles (decodeur, git-modele, git-commandes-preuve) n'etaient
+ * jouees QUE par `--complet`, c'est-a-dire presque jamais.
+ * Elles pilotent Chrome pour la plupart, et c'est bien la le point : le critere
+ * « pilote Chrome » etait un proxy du cout, et un mauvais proxy.
+ *
+ * ⚠ CETTE LISTE DOUBLE, POUR LE SEUL MODE RAPIDE, des etapes definies plus bas
+ * avec leurs commentaires — on ne recopie pas ces commentaires, qui expliquent
+ * POURQUOI chaque controle existe et valent d'etre lus a un seul endroit. Une
+ * liste doublee se perime : le verdict verifie donc, a chaque passage, que toute
+ * etape jouee par ce mode existe bien dans `--complet`, et le dit sinon.
+ * ===================================================================== */
+if (RAPIDE) ETAPES = ETAPES.concat([
+  { nom: "etude-1", fichier: "preuves/etude-journal.js", args: [], quoi: "etude 1 : le programme publie rend-il, dans le navigateur, la sortie publiee" },
+  { nom: "etude-2", fichier: "preuves/etude-moteur-exos.js", args: [], quoi: "etude 2 : les extraits publies sont-ils ceux de js/lecon.js" },
+  { nom: "etude-3", fichier: "preuves/etude-recherche.js", args: [], quoi: "etude 3 : le rapport publie est-il celui que la modification annoncee produit" },
+  { nom: "etude-4", fichier: "preuves/etude-reecriture.js", args: [], quoi: "etude 4 : les deux programmes publies rendent-ils la meme sortie" },
+  { nom: "etude-5", fichier: "preuves/etude-euclide.js", args: [], quoi: "etude 5 : l'algorithme publie resiste-t-il a une force brute independante" },
+  { nom: "etude-6", fichier: "preuves/etude-inconnu.js", args: [], quoi: "etude 6 : la page dit-elle qu'aucun compilateur Go n'a tourne" },
+  { nom: "err-sql", fichier: "preuves/erreurs-sql.js", args: [], quoi: "decodeur : les entrees SQL rejouees dans le moteur du site" },
+  { nom: "decodwb", fichier: "preuves/decodeur.js", args: [], quoi: "le decodeur juge PAR LA PAGE : message exact, trace entiere" },
+  { nom: "gitmod ", fichier: "preuves/git-modele.js", args: [], quoi: "le modele de depot joue DANS CHROME : 13 empreintes contre celles de Node" },
+  { nom: "gitcmdp", fichier: "preuves/git-commandes.js", args: [], quoi: "les commandes du bac a sable jouees DANS CHROME, comparees a un vrai git" },
+  { nom: "lexique", fichier: "doc/verif-lexique-clic.js", args: [], quoi: "le lexique CLIQUE dans Chrome : filtres, recherche par le piege, quiz" },
+  { nom: "mth-prg", fichier: "maths/module-5/verif-cours-progression.js", args: [], quoi: "la page de cours avec une progression SEMEE : 13 liens, barre lue" },
+  { nom: "vexec  ", fichier: "verif-execution.js", args: [], quoi: "visualiseur : les 26 exemples pilotes par le selecteur, pas par pas" },
+]);
 
 /* ===================================================================== *
  * L'ARBITRAGE DU MODE RAPIDE (point A3 du chantier V16).
@@ -885,6 +935,35 @@ function causeDe(r, sortie) {
   })[0];
   return (motif || l[l.length - 1] || "l'outil est sorti en 2 sans rien expliquer").slice(0, 160);
 }
+/* =========================================================================== *
+ * LA TRACE DES ETAPES EN DEFAUT (point A6 du chantier V17).
+ *
+ * Cette chaine JETAIT la sortie de chaque etape : elle n'en gardait que deux
+ * lignes de bilan, choisies par des motifs. Consequence mesuree le 2026-09-09 :
+ * `--complet` a rendu 5 SIGNALE + 1 NON MESURE, et pour trois d'entre eux il
+ * etait IMPOSSIBLE de savoir ce qui avait ete signale -- relances seuls, ils
+ * revenaient verts. Un signalement qu'on ne peut pas relire est un signalement
+ * qu'on finit par ignorer, et c'est ainsi qu'un rouge intermittent devient du
+ * bruit de fond. La chaine ecrit donc la sortie ENTIERE de toute etape qui n'est
+ * pas verte, sous `scratchpad/.verif-journal/<horodatage>/` (dossier ignore par
+ * git), et le verdict donne le chemin. Ce n'est pas un journal general : le vert
+ * n'ecrit rien, seul ce qu'on aura besoin de relire est conserve.
+ * ========================================================================== */
+var JOURNAL = path.join(RACINE, "scratchpad", ".verif-journal",
+  new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19));
+function tracer(e, sortie) {
+  try {
+    fs.mkdirSync(JOURNAL, { recursive: true });
+    var f = path.join(JOURNAL, e.fichier.replace(/\.js$/, "").replace(/[\\/]/g, "-") + ".log");
+    fs.writeFileSync(f, "$ node tools/" + e.fichier + " " + e.args.join(" ") + "\n\n" + sortie, "utf8");
+    return path.relative(RACINE, f).replace(/\\/g, "/");
+  } catch (err) {
+    /* Un journal qu'on ne peut pas ecrire ne doit jamais faire tomber la chaine :
+       on le dit et on continue. */
+    return "(trace non ecrite : " + err.message + ")";
+  }
+}
+
 var resultats = [];
 var debutTotal = Date.now();
 
@@ -909,7 +988,8 @@ ETAPES.forEach(function (e) {
      confonde pas une machine sans git avec un verificateur en panne. */
   var cause = causeDe(r, sortie);
   if (etat === "nonmesure" && e.sautable) cause = "outil externe absent, cause prevue — " + cause;
-  resultats.push({ e: e, etat: etat, code: r.status, cause: cause, duree: duree, sortie: sortie });
+  var trace = etat === "ok" ? null : tracer(e, sortie);
+  resultats.push({ e: e, etat: etat, code: r.status, cause: cause, duree: duree, sortie: sortie, trace: trace });
   process.stdout.write("          -> " + LIBELLE[etat] + "  en " + duree + " s\n\n");
 });
 
@@ -932,6 +1012,9 @@ resultats.forEach(function (r) {
      sans cela elle se lit comme une etape ordinaire et on la survole. */
   if (r.etat === "nonmesure") console.log("            cause : " + r.cause);
   lignes.slice(-2).forEach(function (l) { console.log("            " + l.trim().slice(0, 100)); });
+  /* La sortie entiere de ce qui n'est pas vert : c'est elle qu'on relira quand le
+     signalement ne se reproduira pas (point A6). */
+  if (r.trace) console.log("            trace : " + r.trace);
 });
 console.log("=".repeat(70));
 /* LE VERDICT EN TROIS LIGNES, ET JAMAIS DEUX MOTS POUR TROIS ETATS. « tout est vert »
@@ -943,7 +1026,54 @@ console.log("  total : " + ((Date.now() - debutTotal) / 1000).toFixed(1) + " s �
     ? [enEchec.length ? enEchec.length + " verificateur(s) ont signale quelque chose" : "",
        nonMesures.length ? nonMesures.length + " n'ont RIEN PU MESURER" : ""]
       .filter(Boolean).join(" · ")
-    : "tout est vert (" + resultats.length + " etape(s), toutes mesurees)"));
+    : "tout est vert (" + resultats.length + " etape(s) de ce mode, toutes mesurees)"));
+
+/* =========================================================================== *
+ * CE QUE CE MODE N'A PAS JOUE (point A6 du chantier V17).
+ *
+ * `--rapide` est le mode que lance CHAQUE passe avant de cocher une case, et il
+ * imprimait « tout est vert » sans jamais dire qu'il ne joue que 27 des 62 etapes
+ * de la chaine. Mesure du 2026-09-09 : `--rapide` vert en 108,6 s pendant que
+ * `--complet` rendait 5 SIGNALE et 1 NON MESURE — dont une mutation SURVIVANTE,
+ * c'est-a-dire un verificateur aveugle. Les deux verdicts etaient exacts ; c'est
+ * la lecture qui etait fausse, faute d'avoir dit sur quoi portait le vert.
+ * On ne recopie pas la liste des etapes manquantes : on la DEMANDE a `--complet
+ * --lister`, qui ne lance rien. Une liste recopiee se perime en silence, et c'est
+ * ce defaut-la qui a rendu la surveillance aveugle au chantier V16.
+ * ========================================================================== */
+if (!COMPLET) {
+  var rTout = cp.spawnSync(process.execPath, [__filename, "--complet", "--lister"],
+    { encoding: "utf8", cwd: RACINE });
+  var toutes = (rTout.stdout || "").split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
+  var joues = {};
+  resultats.forEach(function (x) { joues[x.e.fichier] = true; });
+  var sautees = toutes.filter(function (f) { return !joues[f]; });
+  /* Le garde-fou de la liste doublee du mode rapide : une etape jouee ici qui
+     n'existe plus dans `--complet` est une ligne perimee, pas un controle. */
+  var fantomes = Object.keys(joues).filter(function (f) { return toutes.indexOf(f) === -1; });
+  if (toutes.length && fantomes.length) {
+    console.log("\n  ⚠ " + fantomes.length + " etape(s) jouee(s) par ce mode n'existent plus dans `--complet` :");
+    console.log("    " + fantomes.join(", ") + " — liste a corriger dans tools/verif.js.");
+  }
+  if (!toutes.length) {
+    console.log("\n  ⚠ impossible de savoir ce que ce mode ne joue pas : `--complet --lister` n'a rien rendu.");
+  } else if (sautees.length) {
+    console.log("\n  CE VERDICT NE PORTE QUE SUR " + resultats.length + " DES " + toutes.length +
+      " ETAPES DE LA CHAINE : " + sautees.length + " ne sont pas jouees par ce mode.");
+    console.log("  Elles ne sont ni vertes ni rouges — elles n'ont pas tourne.");
+    /* Au-dela de quarante, la liste noierait le verdict : on donne le compte et la
+       commande qui la rend. En dessous — le cas de `--rapide`, 35 sautees — on les
+       NOMME, parce qu'une liste qu'il faut aller chercher n'est jamais consultee. */
+    if (sautees.length <= 40) {
+      for (var iS = 0; iS < sautees.length; iS += 3) {
+        console.log("    " + sautees.slice(iS, iS + 3).join("  ·  "));
+      }
+    } else {
+      console.log("    (liste : node tools/verif.js --complet --lister)");
+    }
+    console.log("  Pour les jouer : node tools/verif.js --complet");
+  }
+}
 
 if (enEchec.length) {
   console.log("\n  Pour le detail, relance l'outil concerne :");

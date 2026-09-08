@@ -38,9 +38,14 @@ var net = require('net');
 var crypto = require('crypto');
 var fs = require('fs');
 var profilChrome = require('../lib/profil-chrome.js');
+var portChrome = require('../lib/port-chrome.js');
 
 var RACINE = path.resolve(__dirname, '..', '..');
-var PORT = 9357;
+/* Le port n'est plus ecrit en dur : Chrome le choisit et l'annonce dans son
+   profil (point A6 du chantier V17). Six paires d'outils partageaient un meme
+   numero, et un port deja pris fait mesurer LA PAGE D'UN AUTRE sans rien dire.
+   Voir tools/lib/port-chrome.js. */
+var PORT = 0;
 var args = process.argv.slice(2).filter(function (a) { return a.indexOf('--') !== 0; });
 /* --progression : sème une progression dans localStorage AVANT de mesurer.
    Un test avec un localStorage vide ment : plusieurs comportements du site (la
@@ -199,10 +204,14 @@ function portOccupe() {
     while ((mm = re.exec(src))) attendus.push(mm[1]);
 
     var url = 'file:///' + path.resolve(RACINE, page).replace(/\\/g, '/');
-    var proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + PORT, '--disable-gpu',
+    var profilCh = profilChrome.neuf('fraicheur');
+    portChrome.oublier(profilCh);
+    var proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=0', '--disable-gpu',
       '--allow-file-access-from-files', '--no-first-run', '--disable-extensions',
       '--window-size=1280,900',
-      '--user-data-dir=' + profilChrome.neuf('fraicheur'), url], { stdio: 'ignore' });
+      '--user-data-dir=' + profilCh, url], { stdio: 'ignore' });
+    try { PORT = await portChrome.attendre(profilCh); }
+    catch (ePort) { console.log(ePort.message); try { proc.kill(); } catch (e2) {} process.exit(2); }
     var cible = null;
     for (var t = 0; t < 40 && !cible; t++) {
       await attendre(300);

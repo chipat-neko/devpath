@@ -38,10 +38,15 @@ var http = require("http");
 var path = require("path");
 var crypto = require("crypto");
 var cp = require("child_process");
+var portChrome = require('./lib/port-chrome.js');
 
 var RACINE = path.resolve(__dirname, "..");
 var EXEMPLES = require(path.join(RACINE, "js", "execution-exemples.js"));
-var PORT = 9351;
+/* Le port n'est plus ecrit en dur : Chrome le choisit et l'annonce dans son
+   profil (point A6 du chantier V17). Six paires d'outils partageaient un meme
+   numero, et un port deja pris fait mesurer LA PAGE D'UN AUTRE sans rien dire.
+   Voir tools/lib/port-chrome.js. */
+var PORT = 0;
 
 /* Les temoins negatifs. Chacun a une RAISON, et elle compte autant que la liste. */
 var TEMOINS_NEGATIFS = [
@@ -169,10 +174,14 @@ function lireTable() {
 
   /* ---- Chrome ---- */
   var profil = fs.mkdtempSync(path.join(os.tmpdir(), "syntaxe-liens-"));
-  var proc = cp.spawn(CHROME, ["--headless=new", "--remote-debugging-port=" + PORT, "--disable-gpu",
+  var profilCh = profil;
+  portChrome.oublier(profilCh);
+  var proc = cp.spawn(CHROME, ["--headless=new", "--remote-debugging-port=0", "--disable-gpu",
     "--no-first-run", "--no-default-browser-check", "--disable-extensions",
     "--host-resolver-rules=MAP * ~NOTFOUND",
-    "--user-data-dir=" + profil, "about:blank"], { stdio: "ignore" });
+    "--user-data-dir=" + profilCh, "about:blank"], { stdio: "ignore" });
+  try { PORT = await portChrome.attendre(profilCh); }
+  catch (ePort) { console.log(ePort.message); try { proc.kill(); } catch (e2) {} process.exit(2); }
   var cible = null;
   for (var t = 0; t < 40 && !cible; t++) {
     await attendre(300);

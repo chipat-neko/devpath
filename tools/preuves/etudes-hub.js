@@ -29,9 +29,14 @@ var cp = require('child_process');
 var path = require('path');
 var http = require('http');
 var fs = require('fs');
+var portChrome = require('../lib/port-chrome.js');
 
 var RACINE = path.resolve(__dirname, '..', '..');
-var PORT = 9367;
+/* Le port n'est plus ecrit en dur : Chrome le choisit et l'annonce dans son
+   profil (point A6 du chantier V17). Six paires d'outils partageaient un meme
+   numero, et un port deja pris fait mesurer LA PAGE D'UN AUTRE sans rien dire.
+   Voir tools/lib/port-chrome.js. */
+var PORT = 0;
 var CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
               'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
               process.env.LOCALAPPDATA + '/Google/Chrome/Application/chrome.exe'].find(function (p) {
@@ -69,9 +74,13 @@ function fileUrl(rel) { return 'file:///' + path.resolve(RACINE, rel).replace(/\
 (async function () {
   console.log('etudes-hub.js — les six études sont-elles atteignables ? · file:// · DNS coupé\n');
 
-  var proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + PORT, '--disable-gpu',
+  var profilCh = path.join(RACINE, 'scratchpad', '.chrome-preuve-hub');
+  portChrome.oublier(profilCh);
+  var proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=0', '--disable-gpu',
     '--no-first-run', '--disable-extensions', '--host-resolver-rules=MAP * ~NOTFOUND',
-    '--user-data-dir=' + path.join(RACINE, 'scratchpad', '.chrome-preuve-hub'), 'about:blank'], { stdio: 'ignore' });
+    '--user-data-dir=' + profilCh, 'about:blank'], { stdio: 'ignore' });
+  try { PORT = await portChrome.attendre(profilCh); }
+  catch (ePort) { console.log(ePort.message); try { proc.kill(); } catch (e2) {} process.exit(2); }
 
   var cible = null;
   for (var t = 0; t < 40 && !cible; t++) {
