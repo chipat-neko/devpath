@@ -667,23 +667,41 @@ Object.keys(LESSONS).forEach((id) => {
 })();
 
 /* ==================================== I18 index dérivés non périmés (--strict) */
-/* build-index.js --strict sort en code 1 dès qu'une entrée de l'ancien index doit
-   être REPRISE (question/carte réécrite ou supprimée qui survit dans l'index). On
-   le lance en comparaison (n'écrit rien) : c'est le garde-fou qui ferme la famille
-   de bugs « index périmé ». Purge : build-index.js --write --fresh. */
+/* build-index.js --strict sort en code 1 sur DEUX causes distinctes :
+     (1) une entrée de l'ancien index doit être REPRISE (question supprimée qui
+         survit dans l'index) ;
+     (2) l'index PUBLIÉ diffère de l'index REGÉNÉRÉ (divergence de contenu).
+   Ce contrôle ne lisait que (1) — et la clé de reprise est l'énoncé seul, donc
+   réécrire un distracteur, une bonne réponse ou une explication ne reprenait rien.
+   Mesure du 2026-09-08 : quiz-index.js périmé de 18 212 octets et 71 entrées
+   fausses (cours lua), I18 VERT. On lit désormais les deux causes, et on
+   distingue « je n'ai pas pu mesurer » (outil en panne) de « j'ai trouvé une
+   faute » : sans ligne [--strict] dans la sortie, l'outil n'a rien conclu. */
 (function () {
   const c = check('I18', 'index dérivés non périmés (build-index --strict)');
   const { execFileSync } = require('child_process');
   const script = path.join(__dirname, 'build-index.js');
   try {
     execFileSync(process.execPath,
-      [script, '--strict', '--root=' + ROOT, '--only=quiz,flashcards,antiseches,pieges'],
-      { stdio: 'pipe' });
+      [script, '--strict', '--root=' + ROOT, '--only=quiz,flashcards,antiseches,pieges,search,searchlite'],
+      { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 });
   } catch (e) {
     const out = (e.stdout ? e.stdout.toString() : '') + (e.stderr ? e.stderr.toString() : '');
-    const n = (out.match(/(\d+) entrée\(s\) REPRISE/) || [])[1] || '?';
-    c.err(n + ' entrée(s) d\'index périmée(s) reprises de l\'ancien index — purger via « build-index.js --write --fresh »');
-    out.split('\n').filter((l) => /✗/.test(l)).slice(0, 4).forEach((l) => c.err('  ' + l.trim()));
+    const repris = (out.match(/(\d+) entrée\(s\) REPRISE/) || [])[1];
+    const perimes = (out.match(/(\d+) index PÉRIMÉ\(S\)/) || [])[1];
+    if (!repris && !perimes) {
+      c.err('build-index.js --strict n\'a PAS pu conclure (code ' + (e.status == null ? 'nul' : e.status) +
+        ', aucune ligne [--strict] en sortie) — contrôle non joué, ce n\'est pas un « OK »');
+      out.split('\n').filter((l) => l.trim()).slice(-4).forEach((l) => c.err('  ' + l.trim()));
+      return;
+    }
+    if (repris) {
+      c.err(repris + ' entrée(s) d\'index périmée(s) reprises de l\'ancien index — purger via « build-index.js --write --fresh »');
+    }
+    if (perimes) {
+      c.err(perimes + ' index publié(s) DIVERGENT(S) du contenu regénéré — regénérer via « build-index.js --write --fresh »');
+    }
+    out.split('\n').filter((l) => /✗/.test(l)).slice(0, 6).forEach((l) => c.err('  ' + l.trim()));
   }
 })();
 

@@ -64,7 +64,7 @@ Quatre exemples mesurés, qui donnent le ton :
 
 Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
 
-- [ ] **A1 · L'index des QCM, et le garde-fou qui le laissait passer.** `js/quiz-index.js` sert les
+- [x] **A1 · L'index des QCM, et le garde-fou qui le laissait passer.** `js/quiz-index.js` sert les
       questions de `pages/examen.html` (`examen.html:95` ; `js/examen.js:242` construit les options
       depuis `q.a` sans jamais relire les pages). Mesure de l'audit : index périmé de **18 212 octets**,
       **71 entrées divergentes**, toutes du cours `lua` — biais « la plus longue » à **88,9 % dans
@@ -76,6 +76,33 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
       `(\d+) entrée\(s\) REPRISE` ; la ligne « different du fichier cible » que `--strict` imprime
       pourtant n'est lue par personne. **Éprouver par injection** : modifier un distracteur dans une
       leçon, vérifier que I18 rougit.
+
+      **FAIT le 2026-09-08.** *Reprise de la mesure d'abord* : `quiz-index.js` n'est **plus** périmé
+      (`build-index.js --only=quiz` → « 6151 entrees (ancien : 6151, ecart +0) | identique au fichier
+      cible ») — le commit `532e2b8` l'avait régénéré. La moitié « régénérer » était donc déjà réglée ;
+      **la cause, elle, était intacte**, et c'est elle qui a été traitée.
+      *Correctif 1 — `build-index.js`* : ajout de l'accumulateur `staleAll` alimenté par `emit()` et
+      `emitObject()` (nouvelle fonction `noteDivergence`), et **seconde cause d'échec `--strict`** : en
+      mode comparaison, tout index publié qui diffère du contenu regénéré sort désormais en code 1 avec
+      l'écart en octets. En `--write` la divergence reste normale (on vient d'écrire) : la règle ne
+      s'applique qu'à `!WRITE`.
+      *Correctif 2 — `verif-donnees.js` I18* : lit maintenant **les deux causes** (`REPRISE` et
+      `index PÉRIMÉ(S)`) au lieu d'une seule, couvre `search,searchlite` en plus de
+      `quiz,flashcards,antiseches,pieges` (`maxBuffer` porté à 64 Mo), et **distingue « je n'ai pas pu
+      mesurer » de « j'ai trouvé une faute »** : si la sortie ne contient aucune ligne `[--strict]`,
+      il dit « contrôle non joué », il ne dit plus « ? entrée(s) reprises ».
+      *Ce que le nouveau garde-fou a trouvé immédiatement* : **`search-index.js` périmé de 8 octets** —
+      le mot « 425 » avait 2 documents publiés au lieu de 3, le manquant étant `doc/lecon-03.html`, la
+      leçon corrigée au commit `532e2b8` qui avait régénéré `quiz-index.js` **mais pas
+      `search-index.js`**. Régénéré (`--write --fresh --only=search,searchlite` ; `search-lite.js`
+      était déjà aligné, non réécrit).
+      *Épreuve par injection* (exigée par les règles permanentes) : un **distracteur** de
+      `pages/lua/lecon-05.html` réécrit (énoncé intact, donc clé `fold(q.q)` inchangée).
+      — **ancienne règle : « questions reprises de l ancien index : 0 » → serait restée VERTE** ;
+      — **nouvelle règle : code 1**, « 1 index PÉRIMÉ(S) … quiz-index.js (publie 4 142 772 o, regenere
+      4 142 760 o, ecart −12 o) » ; I18 passe à **2 ERREUR(S)**, `verif-donnees` sort en code 1.
+      — injection retirée → **I18 OK, 25 contrôles, 0 erreur**. Les deux sens sont prouvés.
+      *Non-régression* : `node tools/verif.js --rapide` → **tout est vert, 95,6 s**.
 
 - [ ] **A2 · Les deux cliquets du biais, qui ne peuvent pas rougir.** `verif-qcm-biais.js` et
       `verif-qcm-lexique.js` sortent en code 0 sur `lua` en imprimant « refiger avec `--ecrire` ».

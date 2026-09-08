@@ -420,11 +420,26 @@ function toJs(globalName, arr, trailingNewline) {
   var json = JSON.stringify(arr).replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
   return "window." + globalName + " = " + json + ";" + (trailingNewline ? "\n" : "");
 }
+/* DIVERGENCES : tout index dont le contenu regenere differe du fichier publie.
+   C'est la SECONDE forme de peremption, et elle etait invisible : --strict ne
+   sortait en code 1 que sur les entrees REPRISES, dont la cle est l'enonce seul
+   (fold(q.q)). Reecrire un distracteur, une bonne reponse ou une explication
+   conserve la cle : rien n'est repris, donc rien ne rougissait — alors que la
+   ligne « different du fichier cible » etait imprimee juste au-dessus. C'est
+   exactement le cas mesure le 2026-09-08 : quiz-index.js perime de 18 212 octets
+   et 71 entrees fausses, avec I18 vert. On les accumule ici. */
+var staleAll = [];
+function noteDivergence(fileName, same, before, text) {
+  if (same) return;
+  staleAll.push(fileName + " (publie " + before.length + " o, regenere " + text.length +
+    " o, ecart " + (text.length - before.length >= 0 ? "+" : "") + (text.length - before.length) + " o)");
+}
 function emit(fileName, globalName, arr, trailingNewline, oldCount) {
   var target = path.join(OUT, fileName);
   var text = toJs(globalName, arr, trailingNewline);
   var before = fs.existsSync(target) ? fs.readFileSync(target, "utf8") : "";
   var same = before === text;
+  noteDivergence(fileName, same, before, text);
   console.log(
     "  " + fileName + " : " + arr.length + " entrees" +
     (oldCount != null ? " (ancien : " + oldCount + ", ecart " + (arr.length - oldCount >= 0 ? "+" : "") + (arr.length - oldCount) + ")" : "") +
@@ -449,6 +464,7 @@ function emitObject(fileName, globalName, obj, count) {
   var text = toJs(globalName, obj, true);
   var before = fs.existsSync(target) ? fs.readFileSync(target, "utf8") : "";
   var same = before === text;
+  noteDivergence(fileName, same, before, text);
   console.log(
     "  " + fileName + " : " + count + " lecons | " +
     (text.length / 1048576).toFixed(2) + " Mo | " +
@@ -888,11 +904,23 @@ if (problems.length) {
 /* --strict : un index à jour ne reprend RIEN. Toute reprise = entrée périmée
    (question/carte réécrite ou supprimée qui survit dans l'index). On la signale
    et on sort en erreur, pour fermer la famille de bugs « index périmé ». */
+var strictFail = false;
 if (STRICT && carriedAll.length) {
   console.log("\n[--strict] " + carriedAll.length + " entrée(s) REPRISE(S) de l'ancien index (périmées : absentes du contenu actuel) :");
   carriedAll.slice(0, 60).forEach(function (x) { console.log("  ✗ " + x); });
   if (carriedAll.length > 60) console.log("  … et " + (carriedAll.length - 60) + " autre(s).");
   console.log("Purge : relance avec --write --fresh (ignore l'ancien index). Index périmé → échec strict.");
-  process.exit(1);
+  strictFail = true;
 }
-if (STRICT) console.log("\n[--strict] OK : aucune entrée périmée, l'index est aligné sur le contenu.");
+/* SECONDE cause d'échec strict, celle qui manquait : l'index PUBLIÉ diffère de
+   l'index REGÉNÉRÉ. En --write la divergence est normale (on vient d'écrire) ;
+   en comparaison, elle signifie que le fichier servi au navigateur ne dit plus
+   ce que disent les leçons. */
+if (STRICT && !WRITE && staleAll.length) {
+  console.log("\n[--strict] " + staleAll.length + " index PÉRIMÉ(S) : le fichier publié diffère du contenu regénéré :");
+  staleAll.forEach(function (x) { console.log("  ✗ " + x); });
+  console.log("Regénérer : node tools/build-index.js --write --fresh --only=… — index périmé → échec strict.");
+  strictFail = true;
+}
+if (strictFail) process.exit(1);
+if (STRICT) console.log("\n[--strict] OK : aucune entrée périmée, aucun index divergent, tout est aligné sur le contenu.");
