@@ -70,15 +70,27 @@ var meriteUnRepli = lireFonction('meriteUnRepli');
 var envelopperPourRepli = lireFonction('envelopperPourRepli');
 var preambuleQuiCompile = lireFonction('preambuleQuiCompile');
 var preambuleReAncre = lireFonction('preambuleReAncre');
+var preambuleElague = lireFonction('preambuleElague');
+/* ⚠️ CETTE SONDE RECOPIAIT LA BOUCLE DU REPLI (dette ouverte au point B2b-14, soldée au
+   point B2b-15). Elle ignorait donc l'ÉLAGAGE PAR LE HAUT écrit ce jour-là, et ses chiffres
+   décrivaient l'état d'AVANT : elle rangeait en AUTRE-ERR huit blocs que le moteur sauve.
+   L'ordre des deux réécritures est maintenant LU dans `js/runner.js`, comme les onze règles
+   au-dessus — c'est exactement ce que fait `tools/verif-js.js`. */
+var prochainPrefixe = lireFonction('prochainPrefixe');
 
 function dec(s) {
   return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
           .replace(/&#39;/g, "'").replace(/&amp;/g, '&');
 }
+/* Motif BORNÉ par `</figure>`, comme dans `tools/verif-js.js` depuis le point B2b-15 :
+   non borné, il traverse les figures et associe l'attribut de l'une au code de l'autre. */
 function blocsJs(fichier) {
   var src = fs.readFileSync(fichier, 'utf8'), out = [];
-  var re = /<figure class="code-block"([^>]*)>[\s\S]*?<code class="language-javascript">([\s\S]*?)<\/code>/g, m;
-  while ((m = re.exec(src))) out.push({ code: dec(m[2]).trim() });
+  var re = /<figure class="code-block"([^>]*)>([\s\S]*?)<\/figure>/g, m;
+  while ((m = re.exec(src))) {
+    var c = m[2].match(/<code class="language-javascript">([\s\S]*?)<\/code>/);
+    if (c) out.push({ code: dec(c[1]).trim() });
+  }
   return out;
 }
 function lecons() {
@@ -90,46 +102,18 @@ function lecons() {
   })(path.join(RACINE, 'pages'));
   return out;
 }
-var GLOBALES_WORKER = ['TextEncoder', 'TextDecoder', 'performance', 'EventTarget', 'Event',
-  'CustomEvent', 'URL', 'URLSearchParams', 'Blob', 'AbortController', 'AbortSignal',
-  'ReadableStream', 'WritableStream', 'TransformStream', 'FormData', 'Headers', 'Request',
-  'Response', 'atob', 'btoa', 'PerformanceObserver', 'crypto', 'DOMException',
-  'MessageChannel', 'BroadcastChannel', 'CompressionStream', 'DecompressionStream'];
-function fmtArgs(a) {
-  return Array.prototype.slice.call(a).map(function (v) {
-    if (typeof v === 'string') return v;
-    if (v === undefined) return 'undefined';
-    if (v === null) return 'null';
-    if (typeof v === 'function') return String(v);
-    try { return JSON.stringify(v); } catch (e) { return String(v); }
-  }).join(' ');
-}
-function contexteWorker(sorties) {
-  var faux = function () {};
-  var ctx = {
-    console: {
-      log: function () { sorties.push(fmtArgs(arguments)); },
-      info: function () { sorties.push(fmtArgs(arguments)); },
-      debug: function () { sorties.push(fmtArgs(arguments)); },
-      warn: function () { sorties.push(fmtArgs(arguments)); },
-      error: function () { sorties.push(fmtArgs(arguments)); },
-      table: faux, group: faux, groupEnd: faux, time: faux, timeEnd: faux, dir: faux
-    },
-    setTimeout: function (f) { try { if (typeof f === 'function') f(); } catch (e) {} return 0; },
-    setInterval: function () { return 0; },
-    clearTimeout: faux, clearInterval: faux,
-    queueMicrotask: function (f) { try { f(); } catch (e) {} },
-    structuredClone: function (v) { return JSON.parse(JSON.stringify(v)); },
-    self: null, globalThis: null
-  };
-  GLOBALES_WORKER.forEach(function (n) {
-    if (typeof globalThis[n] !== 'undefined') ctx[n] = globalThis[n];
-  });
-  ctx.self = ctx; ctx.globalThis = ctx;
-  return ctx;
-}
+/* LE CONTEXTE EST CELUI DE verif-js.js, LU DANS LE MEME MODULE (2026-09-09, B2b-15).
+   Cette sonde en portait sa PROPRE copie, restee au console a 11 methodes et au
+   structuredClone contrefait : elle mesurait donc un autre moteur que le verificateur
+   dont elle prepare les cases. */
+var CTX = require('../lib/contexte-worker.js');
+var contexteWorker = CTX.contexteWorker;
+/* Et la MÊME reconnaissance des erreurs annoncées : cette sonde n'en avait que le motif
+   français, pas l'annonce par son NOM technique (point B2b-13), et comptait donc en panne
+   deux blocs (`pages/js/lecon-06.html` #9 et #10) que `verif-js.js` compte annoncés. */
+var erreurAnnoncee = CTX.erreurAnnoncee;
+
 var DELAI = 5000;
-var ERREUR_ANNONCEE = /\/\/[^\n]*\b(erreur|Erreur|ERREUR|throw|lève|leve|refuse|rejett?e|échoue|echoue|plante|invalide)\b/;
 
 function declareEnColonneZero(texte, nom) {
   var n = nom.replace(/[$]/g, '\\$&');
@@ -166,16 +150,15 @@ lecons().forEach(function (f) {
     var msg = null;
     try { vm.runInContext(code, vm.createContext(contexteWorker(sorties)), { timeout: DELAI, displayErrors: false }); }
     catch (e) { msg = (e && e.name ? e.name + ': ' : '') + (e && e.message ? e.message : String(e)); }
-    if (!msg || /timed out/i.test(msg) || ERREUR_ANNONCEE.test(code)) return;
+    if (!msg || /timed out/i.test(msg) || erreurAnnoncee(code, msg)) return;
     if (!meriteUnRepli(msg)) return;
     var nom = /^ReferenceError: (.+?) is not defined/.exec(msg);
     if (!nom) return;
     nom = nom[1];
-    /* Le repli a-t-il été tenté, et qu'a-t-il donné ? RÉ-ANCRAGE COMPRIS (point B2b-9) :
-       sans lui, cette sonde classerait « TRI » cinq blocs que le moteur sauve désormais,
-       et sa réponse se périmerait dès la passe suivante. */
+    /* Le repli a-t-il été tenté, et qu'a-t-il donné ? RÉ-ANCRAGE (B2b-9) ET ÉLAGAGE
+       (B2b-14) COMPRIS : sans eux, cette sonde classerait en défaut des blocs que le
+       moteur sauve, et sa réponse se périmerait à chaque passe. */
     var essayer = function (gardes) {
-      if (!gardes.length) return 'préambule vide';
       var s2 = [], brut = contexteWorker(s2);
       brut.__finDuPrelude = function () {};
       try {
@@ -186,12 +169,13 @@ lecons().forEach(function (f) {
     };
     var prf = prefixe;
     var gardes = preambuleQuiCompile(prf, code);
-    var msg2 = essayer(gardes);
-    while (msg2 && meriteUnRepli(msg2)) {
-      var prf2 = preambuleReAncre(prf, msg2);
-      if (!prf2) break;
-      prf = prf2;
-      gardes = preambuleQuiCompile(prf, code);
+    var msg2 = gardes.length ? essayer(gardes) : 'préambule vide';
+    while (msg2 && gardes.length) {
+      var suite = prochainPrefixe(prf, msg2);
+      if (!suite) break;
+      var g2 = preambuleQuiCompile(suite.prefixe, code);
+      if (!g2.length) break;
+      prf = suite.prefixe; gardes = g2;
       msg2 = essayer(gardes);
     }
     if (!msg2) return;   // le repli l'a sauvé : rien à expliquer

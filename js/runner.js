@@ -483,6 +483,25 @@
     return /^ReferenceError: .+ is not defined/.test(String(texte));
   }
 
+  /* L'ORDRE DES DEUX RÉÉCRITURES, ÉCRIT UNE SEULE FOIS (2026-09-09, point B2b-15).
+     Le repli qui a échoué peut être retenté de deux façons : le RÉ-ANCRAGE (B2b-9) coupe
+     la fin du préfixe, l'ÉLAGAGE (B2b-14) en coupe le début. Leur ordre de priorité était
+     écrit TROIS fois — dans `lancerJs`, dans `tools/verif-js.js`, dans
+     `tools/preuves/sonde-repli-manque.js` — et trois exemplaires d'une même règle finissent
+     toujours par diverger : le vérificateur mesure alors un moteur qui n'existe pas, ce qui
+     est le défaut soldé aux points B2b-2, B2b-12 et B2b-13. Une seule écriture, ici, LUE
+     par les deux outils. Rend `null` quand aucune des deux réécritures n'a de prise. */
+  function prochainPrefixe(prefixe, erreur) {
+    if (!prefixe || !prefixe.length) return null;
+    if (meriteUnRepli(erreur)) {
+      var p = preambuleReAncre(prefixe, erreur);
+      if (p) return { prefixe: p, facon: "re-ancre" };
+    }
+    var q = preambuleElague(prefixe, erreur);
+    if (q) return { prefixe: q, facon: "elague" };
+    return null;
+  }
+
   /* Code exécuté DANS le worker : capture la console puis évalue le code reçu.
      Il accepte soit une chaîne (le bloc seul, cas ordinaire), soit un objet
      { code, prelude } : les textes du préambule sont alors évalués D'ABORD, en silence —
@@ -1503,33 +1522,20 @@
           return;
         }
       }
-      /* LE RÉ-ANCRAGE (point B2b-9) : le repli a échoué à son tour sur un nom manquant, et
-         un bloc plus ancien du préfixe le déclare — celui que le tri avait écarté au profit
-         d'un bloc plus proche. On tronque le préfixe juste après lui et on rejoue.
+      /* LA RÉÉCRITURE DU PRÉFIXE : le repli a échoué à son tour. Deux réponses possibles —
+         le RÉ-ANCRAGE (point B2b-9) coupe la FIN du préfixe quand un bloc plus ancien
+         déclare le nom manquant, l'ÉLAGAGE (point B2b-14) en coupe le DÉBUT quand un bloc
+         du préambule lit un nom qu'un bloc plus bas met en zone morte temporelle. Leur
+         ORDRE est décidé par `prochainPrefixe`, écrit une seule fois et lu par les outils.
          `secours` est repassé tel quel : ce qu'on remontrera en cas d'échec reste le
          PREMIER essai, celui du bloc seul, pas celui d'un repli intermédiaire. */
-      if (prelude.length && erreurVue && meriteUnRepli(erreurVue) && prefixe && prefixe.length) {
-        var prefixe2 = preambuleReAncre(prefixe, erreurVue);
-        if (prefixe2) {
-          var pre2 = preambuleQuiCompile(prefixe2, codeStr);
-          if (pre2.length) {
-            runBtn.classList.remove("is-running");
-            lancerJs(codeStr, pre2, out, runBtn, block, secours, prefixe2);
-            return;
-          }
-        }
-      }
-      /* L'ÉLAGAGE PAR LE HAUT (point B2b-14) : le repli a échoué sur une zone morte
-         temporelle — un bloc du préambule LIT un nom que la déclaration d'un bloc plus
-         bas met en zone morte. On retranche le début du préfixe jusqu'à ce déclarant et
-         on rejoue. `secours` est repassé tel quel, pour la même raison qu'au-dessus. */
       if (prelude.length && erreurVue && prefixe && prefixe.length) {
-        var prefixe3 = preambuleElague(prefixe, erreurVue);
-        if (prefixe3) {
-          var pre3 = preambuleQuiCompile(prefixe3, codeStr);
-          if (pre3.length) {
+        var suite = prochainPrefixe(prefixe, erreurVue);
+        if (suite) {
+          var preN = preambuleQuiCompile(suite.prefixe, codeStr);
+          if (preN.length) {
             runBtn.classList.remove("is-running");
-            lancerJs(codeStr, pre3, out, runBtn, block, secours, prefixe3);
+            lancerJs(codeStr, preN, out, runBtn, block, secours, suite.prefixe);
             return;
           }
         }

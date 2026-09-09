@@ -2373,6 +2373,115 @@ résultat avant le clic.
       ne connaît donc pas l'élagage écrit ici. Ses chiffres se lisent maintenant comme l'état
       d'AVANT ce point — c'est exactement le défaut que `verif-js.js` évite en LISANT `runner.js`.
 
+- [x] **B2b-15 · Le vérificateur nommait le MAUVAIS FICHIER dans 629 cas sur 1 987, et son
+      instrument de préparation décrivait un autre moteur que le sien. Quatre écritures en
+      double supprimées — 43 blocs en panne, inchangés, et c'est le résultat attendu.**
+
+      **Mesure reproduite d'abord** : 1 613 blocs avec bouton, 776 écartés, 1 546 aboutis,
+      43 par repli, 22 annoncées, 2 non concluants, **43 EN PANNE**, 81 non compilables,
+      35 orphelins — les chiffres laissés par B2b-14, à l'unité près. Le gisement n'avait
+      pas bougé, et ce point ne l'a pas fait bouger non plus : **il ne corrige aucun bloc,
+      il corrige ce que les outils DISENT des blocs.** C'était le préalable, parce que le
+      premier lot qu'on croyait tenir n'existait pas.
+
+      ⚠️ **LE LOT QUE J'ALLAIS TRAITER ÉTAIT UNE ILLUSION D'ÉTIQUETTE.** Les causes
+      annonçaient `pages/cicd/lecon-10.html #1 [.github/workflows/deploy.yml]` et `#2
+      [solution.yml]`, `pages/typescript/lecon-19.html #1 [tsconfig.json]`,
+      `pages/react/lecon-02.html #1 [App.jsx]` : un lot homogène et net — du YAML, du JSON
+      et du JSX portant un bouton « Tester ». Vérification faite dans les pages, **aucun de
+      ces fichiers n'a jamais porté de bouton** : ils sont en `language-yaml`,
+      `language-json`, `language-jsx`. Le motif d'extraction de `verif-js.js` n'était pas
+      BORNÉ par `</figure>` —
+      `<figure class="code-block"([^>]*)>[\s\S]*?<code class="language-javascript">` — donc
+      le `[\s\S]*?` traversait les figures : quand une figure non JavaScript en précédait
+      une JavaScript, il prenait l'attribut de la PREMIÈRE et le code de la SECONDE. Les
+      vrais blocs sont `un feature flag dans le code`, `solution.js`, `panier.js`,
+      `compiled.js`. **Sans cette vérification, la passe entière partait corriger des
+      fichiers qui n'ont pas de bouton.**
+
+      **AMPLEUR MESURÉE AVANT DE TOUCHER À QUOI QUE CE SOIT, et c'est la mesure qui a permis
+      de corriger sans rien risquer** : une sonde a comparé les deux motifs bloc à bloc sur
+      les 1 629 leçons — **0 fichier au nombre de blocs différent, 0 bloc au CODE différent,
+      629 blocs à l'ÉTIQUETTE différente** (`index.html`, `Terminal`, `structure.txt`,
+      `styles.css`…). Aucun verdict n'a donc jamais été faussé : c'est le diagnostic, et lui
+      seul, qui envoyait au mauvais endroit. La correction isole la figure d'abord et ne
+      cherche le `<code>` qu'à l'intérieur ; relevé complet identique au caractère près sur
+      les 308 lignes de `--causes`, sauf les étiquettes.
+
+      **LE CONTRÔLE QUI EMPÊCHE QUE ÇA REVIENNE, et qui n'est pas une tautologie.**
+      `tools/verif-etiquette-blocs.js` LIT `blocsJs` dans `verif-js.js` — jamais ne la
+      recopie, même discipline que `verif-js.js` avec `runner.js` — puis refait
+      l'appariement PAR UNE AUTRE VOIE : le fichier est découpé en figures, chacune jugée
+      sur son seul contenu, si bien qu'aucune expression ne peut courir d'une figure à
+      l'autre. Il ne teste pas une expression régulière, il teste une correspondance : tout
+      motif redevenu glissant, quelle qu'en soit l'écriture, le fait rougir. **Éprouvé par
+      injection** : l'ancien motif remis en place → **code 1, « 629 bloc(s) mal apparié(s) »** ;
+      motif retiré → **code 0, 2 389 blocs sur 1 629 leçons**. Coût **0,64 s mesurés**, il
+      entre donc dans le mode rapide (`js-etiq`), qui passe de 41 à 42 étapes.
+
+      **TROIS AUTRES ÉCRITURES EN DOUBLE, TROUVÉES EN VOULANT SE SERVIR DE LA SONDE.**
+      `sonde-repli-manque.js` est l'instrument qui range les blocs restants par cause ;
+      B2b-14 laissait écrit qu'elle « recopie la boucle du repli au lieu de la lire ». En
+      la rouvrant, ce n'était pas une copie mais **quatre** :
+
+      | ce qui était écrit deux fois | l'état de la copie de la sonde |
+      |---|---|
+      | l'ordre ré-ancrage → élagage | **l'élagage manquait** (B2b-14 ignoré) |
+      | le `console` du contexte | **11 méthodes** contre 24 mesurées (B2b-12) |
+      | `structuredClone` | **la contrefaçon** `JSON.parse(JSON.stringify(v))` (B2b-13) |
+      | l'erreur ANNONCÉE | **le motif français seul**, sans l'annonce par son NOM (B2b-13) |
+
+      Autrement dit : chaque défaut soldé d'un côté depuis B2b-12 était resté entier de
+      l'autre. Les trois derniers sont partis dans `tools/lib/contexte-worker.js`, requis
+      par les deux outils ; l'ordre des deux réécritures est devenu `prochainPrefixe` dans
+      `js/runner.js`, **lue** par les deux, comme les onze règles du bouton.
+
+      ⚠️ **ET L'ORDRE ÉTAIT DÉJÀ ÉCRIT TROIS FOIS, PAS DEUX** : `lancerJs` le portait aussi,
+      dans deux `if` successifs, et il divergeait déjà de `verif-js.js` sur un cas — quand le
+      ré-ancrage rend un préfixe dont plus rien ne compile, le moteur ABANDONNE tandis que le
+      vérificateur poursuivait sa boucle avec l'élagage. Mesuré : aucun bloc du site n'est
+      dans ce cas aujourd'hui (43 pannes et **liste de replis identique ligne à ligne** avant
+      et après). La divergence était donc dormante, pas active — elle est fermée.
+
+      **Effet mesuré sur les chiffres : AUCUN, et c'est ce qu'on venait vérifier.**
+      1 613 / 776 / 1 546 / 43 replis / 22 annoncées / 2 / **43 en panne** / 81 / 35 : tous
+      identiques aux trois étapes (étiquette, boucle unifiée, contexte partagé), sortie de
+      `--causes` **strictement identique** à la dernière étape. Un point d'instrument qui
+      ferait bouger un compteur serait un point d'instrument qui casse quelque chose.
+
+      **LES DEUX INSTRUMENTS CONCORDENT MAINTENANT BLOC POUR BLOC**, ce qui n'était pas le
+      cas avant. Relevé neuf de la sonde : **APRÈS 0, TRI 10, AUTRE-ERR 8, INTROUVABLE 21**,
+      soit 39 — et `verif-js.js` compte 43 pannes = 39 `ReferenceError` + 2 `SyntaxError:
+      Illegal return statement` + 2 `TypeError`, que la sonde n'a pas à expliquer puisqu'elle
+      ne traite que les noms manquants. L'ancien relevé (AUTRE-ERR 15, INTROUVABLE 23)
+      décrivait l'état d'AVANT l'élagage, et comptait en panne `js/lecon-06` #9 et #10, deux
+      blocs dont la page annonce l'erreur par son nom.
+
+      **PREUVE PAR LE NAVIGATEUR — obligatoire ici, puisque `lancerJs` a été réécrit.** Les
+      23 pages qui contiennent un repli, cliquées pour de vrai dans Chrome (`verif-clic.js`,
+      `file://`) : **196 blocs attendus, 196 cliqués (couverture complète), 0 DIVERGENT,
+      0 fragment en erreur**, en 418 s. Chiffres identiques à ceux de B2b-14 : la refonte
+      des deux `if` en un seul appel ne change rien à ce que l'apprenant voit.
+
+      **Non-régression** : `verif-html.js` **1 629 fichiers, 0 problème** ;
+      `verif-donnees.js` **0 erreur sur 25 contrôles** (aucun fichier de contenu touché,
+      donc `search-index.js` inchangé) ; `verif-chaine-declaree.js` **code 0, 81 outils dans
+      un mode, 10 hors chaîne tous déclarés** ; `verif.js --rapide` **42 étapes, tout vert,
+      152,5 s** ; `node --check` sur les 6 fichiers JS touchés ; **0 BOM** ; **0 URL vers un
+      CDN** (les 6 occurrences textuelles de `fonts.gstatic.com` et `cdnjs` sont du contenu
+      de leçon et un README, aucune n'est chargée — et aucun fichier de `pages/` ni de
+      `starter/` n'a été modifié).
+
+      **Reste au gisement : 43**, et la carte est maintenant fiable. **TRI 10** — le bloc
+      source existe mais n'a pas de bouton (`bouton`, `form`, `q`, `grille`, `modeGomme`,
+      `audioCtx` ×2, `quiz`, `DataLoader`, `memoire`) ; lui donner le préambule a déjà été
+      mesuré puis refusé en B2b-9 (0 gain, 2 pertes). **AUTRE-ERR 8** — le repli passe puis
+      bute sur un second nom, en cascade. **INTROUVABLE 21** — le nom n'ouvre aucune ligne
+      de la page, il est lu dans le corps d'une fonction appelée par le bloc ; deux d'entre
+      eux (`indexedDB`, `WebSocket`) sont des globales que le Worker POSSÈDE et que le
+      contexte de mesure exclut délibérément depuis B2b-2, à rejuger au clic avant tout.
+
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

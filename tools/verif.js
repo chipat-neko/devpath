@@ -256,6 +256,13 @@ var ETAPES = [
      la liste HORS_RAPIDE ecarte du mode rapide. Ecrire « mode complet seulement » sans
      toucher a cette liste ne fait que poser un commentaire faux. */
   { nom: "js-blocs", fichier: "verif-js.js", args: [], quoi: "les blocs JavaScript des lecons aboutissent-ils (cliquet)", lent: true, pourquoiLent: "il execute 1 855 blocs" },
+  /* Le rapport de js-blocs NOMME chaque bloc en panne par le data-file de sa figure, et
+     c'est ce nom qui envoie le lecteur au bon endroit. Son motif d'extraction n'etait pas
+     borne par </figure> : il traversait les figures, et 629 blocs sur 1 987 portaient le
+     nom d'un fichier qui n'a jamais eu de bouton (2026-09-09, point B2b-15). Le verdict
+     restait juste, le diagnostic mentait. Ce controle refait l'appariement par une AUTRE
+     voie -- figure par figure, chacune jugee seule -- et coute 0,64 s MESURES. */
+  { nom: "js-etiq", fichier: "verif-etiquette-blocs.js", args: [], quoi: "chaque bloc JS est nomme par le data-file de SA figure" },
   /* Les quatre suivants gardent le cours de maths, le seul du site ou une erreur est
      invisible a la relecture. Ils comblent chacun un angle mort de verif-exemples. */
   { nom: "mth-acc", fichier: "maths/module-5/verif-accept.js", args: [], quoi: "la valeur attendue d'un exercice est celle qu'affiche sa solution" },
