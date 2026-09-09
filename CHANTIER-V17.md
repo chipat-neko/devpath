@@ -1281,6 +1281,133 @@ résultat avant le clic.
       soit réparation leçon par leçon, soit décider que le moteur exécute un bloc dans le contexte
       cumulé de sa leçon — un vrai chantier, à ouvrir comme tel.
 
+- [x] **B2b-5 · Le critère qui ne peut pas se tromper, parce que c'est JavaScript qui tranche :
+      81 blocs écartés, ZÉRO vivant — 242 blocs en panne → 171, et les aboutis ne bougent pas d'une
+      unité. Avec le second cliquet sans lequel ce point aurait rendu la faute la plus banale
+      INVISIBLE.**
+
+      **Mesure reproduite avant de toucher à quoi que ce soit** (`node tools/verif-js.js --causes`) :
+      1 768 blocs avec bouton, 621 écartés, **1 492 aboutis, 32 annoncées, 2 non concluants,
+      242 EN PANNE** — identique au chiffre laissé par B2b-4, le gisement n'avait pas bougé.
+
+      **Le plan disait que le lot suivant n'était plus un lot.** B2b-4 concluait : « du fragment
+      interne, plus 24 `await` de tête et 15 erreurs de syntaxe ; aucune règle générale ne les
+      couvre ». C'était vrai des règles écrites jusque-là, qui décrivent toutes **ce que le Worker
+      n'a pas** — un document, un serveur, un lanceur de tests — et qui doivent donc énumérer des
+      noms, avec le risque de faux positif que B2b-1 a payé comptant (`Element` et `Node` sont des
+      noms de variables ordinaires). La règle de ce point ne décrit rien : **elle demande à
+      JavaScript.** `new Function(texte)` compile le bloc sans en exécuter une ligne ; s'il lève une
+      `SyntaxError`, aucun contexte d'exécution au monde ne fera parler ce bloc.
+
+      Ce sont des corps d'objet détachés (`{ path: '/produit/:id', component: Produit }`), des `case`
+      sans `switch`, des schémas ASCII étiquetés `language-javascript` (l'arbre de `algo/lecon-02`,
+      le déroulé de la factorielle), des lignes de terminal (`npm create vue@latest`), et surtout
+      **du `await` au niveau racine** — légal dans un module, jamais dans le script classique que
+      reçoit le Worker.
+
+      ⚠️ **LE POINT SE JOUE SUR UNE DIVERGENCE POSSIBLE ENTRE DEUX JUGES, ET ELLE A ÉTÉ MESURÉE, PAS
+      RAISONNÉE.** Le Worker exécute `(0, eval)(code)`, pas `new Function(code)` : un bloc que
+      `new Function` refuserait alors qu'`eval` l'accepte serait un **bouton vivant retiré**. On ne
+      peut pas demander à `eval` de compiler sans exécuter ; on lui a donc donné le texte précédé
+      d'un `throw` — la `SyntaxError`, s'il y en a une, est levée à la compilation du script entier,
+      donc AVANT le `throw`, tandis qu'un texte valide part sur le `throw` sans rien exécuter du
+      bloc (le préfixe reprend la directive `"use strict"` quand le bloc en porte une, pour ne pas
+      la déclasser). **Les 1 768 blocs à bouton du site** ont été soumis aux deux juges **dans un
+      vrai Worker de Chrome** (`file://`, DNS coupé, Blob → Worker par la mécanique exacte de
+      `runner.js`) :
+
+      | | blocs |
+      |---|---|
+      | les deux refusent | **81** |
+      | les deux acceptent | **1 684** |
+      | **`new Function` refuse, `eval` accepte** (le seul cas dangereux) | **0** |
+      | `eval` refuse, `new Function` accepte (`return` racine) | 3 |
+
+      Les 3 derniers sont un gain non pris, jamais un risque : `nodejs/lecon-22` #6,
+      `securite/lecon-01` #3, `cicd/lecon-10` #2, tous trois `Illegal return statement`. Aucun écart
+      entre le verdict de Node et celui de Chrome sur `new Function`.
+
+      **Impact mesuré AVANT écriture, en EXÉCUTANT chaque bloc désigné : 81 visés, ZERO VIVANT**,
+      71 déjà comptés en panne, et **10 que le vérificateur classait « erreur annoncée » à tort** —
+      leur commentaire contient le mot « erreur », mais aucune de ces leçons n'enseigne une faute de
+      syntaxe : `pages/js/lecon-48.html` #8 finit sur
+      `console.log(await collecter()); // ["a","b","c","d","e"]`, une sortie **promise** que le
+      bouton ne rendra jamais. Leur bouton mentait deux fois.
+
+      **Écriture.** `neCompilePas(texte)` dans `js/runner.js`, dans la même condition que les quatre
+      autres règles ; `tools/verif-js.js` et `tools/verif-clic.js` la **LISENT** par leur lecteur de
+      fonctions, jamais ne la recopient (les deux vérificateurs mis à jour dans la même passe,
+      dette ouverte en B2b-3).
+
+      ⚠️ **CE POINT CRÉAIT UN ANGLE MORT, ET C'EST LÀ QUE SE JOUE SA VALEUR.** À partir du moment où
+      un bloc qui ne compile pas perd son bouton, **une faute de syntaxe introduite par erreur dans
+      une leçon disparaît en silence** au lieu d'être comptée en panne : le cliquet des pannes
+      devenait aveugle à la faute la plus banale du site — exactement le défaut que ce chantier
+      ferme (« un contrôle qui ne peut pas échouer occupe la place »). Les blocs non compilables ont
+      donc **leur propre cliquet** dans `verif-js.js`, qui ne doit pas monter non plus, et le mode
+      `--causes` les nomme un par un.
+
+      **Les deux cliquets éprouvés par injection**, `const x = ;` en tête du premier bloc de
+      `pages/algo/lecon-01.html` :
+
+      | | avec la faute | sans |
+      |---|---|---|
+      | EN PANNE (premier cliquet) | **171** — inchangé, donc **vert** | 171 |
+      | NE COMPILENT PAS (second) | **82 contre 81** → **code 1** | 81 → code **0** |
+
+      C'est la démonstration chiffrée que le second cliquet n'est pas un ornement : sans lui, la
+      faute passait sans un mot. Page restaurée, md5 `269ad551…` identique avant et après.
+
+      **Mesure finale : 1 687 blocs avec bouton, 702 écartés (+81), 1 492 aboutis (88,4 %, contre
+      84,4 %), 22 annoncées (−10), 2 non concluants, 171 EN PANNE.** Le nombre d'aboutis est
+      **rigoureusement inchangé** : 1 492 avant, 1 492 après. Cliquets fixés à 171 et 81.
+
+      **Preuve par le navigateur** (le vérificateur n'exécute pas `runner.js` : seul un vrai Chrome
+      dit ce que l'apprenant voit), par `verif-clic.js` — l'outil du projet qui CLIQUE — sur
+      7 pages, 4 touchées et **3 témoins**, règle active puis neutralisée, `js/runner.js` restauré
+      ensuite à l'octet près (md5 `16a65243…` identique avant et après) :
+
+      | | boutons posés dans le DOM rendu |
+      |---|---|
+      | règle neutralisée | **47** cliqués sur 47 attendus |
+      | règle active | **30** cliqués sur 30 attendus |
+
+      **17 boutons morts retirés**, et le compte tombe à l'unité près sur la prévision faite depuis
+      le disque page par page (`js/lecon-48` 1, `algo/lecon-12` 4, `js/lecon-54` 4, `vue/lecon-10` 1,
+      plus les témoins `js/lecon-01` 9, `algo/lecon-01` 9, `formats/lecon-02` 2 = 30). **Les
+      3 témoins gardent leurs 20 boutons**, couverture complète des deux côtés, 0 divergence entre
+      ce que la page imprime et ce que le clic rend. Cette mesure prouve en prime que `new Function`
+      s'exécute bien dans la page en `file://` — aucune CSP ne le bride.
+
+      **Non-régression** : `verif-html.js` 1 629 fichiers, **0 grave / 0 attention** ;
+      `verif-donnees.js` 25 contrôles, **0 erreur** ; `verif.js --rapide` **40 étapes, tout vert,
+      145,0 s** ; `node --check` sur les trois fichiers touchés ; 0 URL vers un CDN. Aucun fichier de
+      contenu modifié : ce point ne touche qu'une règle du moteur et deux vérificateurs.
+
+      **Reste au gisement : 171.** Par cours : `js` 55, `projets-js` 33, `algo` 18, `html` 14,
+      `tests` 12, `patterns` 10, `securite` 7, `nodejs` 5, `vue` 4. Causes de tête : 7 `bouton`,
+      7 `etatInitial`, 6 `self.addEventListener is not a function` (les service workers de
+      `html/lecon-42`, un lot homogène à prendre), **6 `test is not defined`** (des suites que
+      `estUneSuiteDeTests` ne voit pas, faute de libellé entre guillemets — son critère est à
+      élargir avec la même prudence qu'en B2b-1), 5 `Tache`, 5 `user`, 4 `ctx`, 4 `UnionFind`.
+
+      **Une piste MESURÉE puis laissée à une case à part, pour que la passe suivante n'ait pas à la
+      refaire.** L'inspection de départ a trouvé un second défaut, distinct de celui-ci :
+      **des blocs dont le `data-file` annonce un langage que le bloc n'est pas.** Deux familles,
+      toutes deux visibles par l'apprenant. Les blocs qui ne sont pas du JavaScript portent
+      `class="language-javascript"`, donc Prism les colorise à tort (`algo/lecon-02` #2 #3 #7,
+      `algo/lecon-10` #2, `js/lecon-30` #3, `react/lecon-14` #1 #2, `vue/lecon-06` #3,
+      `vue/lecon-13` #1 — à passer en `plaintext` ou `bash`, avec le composant Prism correspondant,
+      que `verif-donnees.js` I14 vérifie déjà). Et symétriquement, **du vrai JavaScript est annoncé
+      sous un nom de fichier mensonger** : `cicd/lecon-10` #1 affiche
+      « .github/workflows/deploy.yml » au-dessus de JavaScript, `perf-web/lecon-11` #3 dit
+      « anim.css », `typescript/lecon-19` #1 dit « tsconfig.json », `wasm/lecon-05` #1 dit
+      « decision.txt », `algo/lecon-17` #4 dit « schema.txt ». Cette seconde famille ne touche pas au
+      gisement (ces blocs gardent leur bouton à juste titre) et **elle est probablement bien plus
+      large que ces cinq cas**, puisqu'on ne l'a vue que par la fenêtre des blocs en panne : la
+      recenser demande un balayage des 2 418 blocs `language-javascript`, c'est-à-dire une case à
+      elle seule.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

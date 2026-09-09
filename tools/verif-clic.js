@@ -205,7 +205,7 @@ var reglesRunner = (function () {
   var m = /var BROWSER_ONLY = \/([\s\S]*?)\/;\s*\n/.exec(src);
   var motif = null;
   if (m) { try { motif = new RegExp(m[1]); } catch (e) { motif = null; } }
-  var fns = ['estUnFichierJson', 'estUneSuiteDeTests', 'estUnFragmentServeur', 'estDuDomDePage'].map(function (nom) {
+  var fns = ['estUnFichierJson', 'estUneSuiteDeTests', 'estUnFragmentServeur', 'estDuDomDePage', 'neCompilePas'].map(function (nom) {
     var i = src.indexOf('function ' + nom + '(texte) {');
     if (i < 0) return null;
     var j = src.indexOf('\n  }', i);

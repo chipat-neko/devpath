@@ -75,6 +75,7 @@ var estUnFichierJson = lireFonction('estUnFichierJson');
 var estUneSuiteDeTests = lireFonction('estUneSuiteDeTests');
 var estUnFragmentServeur = lireFonction('estUnFragmentServeur');
 var estDuDomDePage = lireFonction('estDuDomDePage');
+var neCompilePas = lireFonction('neCompilePas');
 
 function dec(s) {
   return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
@@ -199,6 +200,7 @@ else fichiers = lecons(null);
 /* Assez long pour qu'un bloc lent aboutisse, assez court pour ne pas figer la mesure. */
 var DELAI = 5000;
 var total = 0, ok = 0, ko = 0, ecartes = 0, annoncees = 0, indecis = 0;
+var nonCompilables = 0, listeNonCompilables = [];
 var causes = {};
 var parCours = {};
 
@@ -212,6 +214,19 @@ fichiers.forEach(function (f) {
        de bouton, il ne compte donc ni dans les réussites ni dans les échecs. */
     if (BROWSER_ONLY.test(code) || estUnFichierJson(code) || estUneSuiteDeTests(code) ||
         estUnFragmentServeur(code) || estDuDomDePage(code)) { ecartes++; return; }
+    /* LES BLOCS QUI NE COMPILENT PAS SONT COMPTES A PART, ET C'EST INDISPENSABLE.
+       La regle `neCompilePas` (2026-09-09, point B2b-5) retire le bouton d'un bloc que
+       JavaScript refuse de compiler. Elle a un effet de bord qu'il serait grave de laisser
+       sans surveillance : une faute de syntaxe INTRODUITE PAR ERREUR dans une lecon fait
+       desormais disparaitre le bouton EN SILENCE, au lieu d'etre comptee en panne. Le
+       cliquet des pannes deviendrait aveugle a la faute la plus banale — exactement le
+       defaut que ce chantier ferme (« un controle qui ne peut pas echouer occupe la
+       place »). Ces blocs ont donc LEUR PROPRE CLIQUET, qui ne doit pas monter non plus. */
+    if (neCompilePas(code)) {
+      ecartes++; nonCompilables++;
+      listeNonCompilables.push(rel + ' #' + (i + 1) + (bloc.fichier ? '  [' + bloc.fichier + ']' : ''));
+      return;
+    }
     total++;
     parCours[cours] = parCours[cours] || { total: 0, ok: 0, annoncees: 0 };
     parCours[cours].total++;
@@ -257,6 +272,9 @@ fichiers.forEach(function (f) {
 });
 
 if (CAUSES) {
+  console.log('=== BLOCS QUI NE COMPILENT PAS (ecartes, cliquet a part) : ' + nonCompilables + ' ===');
+  listeNonCompilables.forEach(function (o) { console.log('   ' + o); });
+  console.log('');
   console.log('=== CAUSES, de la plus fréquente à la plus rare ===');
   Object.keys(causes).sort(function (a, b) { return causes[b].length - causes[a].length; })
     .forEach(function (c) {
@@ -273,6 +291,7 @@ console.log('  aboutissent ............. ' + ok + (total ? '  (' + (100 * ok / t
 console.log('  erreurs ANNONCÉES ....... ' + annoncees + '  (la page les écrit en commentaire)');
 console.log('  non concluants .......... ' + indecis + '  (plus de ' + (DELAI / 1000) + ' s : hors cliquet)');
 console.log('  EN PANNE ................ ' + ko);
+console.log('  NE COMPILENT PAS ....... ' + nonCompilables + '  (ecartes : pas de bouton, cliquet a part)');
 console.log('\n--- par cours (les 12 plus fournis) ---');
 Object.keys(parCours).sort(function (a, b) {
   return (parCours[b].total - parCours[b].ok - parCours[b].annoncees) -
@@ -291,10 +310,14 @@ if (!CAUSES) {
 /* --- le cliquet ---------------------------------------------------------- */
 if (cibles.length) { console.log('\n  (cliquet inactif : des cibles ont ete passees en argument)'); process.exit(0); }
 if (FIXER) {
-  fs.writeFileSync(ATTENDU, JSON.stringify({ ko: ko, total: total,
+  fs.writeFileSync(ATTENDU, JSON.stringify({ ko: ko, total: total, nonCompilables: nonCompilables,
     note: 'Nombre de blocs JS en panne au dernier releve. Il ne doit jamais augmenter. ' +
-          'Le descendre apres une reparation : node tools/verif-js.js --fixer' }, null, 2) + '\n', 'utf8');
-  console.log('\n  cliquet fixe a ' + ko + ' bloc(s) en panne sur ' + total + '.');
+          'Le descendre apres une reparation : node tools/verif-js.js --fixer',
+    note2: 'nonCompilables : blocs que `new Function` refuse de compiler, donc prives de ' +
+           'bouton par runner.js. Ce ne sont pas des pannes, mais leur nombre ne doit pas ' +
+           'monter : une faute de syntaxe introduite par erreur se cacherait dedans.' }, null, 2) + '\n', 'utf8');
+  console.log('\n  cliquet fixe a ' + ko + ' bloc(s) en panne sur ' + total +
+              ', et ' + nonCompilables + ' bloc(s) qui ne compilent pas.');
   process.exit(0);
 }
 var ref = null;
@@ -304,6 +327,19 @@ if (ko > ref.ko) {
   console.log('\nCLIQUET : ' + ko + ' bloc(s) en panne contre ' + ref.ko + ' a la reference, soit ' +
     (ko - ref.ko) + ' de plus. Un bloc JS qui aboutissait est tombe.');
   process.exit(1);
+}
+/* Le SECOND cliquet : sans lui, une faute de syntaxe ne ferait plus rougir personne,
+   puisque le bloc casse perd simplement son bouton. */
+if (typeof ref.nonCompilables === 'number' && nonCompilables > ref.nonCompilables) {
+  console.log('\nCLIQUET : ' + nonCompilables + ' bloc(s) ne compilent pas, contre ' + ref.nonCompilables +
+    ' a la reference, soit ' + (nonCompilables - ref.nonCompilables) + ' de plus.');
+  console.log('  Un bloc JS a ete casse : il perd son bouton en silence.' +
+              ' Les voir : node tools/verif-js.js --causes');
+  process.exit(1);
+}
+if (typeof ref.nonCompilables === 'number' && nonCompilables < ref.nonCompilables) {
+  console.log('\n  ' + nonCompilables + ' bloc(s) ne compilent pas, contre ' + ref.nonCompilables +
+    ' attendus. Descendre la reference : node tools/verif-js.js --fixer');
 }
 if (ko < ref.ko) {
   console.log('\n  cliquet : ' + ko + ' en panne contre ' + ref.ko + ' attendus, soit ' + (ref.ko - ko) +

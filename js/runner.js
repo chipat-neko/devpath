@@ -146,6 +146,38 @@
     return true;
   }
 
+  /* UN BLOC QUE JAVASCRIPT REFUSE DE COMPILER NE RENDRA JAMAIS RIEN (2026-09-09, B2b-5).
+     Les quatre règles ci-dessus décrivent CE QUE LE WORKER N'A PAS — un document, un
+     serveur, un lanceur de tests. Celle-ci ne décrit rien : elle DEMANDE À JAVASCRIPT.
+     `new Function(texte)` compile le bloc sans en exécuter la moindre ligne ; s'il lève
+     une `SyntaxError`, aucun contexte d'exécution au monde ne fera parler ce bloc, et le
+     bouton « Tester » ne peut promettre qu'un message d'erreur. Ce sont des corps d'objet
+     détachés (`{ path: '/produit/:id', component: Produit }`), des `case` sans `switch`,
+     des schémas ASCII étiquetés `language-javascript`, des lignes de terminal, et
+     surtout du `await` au niveau racine — légal dans un module, jamais dans le script
+     classique que reçoit le Worker.
+     ⚠️ AUCUN FAUX POSITIF N'EST POSSIBLE, ET CE N'EST PAS UN RAISONNEMENT : C'EST UNE
+     MESURE. Le Worker exécute `(0, eval)(code)`, pas `new Function(code)` — les deux
+     juges pouvaient diverger. Une sonde a donc soumis LES 1 768 blocs à bouton du site
+     aux deux, DANS UN VRAI WORKER de Chrome (`file://`, DNS coupé, Blob → Worker comme
+     ci-dessous), en faisant précéder le texte d'un `throw` pour qu'`eval` compile sans
+     rien exécuter : **81 refusés par les deux, 1 684 acceptés par les deux, ZÉRO bloc
+     refusé par `new Function` que `eval` accepterait** — le seul cas qui aurait retiré un
+     bouton vivant. Trois blocs vont dans l'autre sens (`eval` refuse un `return` racine
+     que `new Function` autorise) : gain non pris, jamais un risque.
+     Impact mesuré AVANT écriture, en EXÉCUTANT chaque bloc désigné : 81 blocs visés,
+     ZÉRO vivant, 71 déjà comptés en panne et 10 que le vérificateur classait « erreur
+     annoncée » à tort — leur commentaire contient le mot « erreur », mais la leçon n'y
+     enseigne pas une faute de syntaxe : `pages/js/lecon-48.html` #8 finit sur
+     `console.log(await collecter()); // ["a","b","c","d","e"]`, une sortie promise que le
+     bouton ne rendra jamais.
+     ⚠️ Fonction LUE par `tools/verif-js.js` et `tools/verif-clic.js`, jamais recopiée. */
+  function neCompilePas(texte) {
+    try { new Function(String(texte)); }
+    catch (e) { return e instanceof SyntaxError; }
+    return false;
+  }
+
   /* `import` et `export` en TETE DE LIGNE (2026-09-09, point B2 du chantier V17) : un
      module ES ne s'evalue pas dans le Worker, qui recoit du script classique — le bouton
      rendait « Cannot use import statement outside a module », premiere cause d'echec du
@@ -885,7 +917,7 @@
       if (js) {
         if (BROWSER_ONLY.test(js.textContent) || estUnFichierJson(js.textContent) ||
             estUneSuiteDeTests(js.textContent) || estUnFragmentServeur(js.textContent) ||
-            estDuDomDePage(js.textContent)) {
+            estDuDomDePage(js.textContent) || neCompilePas(js.textContent)) {
           block.setAttribute("data-runner", "skip");
           return;
         }
