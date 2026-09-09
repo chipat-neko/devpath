@@ -667,6 +667,16 @@ if (COMPLET) {
      "les neuf situations guidees : vrais clics, indices un par un, chemins alternatifs"],
     ["decodwb", "preuves/decodeur.js",
      "le decodeur juge PAR LA PAGE : message exact, trace entiere, noms de l'apprenant"],
+    /* LE CONTEXTE DU VERIFICATEUR CONFRONTE AU VRAI WORKER (point B2b-12 du V17).
+       `verif-js.js` execute chaque bloc dans un `console` ECRIT A LA MAIN ; le Worker,
+       lui, part du console NATIF et n'en remplace que cinq methodes. La mesure du
+       2026-09-09 : 11 methodes ici, 24 la-bas, et `console.assert` -- appelee 7 fois par
+       les leçons -- manquait, ce qui declarait EN PANNE deux blocs que l'apprenant voit
+       marcher. C'est le defaut du point B2b-2 sur un autre objet, et rien ne le
+       surveillait. Cette sonde le surveille : elle echoue quand une methode presente
+       chez l'apprenant manque au contexte ET qu'une leçon l'appelle. */
+    ["console", "preuves/sonde-console-worker.js",
+     "le `console` du contexte de verif-js.js face a celui d'un VRAI Worker de Chrome"],
   ].forEach(function (p) {
     ETAPES.push({ nom: p[0], fichier: p[1], args: [], quoi: p[2], lent: true });
   });

@@ -2101,6 +2101,98 @@ résultat avant le clic.
       afficher un résultat) »**. Ils aboutissent, donc aucun cliquet ne les voit ; mais le clic
       est MUET. Le gisement complet n'a pas été mesuré à l'échelle du site.
 
+- [x] **B2b-12 · Le vérificateur mesurait un `console` APPAUVRI : 11 méthodes contre 24 chez
+      l'apprenant — 60 blocs en panne au lieu de 62, aboutis 1 535 → 1 537. Aucun fichier de
+      contenu touché : ce point ne répare que l'instrument.**
+
+      **Mesure reproduite avant de toucher à quoi que ce soit** : `verif-js.js --causes` rend
+      **62 EN PANNE**, le chiffre laissé par B2b-11. Dans les causes, une ligne détonnait :
+      `TypeError: console.assert is not a function`, sur `js/lecon-30` #7 et `js/lecon-43` #8.
+      **`console.assert` n'est pas une fonction de Node absente du navigateur — c'est
+      l'inverse.** Le Worker part du `console` NATIF et n'en remplace que cinq méthodes
+      (`js/runner.js:482`) : il garde donc tout le reste. Le contexte `vm` de `verif-js.js`,
+      lui, fournit un `console` écrit à la main, onze méthodes. **C'est exactement le défaut du
+      point B2b-2 — « l'outil ne mesure pas le site, il mesure sa propre pauvreté » — sur un
+      autre objet, et rien ne le surveillait.**
+
+      **Relevé statique d'abord, parce qu'un grep coûte mille fois moins qu'une sonde** : les
+      leçons appellent `console.log` 8 520 fois, `error` 94, **`assert` 16 (dont 7 en appel, le
+      reste en prose)**, `warn` 12, `table` 5, `dir` 4, `time`/`timeEnd` 3, `group` 3,
+      `groupEnd` 2. `assert` est la seule employée qui manquait.
+
+      **LA LISTE A ÉTÉ MESURÉE DANS UN VRAI CHROME, PAS DEVINÉE** —
+      `tools/preuves/sonde-console-worker.js`, qui **LIT `WORKER_SRC` et
+      `envelopperPourRepli` dans `js/runner.js`**, écrit une page jetable créant le Worker par
+      la mécanique exacte du moteur (Blob → `new Worker`), en `file://`, et lui demande
+      l'inventaire. Verdict : **24 membres, tous des fonctions**, contre 11 dans le contexte —
+      `assert, clear, context, count, countReset, createTask, dirxml, groupCollapsed, profile,
+      profileEnd, timeLog, timeStamp, trace` manquaient. Les treize sont ajoutées, muettes, et
+      **c'est FIDÈLE** : le Worker ne détourne pas ces méthodes-là, leur sortie part dans la
+      console de DevTools et n'atteint jamais le panneau que l'apprenant lit. Douze ne sont
+      employées par aucune leçon aujourd'hui, mais elles EXISTENT chez lui : les omettre, c'est
+      armer le même faux positif pour la prochaine leçon qui s'en servira. **Aucune ne touche au
+      réseau — la réserve de B2b-2 sur `fetch` et `WebSocket` ne s'applique pas ici.**
+
+      ⚠️ **TROIS PIÈGES DE LA SONDE, tous mesurés, aucun supposé — et chacun aurait rendu un
+      chiffre faux avec un air de mesure réussie :**
+
+      | ce qui a été fait | ce que ça a rendu | pourquoi |
+      |---|---|---|
+      | `for (var k in console)` | **2 membres** au lieu de 24 | les méthodes natives sont des propriétés propres NON ÉNUMÉRABLES ; il faut `getOwnPropertyNames` |
+      | chercher le marqueur dans tout le DOM | il lisait **sa propre source** | `--dump-dom` rend aussi le `<script>`, où le code envoyé au Worker figure en toutes lettres |
+      | coller `WORKER_SRC` seul dans la page | « (en attente) » sans fin | il s'ouvre sur `envelopperPourRepli.toString()`, définie ailleurs dans `runner.js` |
+
+      ⚠️⚠️ **ET LE PIÈGE LE PLUS COÛTEUX : LE BUDGET DE TEMPS VIRTUEL DÉPEND DE LA CHARGE DE LA
+      MACHINE.** La sonde a rendu ses 24 membres, puis « NON MESURÉ : le Worker n'a rien
+      renvoyé » à chaque relance, **sans qu'une ligne de la page ait changé** : 75 processus
+      Chrome résiduels traînaient, et le Worker ne démarrait plus dans les 6 000 ms de
+      `--virtual-time-budget`. Le MÊME fichier, relancé à 25 000, a rendu les 24 membres du
+      premier coup. **Une sonde dont le verdict dépend de la charge est une sonde qui ment** —
+      c'est le défaut du `timeout` de `vm` corrigé au point B2a, réapparu sur un autre
+      instrument. Parade : deux essais (30 s puis 90 s), et le rapport **imprime le budget qui a
+      suffi** (90 000 ms sur cette machine).
+
+      ⚠️ **CE QUE LA SONDE NE PEUT PAS MESURER, et il fallait le savoir avant de l'écrire.** Un
+      premier jet APPELAIT chaque méthode pour vérifier qu'elle ne jette pas. Bisection dans sa
+      propre page, trois essais : `console.log("@@@simple")` revient ; `console.assert(true,"s")`
+      puis un log ne revient pas ; `console.table([1])` puis un log non plus. Le point commun
+      n'est pas la méthode, c'est qu'elle soit **NATIVE** : elle parle à l'agent d'inspection, ce
+      qui suspend le temps virtuel sous `--dump-dom`. **Artefact de la technique, pas du site.**
+      La sonde mesure donc la PRÉSENCE ; le FONCTIONNEMENT se prouve au clic.
+
+      **Preuve par le navigateur, sur les deux blocs concernés**, `verif-clic.js --sorties`
+      (l'outil écrit au point précédent), Chrome `file://` :
+
+      | bloc | verdict de `verif-js.js` avant | ce que l'apprenant voit au clic |
+      |---|---|---|
+      | `js/lecon-43` #8 | `TypeError: console.assert is not a function` | `false` / `Symbol(couleur)` / `couleur` — les trois `console.log` de la leçon |
+      | `js/lecon-30` #7 | idem | s'exécute sans erreur, sans sortie (l'`assert` passe, il est silencieux **par définition**) |
+
+      **La sonde est une ÉTAPE DE LA CHAÎNE, et elle PEUT ROUGIR.** `verif-chaine-declaree.js`
+      l'a d'ailleurs signalée « hors chaîne » avant qu'elle y soit, ce qui est son travail. Elle
+      échoue quand une méthode présente chez l'apprenant manque au contexte **ET** qu'une leçon
+      l'appelle — le seuil est l'EMPLOI, pas la simple absence, sinon elle rougirait sur douze
+      méthodes que personne n'utilise. Éprouvée par injection : `assert` retirée du contexte →
+      **« 1 absente, appelée par les leçons : 7 », code 1** ; remise → **« 0 absente », code 0**,
+      md5 du fichier identique (`3b5433bc…`). Déclarée dans `verif.js --complet` sous le nom
+      `console`, avec les preuves navigateur (elle ouvre Chrome, elle ne peut pas tenir ailleurs).
+
+      **Mesure finale : 1 613 blocs avec bouton, 776 écartés, 1 537 aboutis (95,3 %), 35 par
+      repli, 14 annoncées, 2 non concluants, 60 EN PANNE, 81 non compilables, 35 orphelins.**
+      Pannes **−2**, aboutis **+2**, **tous les autres compteurs inchangés**. Cliquet descendu à
+      **60**.
+
+      **Non-régression** : `verif-donnees.js` **0 erreur sur 25 contrôles** ;
+      `verif-chaine-declaree.js` **code 0, 80 outils dans un mode** ; `verif.js --rapide`
+      **41 étapes, tout vert, 124,7 s** ; `node --check` sur les trois fichiers touchés ;
+      **0 URL vers un CDN**. Aucun fichier de contenu modifié, donc `search-index.js` inchangé.
+
+      **Reste au gisement : 60.** Le lot suivant reste celui de `js` (32), et le tri annoncé en
+      B2b-11 tient : d'abord les erreurs VOLONTAIRES que le détecteur de commentaire ne
+      reconnaît pas (`js/lecon-02` #4 et #16 « Assignment to constant variable », `js/lecon-06`
+      #13 « Cannot access before initialization », les trois `throw` de `js/lecon-38`,
+      `typescript/lecon-01` #1), ensuite les fragments.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

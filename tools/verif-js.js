@@ -200,7 +200,26 @@ function contexteWorker(sorties) {
       debug: function () { sorties.push(fmtArgs(arguments)); },
       warn: function () { sorties.push(fmtArgs(arguments)); },
       error: function () { sorties.push(fmtArgs(arguments)); },
-      table: faux, group: faux, groupEnd: faux, time: faux, timeEnd: faux, dir: faux
+      table: faux, group: faux, groupEnd: faux, time: faux, timeEnd: faux, dir: faux,
+      /* ⚠️ LES TREIZE SUIVANTES SONT MESURÉES, PAS DEVINÉES (point B2b-12, 2026-09-09).
+         Ce `console` était écrit à la main ; le Worker, lui, part du console NATIF et
+         n'en remplace que log/info/debug/warn/error — il garde donc tout le reste.
+         `tools/preuves/sonde-console-worker.js` a demandé la liste à un VRAI Worker de
+         Chrome (page `file://`, Blob → Worker par la mécanique de runner.js) : **24
+         membres**, contre 11 ici. `console.assert` en fait partie, elle S'APPELLE sans
+         jeter, et les leçons l'emploient 7 fois — deux blocs étaient donc déclarés EN
+         PANNE alors qu'ils marchent chez l'apprenant. C'est le défaut du point B2b-2,
+         « l'outil ne mesure pas le site, il mesure sa propre pauvreté », sur un autre
+         objet. Les douze autres ne sont employées par aucune leçon aujourd'hui, mais
+         elles EXISTENT chez l'apprenant : les omettre, c'est armer le même faux positif
+         pour la prochaine leçon qui s'en servira.
+         Toutes sont muettes, et c'est FIDÈLE : le Worker ne détourne pas ces
+         méthodes-là, leur sortie part dans la console de DevTools et n'atteint jamais
+         le panneau que l'apprenant lit. Aucune ne touche au réseau — la réserve de
+         B2b-2 sur `fetch` et `WebSocket` ne s'applique pas ici. */
+      assert: faux, clear: faux, context: faux, count: faux, countReset: faux,
+      createTask: faux, dirxml: faux, groupCollapsed: faux, profile: faux,
+      profileEnd: faux, timeLog: faux, timeStamp: faux, trace: faux
     },
     setTimeout: function (f) { try { if (typeof f === 'function') f(); } catch (e) {} return 0; },
     setInterval: function () { return 0; },
