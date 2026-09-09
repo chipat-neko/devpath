@@ -618,14 +618,86 @@ résultat avant le clic.
       Ce n'est pas le site qui échoue, c'est l'outil qui rend un verdict dépendant de la taille du lot —
       exactement le défaut que le point A3 a corrigé sur `verif-clic.js`.
 
-- [ ] **B1b-2 · `sql`, le gisement des TABLES : 33 blocs restants.** Causes : **17 « no such table »**
-      (`ca_mensuel` ×3, `article` ×3, `ventes_produits` ×2, `tailles` ×2, `employe`, `produit`,
-      `paiements`, `main.paiements`, `lignes_panier`, `articles`, `contacts`, `clients_lyon`,
-      `commandes_clients`), **12 erreurs de syntaxe** (`near "FROM"` ×5 — à regarder de près, plusieurs
-      viennent de `SELECT … , FROM` ou d'une clause propre à PostgreSQL —, `CONSTRAINT`, `USING`,
-      `INCLUDE`, `DUPLICATE`, `GRANT`), **2 colonnes** (`creee_le`, `o.date`), un `@` et un `JOIN USING`.
-      Décider AU CAS PAR CAS : une table créée par un bloc précédent de la même page n'a pas à entrer
-      dans la base de démonstration commune ; un `GRANT` ou un `CREATE … INCLUDE` relève d'`AUTRE_SGBD`.
+- [x] **B1b-2 · `sql`, le gisement des TABLES : 32 blocs en erreur → 0. Le cours est à 187/187, soit
+      100 %.** Site entier **47 → 14**. Mesure reproduite avant de toucher à quoi que ce soit : 47 blocs
+      en erreur, dont 32 dans `sql` (le plan en annonçait 33 ; l'écart d'un vient du bloc que B1c-1 avait
+      rendu cliquable). Trois vagues, chacune mesurée séparément.
+
+      **1) Dix marqueurs de dialecte — 14 blocs, dont ZÉRO aboutissait (47 → 33).** Les leçons 4, 10, 12,
+      16, 17 et 24 COMPARENT les dialectes : c'est leur sujet. Chaque forme a été essayée sur le moteur
+      du dépôt avant d'être écrite (`tmp/essai2.js`) : `EXTRACT(… FROM …)` et `SUBSTRING(… FROM … FOR)`
+      → « near "FROM" » ; `GRANT`/`REVOKE` → « near "GRANT" » ; `ON DUPLICATE KEY` → « near
+      "DUPLICATE" » ; `USING GIN` → « near "USING" » ; `@>`/`@@` → « unrecognized token » ;
+      `to_tsvector`/`to_tsquery`/`ts_rank` → « no such function » ; `FULLTEXT`/`AGAINST(` ; `= ANY(` →
+      « no such function: ANY » ; `INCLUDE (` → « near "INCLUDE" ». **Impact mesuré AVANT écriture**
+      (`tmp/impact3.js`, qui exécute chaque bloc désigné) : **14 blocs visés, 14 déjà en erreur, 0
+      vivant** — aucun bouton qui marchait n'a été retiré, et le nombre d'aboutis n'a pas bougé (234).
+      ⚠️ `@[>@]` et non `@\w` : la variante large attrapait les adresses e-mail des données d'exemple.
+
+      **2) Le décor élargi — 15 blocs réparés (33 → 18), aboutis 234 → 249.** Onze schémas d'une seule
+      leçon manquaient à la base de démonstration : `tailles`/`couleurs` (le CROSS JOIN de la leçon 8,
+      qui rend bien les 6 paires S·M·L × Rouge·Bleu annoncées), `clients_lyon`, `ventes_produits`,
+      `employe`, `produit`, `factures`, `paiements`, `lignes_panier`, `articles`, `contacts`, plus les
+      colonnes `client_id` sur `clients` et `creee_le`/`statut` sur `commandes`. **Rien n'est inventé** :
+      le contenu vient de ce que LA LEÇON annonce. `employe` porte Alice/Brahim/Chloé/Diego/Elena, et
+      le bouton de la leçon 16 rend désormais **exactement le tableau publié en dessous** (niveau 1
+      Alice, 2 Brahim, 2 Chloé, 3 Diego, 3 Elena). `ventes_produits` est **copié du bloc `data-exos` de
+      la même leçon** : le bouton « Exécuter » et l'exercice auto-corrigé travaillent maintenant sur les
+      mêmes lignes, et le bloc 10 rend les trois lignes que l'exercice déclare attendues.
+      `clients.client_id` DOUBLE `id` à dessein : la leçon 8 enseigne `JOIN … USING (client_id)` et écrit
+      sous le bloc « marche seulement si la colonne porte le même nom des deux côtés » — l'exemple qui
+      ILLUSTRE la règle était le seul à ne pas la respecter.
+      ⚠️ **Une régression attrapée au vol, et c'est le cœur du point.** Ajouter `pays` à `clients` (pour
+      la leçon 17) a cassé `sql/lecon-11 #11`, qui ENSEIGNE `ALTER TABLE clients ADD COLUMN pays` :
+      « duplicate column name: pays ». Un bouton vivant perdu pour en gagner un autre — échange nul.
+      `pays` est donc resté hors du décor et c'est la leçon 17 qui a été recalée sur `ville`, colonne du
+      fil rouge (2 requêtes + 2 lignes de plan). Les deux boutons vivent.
+
+      **3) Les vues du décor, et pourquoi elles sont CONDITIONNELLES (18 → 15).** La leçon 12 crée
+      `commandes_clients` dans un bloc et la LIT dans le suivant ; la leçon 24 lit un socle `ca_mensuel`
+      que ses propres blocs définissent en `MATERIALIZED VIEW` (écarté). Poser ces vues
+      inconditionnellement a produit **deux régressions successives, toutes deux mesurées** : d'abord
+      `lecon-12 #1` (« table commandes_clients already exists »), puis — une fois corrigé —
+      `lecon-23 #2`, qui fait `ALTER TABLE clients DROP COLUMN nom` et que SQLite refuse dès qu'une vue
+      dépend de la colonne (« error in view commandes_clients after drop column »). Ce bloc ne parle
+      pas de vues ; il n'avait aucune raison d'en subir une. D'où la règle finale, écrite dans
+      `SEED_VUES` : **une vue du décor n'existe que pour le bloc qui écrit son nom sans la définir
+      lui-même.** Le motif `VUE_CREEE` et la liste `SEED_VUES` sont LUS par `verif-sql.js`, jamais
+      recopiés — comme `AUTRE_SGBD` et `TABLE_CREEE`. Dernier bloc traité : la CTE au corps vide
+      `WITH ca_mensuel AS ( /* le socle ci-dessus */ )` de la leçon 24, devenue un commentaire, ce qui
+      l'aligne sur les trois blocs voisins qui lisent le socle directement.
+
+      **4) Quatre boutons retirés parce qu'ils MENTAIENT — le seul retrait de blocs aboutissant.**
+      La leçon 17 recalée, son bloc `EXPLAIN` s'est mis à aboutir. Cliqué dans un vrai Chrome, il rend
+      le bytecode de la machine virtuelle SQLite — colonnes `addr opcode p1 p2 p3 p4 p5 comment`,
+      « 0 Init 0 10 0 NULL… » — alors que la page annonce juste en dessous
+      « Seq Scan on clients (cost=0.00..2310.00 rows=12000) ». Vérifié : les **trois autres** blocs
+      `EXPLAIN` du site (`sql/lecon-14 #3`, `bdd/lecon-12 #1` et `#2`) sont dans le même cas, leurs
+      pages publiant elles aussi des plans PostgreSQL. Un bouton qui affiche autre chose que ce que la
+      page promet est pire qu'un bouton absent : `EXPLAIN` rejoint `AUTRE_SGBD`, **avec un lookahead
+      qui préserve `EXPLAIN QUERY PLAN`**, la forme SQLite, qui rendrait un plan lisible.
+      C'est ce retrait qui explique la seule baisse d'aboutis du point (252 → 248) : elle est voulue.
+
+      **Preuve par le navigateur, pas par le vérificateur** (le Worker de `runner.js` a sa propre copie
+      des règles, que `verif-sql.js` n'exécute pas) : `tools/preuves/sql-lecon.js` sur les leçons 04,
+      08, 10, 12, 13, 16, 17, 22, 23, 24 du cours sql et sur `bdd/lecon-12`, dans un vrai Chrome,
+      `file://`, DNS coupé — **65 blocs cliqués, 65 résultats, 0 erreur, 0 requête distante**. Les
+      accents traversent le Blob du Worker (« Chloé » rendu intact). `bdd/lecon-12` est bien passée de
+      5 blocs avec bouton à 2 : les trois `EXPLAIN` n'en ont plus.
+      ⚠️ **Un tableau publié recalé dans la foulée** : rendre `lecon-12 #2` cliquable a mis son résultat
+      en contradiction avec le tableau imprimé en dessous, qui annonçait Dupont/Martin/Nkono — trois
+      noms absents du fil rouge. Il annonce maintenant la ligne mesurée (Camille Roy, Lyon, 120).
+
+      **Cliquet descendu à 14 et éprouvé par injection, dans les deux sens** (`tmp/injecte-sql.js`, qui
+      sort en 9 s'il ne remplace rien — le piège CRLF de B1a) : table renommée en
+      `ventes_produits_absente` dans `lecon-13` → **code 1**, « 15 contre 14 à la référence » ; faute
+      retirée → **code 0**, page revenue à l'octet près (`git diff` vide).
+      `verif-html.js` 0/0 sur 1 629 fichiers ; `verif-donnees.js` 25 contrôles, 0 erreur après
+      régénération de `search-index.js` (le contenu de trois leçons a changé) ; `verif.js --rapide`
+      **40 étapes, tout vert**.
+      ⚠️ **B1e reproduit une troisième fois au passage** : `sql-lecon.js` lancé sur `lecon-08` +
+      `lecon-13` a annoncé « pages/sql/lecon-08.html — **0** bloc(s) SQL avec bouton », là où la même
+      page seule en donne **11**, tous OK. Le verdict de cet outil dépend toujours de la taille du lot.
 
 - [x] **B1c-1 · « les commentaires ne sont pas du code » : `bdd` 19 → 14, site 53 → 47.** Deux
       décisions du moteur lisaient le texte BRUT du bloc, commentaires compris, et se trompaient :

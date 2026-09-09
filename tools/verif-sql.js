@@ -86,6 +86,24 @@ function lireMotifTableCreee() {
   return eval(m[1]);
 }
 
+/* Et le motif des VUES : le Worker ne pose une vue du décor que si le bloc écrit son
+   nom sans la définir (voir VUE_CREEE et SEED_VUES dans runner.js). Le motif ET la
+   liste sont LUS, jamais recopiés — seul le geste est répété ici. */
+function lireMotifVueCreee() {
+  var src = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
+  var m = src.match(/var VUE_CREEE = (\/[\s\S]*?\/i);/);
+  if (!m) throw new Error('VUE_CREEE introuvable dans js/runner.js');
+  return eval(m[1]);
+}
+function lireVuesDecor() {
+  var src = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
+  var i = src.indexOf('var SEED_VUES = [');
+  if (i < 0) throw new Error('SEED_VUES introuvable dans js/runner.js');
+  var j = src.indexOf('\n  ];', i);
+  if (j < 0) throw new Error('fin de SEED_VUES introuvable');
+  return eval('(' + src.slice(i + 'var SEED_VUES = '.length, j + 4) + ')');
+}
+
 /* Et le motif des commentaires SQL, pour la même raison : un `-- CREATE TABLE client`
    cité en rappel dans une leçon n'est pas une création de table. */
 function lireMotifCommentaire() {
@@ -149,6 +167,16 @@ var wasmBinary = Buffer.from(mb[1], 'base64');
 initSqlJs({ wasmBinary: wasmBinary, locateFile: function (f) { return f; } }).then(function (SQL) {
   var SEED = lireSeed();
   var aBesoinDuSeed = faireRegleDuSeed(lireMotifTableCreee(), SEED);
+  var MOTIF_VUE = lireMotifVueCreee();
+  var VUES_DECOR = lireVuesDecor();
+  function vuesAPoser(code) {
+    var nu = sansCommentaires(code), defini = [], re = new RegExp(MOTIF_VUE.source, 'gi'), m;
+    while ((m = re.exec(nu))) defini.push(m[1].toLowerCase());
+    return VUES_DECOR.filter(function (v) {
+      if (defini.indexOf(v.nom.toLowerCase()) !== -1) return false;
+      return new RegExp('\\b' + v.nom + '\\b', 'i').test(nu);
+    });
+  }
   var fichiers = [];
   if (cibles.length) cibles.forEach(function (c) { fichiers = fichiers.concat(lecons(c)); });
   else fichiers = lecons(null);
@@ -173,6 +201,7 @@ initSqlJs({ wasmBinary: wasmBinary, locateFile: function (f) { return f; } }).th
       var db = new SQL.Database();
       try {
         if (aBesoinDuSeed(code)) db.exec(SEED);
+        vuesAPoser(code).forEach(function (v) { try { db.exec(v.sql); } catch (e) {} });
         db.exec(code);
         ok++; parCours[cours].ok++;
         if (!SEULEMENT_ERREURS) console.log('  OK  ' + rel + ' #' + (i + 1));
