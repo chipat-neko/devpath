@@ -1068,6 +1068,66 @@ résultat avant le clic.
       defined`. Par cours : `js` 102, `projets-js` 34, `html` 29, `algo` 28, `nodejs` 26, `securite` 17,
       `patterns` 13, `tests` 12, `vue` 11, `nosql` 10.
 
+- [x] **B2b-2 · Le vérificateur mesurait un Worker APPAUVRI : 16 blocs déclarés en panne à tort, 9 sont
+      vivants pour de bon. 303 → 294, et les aboutis MONTENT de 1 481 à 1 490.**
+
+      **Ce point n'a pas retiré un bouton : il a réparé l'instrument.** En attaquant le lot suivant
+      (`await is only valid in async`), les causes se sont mises à ressembler à une liste de globales de
+      navigateur : `TextEncoder is not defined`, `performance is not defined`,
+      `EventTarget is not defined`. Or ce sont des noms qu'un vrai Web Worker POSSÈDE. Le contexte `vm`
+      de `verif-js.js` avait été écrit au minimum — console, minuteries, `self` — donc il déclarait en
+      panne des blocs qui marchent chez l'apprenant. **L'outil ne mesurait pas le site, il mesurait sa
+      propre pauvreté**, et le lot suivant aurait consisté à retirer des boutons VIVANTS sur cette foi.
+      Comptage : **16 blocs** échouaient sur un `X is not defined` où X est une globale standard d'un
+      Worker (TextEncoder 4, performance 3, EventTarget 3, PerformanceObserver 2, FormData,
+      ReadableStream, URL, WebSocket 1 chacun).
+
+      **LA LISTE A ÉTÉ MESURÉE DANS UN VRAI CHROME, PAS DEVINÉE.** Une page ouverte en `file://`, DNS
+      coupé, crée un Worker par la mécanique exacte de `runner.js` (Blob → `new Worker`) et lui demande,
+      pour 30 noms, s'il les possède, puis exécute 13 essais qui vérifient qu'ils FONCTIONNENT (et pas
+      seulement que le nom existe). **30 présents sur 30, 13 essais « MARCHE » sur 13** — y compris
+      `crypto.subtle`, Chrome tenant `file://` pour un contexte sécurisé. 0 requête distante pendant la
+      mesure. C'était la seule façon de trancher : supposer que « `crypto.subtle` exige HTTPS » aurait
+      fait écarter à tort tout le cours de cryptographie.
+
+      ⚠️ **CE QUI EST DÉLIBÉRÉMENT RESTÉ DEHORS, et c'est là que le point se joue.** `fetch`,
+      `WebSocket`, `XMLHttpRequest`, `indexedDB` et `caches` sont **présents eux aussi** dans ce Worker
+      — la mesure le dit. Les ajouter aurait fait ABOUTIR ici des blocs qui échouent chez l'apprenant,
+      puisque le site n'a ni serveur ni réseau : l'inverse exact du but. Un vérificateur trop généreux
+      est plus dangereux qu'un vérificateur absent, parce qu'il rend un vert. Ils restent donc hors du
+      contexte, et un bloc qui les appelle continue d'être compté en panne (il en reste 1, sur
+      `WebSocket`).
+
+      **Mesure : 1 819 blocs avec bouton, 1 490 aboutis (81,9 %, contre 1 481), 33 annoncées,
+      2 non concluants, 294 EN PANNE** (contre 303). Comparaison ligne à ligne des deux relevés :
+      **9 blocs gagnés, 0 PERDU** — aucun bloc n'est passé d'abouti à panne. Cliquet descendu à 294.
+
+      **Preuve par le navigateur, sur les 9 blocs concernés, un par un.** Chrome, `file://`, DNS coupé :
+      la page est ouverte, les `<details>` dépliés, le bouton « Tester » CLIQUÉ, et le panneau console
+      relu. **9 cliqués, 9 sans la moindre ligne d'erreur, 0 requête distante** :
+
+      | bloc | ce que l'apprenant voit |
+      |---|---|
+      | `js/lecon-34` #6 | `true` |
+      | `js/lecon-55` #5 et #6 | `99,97,102,195,169` (3 lignes) |
+      | `js/lecon-55` #11 | `3` (3 lignes) |
+      | `js/lecon-57` #7 | `2, 1, 0` |
+      | `js/lecon-58` #6 | `parse-json: 0.00 ms` |
+      | `js/lecon-58` #9 | `for: 0.522 ms/appel (sink=0)` (2 lignes) |
+      | `js/lecon-62` #4, `js/lecon-64` #6 | s'exécutent sans erreur, sans `console.log` |
+
+      **Une piste MESURÉE puis écartée, pour que la passe suivante n'ait pas à la refaire.** Le lot
+      `await` peut se traiter côté MOTEUR : détecter par compilation (`new Function`) qu'un bloc ne
+      refuse que pour cause d'`await` hors fonction async, et l'enrober dans une IIFE `async` — une
+      détection sans faux positif possible, puisque c'est JavaScript lui-même qui tranche. Mesuré sur
+      le site : **33 blocs touchés, 0 aujourd'hui vivant (donc aucun risque), mais 3 seulement
+      deviennent vivants.** Les 30 autres échouent ensuite sur `fetch`, `ReadableStream`,
+      `prisma`, `req`, `db` — le `await` n'était pas leur maladie, seulement leur premier symptôme.
+      Trois blocs ne valent pas de rendre le vérificateur asynchrone : la piste est notée, pas prise.
+
+      **Non-régression** : `node --check tools/verif-js.js` ; `verif.js --rapide` **40 étapes, tout
+      vert, 137,7 s**. Aucun fichier de contenu touché — ce point ne modifie que l'outil.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

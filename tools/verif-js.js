@@ -111,6 +111,32 @@ function lecons(cible) {
  * que la page ÉCRIT à côté du code, en commentaire, avant l'exécution. */
 var ERREUR_ANNONCEE = /\/\/[^\n]*\b(erreur|Erreur|ERREUR|throw|lève|leve|refuse|rejett?e|échoue|echoue|plante|invalide)\b/;
 
+/* --- LES GLOBALES D'UN VRAI WORKER, ET POURQUOI CETTE LISTE EXISTE (2026-09-09, B2b-2)
+ * Ce contexte a été écrit « au minimum » : console, minuteries, `self`. Résultat, il
+ * déclarait EN PANNE des blocs qui marchent parfaitement chez l'apprenant, simplement
+ * parce qu'un contexte `vm` nu ne possède pas `TextEncoder`. **16 blocs échouaient sur un
+ * `X is not defined` où X est une globale standard d'un Worker** : TextEncoder (4),
+ * performance (3), EventTarget (3), PerformanceObserver (2), FormData, ReadableStream,
+ * URL, WebSocket (1 chacun). L'outil ne mesurait donc pas le site : il mesurait sa propre
+ * pauvreté, et un bouton retiré sur cette foi aurait été un bouton VIVANT retiré.
+ *
+ * LA LISTE N'EST PAS DEVINÉE, ELLE EST MESURÉE DANS UN VRAI CHROME. Une page ouverte en
+ * `file://`, DNS coupé, crée un Worker par la même mécanique que `runner.js` (Blob → Worker)
+ * et lui demande, pour chaque nom, s'il existe ET s'il FONCTIONNE. Les 13 essais exécutés
+ * rendent tous « MARCHE » — y compris `crypto.subtle`, car Chrome tient `file://` pour un
+ * contexte sécurisé. 0 requête distante pendant la mesure.
+ *
+ * ⚠️ CE QUI EST DÉLIBÉRÉMENT ABSENT, ET C'EST LE POINT DÉLICAT. `fetch`, `WebSocket`,
+ * `XMLHttpRequest`, `indexedDB` et `caches` EXISTENT aussi dans ce Worker — la mesure le
+ * dit — mais ils exigent un serveur ou le réseau, que le site n'a pas. Les fournir ferait
+ * ABOUTIR ici des blocs qui échouent chez l'apprenant : exactement l'inverse du but. Ils
+ * restent donc hors du contexte, et un bloc qui les appelle reste compté en panne. */
+var GLOBALES_WORKER = ['TextEncoder', 'TextDecoder', 'performance', 'EventTarget', 'Event',
+  'URL', 'URLSearchParams', 'Blob', 'AbortController', 'AbortSignal', 'ReadableStream',
+  'WritableStream', 'TransformStream', 'FormData', 'Headers', 'Request', 'Response',
+  'atob', 'btoa', 'PerformanceObserver', 'crypto', 'DOMException', 'MessageChannel',
+  'BroadcastChannel', 'CompressionStream', 'DecompressionStream'];
+
 /* Le contexte d'exécution : celui du Worker, pas celui de Node.
    `console` est détourné comme dans WORKER_SRC ; les globales que le Worker possède et
    que Node nomme autrement sont fournies. Rien d'autre n'est ajouté : ajouter `require`
@@ -133,6 +159,9 @@ function contexteWorker(sorties) {
     structuredClone: function (v) { return JSON.parse(JSON.stringify(v)); },
     self: null, globalThis: null
   };
+  GLOBALES_WORKER.forEach(function (n) {
+    if (typeof globalThis[n] !== 'undefined') ctx[n] = globalThis[n];
+  });
   ctx.self = ctx; ctx.globalThis = ctx;
   return ctx;
 }
