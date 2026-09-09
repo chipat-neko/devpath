@@ -170,6 +170,7 @@ var contexteWorker = CTX.contexteWorker;
 var fmtArgs = CTX.fmtArgs;
 var ERREUR_ANNONCEE = CTX.ERREUR_ANNONCEE;
 var erreurAnnoncee = CTX.erreurAnnoncee;
+var estHorsPortee = CTX.estHorsPortee;
 var fichiers = [];
 if (cibles.length) cibles.forEach(function (c) { fichiers = fichiers.concat(lecons(c)); });
 else fichiers = lecons(null);
@@ -179,6 +180,7 @@ var DELAI = 5000;
 var total = 0, ok = 0, ko = 0, ecartes = 0, annoncees = 0, indecis = 0;
 var nonCompilables = 0, listeNonCompilables = [];
 var orphelins = 0, listeOrphelins = [];
+var horsPortee = 0, listeHorsPortee = [];
 var causes = {};
 var parCours = {};
 
@@ -346,6 +348,17 @@ fichiers.forEach(function (f) {
       if (!SEULEMENT_ERREURS && !CAUSES) console.log('  ANN ' + rel + ' #' + (i + 1) + ' — ' + msg.slice(0, 70) + '  (annoncée)');
       return;
     }
+    /* Une panne qui n'en est pas une : le bloc emploie une globale que le vrai Worker
+       POSSÈDE et que Node ne peut pas fournir sans l'inventer (`indexedDB`, `caches`).
+       Le critère et sa justification sont dans `tools/lib/contexte-worker.js` ; le cliquet
+       posé plus bas exige l'ÉGALITÉ, pour qu'on ne puisse rien cacher dans cette case. */
+    if (estHorsPortee(msg)) {
+      horsPortee++;
+      listeHorsPortee.push(rel + ' #' + (i + 1) + (bloc.fichier ? '  [' + bloc.fichier + ']' : '') + ' — ' + msg);
+      if (!SEULEMENT_ERREURS && !CAUSES) console.log('  HP  ' + rel + ' #' + (i + 1) +
+        ' — ' + msg + '  (hors de portee de la mesure)');
+      return;
+    }
     ko++;
     var cle = msg.replace(/^(\w+Error): /, '$1: ').replace(/'[^']*'/g, "'…'").slice(0, 60);
     (causes[cle] = causes[cle] || []).push(rel + ' #' + (i + 1) + (bloc.fichier ? '  [' + bloc.fichier + ']' : ''));
@@ -364,6 +377,9 @@ if (CAUSES) {
   console.log('=== FRAGMENTS ORPHELINS (ecartes, cliquet a part) : ' + orphelins + ' ===');
   listeOrphelins.forEach(function (o) { console.log('   ' + o); });
   console.log('');
+  console.log('=== HORS DE PORTEE DE LA MESURE (cliquet d\'EGALITE) : ' + horsPortee + ' ===');
+  listeHorsPortee.forEach(function (o) { console.log('   ' + o); });
+  console.log('');
   console.log('=== CAUSES, de la plus fréquente à la plus rare ===');
   Object.keys(causes).sort(function (a, b) { return causes[b].length - causes[a].length; })
     .forEach(function (c) {
@@ -380,6 +396,7 @@ console.log('  aboutissent ............. ' + ok + (total ? '  (' + (100 * ok / t
 console.log('  dont PAR REPLI .......... ' + replies + '  (derrière les blocs précédents de la leçon)');
 console.log('  erreurs ANNONCÉES ....... ' + annoncees + '  (la page les écrit en commentaire)');
 console.log('  non concluants .......... ' + indecis + '  (plus de ' + (DELAI / 1000) + ' s : hors cliquet)');
+console.log('  hors de portee .......... ' + horsPortee + '  (globale reelle du Worker que Node ne peut pas fournir : cliquet d\'EGALITE)');
 console.log('  EN PANNE ................ ' + ko);
 console.log('  NE COMPILENT PAS ....... ' + nonCompilables + '  (ecartes : pas de bouton, cliquet a part)');
 console.log('  FRAGMENTS ORPHELINS .... ' + orphelins + '  (ecartes : un nom que rien ne fournit, cliquet a part)');
@@ -402,7 +419,7 @@ if (!CAUSES) {
 if (cibles.length) { console.log('\n  (cliquet inactif : des cibles ont ete passees en argument)'); process.exit(0); }
 if (FIXER) {
   fs.writeFileSync(ATTENDU, JSON.stringify({ ko: ko, total: total, nonCompilables: nonCompilables,
-    orphelins: orphelins,
+    orphelins: orphelins, horsPortee: horsPortee,
     note: 'Nombre de blocs JS en panne au dernier releve. Il ne doit jamais augmenter. ' +
           'Le descendre apres une reparation : node tools/verif-js.js --fixer',
     note2: 'nonCompilables : blocs que `new Function` refuse de compiler, donc prives de ' +
@@ -411,7 +428,12 @@ if (FIXER) {
     note3: 'orphelins : blocs qui ouvrent une ligne sur un nom que rien dans la page ne ' +
            'fournit, donc prives de bouton par runner.js. Meme raison que ci-dessus, et ' +
            'elle a ete MESUREE : un appel de fonction inexistante ajoute par erreur ferait ' +
-           'simplement disparaitre le bouton, sans faire monter les pannes.' }, null, 2) + '\n', 'utf8');
+           'simplement disparaitre le bouton, sans faire monter les pannes.',
+    note4: 'horsPortee : blocs qui emploient une globale que le VRAI Worker possede et que ' +
+           'Node ne peut pas fournir sans l\'inventer (indexedDB, caches). Ils marchent chez ' +
+           'l\'apprenant et sont soustraits au verdict : ce cliquet-la exige donc l\'EGALITE, ' +
+           'pas la non-regression. En baisse comme en hausse, il rougit -- sinon la categorie ' +
+           'deviendrait un endroit ou cacher une vraie panne.' }, null, 2) + '\n', 'utf8');
   console.log('\n  cliquet fixe a ' + ko + ' bloc(s) en panne sur ' + total +
               ', ' + nonCompilables + ' bloc(s) qui ne compilent pas, et ' + orphelins +
               ' fragment(s) orphelin(s).');
@@ -441,6 +463,19 @@ if (typeof ref.orphelins === 'number' && orphelins > ref.orphelins) {
     ' a la reference, soit ' + (orphelins - ref.orphelins) + ' de plus.');
   console.log('  Un bloc JS cite un nom que plus rien ne fournit : il perd son bouton en' +
               ' silence. Les voir : node tools/verif-js.js --causes');
+  process.exit(1);
+}
+/* Le QUATRIEME cliquet, et le seul qui exige l'EGALITE (2026-09-09, point B2b-16). Les trois
+   autres interdisent une hausse ; celui-ci interdit aussi une BAISSE, parce que la categorie
+   qu'il garde est la seule ou un bloc peut etre soustrait au verdict. Un fourre-tout qui ne
+   fait rougir que dans un sens est un endroit ou cacher une vraie panne : c'est exactement la
+   crainte ecrite dans le releve du point, et c'est la lecon du cours mobile (fermer un indice
+   dans un seul SENS laisse la faille entiere). Les blocs sont d'ailleurs NOMMES par --causes. */
+if (typeof ref.horsPortee === 'number' && horsPortee !== ref.horsPortee) {
+  console.log('\nCLIQUET : ' + horsPortee + ' bloc(s) hors de portee de la mesure, contre ' +
+    ref.horsPortee + ' a la reference.');
+  console.log('  Cette categorie ECHAPPE au verdict : son effectif ne bouge pas sans decision.' +
+              ' Les voir : node tools/verif-js.js --causes');
   process.exit(1);
 }
 if (typeof ref.orphelins === 'number' && orphelins < ref.orphelins) {

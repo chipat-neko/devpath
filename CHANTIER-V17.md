@@ -2632,12 +2632,31 @@ résultat avant le clic.
       exécutés), `verif-sorties` 449 blocs rejoués / 0 divergent, `verif-html` 0, `verif-donnees`
       0 erreur, 0 URL de CDN introduite.
 
-      **CE QUI RESTE OUVERT, ET C'EST LA QUESTION 1.** `js/lecon-32` #6 (`indexedDB`) marche chez
-      l'apprenant et reste compté en panne : Node n'a pas d'IndexedDB, et en fabriquer un serait
-      l'inventer. Une catégorie « hors de portée de la mesure » reste à créer — avec son PROPRE
-      cliquet, pour qu'on ne puisse rien y cacher, ce que le relevé initial redoutait à juste
-      titre. 1 bloc concerné. Le `WebSocket` de `nodejs/lecon-17` #3, lui, est réglé : il
-      n'ouvrait déjà aucune connexion sortante et affiche maintenant le message du refus.
+      **LA QUESTION 1 TRANCHÉE : une catégorie « HORS DE PORTÉE DE LA MESURE », mais tenue par
+      un cliquet d'ÉGALITÉ.** `js/lecon-32` #6 (`indexedDB`) marche chez l'apprenant — il écrit
+      puis relit sa donnée et affiche « Acheter du pain », mesuré au clic — et restait compté en
+      panne : Node n'a pas d'IndexedDB, et en fabriquer un serait l'INVENTER (refusé en B2b-4).
+      Le relevé initial redoutait, à juste titre, qu'une catégorie hors cliquet devienne un
+      endroit où cacher de vraies pannes. La réponse est le **quatrième cliquet de `verif-js.js`,
+      et le seul qui interdise aussi la BAISSE** : son effectif doit valoir exactement celui de
+      la référence. Les trois autres ne surveillent qu'un sens — c'est la leçon du cours mobile,
+      « fermer un indice dans un seul sens laisse la faille entière ». Le critère ne peut pas
+      déborder : il exige un `ReferenceError` portant EXACTEMENT `indexedDB` ou `caches`
+      (vérifié : `ReferenceError: db is not defined` et `TypeError: indexedDB is not defined`
+      ne passent pas), et les blocs sont NOMMÉS par `--causes`.
+
+      **Effet mesuré : 1 bloc, celui-là même que le relevé désignait. Blocs en panne 43 → 42**,
+      référence descendue. **Cliquet éprouvé dans les deux sens** : référence à 0 pour une mesure
+      de 1 → code **1** ; référence à 2 pour une mesure de 1 → code **1** ; référence remise à 1
+      → code **0**, « 42 blocs en panne, comme à la référence ».
+
+      Le `WebSocket` de `nodejs/lecon-17` #3 est réglé du même coup : il n'ouvrait déjà aucune
+      connexion sortante, et il affiche maintenant le message du refus au lieu de rien.
+
+      **`verif-clic.js`, le seul outil qui clique vraiment, passé après tout cela** :
+      **512 blocs cliqués sur 512 attendus, couverture complète, 0 divergent**, 995 s sur
+      75 pages. Le renommage du formateur dans `WORKER_SRC` n'a rien cassé de ce que les pages
+      annoncent.
 
 
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**

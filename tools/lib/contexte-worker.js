@@ -137,6 +137,28 @@ function lireDuRunner(nom) {
   return (_lues[nom] = eval('(' + src.slice(i, j + 4) + ')'));
 }
 function apisHorsLigne() { return lireDuRunner('apisHorsLigne')(); }
+
+
+/* --- CE QUE CE VÉRIFICATEUR NE PEUT PAS MESURER, ET QUI DOIT LE DIRE (2026-09-09, B2b-16)
+ * `indexedDB` et `caches` existent dans un vrai Worker — la sonde du point B2b-2 l'a mesuré —
+ * mais Node ne les a pas, et en fabriquer un ici serait les INVENTER : refusé au point B2b-4,
+ * parce qu'une API contrefaite fait ABOUTIR des blocs qui échouent chez l'apprenant.
+ * Résultat, un bloc qui les emploie était compté EN PANNE alors qu'il marche : mesuré au clic
+ * dans Chrome sur `pages/js/lecon-32.html` #6, qui écrit puis relit sa donnée et affiche
+ * « Acheter du pain ». IndexedDB est du stockage LOCAL, il n'a besoin d'aucun serveur.
+ *
+ * ⚠️ UNE CATÉGORIE HORS CLIQUET EST UN ENDROIT OÙ L'ON PEUT CACHER DE VRAIES PANNES — le
+ * relevé du point B2b-16 le disait avant qu'elle existe. Elle est donc tenue par un cliquet
+ * d'ÉGALITÉ, pas de non-régression : son effectif doit valoir exactement celui de la
+ * référence. Y verser un bloc de plus fait rougir, tout comme en retirer un. Et le critère
+ * ne peut pas déborder : il exige un `ReferenceError` portant EXACTEMENT l'un de ces deux
+ * noms, pas un message qui les contient. */
+var HORS_PORTEE = ['indexedDB', 'caches'];
+function estHorsPortee(msg) {
+  return HORS_PORTEE.some(function (n) {
+    return msg === 'ReferenceError: ' + n + ' is not defined';
+  });
+}
 /* Le formatage d'une valeur affichée est LU dans `js/runner.js` (point B2b-16) : cette
    fonction en portait une copie, et la copie a divergé le jour où le moteur a cessé de
    sérialiser les `Error` en `{}`. C'est le défaut du point B2b-15, sur l'objet d'à côté. */
@@ -189,4 +211,5 @@ function erreurAnnoncee(code, msg) {
   return !!debut && com.toLowerCase().indexOf(debut.toLowerCase()) !== -1;
 }
 
-module.exports = { GLOBALES_WORKER: GLOBALES_WORKER, contexteWorker: contexteWorker, fmtArgs: fmtArgs, ERREUR_ANNONCEE: ERREUR_ANNONCEE, erreurAnnoncee: erreurAnnoncee };
+module.exports = { GLOBALES_WORKER: GLOBALES_WORKER, contexteWorker: contexteWorker, fmtArgs: fmtArgs, ERREUR_ANNONCEE: ERREUR_ANNONCEE, erreurAnnoncee: erreurAnnoncee,
+  HORS_PORTEE: HORS_PORTEE, estHorsPortee: estHorsPortee };
