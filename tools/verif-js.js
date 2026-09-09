@@ -88,6 +88,12 @@ var estUnFragmentServeur = lireFonction('estUnFragmentServeur');
 var estDuDomDePage = lireFonction('estDuDomDePage');
 var estUnServiceWorker = lireFonction('estUnServiceWorker');
 var neCompilePas = lireFonction('neCompilePas');
+/* ⚠️ LA SEULE RÈGLE QUI PREND UN SECOND ARGUMENT (2026-09-09, point B2b-8) : les blocs de
+   navigateur qui PRÉCÈDENT celui qu'on examine dans la leçon. Toutes les autres jugent un
+   bloc seul ; celle-ci répond à une panne qui n'existe QUE dans un contexte — un `bouton`
+   ou un `ctx` né d'un `document.querySelector` dans un bloc écarté, donc absent du
+   préambule du repli. Lue, jamais recopiée, comme les autres. */
+var heriteDuNavigateur = lireFonction('heriteDuNavigateur');
 /* Le REPLI (2026-09-09, point B2b-7) : quand rejouer, et comment envelopper le bloc rejoué.
    Ces deux règles sont LUES elles aussi — si ce vérificateur devinait l'enveloppe au lieu de
    la lire, il mesurerait un moteur qui n'existe pas. */
@@ -232,14 +238,22 @@ fichiers.forEach(function (f) {
      sur un nom manquant derrière les blocs À BOUTON qui le précèdent dans la leçon — donc
      ceux, et seulement ceux, que ce vérificateur retient lui aussi. On les collecte au
      premier passage : un bloc n'est jamais son propre préambule. */
+  /* CE QUI PRÉCÈDE CHAQUE BLOC (point B2b-8), relevé dans une passe séparée exactement
+     comme `init()` le fait dans runner.js : les blocs de NAVIGATEUR situés avant celui
+     qu'on examine. C'est le seul contexte dont une règle du bouton ait besoin. */
+  var navAvant = [], vusNav = [];
+  blocsDuFichier.forEach(function (bloc) {
+    navAvant.push(vusNav.slice());
+    if (bloc.code && (BROWSER_ONLY.test(bloc.code) || estDuDomDePage(bloc.code))) vusNav.push(bloc.code);
+  });
   var aBouton = [];
-  function aUnBouton(code) {
+  function aUnBouton(code, ctxNav) {
     return !(BROWSER_ONLY.test(code) || estUnFichierJson(code) || estUneSuiteDeTests(code) ||
       estUnFragmentServeur(code) || estDuDomDePage(code) || estUnServiceWorker(code) ||
-      neCompilePas(code));
+      neCompilePas(code) || heriteDuNavigateur(code, ctxNav));
   }
-  blocsDuFichier.forEach(function (bloc) {
-    if (bloc.code && aUnBouton(bloc.code)) aBouton.push(bloc.code);
+  blocsDuFichier.forEach(function (bloc, i) {
+    if (bloc.code && aUnBouton(bloc.code, navAvant[i])) aBouton.push(bloc.code);
   });
   var vus = 0;
   blocsDuFichier.forEach(function (bloc, i) {
@@ -263,6 +277,10 @@ fichiers.forEach(function (f) {
       listeNonCompilables.push(rel + ' #' + (i + 1) + (bloc.fichier ? '  [' + bloc.fichier + ']' : ''));
       return;
     }
+    /* L'HÉRITAGE DU NAVIGATEUR est testé APRÈS `neCompilePas`, dans le même ordre que
+       `init()` : un bloc qui relève des deux doit être compté du même côté par les deux
+       outils, sinon les chiffres divergent sans qu'aucune règle n'ait changé. */
+    if (heriteDuNavigateur(code, navAvant[i])) { ecartes++; return; }
     total++;
     var prefixe = aBouton.slice(0, vus);
     vus++;

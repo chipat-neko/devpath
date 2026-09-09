@@ -205,19 +205,39 @@ var reglesRunner = (function () {
   var m = /var BROWSER_ONLY = \/([\s\S]*?)\/;\s*\n/.exec(src);
   var motif = null;
   if (m) { try { motif = new RegExp(m[1]); } catch (e) { motif = null; } }
-  var fns = ['estUnFichierJson', 'estUneSuiteDeTests', 'estUnFragmentServeur', 'estDuDomDePage', 'estUnServiceWorker', 'neCompilePas'].map(function (nom) {
-    var i = src.indexOf('function ' + nom + '(texte) {');
-    if (i < 0) return null;
+  var par = {};
+  ['estUnFichierJson', 'estUneSuiteDeTests', 'estUnFragmentServeur', 'estDuDomDePage',
+   'estUnServiceWorker', 'neCompilePas', 'heriteDuNavigateur'].forEach(function (nom) {
+    var i = src.indexOf('function ' + nom + '(');
+    if (i < 0) return;
     var j = src.indexOf('\n  }', i);
-    if (j < 0) return null;
-    try { return eval('(' + src.slice(i, j + 4) + ')'); } catch (e) { return null; }
-  }).filter(Boolean);
-  return { motif: motif, fns: fns };
+    if (j < 0) return;
+    try { par[nom] = eval('(' + src.slice(i, j + 4) + ')'); } catch (e) { /* règle absente : signalée plus bas */ }
+  });
+  return { motif: motif, par: par };
 })();
 var BROWSER_ONLY = reglesRunner.motif;
-function ecarteParRunner(code) {
+/* Les règles SANS contexte : elles ne regardent que le bloc. */
+var REGLES_SEULES = ['estUnFichierJson', 'estUneSuiteDeTests', 'estUnFragmentServeur',
+  'estDuDomDePage', 'estUnServiceWorker', 'neCompilePas'];
+/* ⚠️ LA SEULE RÈGLE QUI REGARDE CE QUI PRÉCÈDE (point B2b-8) : `heriteDuNavigateur` reçoit
+   les blocs de navigateur situés AVANT celui qu'on examine. Sans ce contexte, cet outil
+   réclamerait 27 boutons de plus que le navigateur n'en pose — la même dette que celle
+   soldée en B2b-3, un cran plus loin. */
+function estNavigateur(code) {
   if (BROWSER_ONLY && BROWSER_ONLY.test(code)) return true;
-  return reglesRunner.fns.some(function (f) { return f(code); });
+  var f = reglesRunner.par.estDuDomDePage;
+  return !!f && f(code);
+}
+function ecarteParRunner(code, navAvant) {
+  if (BROWSER_ONLY && BROWSER_ONLY.test(code)) return true;
+  var ecarte = REGLES_SEULES.some(function (n) {
+    var f = reglesRunner.par[n];
+    return !!f && f(code);
+  });
+  if (ecarte) return true;
+  var h = reglesRunner.par.heriteDuNavigateur;
+  return !!h && h(code, navAvant || []);
 }
 function decode(s) {
   return String(s).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
@@ -226,8 +246,16 @@ function decode(s) {
 function blocsAttendusDe(page) {
   var html = fs.readFileSync(path.join(RACINE, page), 'utf8');
   var re = /<figure class="code-block"[\s\S]*?<\/figure>/g, m, n = 0;
+  var navAvant = [];
   while ((m = re.exec(html))) {
     var f = m[0];
+    /* LA COLLECTE DES BLOCS DE NAVIGATEUR PRÉCÈDE TOUT FILTRE, comme dans `runner.js` :
+       un bloc sans `<pre>`, ou dont l'auteur a désactivé le bouton, n'est jamais candidat
+       mais reste une source de noms pour ceux qui le suivent. */
+    var cAv = /<code[^>]*class="[^"]*language-javascript[^"]*"[^>]*>([\s\S]*?)<\/code>/.exec(f);
+    var codeAv = cAv ? decode(cAv[1]).trim() : null;
+    var contexte = navAvant.slice();
+    if (codeAv !== null && estNavigateur(codeAv)) navAvant.push(codeAv);
     if (f.indexOf('<pre') < 0) continue;
     /* `data-runner` ÉCRIT DANS LE SOURCE = l'auteur a désactivé le bouton lui-même,
        et `runner.js` sort aussitôt (`if (!bar || block.hasAttribute("data-runner")) return`).
@@ -236,9 +264,8 @@ function blocsAttendusDe(page) {
        modulo.js`, un `const mod = …` sans affichage, exclu exprès. Un bloc qu'on renonce
        à juger doit être exclu du DÉNOMINATEUR, pas retranché d'un total. */
     if (/\sdata-runner(\s*=|[\s>])/i.test(f.slice(0, f.indexOf('<pre')))) continue;
-    var c = /<code[^>]*class="[^"]*language-javascript[^"]*"[^>]*>([\s\S]*?)<\/code>/.exec(f);
-    if (!c) continue;
-    if (ecarteParRunner(decode(c[1]).trim())) continue;
+    if (!cAv) continue;
+    if (ecarteParRunner(codeAv, contexte)) continue;
     n++;
   }
   return n;

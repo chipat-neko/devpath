@@ -1608,6 +1608,120 @@ résultat avant le clic.
       S'y ajoutent 3 `Illegal return statement`, ces blocs qu'`eval` refuse alors que
       `new Function` les accepte, déjà repérés en B2b-5.
 
+- [x] **B2b-8 · Le fragment qui HÉRITE du navigateur : 27 blocs écartés, ZÉRO vivant retiré —
+      131 blocs en panne → 107, et les aboutis ne bougent pas d'une unité (1 522 avant, 1 522
+      après). Avec le critère évident mesuré puis REFUSÉ parce qu'il emportait 31 boutons qui
+      marchent.**
+
+      **Mesure reproduite avant de toucher à quoi que ce soit** (`node tools/verif-js.js --causes`) :
+      1 675 blocs avec bouton, 714 écartés, **1 522 aboutis, 20 annoncées, 2 non concluants,
+      131 EN PANNE, 81 non compilables** — identique au chiffre laissé par B2b-7, le gisement
+      n'avait pas bougé. Causes de tête, exactement celles annoncées : 7 `bouton`, 4 `ctx`,
+      3 `form`, 3 `element`, 2 `canvas`. Toutes le même récit : le nom naît d'un
+      `const bouton = document.querySelector(…)` dans un bloc PRÉCÉDENT que `BROWSER_ONLY`
+      écarte — donc absent du préambule, donc hors de portée du repli de B2b-7.
+
+      **C'est la PREMIÈRE règle du bouton qui regarde ce qui PRÉCÈDE.** Les sept autres jugent un
+      bloc seul. Celle-ci répond à une panne qui n'existe que dans un contexte, et elle reçoit
+      donc un second argument : les blocs de navigateur situés avant celui qu'on examine. Dans
+      `runner.js` comme dans les deux vérificateurs, ce relevé se fait dans une **passe séparée**,
+      avant toute décision — un bloc sans barre d'outils n'est jamais candidat au bouton mais
+      reste une source de noms pour ceux qui le suivent, et une passe à part rend l'ordre
+      explicite au lieu de le faire dépendre d'un effet de bord de la boucle.
+
+      ⚠️ **LE CRITÈRE ÉVIDENT AURAIT RETIRÉ 31 BOUTONS QUI MARCHENT, et seule l'exécution le
+      disait.** `tools/preuves/sonde-heritage-navigateur.js` EXÉCUTE chaque bloc désigné, repli
+      compris, avant qu'une ligne ne soit écrite dans le moteur :
+
+      | critère | visés | dont VIVANTS |
+      |---|---|---|
+      | décl. colonne 0, usage n'importe où | 75 | **31** |
+      | décl. n'importe où, usage n'importe où | 100 | **50** |
+      | **décl. colonne 0, USAGE en colonne 0** (retenu) | **27** | **0** |
+
+      Ce qui sépare les deux lignes tient en une phrase : **un nom cité dans le CORPS d'une
+      fonction que le bloc n'appelle jamais ne fait rien échouer.** `projets-js/lecon-16` #2
+      déclare des fonctions de dessin qui mentionnent `ctx` sans jamais les appeler : il aboutit,
+      silencieux mais vivant. Le nom qui OUVRE une ligne, lui, est évalué au niveau racine et
+      l'erreur est certaine dès le clic. C'est la contrainte de colonne zéro du point B2b-3,
+      appliquée cette fois à l'USAGE et non à la déclaration.
+      **Deux variantes voisines mesurées puis écartées** : chercher la déclaration n'importe où
+      gagne UN bloc (28 au lieu de 27, `js/lecon-65` #5) au prix de noms locaux banals promus en
+      sources ; et la CASCADE — l'écarté transmet à son tour — ne change **RIEN**, 27 dans les
+      deux cas. On garde la règle la plus étroite, et on n'écrit pas une complication qui ne
+      rapporte rien.
+
+      **Impact : 27 blocs visés, 24 déjà comptés en panne, 3 que le vérificateur classait
+      « erreur annoncée » à tort, ZÉRO VIVANT.** Les trois : `js/lecon-33` #4 et #6,
+      `projets-js/lecon-19` #3 — leur commentaire porte les mots « invalide » ou « erreur », mais
+      ils n'enseignent aucune faute ; ce sont des écouteurs `submit` et `dragstart` posés sur un
+      `form` et un `board` du document, l'un d'eux s'ouvrant même sur « effet navigateur ». D'où
+      les annoncées qui passent de 20 à 17.
+
+      ⚠️ **LA SONDE MESURE MAINTENANT LA RÈGLE RÉELLEMENT POSÉE DANS LE MOTEUR, pas sa maquette.**
+      Les quatre variantes ci-dessus sont des reconstitutions écrites dans la sonde ; une
+      cinquième **LIT `heriteDuNavigateur` dans `js/runner.js`** et rejoue la mesure. Sans elle,
+      rien n'interdisait qu'une transcription approximative vise 27 blocs pendant que le moteur en
+      visait d'autres — le défaut fondateur du chantier, celui du commit « trois cas, testés » du
+      2026-09-02. Verdict : **27 visés, 24 en panne, 0 vivant, identique à la maquette.**
+
+      **Écriture.** `heriteDuNavigateur(texte, blocsNavigateur)` dans `js/runner.js`, huitième règle
+      du bouton ; `tools/verif-js.js` et `tools/verif-clic.js` la **LISENT**, jamais ne la
+      recopient. Les deux la testent **après** `neCompilePas`, dans le même ordre que `init()` :
+      un bloc qui relève des deux doit être compté du même côté par les deux outils, sinon les
+      chiffres divergent sans qu'aucune règle n'ait changé. `verif-clic.js` a demandé un peu plus
+      qu'une ligne — son `ecarteParRunner` jugeait un bloc isolé et sa table de règles était un
+      tableau anonyme : elle devient une table nom → fonction, seule façon d'y désigner
+      `estDuDomDePage` (qui décide ce qui est « du navigateur ») et de passer un contexte à la
+      règle qui en réclame un. Sans cela il aurait réclamé **27 boutons que le navigateur ne pose
+      plus** : la dette de B2b-3, un cran plus loin.
+
+      **Mesure finale : 1 648 blocs avec bouton, 741 écartés (+27), 1 522 aboutis (92,4 %, contre
+      90,9 %), dont 30 par repli, 17 annoncées, 2 non concluants, 107 EN PANNE, 81 non
+      compilables.** Le nombre d'aboutis est **inchangé à l'unité près**, et les 30 blocs qui ne
+      vivent que par le repli sont toujours 30 — c'était le risque propre à ce point, puisqu'un
+      bloc privé de bouton disparaît aussi du préambule des suivants. Cliquet descendu à 107.
+
+      **Preuve par le navigateur** (le vérificateur n'exécute pas `runner.js` : seul un vrai Chrome
+      dit ce que l'apprenant voit), par `verif-clic.js` — l'outil du projet qui CLIQUE — sur
+      **13 pages, les 10 touchées et 3 témoins**, règle active puis neutralisée, le fichier
+      restauré ensuite à l'octet près (md5 `b8b999eb…` identique avant et après) :
+
+      | sur `js/lecon-11`, `html/lecon-44`, `projets-js/lecon-10` + 3 témoins | boutons posés dans le DOM rendu |
+      |---|---|
+      | règle neutralisée | **35** cliqués sur 35 attendus |
+      | règle active | **24** cliqués sur 24 attendus |
+
+      **11 boutons de moins**, et ce sont exactement les 11 blocs que la règle désigne sur ces
+      pages (`js/lecon-11` #2 #3 #4 #6, `html/lecon-44` #2 #3 #6 #8, `projets-js/lecon-10` #3 #4
+      #5) : l'écart tombe à l'unité près sur la prévision, donc **aucun témoin n'est entamé**. Les
+      7 autres pages touchées (`js/lecon-33`, `projets-js/lecon-02` `-06` `-12` `-17` `-19`,
+      `nodejs/lecon-06`) rendent **18 blocs cliqués sur 18 attendus**. Au total **42 sur 42,
+      couverture complète, 0 divergence** entre ce que la page imprime et ce que le clic rend.
+
+      **Le garde-fou éprouvé par injection, dans les deux sens et deux fois.** (a) Règle
+      neutralisée dans `runner.js` : `verif-js.js` sort en **1**, « 131 blocs en panne contre 107
+      à la référence » ; restaurée, code **0**, md5 identique. (b) `zzzNomInexistant();` injecté en
+      tête d'un bloc vivant d'`algo/lecon-01` : code **1**, « 108 contre 107 » ; faute retirée,
+      code **0**, page revenue à l'octet près (md5 `269ad551…`). Le contrôle rougit donc aussi
+      bien quand la règle disparaît que quand le contenu casse.
+
+      **Non-régression** : `verif-html.js` 1 629 fichiers, **0 grave / 0 attention** ;
+      `verif-donnees.js` 25 contrôles, **0 erreur** ; `verif-chaine-declaree.js` 89 outils,
+      **code 0** ; `preuves/worker-src-compile.js` **code 0** ; `verif.js --rapide` **41 étapes,
+      tout vert, 145,8 s** ; `node --check` sur les quatre fichiers touchés ; 0 URL vers un CDN
+      (grep = 0 sur les quatre). Aucun fichier de contenu modifié : ce point ne touche que le
+      moteur et ses vérificateurs.
+
+      **Reste au gisement : 107.** Par cours : `js` 44, `projets-js` 14, `patterns` 8, `securite` 7,
+      `tests` 6, `html` 4, `algo` 4, `nodejs` 4, `vue` 4. Causes de tête : 6 `etatInitial`,
+      4 `bouton`, 4 `user`, 3 `taches`, 3 `Tache`, 3 `element`, 3 `Illegal return statement`.
+      Le reste n'est plus homogène : ce sont des fragments dont le bloc source est lui-même à
+      bouton mais placé APRÈS (l'ordre de la leçon expose la solution avant l'énoncé), des noms
+      qui ne sont déclarés nulle part dans la page, et les 3 `return` racine qu'`eval` refuse
+      alors que `new Function` les accepte (B2b-5). La prochaine case devra donc trancher lot par
+      lot, sans espérer une règle unique.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

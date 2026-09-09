@@ -208,6 +208,58 @@
     return false;
   }
 
+  /* LE FRAGMENT QUI HÉRITE DU NAVIGATEUR (2026-09-09, point B2b-8). Les règles ci-dessus
+     regardent un bloc SEUL. Celle-ci est la première à regarder ce qui le PRÉCÈDE, parce
+     que le repli du point B2b-7 a laissé un reste parfaitement homogène : `bouton`, `ctx`,
+     `form`, `canvas`, `grille`, `board` — des noms que le bloc n'a pas déclarés et que le
+     repli ne peut PAS lui fournir, puisqu'ils viennent d'un bloc précédent ÉCARTÉ comme
+     code de navigateur (`const bouton = document.querySelector(…)`), donc absent du
+     préambule. Un bloc qui consomme au niveau racine un nom né d'un `document.querySelector`
+     est du code de navigateur lui aussi : le bouton ne pouvait promettre qu'un
+     « X is not defined ».
+
+     ⚠️ LES DEUX « COLONNE ZÉRO » NE SONT PAS UN GOÛT D'ÉCRITURE, C'EST LA MESURE QUI LES A
+     IMPOSÉES (`tools/preuves/sonde-heritage-navigateur.js`, qui EXÉCUTE chaque bloc désigné) :
+
+       | critère                                        | visés | dont VIVANTS |
+       |---|---|---|
+       | décl. colonne 0, usage n'importe où            |  75   | **31**       |
+       | décl. n'importe où, usage n'importe où         | 100   | **50**       |
+       | décl. colonne 0, USAGE en colonne 0 (retenu)   |  27   | **0**        |
+
+     Un nom cité dans le CORPS d'une fonction que le bloc n'appelle jamais ne fait rien
+     échouer : le bloc aboutit, silencieux mais vivant. Les 31 vivants de la première
+     variante sont exactement ceux-là (`projets-js/lecon-16` #2 déclare des fonctions de
+     dessin qui mentionnent `ctx` sans jamais les appeler). Le nom qui OUVRE une ligne, lui,
+     est évalué au niveau racine : l'erreur est certaine dès le clic.
+     Deux variantes voisines ont été mesurées puis écartées : la déclaration cherchée
+     n'importe où gagne UN bloc (28 au lieu de 27, `js/lecon-65` #5) au prix de noms locaux
+     banals promus en sources, et la CASCADE (l'écarté transmet à son tour) ne change
+     RIEN — 27 dans les deux cas. On garde donc la règle la plus étroite.
+     GARDE : un bloc qui déclare ou affecte lui-même le nom est autonome, on l'épargne.
+     Impact mesuré AVANT écriture, en EXÉCUTANT chaque bloc désigné : 27 blocs visés,
+     ZÉRO vivant, 24 déjà comptés en panne et 3 que le vérificateur classait « erreur
+     annoncée » à tort (`js/lecon-33` #4 et #6, `projets-js/lecon-19` #3 : leur commentaire
+     porte les mots « invalide » ou « erreur », mais ces blocs n'enseignent aucune faute —
+     ce sont des écouteurs `submit` et `dragstart` sur un `form` et un `board` du document).
+     ⚠️ Fonction LUE par `tools/verif-js.js` et `tools/verif-clic.js`, jamais recopiée. */
+  function heriteDuNavigateur(texte, blocsNavigateur) {
+    var t = String(texte);
+    var liste = blocsNavigateur || [];
+    for (var i = 0; i < liste.length; i++) {
+      var re = /^(?:const|let|var|class|async\s+function|function)\s+([A-Za-z_$À-ɏ][\w$À-ɏ]*)/gm;
+      var m;
+      while ((m = re.exec(liste[i]))) {
+        var n = m[1].replace(/[$]/g, '\\$&');
+        if (!new RegExp('^' + n + '(?![\\w$À-ɏ])', 'm').test(t)) continue;
+        if (new RegExp('(?:const|let|var|function|class)\\s+' + n + '(?![\\w$À-ɏ])').test(t)) continue;
+        if (new RegExp('(?:^|[^\\w$.À-ɏ])' + n + '\\s*=(?!=)').test(t)) continue;
+        return true;
+      }
+    }
+    return false;
+  }
+
   /* `import` et `export` en TETE DE LIGNE (2026-09-09, point B2 du chantier V17) : un
      module ES ne s'evalue pas dans le Worker, qui recoit du script classique — le bouton
      rendait « Cannot use import statement outside a module », premiere cause d'echec du
@@ -1017,7 +1069,22 @@
 
   /* --------------------------------------------------- Initialisation */
   function init() {
-    $all(".code-block").forEach(function (block) {
+    var blocs = $all(".code-block");
+    /* CE QUI PRÉCÈDE CHAQUE BLOC (point B2b-8). `heriteDuNavigateur` est la seule règle
+       qui ait besoin d'un CONTEXTE : les blocs de navigateur situés AVANT celui qu'on
+       examine. On les relève dans une passe séparée, faite avant toute décision, pour deux
+       raisons — un bloc qui n'a pas de barre d'outils n'est jamais candidat au bouton mais
+       reste une source de noms pour ceux qui le suivent, et une passe à part rend l'ordre
+       explicite au lieu de le faire dépendre d'un effet de bord de la boucle principale. */
+    var navAvant = [], vusNav = [];
+    blocs.forEach(function (block) {
+      navAvant.push(vusNav.slice());
+      var c = block.querySelector("code.language-javascript");
+      if (c && (BROWSER_ONLY.test(c.textContent) || estDuDomDePage(c.textContent))) {
+        vusNav.push(c.textContent);
+      }
+    });
+    blocs.forEach(function (block, iBloc) {
       var bar = block.querySelector(".code-block__bar");
       if (!bar || block.hasAttribute("data-runner")) return;
       var js = block.querySelector("code.language-javascript");
@@ -1029,7 +1096,8 @@
         if (BROWSER_ONLY.test(js.textContent) || estUnFichierJson(js.textContent) ||
             estUneSuiteDeTests(js.textContent) || estUnFragmentServeur(js.textContent) ||
             estDuDomDePage(js.textContent) || estUnServiceWorker(js.textContent) ||
-            neCompilePas(js.textContent)) {
+            neCompilePas(js.textContent) ||
+            heriteDuNavigateur(js.textContent, navAvant[iBloc])) {
           block.setAttribute("data-runner", "skip");
           return;
         }
