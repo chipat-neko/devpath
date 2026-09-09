@@ -48,7 +48,35 @@
   // dans un commentaire FRANÇAIS satisfaisait \bconfirm\b, et le bloc perdait son
   // bouton « Tester » en silence (3 blocs du site mesurés ainsi le 2026-08-25). On borne
   // donc explicitement sur les lettres accentuées plutôt que sur \b.
-  var BROWSER_ONLY = /(?:^|[^\w$À-ɏ])(document|window|localStorage|sessionStorage|alert|prompt|confirm|location|navigator|process|Buffer|__dirname|__filename)(?![\w$À-ɏ])|require\s*\(|module\.exports|\bexports\.|\bglobalThis\b|node:|new Worker|postMessage|SharedArrayBuffer|Atomics|importScripts/;
+  /* UN FICHIER DE DONNEES N'EST PAS UN PROGRAMME (2026-09-09, point B2).
+     `pages/nodejs/lecon-03.html` porte cinq `package.json` annonces
+     `class="language-javascript"` : un bouton « Tester » sur un fichier de configuration.
+     ⚠️ LE CRITERE DU PLAN ETAIT TROP LARGE, et la mesure l'a montre avant qu'il ne casse
+     quoi que ce soit : « data-file en .json » designe 8 blocs, dont **3 VIVANTS** —
+     `pages/formats/lecon-02.html` et `pages/nosql/lecon-12.html` sont de vrais programmes
+     qui MANIPULENT du JSON (`JSON.parse`, puis `console.log`), et dont le `data-file`
+     porte un nom en .json par simple convenance d'affichage. Les ecarter aurait retire
+     trois boutons qui marchent.
+     Le critere retenu ne peut pas se tromper : le bloc PARSE ENTIEREMENT EN JSON. Il
+     attrape en prime les quatre `package.json` de la lecon 3 que `data-file` ratait,
+     puisqu'ils sont annonces « Terminal ». Mesure : 8 blocs vises, 8 deja en panne,
+     ZERO vivant. Le test du premier caractere ecarte les scalaires : `JSON.parse("42")`
+     reussit, et un bloc reduit a un nombre reste un programme.
+     ⚠️ Fonction LUE par `tools/verif-js.js`, jamais recopiee. */
+  function estUnFichierJson(texte) {
+    var t = String(texte).trim();
+    if (!/^[{[]/.test(t)) return false;
+    try { JSON.parse(t); return true; } catch (e) { return false; }
+  }
+
+  /* `import` et `export` en TETE DE LIGNE (2026-09-09, point B2 du chantier V17) : un
+     module ES ne s'evalue pas dans le Worker, qui recoit du script classique — le bouton
+     rendait « Cannot use import statement outside a module », premiere cause d'echec du
+     site avec 85 blocs. Le motif exige le debut d'une ligne : `import` cite au milieu
+     d'une phrase de commentaire ou dans une chaine ne retire aucun bouton. Impact mesure
+     AVANT ecriture, en EXECUTANT chaque bloc designe : 124 blocs vises, 124 deja en
+     panne, ZERO vivant. */
+  var BROWSER_ONLY = /(?:^|[^\w$À-ɏ])(document|window|localStorage|sessionStorage|alert|prompt|confirm|location|navigator|process|Buffer|__dirname|__filename)(?![\w$À-ɏ])|require\s*\(|module\.exports|\bexports\.|\bglobalThis\b|node:|new Worker|postMessage|SharedArrayBuffer|Atomics|importScripts|(?:^|\n)\s*(?:import|export)[\s{*]/;
 
   // Enveloppe de base pour l'aperçu d'un FRAGMENT HTML (style minimal lisible)
   var PREVIEW_PRE =
@@ -778,7 +806,7 @@
       var sql = block.querySelector("code.language-sql");
 
       if (js) {
-        if (BROWSER_ONLY.test(js.textContent)) {
+        if (BROWSER_ONLY.test(js.textContent) || estUnFichierJson(js.textContent)) {
           block.setAttribute("data-runner", "skip");
           return;
         }

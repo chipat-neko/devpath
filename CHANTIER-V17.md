@@ -931,6 +931,75 @@ résultat avant le clic.
       autonomes, ou débrancher, les fragments qui dépendent d'un bloc précédent. `CHANTIER-V14.md:497`
       en recense déjà 64 : **le gisement réel est sept fois plus gros.** Une case par lot de cours.
 
+- [x] **B2a · L'outil manquait, et le voici : `tools/verif-js.js`. Puis les deux élargissements du
+      plan — 470 blocs en panne → 339, sans qu'un seul bouton vivant soit retiré.**
+
+      **Le point commençait par un trou d'outillage.** Le chiffre de 451 venait d'une mesure faite une
+      fois, à la main, par un outil qui n'a pas été conservé : il était donc invérifiable et se
+      périmait à chaque passe. `verif-js.js` est le pendant JavaScript de `verif-sql.js` — il exécute
+      chaque bloc dans un contexte `vm` qui reproduit celui du Worker (`console` détourné, pas de
+      `require`), et il **lit dans `js/runner.js`** les règles qui décident du bouton, jamais ne les
+      recopie. Première mesure : **1 987 blocs avec bouton, 1 474 aboutis, 43 erreurs annoncées en
+      commentaire, 470 EN PANNE** — les causes tombent sur celles de l'audit (85 `Cannot use import
+      statement`, 34 `test is not defined`, 25 `await is only valid in async`).
+
+      **(a-1) `import` / `export` en tête de ligne : 124 blocs, ZÉRO vivant (470 → 356).** Un module
+      ES ne s'évalue pas dans le Worker. Le motif exige le début d'une ligne, pour qu'un `import`
+      cité au milieu d'une phrase de commentaire ne retire aucun bouton. Aboutis inchangés à 1 474.
+
+      **(a-2) Un fichier de données n'est pas un programme : 8 blocs, ZÉRO vivant (356 → 347).**
+      ⚠️ **Le critère écrit dans le plan était trop large, et la mesure l'a montré avant qu'il ne casse
+      quoi que ce soit.** « `data-file` en `.json` » désigne 8 blocs — dont **3 VIVANTS** :
+      `pages/formats/lecon-02.html` et `pages/nosql/lecon-12.html` sont de vrais programmes qui
+      MANIPULENT du JSON (`JSON.parse`, puis `console.log` — mesuré, ils affichent 2, 1 et 1 lignes),
+      et dont le `data-file` porte un nom en `.json` par simple convenance d'affichage. Le critère
+      retenu ne peut pas se tromper : **le bloc parse entièrement en JSON**. Il attrape en prime les
+      quatre `package.json` de `nodejs/lecon-03` que `data-file` ratait, puisqu'ils sont annoncés
+      « Terminal ». Le test du premier caractère écarte les scalaires (`JSON.parse("42")` réussit, et
+      un bloc réduit à un nombre reste un programme).
+
+      ⚠️ **L'OUTIL EST NÉ AVEC LE DÉFAUT QU'IL VENAIT DE CORRIGER AILLEURS.** Deux relevés du même
+      dépôt ont rendu 470 puis 469 : un dépassement de délai était compté comme une panne, et le
+      `timeout` de `vm` dépend de la charge de la machine. Un cliquet posé là-dessus aurait rougi au
+      hasard — exactement le défaut de `sql-lecon.js` traité au point B1e, réintroduit le même jour
+      dans un outil neuf. Corrigé : délai porté à 5 s, et les dépassements comptés **à part**, hors
+      cliquet, sous l'étiquette « non concluants ». Deux relevés consécutifs rendent maintenant des
+      chiffres identiques. Ce sont 2 blocs, des démonstrations lentes à dessein (hachage répété,
+      boucle de blocage).
+
+      **Mesure finale : 1 855 blocs avec bouton, 1 481 aboutis (79,5 %), 33 erreurs annoncées,
+      2 non concluants, 339 EN PANNE.** Le nombre d'aboutis n'a jamais baissé à aucune étape.
+
+      **Preuve par le navigateur** (le vérificateur n'exécute pas `runner.js` : seul un vrai Chrome
+      dit ce que l'apprenant voit), `file://`, DNS coupé : `nodejs/lecon-03` — **5 blocs écartés, 1
+      bouton restant**, ce qui est exactement le « 5 sur 6 sont des `package.json` » du plan ;
+      `js/lecon-26` — 16 modules ES écartés, 1 bouton ; et surtout **`formats/lecon-02` garde ses 2
+      boutons**, ce qui prouve sur pièce que le critère resserré était le bon. 0 bloc fautif encore
+      cliquable, 0 requête distante.
+
+      **Cliquet posé à 339 et éprouvé** : `const x = ;` injecté dans `algo/lecon-01` → **code 1**,
+      « 340 contre 339 à la référence » ; faute retirée → **code 0**, page revenue à l'octet près.
+      L'outil est déclaré dans `verif.js` — le contrôle `gardech` l'a d'ailleurs signalé « hors chaîne »
+      avant que ce soit fait, ce qui est son travail.
+      ⚠️ **Le drapeau `lent` n'exclut de RIEN** : il n'affiche qu'un mot de patience, seule la liste
+      `HORS_RAPIDE` écarte du mode rapide. Un premier jet portait donc un commentaire « mode complet
+      seulement » parfaitement faux, et le mode rapide passait de 130 s à **205 s (+58 %)**. Mesure
+      faite, `verif-js.js` (71,9 s) rejoint `HORS_RAPIDE` avec les bacs à sable Git, pour la même
+      raison chiffrée ; il reste joué par le mode par défaut, `--complet` et `--strict`. Rapide
+      remesuré : **134,4 s, 40 étapes, tout vert**.
+
+- [ ] **B2b · Les 339 blocs JavaScript encore en panne.** C'est la partie (b) du plan : rendre
+      autonomes, ou débrancher, les fragments qui dépendent d'un bloc précédent. Le gisement est
+      désormais MESURABLE à tout moment (`node tools/verif-js.js --causes`) et le cliquet interdit
+      qu'il grossisse. Par cours : `js` 103, `tests` 46, `projets-js` 34, `html` 29, `algo` 28,
+      `nodejs` 26, `securite` 17, `patterns` 13, `vue` 11, `nosql` 10. Causes principales :
+      **34 `test is not defined`** (des suites de tests écrites pour `node --test` — probablement à
+      écarter en bloc, comme les modules ES, mais à mesurer), **24 `await is only valid in async`**
+      (fragments à envelopper dans une fonction, ou à débrancher), **16 `app is not defined`** et
+      **12 `db is not defined`** (fragments Express/base qui dépendent d'un bloc précédent),
+      **9 `HTMLElement is not defined`** (du DOM que `BROWSER_ONLY` ne nomme pas encore).
+      Une case par lot de cours ; commencer par `test is not defined`, le plus homogène.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

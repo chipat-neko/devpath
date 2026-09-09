@@ -238,6 +238,18 @@ var ETAPES = [
      pourquoi cet outil a recu un CLIQUET : le nombre de blocs en erreur ne doit
      jamais augmenter. */
   { nom: "sql-blc", fichier: "verif-sql.js", args: [], quoi: "les blocs SQL des lecons aboutissent-ils (seuil + cliquet)" },
+  /* Le pendant JavaScript, ecrit le 2026-09-09 (point B2). Le bouton « Tester » existe
+     depuis bien plus longtemps que le bouton SQL, et personne n'avait jamais EXECUTE ces
+     blocs : 470 sur 1 987 rendaient une erreur. Il execute le code dans un contexte vm
+     qui reproduit celui du Worker, et lit dans runner.js les deux regles qui decident du
+     bouton, pour ne pas mesurer autre chose que ce que voit l'apprenant. Cliquet comme
+     pour SQL. ⚠ Il coute 71,9 s MESURES, ce qui aurait porte le mode rapide de 130 s a
+     205 s (+58 %) : il rejoint donc HORS_RAPIDE, comme les bacs a sable Git et pour la
+     meme raison chiffree. Il reste joue par le mode par defaut, --complet et --strict.
+     ⚠ Le drapeau `lent` n'exclut de RIEN — il n'affiche qu'un mot de patience ; seule
+     la liste HORS_RAPIDE ecarte du mode rapide. Ecrire « mode complet seulement » sans
+     toucher a cette liste ne fait que poser un commentaire faux. */
+  { nom: "js-blocs", fichier: "verif-js.js", args: [], quoi: "les blocs JavaScript des lecons aboutissent-ils (cliquet)", lent: true, pourquoiLent: "il execute 1 855 blocs" },
   /* Les quatre suivants gardent le cours de maths, le seul du site ou une erreur est
      invisible a la relecture. Ils comblent chacun un angle mort de verif-exemples. */
   { nom: "mth-acc", fichier: "maths/module-5/verif-accept.js", args: [], quoi: "la valeur attendue d'un exercice est celle qu'affiche sa solution" },
@@ -317,7 +329,9 @@ if (RAPIDE) ETAPES = ETAPES.concat([
  * ===================================================================== */
 var HORS_RAPIDE = ["verif-git-commandes.js", "verif-git-graphe.js", "verif-git-scenarios.js",
   /* ~37 s : il rejoue `git show` sur les 20 lecons de chacun des 25 cours traites. */
-  "verif-explain-orpheline.js"];
+  "verif-explain-orpheline.js",
+  /* 71,9 s mesures : il execute les 1 855 blocs JavaScript du site un par un. */
+  "verif-js.js"];
 if (RAPIDE) {
   ETAPES = ETAPES.filter(function (e) { return HORS_RAPIDE.indexOf(e.fichier) === -1; });
 }
