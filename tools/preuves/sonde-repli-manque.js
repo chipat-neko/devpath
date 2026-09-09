@@ -2,7 +2,7 @@
 /**
  * tools/preuves/sonde-repli-manque.js — POURQUOI le repli ne sauve pas ces blocs-là.
  *
- * Après le point B2b-9 il reste 102 blocs JS en panne (107 avant lui). Une partie échoue sur
+ * Après le point B2b-10 il reste 70 blocs JS en panne (102 avant lui). Une partie échoue sur
  * « X is not defined » alors que X EST déclaré, en colonne zéro, par un bloc de la même
  * leçon qui A un bouton — donc un bloc que le préambule du repli (point B2b-7) aurait dû
  * fournir. Cette sonde répond à une seule question, et par la mesure : dans ces cas-là,
@@ -16,11 +16,16 @@
  *   - INTROUVABLE : X n'est déclaré en colonne zéro par aucun bloc de la page.
  *
  * Elle ne modifie rien et ne rend aucun verdict : elle prépare la case suivante.
- * Relevé du 2026-09-09, ré-ancrage compris : APRES 0, TRI 10, AUTRE-ERR 17, INTROUVABLE 60.
- * Les 6 « le tri a écarté le bloc source » de la veille ont disparu — 4 sauvés par le
- * ré-ancrage du point B2b-9, 2 repassés en AUTRE-ERR. Le TRI restant est d'une SEULE
- * nature : le bloc source n'a pas de bouton. Lui donner le préambule a été mesuré puis
- * refusé (0 gain, 2 pertes) : ces blocs touchent `document` ou `localStorage`.
+ * Relevé du 2026-09-09, ré-ancrage ET fragment orphelin compris : APRES 0, TRI 10,
+ * AUTRE-ERR 15, INTROUVABLE 31.
+ * Deux lots ont été fermés depuis l'écriture de cette sonde. Les 6 « le tri a écarté le bloc
+ * source » : 4 sauvés par le ré-ancrage du point B2b-9, 2 repassés en AUTRE-ERR. Et 29 des
+ * 60 INTROUVABLES : privés de bouton par `estUnFragmentOrphelin` (point B2b-10), ils ne sont
+ * plus des pannes. Le TRI restant est d'une SEULE nature — le bloc source n'a pas de bouton —
+ * et lui donner le préambule a été mesuré puis refusé (0 gain, 2 pertes) : ces blocs touchent
+ * `document` ou `localStorage`. Les 31 INTROUVABLES restants sont ceux qu'un critère STATIQUE
+ * ne sait pas nommer : le nom manquant n'ouvre aucune ligne, il est lu dans le corps d'une
+ * fonction que le bloc appelle.
  */
 var fs = require('fs');
 var path = require('path');
@@ -49,6 +54,7 @@ var estDuDomDePage = lireFonction('estDuDomDePage');
 var estUnServiceWorker = lireFonction('estUnServiceWorker');
 var neCompilePas = lireFonction('neCompilePas');
 var heriteDuNavigateur = lireFonction('heriteDuNavigateur');
+var estUnFragmentOrphelin = lireFonction('estUnFragmentOrphelin');
 var meriteUnRepli = lireFonction('meriteUnRepli');
 var envelopperPourRepli = lireFonction('envelopperPourRepli');
 var preambuleQuiCompile = lireFonction('preambuleQuiCompile');
@@ -125,15 +131,18 @@ var detail = { APRES: [], TRI: [], 'AUTRE-ERR': [], INTROUVABLE: [] };
 lecons().forEach(function (f) {
   var rel = path.relative(RACINE, f).replace(/\\/g, '/');
   var blocs = blocsJs(f);
-  var navAvant = [], vusNav = [];
+  var navAvant = [], vusNav = [], tousTextesJs = [];
   blocs.forEach(function (b) {
     navAvant.push(vusNav.slice());
-    if (b.code && (BROWSER_ONLY.test(b.code) || estDuDomDePage(b.code))) vusNav.push(b.code);
+    if (!b.code) return;
+    tousTextesJs.push(b.code);
+    if (BROWSER_ONLY.test(b.code) || estDuDomDePage(b.code)) vusNav.push(b.code);
   });
   function aUnBouton(code, ctxNav) {
     return !(BROWSER_ONLY.test(code) || estUnFichierJson(code) || estUneSuiteDeTests(code) ||
       estUnFragmentServeur(code) || estDuDomDePage(code) || estUnServiceWorker(code) ||
-      neCompilePas(code) || heriteDuNavigateur(code, ctxNav));
+      neCompilePas(code) || heriteDuNavigateur(code, ctxNav) ||
+      estUnFragmentOrphelin(code, tousTextesJs));
   }
   var indexBouton = [];
   blocs.forEach(function (b, i) { if (b.code && aUnBouton(b.code, navAvant[i])) indexBouton.push(i); });

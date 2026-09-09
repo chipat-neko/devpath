@@ -207,7 +207,8 @@ var reglesRunner = (function () {
   if (m) { try { motif = new RegExp(m[1]); } catch (e) { motif = null; } }
   var par = {};
   ['estUnFichierJson', 'estUneSuiteDeTests', 'estUnFragmentServeur', 'estDuDomDePage',
-   'estUnServiceWorker', 'neCompilePas', 'heriteDuNavigateur'].forEach(function (nom) {
+   'estUnServiceWorker', 'neCompilePas', 'heriteDuNavigateur',
+   'estUnFragmentOrphelin'].forEach(function (nom) {
     var i = src.indexOf('function ' + nom + '(');
     if (i < 0) return;
     var j = src.indexOf('\n  }', i);
@@ -229,7 +230,7 @@ function estNavigateur(code) {
   var f = reglesRunner.par.estDuDomDePage;
   return !!f && f(code);
 }
-function ecarteParRunner(code, navAvant) {
+function ecarteParRunner(code, navAvant, tousJs) {
   if (BROWSER_ONLY && BROWSER_ONLY.test(code)) return true;
   var ecarte = REGLES_SEULES.some(function (n) {
     var f = reglesRunner.par[n];
@@ -237,7 +238,13 @@ function ecarteParRunner(code, navAvant) {
   });
   if (ecarte) return true;
   var h = reglesRunner.par.heriteDuNavigateur;
-  return !!h && h(code, navAvant || []);
+  if (h && h(code, navAvant || [])) return true;
+  /* ⚠️ LA SECONDE RÈGLE À CONTEXTE (point B2b-10), et elle n'a pas le même : celle-ci
+     demande la page ENTIÈRE, pas ce qui précède. Sans elle, cet outil réclamait 12 boutons
+     de plus que le navigateur n'en pose sur un simple échantillon de 5 pages — la dette de
+     B2b-3 puis de B2b-8, une troisième fois. */
+  var o = reglesRunner.par.estUnFragmentOrphelin;
+  return !!o && o(code, tousJs || []);
 }
 function decode(s) {
   return String(s).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
@@ -245,6 +252,16 @@ function decode(s) {
 }
 function blocsAttendusDe(page) {
   var html = fs.readFileSync(path.join(RACINE, page), 'utf8');
+  /* PREMIÈRE PASSE : tous les textes JavaScript de la page, pour la règle du FRAGMENT
+     ORPHELIN qui juge sur la page entière et non sur ce qui précède. */
+  var tousJs = [];
+  (function () {
+    var r = /<figure class="code-block"[\s\S]*?<\/figure>/g, x;
+    while ((x = r.exec(html))) {
+      var c = /<code[^>]*class="[^"]*language-javascript[^"]*"[^>]*>([\s\S]*?)<\/code>/.exec(x[0]);
+      if (c) tousJs.push(decode(c[1]).trim());
+    }
+  })();
   var re = /<figure class="code-block"[\s\S]*?<\/figure>/g, m, n = 0;
   var navAvant = [];
   while ((m = re.exec(html))) {
@@ -265,7 +282,7 @@ function blocsAttendusDe(page) {
        à juger doit être exclu du DÉNOMINATEUR, pas retranché d'un total. */
     if (/\sdata-runner(\s*=|[\s>])/i.test(f.slice(0, f.indexOf('<pre')))) continue;
     if (!cAv) continue;
-    if (ecarteParRunner(codeAv, contexte)) continue;
+    if (ecarteParRunner(codeAv, contexte, tousJs)) continue;
     n++;
   }
   return n;

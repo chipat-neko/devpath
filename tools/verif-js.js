@@ -94,6 +94,10 @@ var neCompilePas = lireFonction('neCompilePas');
    ou un `ctx` né d'un `document.querySelector` dans un bloc écarté, donc absent du
    préambule du repli. Lue, jamais recopiée, comme les autres. */
 var heriteDuNavigateur = lireFonction('heriteDuNavigateur');
+/* LE FRAGMENT ORPHELIN (2026-09-09, point B2b-10) : la seule regle qui demande la page
+   ENTIERE — un nom declare plus bas est fourni par la lecon, meme si le repli ne peut pas
+   le donner. Lue, jamais recopiee, comme les autres. */
+var estUnFragmentOrphelin = lireFonction('estUnFragmentOrphelin');
 /* Le REPLI (2026-09-09, point B2b-7) : quand rejouer, et comment envelopper le bloc rejoué.
    Ces deux règles sont LUES elles aussi — si ce vérificateur devinait l'enveloppe au lieu de
    la lire, il mesurerait un moteur qui n'existe pas. */
@@ -229,6 +233,7 @@ else fichiers = lecons(null);
 var DELAI = 5000;
 var total = 0, ok = 0, ko = 0, ecartes = 0, annoncees = 0, indecis = 0;
 var nonCompilables = 0, listeNonCompilables = [];
+var orphelins = 0, listeOrphelins = [];
 var causes = {};
 var parCours = {};
 
@@ -245,16 +250,22 @@ fichiers.forEach(function (f) {
   /* CE QUI PRÉCÈDE CHAQUE BLOC (point B2b-8), relevé dans une passe séparée exactement
      comme `init()` le fait dans runner.js : les blocs de NAVIGATEUR situés avant celui
      qu'on examine. C'est le seul contexte dont une règle du bouton ait besoin. */
-  var navAvant = [], vusNav = [];
+  /* La meme passe releve AUSSI tous les textes JS de la page : `estUnFragmentOrphelin`
+     (point B2b-10) demande la page ENTIERE, pas ce qui precede — un nom declare plus bas
+     est fourni par la lecon, meme si le repli ne peut pas le donner. */
+  var navAvant = [], vusNav = [], tousJs = [];
   blocsDuFichier.forEach(function (bloc) {
     navAvant.push(vusNav.slice());
-    if (bloc.code && (BROWSER_ONLY.test(bloc.code) || estDuDomDePage(bloc.code))) vusNav.push(bloc.code);
+    if (!bloc.code) return;
+    tousJs.push(bloc.code);
+    if (BROWSER_ONLY.test(bloc.code) || estDuDomDePage(bloc.code)) vusNav.push(bloc.code);
   });
   var aBouton = [];
   function aUnBouton(code, ctxNav) {
     return !(BROWSER_ONLY.test(code) || estUnFichierJson(code) || estUneSuiteDeTests(code) ||
       estUnFragmentServeur(code) || estDuDomDePage(code) || estUnServiceWorker(code) ||
-      neCompilePas(code) || heriteDuNavigateur(code, ctxNav));
+      neCompilePas(code) || heriteDuNavigateur(code, ctxNav) ||
+      estUnFragmentOrphelin(code, tousJs));
   }
   blocsDuFichier.forEach(function (bloc, i) {
     if (bloc.code && aUnBouton(bloc.code, navAvant[i])) aBouton.push(bloc.code);
@@ -285,6 +296,18 @@ fichiers.forEach(function (f) {
        `init()` : un bloc qui relève des deux doit être compté du même côté par les deux
        outils, sinon les chiffres divergent sans qu'aucune règle n'ait changé. */
     if (heriteDuNavigateur(code, navAvant[i])) { ecartes++; return; }
+    /* LE FRAGMENT ORPHELIN, teste en DERNIER, dans le meme ordre que `init()`.
+       ⚠️ IL LUI FAUT SON PROPRE CLIQUET, POUR LA MEME RAISON QU'A `neCompilePas` — et la
+       mesure l'a prouve AVANT que ce compteur n'existe : `zzzNomInexistant();` injecte en
+       tete d'un bloc vivant d'`algo/lecon-01` laissait le cliquet des pannes a 70, VERT,
+       parce que la regle neuve ecartait aussitot le bloc casse. Un appel de fonction
+       inexistante — la faute la plus banale du site — devenait invisible. Ces blocs sont
+       donc comptes a part, avec un cliquet qui ne doit pas monter non plus. */
+    if (estUnFragmentOrphelin(code, tousJs)) {
+      ecartes++; orphelins++;
+      listeOrphelins.push(rel + ' #' + (i + 1) + (bloc.fichier ? '  [' + bloc.fichier + ']' : ''));
+      return;
+    }
     total++;
     var prefixe = aBouton.slice(0, vus);
     vus++;
@@ -389,6 +412,9 @@ if (CAUSES) {
   console.log('=== BLOCS QUI NE COMPILENT PAS (ecartes, cliquet a part) : ' + nonCompilables + ' ===');
   listeNonCompilables.forEach(function (o) { console.log('   ' + o); });
   console.log('');
+  console.log('=== FRAGMENTS ORPHELINS (ecartes, cliquet a part) : ' + orphelins + ' ===');
+  listeOrphelins.forEach(function (o) { console.log('   ' + o); });
+  console.log('');
   console.log('=== CAUSES, de la plus fréquente à la plus rare ===');
   Object.keys(causes).sort(function (a, b) { return causes[b].length - causes[a].length; })
     .forEach(function (c) {
@@ -407,6 +433,7 @@ console.log('  erreurs ANNONCÉES ....... ' + annoncees + '  (la page les écrit
 console.log('  non concluants .......... ' + indecis + '  (plus de ' + (DELAI / 1000) + ' s : hors cliquet)');
 console.log('  EN PANNE ................ ' + ko);
 console.log('  NE COMPILENT PAS ....... ' + nonCompilables + '  (ecartes : pas de bouton, cliquet a part)');
+console.log('  FRAGMENTS ORPHELINS .... ' + orphelins + '  (ecartes : un nom que rien ne fournit, cliquet a part)');
 console.log('\n--- par cours (les 12 plus fournis) ---');
 Object.keys(parCours).sort(function (a, b) {
   return (parCours[b].total - parCours[b].ok - parCours[b].annoncees) -
@@ -426,13 +453,19 @@ if (!CAUSES) {
 if (cibles.length) { console.log('\n  (cliquet inactif : des cibles ont ete passees en argument)'); process.exit(0); }
 if (FIXER) {
   fs.writeFileSync(ATTENDU, JSON.stringify({ ko: ko, total: total, nonCompilables: nonCompilables,
+    orphelins: orphelins,
     note: 'Nombre de blocs JS en panne au dernier releve. Il ne doit jamais augmenter. ' +
           'Le descendre apres une reparation : node tools/verif-js.js --fixer',
     note2: 'nonCompilables : blocs que `new Function` refuse de compiler, donc prives de ' +
            'bouton par runner.js. Ce ne sont pas des pannes, mais leur nombre ne doit pas ' +
-           'monter : une faute de syntaxe introduite par erreur se cacherait dedans.' }, null, 2) + '\n', 'utf8');
+           'monter : une faute de syntaxe introduite par erreur se cacherait dedans.',
+    note3: 'orphelins : blocs qui ouvrent une ligne sur un nom que rien dans la page ne ' +
+           'fournit, donc prives de bouton par runner.js. Meme raison que ci-dessus, et ' +
+           'elle a ete MESUREE : un appel de fonction inexistante ajoute par erreur ferait ' +
+           'simplement disparaitre le bouton, sans faire monter les pannes.' }, null, 2) + '\n', 'utf8');
   console.log('\n  cliquet fixe a ' + ko + ' bloc(s) en panne sur ' + total +
-              ', et ' + nonCompilables + ' bloc(s) qui ne compilent pas.');
+              ', ' + nonCompilables + ' bloc(s) qui ne compilent pas, et ' + orphelins +
+              ' fragment(s) orphelin(s).');
   process.exit(0);
 }
 var ref = null;
@@ -451,6 +484,19 @@ if (typeof ref.nonCompilables === 'number' && nonCompilables > ref.nonCompilable
   console.log('  Un bloc JS a ete casse : il perd son bouton en silence.' +
               ' Les voir : node tools/verif-js.js --causes');
   process.exit(1);
+}
+/* Le TROISIEME cliquet, ne du meme constat que le second, et MESURE : voir le commentaire
+   pose plus haut sur `estUnFragmentOrphelin`. */
+if (typeof ref.orphelins === 'number' && orphelins > ref.orphelins) {
+  console.log('\nCLIQUET : ' + orphelins + ' fragment(s) orphelin(s), contre ' + ref.orphelins +
+    ' a la reference, soit ' + (orphelins - ref.orphelins) + ' de plus.');
+  console.log('  Un bloc JS cite un nom que plus rien ne fournit : il perd son bouton en' +
+              ' silence. Les voir : node tools/verif-js.js --causes');
+  process.exit(1);
+}
+if (typeof ref.orphelins === 'number' && orphelins < ref.orphelins) {
+  console.log('\n  ' + orphelins + ' fragment(s) orphelin(s), contre ' + ref.orphelins +
+    ' attendus. Descendre la reference : node tools/verif-js.js --fixer');
 }
 if (typeof ref.nonCompilables === 'number' && nonCompilables < ref.nonCompilables) {
   console.log('\n  ' + nonCompilables + ' bloc(s) ne compilent pas, contre ' + ref.nonCompilables +

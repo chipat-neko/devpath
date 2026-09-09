@@ -1866,6 +1866,134 @@ résultat avant le clic.
       orphelin ou de le rendre autonome.** C'est un travail de CONTENU, pas de moteur, et c'est
       la nature des 60 « introuvables ».
 
+- [x] **B2b-10 · Le FRAGMENT ORPHELIN, neuvième règle du bouton : 35 blocs écartés, ZÉRO vivant
+      retiré — 102 blocs en panne → 70, aboutis inchangés à 1 527. Et le troisième cliquet, né
+      d'une injection qui a traversé le contrôle EN VERT.**
+
+      **Mesure reproduite avant de toucher à quoi que ce soit** : `verif-js.js --causes` rend
+      **102 EN PANNE**, et `sonde-repli-manque.js` rejouée **60 INTROUVABLE, 17 AUTRE-ERR,
+      10 TRI, 0 APRÈS** — les chiffres laissés par B2b-9. Le lot des 60 « introuvables » est
+      celui que le point précédent a déclaré hors d'atteinte de tout préambule : le nom manquant
+      n'est déclaré NULLE PART dans la page. Il ne reste qu'à leur retirer le bouton.
+
+      **La difficulté est que cette règle-là ne peut pas exécuter.** Les huit précédentes
+      jugent un texte ; celle-ci doit dire, SANS rien lancer, « ce bloc ouvre une ligne sur un
+      nom que rien ne fournit ». Or un mot peut ouvrir une ligne sans être un identifiant : le
+      texte d'un gabarit `` ` `` sur plusieurs lignes, ou le corps d'un commentaire `/* … */`.
+      **Chaque précaution a donc été mesurée, pas supposée**
+      (`tools/preuves/sonde-fragment-orphelin.js`, qui EXÉCUTE chaque bloc visé, repli et
+      ré-ancrage compris) :
+
+      | critère | visés | dont VIVANTS |
+      |---|---|---|
+      | tel quel | 38 | **3** |
+      | commentaires neutralisés | 38 | **3** |
+      | + chaînes et gabarits neutralisés | 36 | **1** |
+      | **+ étiquettes exclues** (retenu) | **35** | **0** |
+      | **la règle RÉELLEMENT POSÉE dans `runner.js`** | **35** | **0** |
+
+      Les trois vivants que le critère naïf emportait disent chacun pourquoi une précaution
+      existe : `js/lecon-13` #12 (« Total » dans un gabarit), `crypto/lecon-10` #1 (« tar » dans
+      un gabarit — **40 lignes de sortie**, un bloc bien vivant), et `graphql/lecon-09` #4, un
+      fragment d'objet qui s'ouvre sur `context: () => ({` — **`nom:` en tête de ligne est une
+      clé ou un label, jamais la lecture d'une variable.**
+      ⚠️ Le nettoyage des chaînes se fait **caractère par caractère**, pas par expression
+      régulière : aucune regex ne suit l'imbrication d'un `${…}`, et le code qui s'y trouve est
+      du VRAI code qu'il faut continuer de lire.
+
+      ⚠️ **LA CINQUIÈME LIGNE DU TABLEAU EST LA SEULE QUI COMPTE**, et c'est la leçon de B2b-8
+      appliquée d'emblée : les quatre premières sont des reconstitutions écrites dans la sonde.
+      Une cinquième **LIT `estUnFragmentOrphelin` dans `js/runner.js`** et rejoue la mesure.
+      Verdict identique — 35 visés, 35 morts, 0 vivant.
+
+      **Impact : 35 blocs, dont 32 comptés en panne et 3 que le vérificateur classait « erreur
+      annoncée » à tort** (d'où les annoncées qui passent de 17 à 14). Les trois — `js/lecon-47`
+      #11, `js/lecon-23` #4, `tests/lecon-02` #2 — sont d'authentiques fragments : ils appellent
+      `debounce`, `chargerProfil()`, `affirmer(…)`, déclarés nulle part. Leur commentaire porte
+      les mots « erreur » ou « échec » **dans une explication**, pas dans une promesse
+      d'exception ; c'est le même faux positif du détecteur de commentaire qu'au point B2b-8.
+
+      ⚠️⚠️ **LE DÉFAUT LE PLUS GRAVE DE CE POINT N'EST PAS DANS LA RÈGLE, IL EST DANS CE QUE LA
+      RÈGLE REND AVEUGLE — et il a traversé le contrôle EN VERT.** L'épreuve par injection
+      habituelle, `zzzNomInexistant();` en tête d'un bloc vivant d'`algo/lecon-01`, a rendu
+      **code 0, « 70 blocs en panne, comme à la référence »**. Cause : la règle neuve écartait
+      aussitôt le bloc cassé, qui sortait donc du décompte des pannes. **Un appel de fonction
+      inexistante — la faute la plus banale du site — était devenu invisible au cliquet.**
+      C'est exactement le défaut de bord que `neCompilePas` avait reçu au point B2b-5, et qui
+      lui avait déjà valu un cliquet séparé ; il vient de se reproduire à l'identique sur une
+      règle neuve, un mois plus tard. **Les fragments orphelins ont donc leur propre cliquet**,
+      `orphelins: 35` dans `verif-js-attendu.json`. Les trois cliquets sont désormais éprouvés
+      chacun sur SA faute :
+
+      | injection dans `algo/lecon-01` | cliquet qui rougit | code |
+      |---|---|---|
+      | `null.zz;` (faute d'exécution) | pannes, **71 contre 70** | 1 |
+      | `const x = ;` (faute de syntaxe) | non compilables, **82 contre 81** | 1 |
+      | `zzzNomInexistant();` (nom absent) | **orphelins, 36 contre 35** | 1 |
+
+      À chaque fois, faute retirée → code **0** et page revenue à l'octet près (md5
+      `269ad551…`). Et dans l'autre sens : `estUnFragmentOrphelin` neutralisée dans `runner.js`
+      → **code 1, « 102 blocs en panne contre 70 à la référence »** ; restaurée, code **0**, md5
+      identique (`b299969c…`).
+
+      **Preuve par le navigateur** (le vérificateur n'exécute pas `runner.js` : seul un vrai
+      Chrome dit ce que l'apprenant voit), par `verif-clic.js` — l'outil du projet qui CLIQUE —
+      sur **8 pages : 5 touchées à forte densité et 3 témoins** (les pages du point B2b-9, ce qui
+      contrôle aussi sa non-régression) :
+
+      | sur `js/lecon-61`, `securite/lecon-04`, `tests/lecon-05`, `perf-web/lecon-11`, `html/lecon-44` + 3 témoins | boutons posés dans le DOM rendu |
+      |---|---|
+      | règle neutralisée | **43** cliqués sur 43 attendus |
+      | règle active | **31** cliqués sur 31 attendus |
+
+      **12 boutons de moins**, et ce sont exactement les 12 blocs que la règle désigne sur ces
+      pages : l'écart tombe à l'unité près sur la prévision, **aucun témoin n'est entamé**, et
+      les trois pages de B2b-9 gardent leurs boutons.
+
+      ⚠️ **`verif-clic.js` A RÉCLAMÉ 12 BOUTONS QUE LE NAVIGATEUR NE POSE PLUS — la dette de
+      B2b-3 puis de B2b-8, une troisième fois.** Première mesure : **43 attendus, 31 cliqués,
+      « ÉCART DE 12 BLOC(S) », code 2.** Sa table de règles ne connaissait pas la neuve, et son
+      compte « attendu » est relevé sur le disque. Soldé dans la même passe : la règle y est
+      LUE, et `blocsAttendusDe` fait désormais **deux passes** — une pour relever tous les
+      textes JavaScript de la page, une pour décider. Car c'est **la seconde règle à contexte,
+      et elle n'a pas le même que la première** : `heriteDuNavigateur` demande ce qui PRÉCÈDE,
+      `estUnFragmentOrphelin` demande la page ENTIÈRE — un nom déclaré plus bas est fourni par
+      la leçon, même si le repli ne peut pas le donner, et écarter le bloc pour cela serait un
+      abus. Après solde : **31 attendus, 31 cliqués, couverture complète, 0 divergent.**
+
+      **Écriture.** `estUnFragmentOrphelin(texte, tousLesBlocs)` dans `js/runner.js`, neuvième
+      règle du bouton, testée en dernier ; `init()` relève tous les textes JS dans la passe
+      séparée qui existait déjà. `tools/verif-js.js` et `tools/verif-clic.js` la **LISENT**,
+      jamais ne la recopient, et la testent dans le même ordre qu'`init()`. Les trois sondes
+      (`sonde-fragment-orphelin.js`, `sonde-repli-manque.js`, `sonde-preambule-elargi.js`) la
+      lisent aussi : une sonde qui calcule les blocs à bouton autrement que le moteur mesure un
+      site qui n'existe pas.
+      La fonction est **AUTONOME**, listes de mots-clés et de globales comprises — les
+      vérificateurs l'évaluent hors de tout contexte, une référence à une autre fonction du
+      module la rendrait illisible.
+
+      **Mesure finale : 1 613 blocs avec bouton (contre 1 648), 776 écartés (+35), 1 527
+      aboutis (94,7 %, contre 92,7 %), dont 35 par repli, 14 annoncées, 2 non concluants,
+      70 EN PANNE, 81 non compilables, 35 fragments orphelins.** **Le nombre d'aboutis est
+      inchangé à l'unité près** — c'était le risque propre à ce point, puisqu'un bloc privé de
+      bouton disparaît aussi du préambule des suivants. Cliquet descendu à 70.
+
+      **Non-régression** : `verif-html.js` **1 629 fichiers, 0 grave / 0 attention** ;
+      `verif-donnees.js` **0 erreur** ; `verif-chaine-declaree.js` **code 0** ;
+      `preuves/worker-src-compile.js` **code 0** ; `verif.js --rapide` **41 étapes, tout vert,
+      149,9 s** ; `node --check` sur les six fichiers touchés ; **0 URL vers un CDN**. Aucun
+      fichier de contenu modifié : ce point ne touche que le moteur, ses vérificateurs et ses
+      sondes.
+
+      **Reste au gisement : 70.** Par cours : `js` 34, `projets-js` 11, `patterns` 8,
+      `nodejs` 4, `algo` 3, `vue` 3, `typescript` 2, `cicd` 2. La dissection rejouée, la
+      nouvelle règle comprise : **INTROUVABLE 31, AUTRE-ERR 15, TRI 10, APRÈS 0.** Les 31
+      « introuvables » qui subsistent sont ceux que le critère STATIQUE ne sait pas nommer — le
+      nom manquant n'ouvre aucune ligne, il est lu dans le corps d'une fonction que le bloc
+      appelle. Les élargir demanderait de savoir quelles fonctions un bloc appelle vraiment,
+      c'est-à-dire de l'exécuter : **une règle de bouton ne le peut pas.** Ce qui reste se
+      traite donc bloc par bloc, dans le CONTENU.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

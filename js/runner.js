@@ -260,6 +260,92 @@
     return false;
   }
 
+  /* LE FRAGMENT ORPHELIN (2026-09-09, point B2b-10) --------------------------------
+     La règle précédente donne à un bloc ce qu'un bloc voisin a déclaré. Celle-ci constate
+     l'inverse : le bloc OUVRE une ligne sur un nom que **rien dans la page** ne fournit —
+     ni une déclaration, ni une affectation, dans aucun bloc. Un `taches.push(…)` ou un
+     `bouton.addEventListener(…)` sans le `querySelector` qui les crée nulle part : le
+     clic ne peut rendre qu'une erreur, et aucun préambule n'y changera rien. C'est le
+     lot des « INTROUVABLES » que `sonde-repli-manque.js` compte depuis le point B2b-8.
+
+     TROIS PRÉCAUTIONS, ET CHACUNE A ÉTÉ MESURÉE, PAS SUPPOSÉE
+     (`tools/preuves/sonde-fragment-orphelin.js`, qui EXÉCUTE chaque bloc visé) :
+
+     | critère | visés | dont VIVANTS |
+     |---|---|---|
+     | tel quel | 38 | **3** |
+     | commentaires neutralisés | 38 | **3** |
+     | + chaînes et gabarits neutralisés | 36 | **1** |
+     | **+ étiquettes exclues** (retenu) | **35** | **0** |
+
+     (1) Les CHAÎNES : dans `const t = \`…\`` sur plusieurs lignes, un mot du texte ouvre une
+         ligne sans être un identifiant. `js/lecon-13` #12 (« Total ») et `crypto/lecon-10`
+         #1 (« tar », 40 lignes de sortie) sont bien vivants et seraient tombés.
+     (2) Les COMMENTAIRES de bloc, pour la même raison.
+     (3) Les ÉTIQUETTES : `nom:` en tête de ligne est une clé d'objet ou un label, jamais la
+         lecture d'une variable — `graphql/lecon-09` #4 est un fragment d'objet qui s'ouvre
+         sur `context: () => ({`.
+
+     ⚠️ Le nettoyage des chaînes se fait caractère par caractère, pas par expression
+     régulière : aucune regex ne suit l'imbrication d'un `${…}` dans un gabarit, et le code
+     qui s'y trouve, lui, est du VRAI code qu'il faut continuer de lire.
+     La fonction est AUTONOME — listes comprises — parce que les vérificateurs la LISENT
+     dans ce fichier et l'évaluent hors de tout contexte. */
+  function estUnFragmentOrphelin(texte, tousLesBlocs) {
+    var t = String(texte), blocs = tousLesBlocs || [];
+    t = t.replace(/\/\*[\s\S]*?\*\//g, function (m) { return m.replace(/[^\n]/g, " "); })
+         .replace(/(^|[^:\\])\/\/[^\n]*/g, function (m, p) { return p; });
+    var net = "", i = 0, n = t.length;
+    while (i < n) {
+      var c = t[i];
+      if (c === '"' || c === "'" || c === "`") {
+        var q = c, prof = 0;
+        net += " "; i++;
+        while (i < n) {
+          var d = t[i];
+          if (d === "\\") { net += "  "; i += 2; continue; }
+          if (q === "`" && d === "$" && t[i + 1] === "{") { prof++; net += "  "; i += 2; continue; }
+          if (q === "`" && prof > 0 && d === "}") { prof--; net += " "; i++; continue; }
+          if (prof > 0) { net += d; i++; continue; }
+          if (d === q) { net += " "; i++; break; }
+          net += (d === "\n" ? "\n" : " "); i++;
+        }
+        continue;
+      }
+      net += c; i++;
+    }
+    var connus = {};
+    ("const let var function class async await return if else for while do switch case " +
+     "default break continue try catch finally throw new delete typeof void instanceof in " +
+     "of this super yield import export null true false undefined debugger with static " +
+     "get set console Math JSON Object Array String Number Boolean Date RegExp Error " +
+     "TypeError RangeError SyntaxError ReferenceError EvalError URIError AggregateError " +
+     "Promise Symbol Map Set WeakMap WeakSet WeakRef Proxy Reflect BigInt Function " +
+     "parseInt parseFloat isNaN isFinite encodeURI encodeURIComponent decodeURI " +
+     "decodeURIComponent Infinity NaN ArrayBuffer SharedArrayBuffer DataView Int8Array " +
+     "Uint8Array Uint8ClampedArray Int16Array Uint16Array Int32Array Uint32Array " +
+     "Float32Array Float64Array BigInt64Array BigUint64Array Intl setTimeout setInterval " +
+     "clearTimeout clearInterval queueMicrotask structuredClone self globalThis eval " +
+     "arguments Atomics TextEncoder TextDecoder performance EventTarget Event CustomEvent " +
+     "URL URLSearchParams Blob AbortController AbortSignal ReadableStream WritableStream " +
+     "TransformStream FormData Headers Request Response atob btoa PerformanceObserver " +
+     "crypto DOMException MessageChannel BroadcastChannel CompressionStream " +
+     "DecompressionStream").split(" ").forEach(function (m) { connus[m] = true; });
+    var re = /^([A-Za-z_$À-ɏ][\w$À-ɏ]*)(\s*:)?/gm, m;
+    while ((m = re.exec(net))) {
+      if (connus[m[1]] || m[2]) continue;
+      var nom = m[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      var decl = new RegExp("(?:const|let|var|class|function)\\s+" + nom + "(?![\\w$À-ɏ])");
+      var affect = new RegExp("(?:^|[^\\w$.À-ɏ])" + nom + "\\s*=(?!=)");
+      var fourni = false;
+      for (var b = 0; b < blocs.length; b++) {
+        if (decl.test(blocs[b]) || affect.test(blocs[b])) { fourni = true; break; }
+      }
+      if (!fourni) return true;
+    }
+    return false;
+  }
+
   /* `import` et `export` en TETE DE LIGNE (2026-09-09, point B2 du chantier V17) : un
      module ES ne s'evalue pas dans le Worker, qui recoit du script classique — le bouton
      rendait « Cannot use import statement outside a module », premiere cause d'echec du
@@ -1109,11 +1195,17 @@
        raisons — un bloc qui n'a pas de barre d'outils n'est jamais candidat au bouton mais
        reste une source de noms pour ceux qui le suivent, et une passe à part rend l'ordre
        explicite au lieu de le faire dépendre d'un effet de bord de la boucle principale. */
-    var navAvant = [], vusNav = [];
+    /* La même passe relève AUSSI tous les textes JavaScript de la page, dans quelque bloc
+       que ce soit : `estUnFragmentOrphelin` (point B2b-10) demande, elle, la page ENTIÈRE
+       et non ce qui précède — un nom déclaré plus bas est fourni par la leçon, même si le
+       repli ne peut pas le donner ; lui retirer son bouton pour cela serait un abus. */
+    var navAvant = [], vusNav = [], tousJs = [];
     blocs.forEach(function (block) {
       navAvant.push(vusNav.slice());
       var c = block.querySelector("code.language-javascript");
-      if (c && (BROWSER_ONLY.test(c.textContent) || estDuDomDePage(c.textContent))) {
+      if (!c) return;
+      tousJs.push(c.textContent);
+      if (BROWSER_ONLY.test(c.textContent) || estDuDomDePage(c.textContent)) {
         vusNav.push(c.textContent);
       }
     });
@@ -1130,7 +1222,8 @@
             estUneSuiteDeTests(js.textContent) || estUnFragmentServeur(js.textContent) ||
             estDuDomDePage(js.textContent) || estUnServiceWorker(js.textContent) ||
             neCompilePas(js.textContent) ||
-            heriteDuNavigateur(js.textContent, navAvant[iBloc])) {
+            heriteDuNavigateur(js.textContent, navAvant[iBloc]) ||
+            estUnFragmentOrphelin(js.textContent, tousJs)) {
           block.setAttribute("data-runner", "skip");
           return;
         }

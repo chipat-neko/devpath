@@ -21,8 +21,10 @@
  *   ETENDU  PRÉFIXE ÉTENDU : le préambule prend TOUS les blocs précédents, y compris ceux
  *           sans bouton.
  *
- * RELEVÉ DU 2026-09-09, sur 1 522 blocs qui aboutissent et 124 en panne (erreurs annoncées
- * comprises ; le vérificateur, qui les déduit, en compte 107) :
+ * RELEVÉ DU 2026-09-09. La référence de la sonde est le repli SEUL, ré-ancrage exclu : elle
+ * comptait 1 522 blocs qui aboutissent et 124 en panne le jour du point B2b-9, puis 89 après
+ * que le point B2b-10 eut privé 35 fragments orphelins de leur bouton. Les verdicts, eux,
+ * n'ont pas bougé d'une unité :
  *
  *   | variante | gains | pertes |
  *   |---|---|---|
@@ -67,6 +69,7 @@ var estDuDomDePage = lireFonction('estDuDomDePage');
 var estUnServiceWorker = lireFonction('estUnServiceWorker');
 var neCompilePas = lireFonction('neCompilePas');
 var heriteDuNavigateur = lireFonction('heriteDuNavigateur');
+var estUnFragmentOrphelin = lireFonction('estUnFragmentOrphelin');
 var meriteUnRepli = lireFonction('meriteUnRepli');
 var envelopperPourRepli = lireFonction('envelopperPourRepli');
 var preambuleQuiCompile = lireFonction('preambuleQuiCompile');
@@ -197,15 +200,18 @@ var panneRef = 0, okRef = 0;
 lecons().forEach(function (f) {
   var rel = path.relative(RACINE, f).replace(/\\/g, '/');
   var blocs = blocsJs(f);
-  var navAvant = [], vusNav = [];
+  var navAvant = [], vusNav = [], tousTextesJs = [];
   blocs.forEach(function (b) {
     navAvant.push(vusNav.slice());
-    if (b.code && (BROWSER_ONLY.test(b.code) || estDuDomDePage(b.code))) vusNav.push(b.code);
+    if (!b.code) return;
+    tousTextesJs.push(b.code);
+    if (BROWSER_ONLY.test(b.code) || estDuDomDePage(b.code)) vusNav.push(b.code);
   });
   function aUnBouton(code, ctxNav) {
     return !(BROWSER_ONLY.test(code) || estUnFichierJson(code) || estUneSuiteDeTests(code) ||
       estUnFragmentServeur(code) || estDuDomDePage(code) || estUnServiceWorker(code) ||
-      neCompilePas(code) || heriteDuNavigateur(code, ctxNav));
+      neCompilePas(code) || heriteDuNavigateur(code, ctxNav) ||
+      estUnFragmentOrphelin(code, tousTextesJs));
   }
   var aBouton = [];
   blocs.forEach(function (b, i) { if (b.code && aUnBouton(b.code, navAvant[i])) aBouton.push(b.code); });
