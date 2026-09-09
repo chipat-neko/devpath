@@ -126,6 +126,10 @@ fichiers.forEach(function (f) {
     }
     if (CTX.erreurAnnoncee(code, msg)) return;   // c'est la leçon, pas une panne
     if (CTX.estHorsPortee(msg)) return;          // globale du Worker que Node n'a pas
+    /* Le refus hors ligne du moteur est compte a part par le verificateur depuis le point
+       B2b-19 : sans cette ligne, cette sonde examinerait 47 blocs la ou il en compte 45 --
+       deux outils qui lisent le meme corpus et rendent deux chiffres, le defaut B2b-15. */
+    if (CTX.estRefusHorsLigne(msg)) return;
 
     examines++;
     var oublie = msg.match(/^ReferenceError: ([A-Za-z_$À-ɏ][\w$À-ɏ]*) is not defined/);

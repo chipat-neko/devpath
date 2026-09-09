@@ -2954,6 +2954,56 @@ résultat avant le clic.
       `verif-donnees.js` : **25 contrôles, 0 erreur d'invariant**. Chaîne rapide finale :
       **42 étapes, 119,3 s, tout vert, toutes mesurées.**
 
+- [ ] **B2b-20 · Les 45 blocs qui restent, et pourquoi le lot le plus gros NE PEUT PAS être
+      fermé par une règle du bouton. Mesure de réfutation faite, chiffrée, avant d'écrire
+      quoi que ce soit.**
+
+      **La carte, refaite après B2b-19** (`node tools/preuves/sonde-origine-du-nom.js`, qui
+      examine bien **45** blocs — le même chiffre que le vérificateur, la divergence à 47
+      ayant été soldée en même temps que la sonde apprenait la catégorie « refus hors ligne ») :
+      **BOUTON-AVANT 8 · MUET-AVANT 13 · PLUS-BAS 1 · NULLE-PART 19 · AUTRE 4.**
+
+      **LE LOT VISÉ ÉTAIT « NULLE-PART » (19), ET L'IDÉE ÉTAIT NATURELLE.** Ces blocs échouent
+      sur un nom que **rien dans la page** ne fournit (`taches`, `phrase`, `produits`, `saisie`,
+      `React`, `req`, `flags`, `defineStore`…). La règle du fragment orphelin (B2b-10) ne les
+      voit pas parce qu'elle n'examine que les identifiants **en tête de ligne** ; il « suffisait »
+      donc de l'élargir aux noms lus ailleurs — `console.log(pourcentageFait(taches))`,
+      `if (/chat/.test(phrase))`, `new URL(req.url, …)`.
+
+      ⚠️ **LA MESURE RÉFUTE L'IDÉE, ET SANS APPEL.** Trois variantes du critère élargi ont été
+      appliquées aux 1 613 blocs à bouton, le statut de chaque bloc étant **demandé au
+      vérificateur** plutôt que recalculé (aucune logique dupliquée) :
+
+      | critère | blocs visés | dont **VIVANTS** |
+      |---|---|---|
+      | tous les identifiants lus du bloc | 1 156 | **1 110** |
+      | idem, restreint à la profondeur 0 d'accolades | 965 | **928** |
+      | idem, listes de paramètres et `catch` neutralisés | 311 | **284** |
+
+      Le meilleur des trois emporterait encore **284 blocs vivants** pour en gagner 21. La
+      raison est structurelle : reconnaître une variable LIBRE demande de connaître les
+      LIAISONS (paramètres de fonctions fléchées imbriquées, méthodes abrégées,
+      déstructurations, `for…of`, `catch`), c'est-à-dire une analyse syntaxique — et une règle
+      du bouton est jouée par `runner.js` **sans rien exécuter**. La prudence de la règle
+      B2b-10, qui se limite à la tête de ligne, n'était donc pas de la timidité : c'est la
+      seule position où une regex ne se trompe pas. **Aucune règle n'a été écrite ; c'est le
+      résultat du point.**
+
+      **CE QU'IL FAUDRAIT DÉCIDER, ET QUI N'EST PAS UNE DÉCISION D'OUTIL.** Il reste deux
+      issues pour ces 19 blocs, toutes deux dans le CONTENU :
+      (1) **compléter le fragment** — trois lignes qui fournissent la donnée d'exemple
+      (`const taches = [ … ]`), après quoi le clic rend un vrai résultat au lieu d'une erreur.
+      C'est la voie de B2b-11, la plus utile à l'apprenant, mais chaque bloc demande de lire la
+      leçon, d'écrire la donnée et de **vérifier la sortie par exécution**, commentaire annoncé
+      compris ;
+      (2) pour ceux dont le nom manquant est du DOM (`champ`, `surlignerChamp` dans
+      `js/lecon-63`), il n'y a rien à fournir dans un Worker : c'est `BROWSER_ONLY` ou une
+      réécriture sans DOM.
+      Le lot est laissé **décoché** parce qu'il dépasse une passe : 19 blocs à traiter un par
+      un dans le contenu, chacun avec sa preuve d'exécution. Le découper par leçon
+      (`js/lecon-27` 2, `js/lecon-28` 2, `js/lecon-63` 3, `js/lecon-65` 1, `vue` 3…) est la
+      façon dont il faut le reprendre.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf
