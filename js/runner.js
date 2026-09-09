@@ -400,20 +400,39 @@
      bloc, en partant du plus PROCHE — c'est lui qui a le plus de chances de porter ce qui
      manque, et un bloc plus ancien qui le contredit est écarté, pas l'inverse.
      Là encore, aucun jugement sur le texte : c'est JavaScript qui tranche (point B2b-5). */
-  function preambuleQuiCompile(pre, texte) {
-    var gardes = [];
-    for (var i = pre.length - 1; i >= 0; i--) {
-      var essai = [pre[i]].concat(gardes);
+  /* L'ANCRAGE (2026-09-09, point B2b-17) : `ancres` est la liste des noms sur lesquels le
+     repli a DÉJÀ échoué. Les blocs qui les déclarent sont essayés EN PREMIER, donc gardés
+     d'office ; c'est ce qui suit qui est écarté en cas de collision, et non plus eux.
+     Sans cette liste, le comportement est identique au précédent — l'ordre d'essai est
+     alors exactement « du plus proche au plus ancien ».
+     ⚠️ SEULE LA PRIORITÉ DE CONSERVATION CHANGE, JAMAIS L'ORDRE D'EXÉCUTION : les blocs
+     retenus repartent triés par leur rang dans la leçon. Un premier jet DÉPLAÇAIT le bloc
+     déclarant en fin de préambule pour qu'il soit vu le premier par le tri — il s'exécutait
+     alors après ceux qui l'utilisent, ce qui ne marche que pour les `function` (hissées) et
+     casse tout `const` ou `class`. */
+  function preambuleQuiCompile(pre, texte, ancres) {
+    var ordre = [], i;
+    (ancres || []).forEach(function (nom) {
+      var n = nom.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      var decl = new RegExp("^(?:const|let|var|class|async\\s+function|function)\\s+" + n + "(?![\\w$À-ɏ])", "m");
+      for (var k = pre.length - 1; k >= 0; k--) {
+        if (decl.test(pre[k])) { if (ordre.indexOf(k) < 0) ordre.push(k); break; }
+      }
+    });
+    for (i = pre.length - 1; i >= 0; i--) if (ordre.indexOf(i) < 0) ordre.push(i);
+    var retenus = [];
+    ordre.forEach(function (k) {
+      var idx = retenus.concat([k]).sort(function (a, b) { return a - b; });
       try {
-        new Function(essai.join("\n") + "\n" + envelopperPourRepli(texte));
-        gardes = essai;
+        new Function(idx.map(function (j) { return pre[j]; }).join("\n") + "\n" + envelopperPourRepli(texte));
+        retenus = idx;
       } catch (e) {
         /* SEULE une faute de compilation écarte un bloc. Tout autre incident est un
            défaut de ce code, pas du contenu : un `catch` muet le cacherait. */
         if (!(e instanceof SyntaxError)) throw e;
       }
-    }
-    return gardes;
+    });
+    return retenus.map(function (j) { return pre[j]; });
   }
 
   /* LE RÉ-ANCRAGE DU PRÉAMBULE (2026-09-09, point B2b-9) ------------------------------
@@ -470,7 +489,21 @@
     var nom = m[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     var decl = new RegExp("^(?:const|let|var|class|async\\s+function|function)\\s+" + nom + "(?![\\w$À-ɏ])", "m");
     for (var i = prefixe.length - 1; i >= 0; i--) {
-      if (decl.test(prefixe[i])) return i <= 0 ? null : prefixe.slice(i);
+      if (!decl.test(prefixe[i])) continue;
+      /* ⚠️ LE BLOC DÉCLARANT PEUT ÊTRE LE FAUTIF LUI-MÊME (2026-09-09, point B2b-17).
+         L'élagage ci-dessus suppose que le LECTEUR du nom précède le DÉCLARANT, et il
+         retranche donc tout ce qui est au-dessus de ce dernier. Il reste un cas qu'il ne
+         traitait pas, et le site en contient une leçon entière : un bloc qui ENSEIGNE la
+         zone morte temporelle lit le nom et le déclare LUI-MÊME, dans cet ordre
+         (`pages/js/lecon-16` #2 : `console.log(age);` puis `const age = 30;`). Le retenir
+         en tête de préambule rejoue l'erreur à l'identique, et l'ancienne écriture rendait
+         alors `null` : le repli abandonnait, et TOUS les blocs suivants de la leçon
+         restaient en panne sur un nom que le bloc d'avant fournissait pourtant.
+         Quand le déclarant est déjà en tête, on le retire à son tour : un préambule est là
+         pour FOURNIR des noms, jamais pour rejouer une démonstration d'erreur. La
+         décroissance reste STRICTE, donc la terminaison est acquise comme avant. */
+      if (i > 0) return prefixe.slice(i);
+      return prefixe.length > 1 ? prefixe.slice(1) : null;
     }
     return null;
   }
@@ -491,9 +524,27 @@
      toujours par diverger : le vérificateur mesure alors un moteur qui n'existe pas, ce qui
      est le défaut soldé aux points B2b-2, B2b-12 et B2b-13. Une seule écriture, ici, LUE
      par les deux outils. Rend `null` quand aucune des deux réécritures n'a de prise. */
-  function prochainPrefixe(prefixe, erreur) {
+  function prochainPrefixe(prefixe, erreur, ancres) {
     if (!prefixe || !prefixe.length) return null;
     if (meriteUnRepli(erreur)) {
+      /* L'ANCRAGE PASSE EN PREMIER (2026-09-09, point B2b-17), parce qu'il ne PERD rien :
+         il garde le préfixe entier et se contente de changer QUI est écarté en cas de
+         collision. Le ré-ancrage et l'élagage, eux, tronquent. Cas d'école mesuré,
+         `pages/projets-js/lecon-15` : le bloc #1 déclare `etatInitial` ET `const jeu`, le
+         #3 redéclare `const jeu` ; le tri gardait le #3 — le plus proche — et jetait le #1,
+         donc `etatInitial`. Le ré-ancrage tronquait alors juste après le #1, ce qui faisait
+         perdre les #2 et #4 dont le bloc a besoin lui aussi : il échouait sur le nom suivant.
+         ⚠️ UN NOM N'EST ANCRÉ QU'UNE FOIS, et c'est ce qui garantit la terminaison : l'ancrage
+         ne fait pas décroître le préfixe, donc sans cette mémoire la relance serait infinie.
+         Les noms épuisés, on retombe sur les deux troncatures, strictement décroissantes. */
+      var m = /^ReferenceError: (.+?) is not defined/.exec(String(erreur));
+      if (m && ancres && ancres.indexOf(m[1]) < 0) {
+        var n = m[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        var decl = new RegExp("^(?:const|let|var|class|async\\s+function|function)\\s+" + n + "(?![\\w$À-ɏ])", "m");
+        for (var k = prefixe.length - 1; k >= 0; k--) {
+          if (decl.test(prefixe[k])) { ancres.push(m[1]); return { prefixe: prefixe, facon: "ancre" }; }
+        }
+      }
       var p = preambuleReAncre(prefixe, erreur);
       if (p) return { prefixe: p, facon: "re-ancre" };
     }
@@ -1511,7 +1562,11 @@
      `prefixe` est la liste COMPLÈTE des blocs précédents dont `prelude` a été tiré : le
      ré-ancrage en a besoin pour retrancher, et elle ne se retrouverait pas depuis `prelude`,
      qui est déjà le résultat du tri. */
-  function lancerJs(codeStr, prelude, out, runBtn, block, secours, prefixe) {
+  /* `ancres` (point B2b-17) : la mémoire des noms déjà ancrés, portée de relance en
+     relance. C'est elle qui garantit qu'un nom n'est ancré qu'une fois, donc que la
+     chaîne des replis se termine. */
+  function lancerJs(codeStr, prelude, out, runBtn, block, secours, prefixe, ancres) {
+    ancres = ancres || [];
     out.innerHTML = '<p class="runner-output__head">Console</p>';
     var lines = 0,
       finished = false,
@@ -1563,10 +1618,10 @@
          blocs avant lui. On le rejoue derrière eux, dans un Worker neuf. */
       if (!prelude.length && erreurVue && meriteUnRepli(erreurVue) && block) {
         var prefixe0 = preambuleDe(block);
-        var pre = preambuleQuiCompile(prefixe0, codeStr);
+        var pre = preambuleQuiCompile(prefixe0, codeStr, ancres);
         if (pre.length) {
           runBtn.classList.remove("is-running");
-          lancerJs(codeStr, pre, out, runBtn, block, journal, prefixe0);
+          lancerJs(codeStr, pre, out, runBtn, block, journal, prefixe0, ancres);
           return;
         }
       }
@@ -1578,12 +1633,12 @@
          `secours` est repassé tel quel : ce qu'on remontrera en cas d'échec reste le
          PREMIER essai, celui du bloc seul, pas celui d'un repli intermédiaire. */
       if (prelude.length && erreurVue && prefixe && prefixe.length) {
-        var suite = prochainPrefixe(prefixe, erreurVue);
+        var suite = prochainPrefixe(prefixe, erreurVue, ancres);
         if (suite) {
-          var preN = preambuleQuiCompile(suite.prefixe, codeStr);
+          var preN = preambuleQuiCompile(suite.prefixe, codeStr, ancres);
           if (preN.length) {
             runBtn.classList.remove("is-running");
-            lancerJs(codeStr, preN, out, runBtn, block, secours, suite.prefixe);
+            lancerJs(codeStr, preN, out, runBtn, block, secours, suite.prefixe, ancres);
             return;
           }
         }

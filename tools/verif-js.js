@@ -60,101 +60,43 @@ var cibles = args.filter(function (a) { return a.indexOf('--') !== 0; });
    sous-ensemble n'est pas comparable à la référence du site entier. */
 var ATTENDU = path.join(__dirname, 'verif-js-attendu.json');
 
-/* La règle du bouton est LUE dans runner.js, jamais recopiée. */
-function lireMotif(nom) {
-  var src = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
-  var m = src.match(new RegExp('var ' + nom + ' = (/[\\s\\S]*?/);'));
-  if (!m) throw new Error(nom + ' introuvable dans js/runner.js');
-  return eval(m[1]);
-}
-var BROWSER_ONLY = lireMotif('BROWSER_ONLY');
-
+/* LES RÈGLES DU BOUTON SONT LUES DANS `js/runner.js`, ET DEPUIS `tools/lib/regles-bouton.js`
+   (2026-09-09, point B2b-17). Elles étaient lues ICI, et ici seulement : toute sonde qui
+   voulait raisonner sur les mêmes blocs devait refaire la lecture chez elle, ce qui est
+   exactement le défaut mesuré au point B2b-15 (deux copies du contexte du Worker, deux
+   verdicts sur les mêmes blocs). Un seul exemplaire, donc, et il lit runner.js. */
+var REG = require('./lib/regles-bouton.js');
+var BROWSER_ONLY = REG.BROWSER_ONLY;
 /* Les autres règles du bouton sont des FONCTIONS, pas des motifs : un bloc qui parse
    entièrement en JSON est un fichier de données, et un bloc qui appelle `test("…")` est
-   une suite de tests que seul un lanceur sait exécuter. Elles sont lues dans runner.js
-   pour la même raison que BROWSER_ONLY — ce vérificateur doit décider exactement comme le
-   navigateur, sinon il mesure autre chose. */
-function lireFonction(nom) {
-  var src = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
-  var i = src.indexOf('function ' + nom + '(');
-  if (i < 0) throw new Error(nom + ' introuvable dans js/runner.js');
-  var j = src.indexOf('\n  }', i);
-  if (j < 0) throw new Error('fin de ' + nom + ' introuvable');
-  return eval('(' + src.slice(i, j + 4) + ')');
-}
-var estUnFichierJson = lireFonction('estUnFichierJson');
-var estUneSuiteDeTests = lireFonction('estUneSuiteDeTests');
-var estUnFragmentServeur = lireFonction('estUnFragmentServeur');
-var estDuDomDePage = lireFonction('estDuDomDePage');
-var estUnServiceWorker = lireFonction('estUnServiceWorker');
-var neCompilePas = lireFonction('neCompilePas');
+   une suite de tests que seul un lanceur sait exécuter. */
+var estUnFichierJson = REG.estUnFichierJson;
+var estUneSuiteDeTests = REG.estUneSuiteDeTests;
+var estUnFragmentServeur = REG.estUnFragmentServeur;
+var estDuDomDePage = REG.estDuDomDePage;
+var estUnServiceWorker = REG.estUnServiceWorker;
+var neCompilePas = REG.neCompilePas;
 /* ⚠️ LA SEULE RÈGLE QUI PREND UN SECOND ARGUMENT (2026-09-09, point B2b-8) : les blocs de
-   navigateur qui PRÉCÈDENT celui qu'on examine dans la leçon. Toutes les autres jugent un
-   bloc seul ; celle-ci répond à une panne qui n'existe QUE dans un contexte — un `bouton`
-   ou un `ctx` né d'un `document.querySelector` dans un bloc écarté, donc absent du
-   préambule du repli. Lue, jamais recopiée, comme les autres. */
-var heriteDuNavigateur = lireFonction('heriteDuNavigateur');
+   navigateur qui PRÉCÈDENT celui qu'on examine dans la leçon. */
+var heriteDuNavigateur = REG.heriteDuNavigateur;
 /* LE FRAGMENT ORPHELIN (2026-09-09, point B2b-10) : la seule regle qui demande la page
-   ENTIERE — un nom declare plus bas est fourni par la lecon, meme si le repli ne peut pas
-   le donner. Lue, jamais recopiee, comme les autres. */
-var estUnFragmentOrphelin = lireFonction('estUnFragmentOrphelin');
-/* Le REPLI (2026-09-09, point B2b-7) : quand rejouer, et comment envelopper le bloc rejoué.
-   Ces deux règles sont LUES elles aussi — si ce vérificateur devinait l'enveloppe au lieu de
-   la lire, il mesurerait un moteur qui n'existe pas. */
-var meriteUnRepli = lireFonction('meriteUnRepli');
-var envelopperPourRepli = lireFonction('envelopperPourRepli');
-var preambuleQuiCompile = lireFonction('preambuleQuiCompile');
-/* Le RÉ-ANCRAGE (2026-09-09, point B2b-9) : quand le repli échoue à son tour sur un nom
-   manquant, quel préfixe RETRANCHÉ retenter. Lue elle aussi — c'est une règle qui décide
-   ce que l'apprenant voit, et deux exemplaires finiraient par diverger. */
-var preambuleReAncre = lireFonction('preambuleReAncre');
-/* L'ÉLAGAGE PAR LE HAUT (2026-09-09, point B2b-14) : le pendant du ré-ancrage, quand le
-   repli échoue sur une zone morte temporelle et non sur un nom manquant. Lue elle aussi. */
-var preambuleElague = lireFonction('preambuleElague');
-/* L'ORDRE des deux réécritures (2026-09-09, point B2b-15). Il était écrit ici ET dans
-   `lancerJs` : deux exemplaires d'une même priorité, donc deux moteurs possibles. Il n'est
-   plus écrit qu'une fois, dans `js/runner.js`, et LU comme les neuf règles au-dessus. */
-var prochainPrefixe = lireFonction('prochainPrefixe');
+   ENTIERE — un nom declare plus bas est fourni par la lecon. */
+var estUnFragmentOrphelin = REG.estUnFragmentOrphelin;
+/* Le REPLI (2026-09-09, point B2b-7) : quand rejouer, et comment envelopper le bloc rejoué. */
+var meriteUnRepli = REG.meriteUnRepli;
+var envelopperPourRepli = REG.envelopperPourRepli;
+var preambuleQuiCompile = REG.preambuleQuiCompile;
+/* Le RÉ-ANCRAGE (B2b-9), l'ÉLAGAGE PAR LE HAUT (B2b-14) et l'ORDRE des deux réécritures
+   (B2b-15) : lus eux aussi, jamais devinés. */
+var preambuleReAncre = REG.preambuleReAncre;
+var preambuleElague = REG.preambuleElague;
+var prochainPrefixe = REG.prochainPrefixe;
 
-function dec(s) {
-  return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'").replace(/&amp;/g, '&');
-}
-
-/* On récupère le bloc ET son `data-file` : `pages/nodejs/lecon-03.html` porte cinq
-   `package.json` annoncés `language-javascript`, et le nom du fichier est la seule chose
-   qui les distingue d'un programme.
-   ⚠️ LE MOTIF EST BORNÉ PAR `</figure>`, ET CE N'EST PAS UN DÉTAIL (2026-09-09, B2b-15).
-   Écrit `<figure …>[\s\S]*?<code class="language-javascript">`, le `[\s\S]*?` traverse
-   les figures : quand une figure NON JavaScript précède une figure JavaScript, on prend
-   l'attribut `data-file` de la PREMIÈRE et le code de la SECONDE. Le code exécuté restait
-   juste — la sonde `tools/preuves/mesure-etiquette-datafile.js` l'a vérifié bloc à bloc :
-   0 fichier au compte différent, 0 code différent — mais **629 blocs sur 1 987 portaient
-   le nom d'un fichier qui n'a jamais eu de bouton** (`index.html`, `Terminal`, `.yml`…),
-   ce qui envoyait lire le mauvais bloc. On isole donc la figure d'abord, et on ne cherche
-   le `<code>` qu'à l'intérieur. */
-function blocsJs(fichier) {
-  var src = fs.readFileSync(fichier, 'utf8'), out = [];
-  var re = /<figure class="code-block"([^>]*)>([\s\S]*?)<\/figure>/g, m;
-  while ((m = re.exec(src))) {
-    var code = m[2].match(/<code class="language-javascript">([\s\S]*?)<\/code>/);
-    if (!code) continue;
-    var df = (m[1] || '').match(/data-file="([^"]*)"/);
-    out.push({ code: dec(code[1]).trim(), fichier: df ? df[1] : '' });
-  }
-  return out;
-}
-
-function lecons(cible) {
-  var out = [];
-  var base = cible ? path.resolve(RACINE, cible) : path.join(RACINE, 'pages');
-  (function marche(d) {
-    var st; try { st = fs.statSync(d); } catch (e) { return; }
-    if (st.isFile()) { if (/\.html$/.test(d)) out.push(d); return; }
-    for (var f of fs.readdirSync(d)) marche(path.join(d, f));
-  })(base);
-  return out.filter(function (f) { return /lecon-\d+\.html$/.test(f); });
-}
+/* Le découpage des blocs (`blocsJs`) et le parcours des leçons sont dans le même module :
+   le motif de `blocsJs` est BORNÉ PAR `</figure>`, et ce détail — mesuré au point B2b-15 —
+   ne doit exister qu'à un seul endroit. */
+var blocsJs = REG.blocsJs;
+var lecons = REG.lecons;
 
 /* CE QUI EST COMMUN AUX OUTILS EST ÉCRIT UNE SEULE FOIS (2026-09-09, point B2b-15).
    Le contexte d'exécution et la reconnaissance des erreurs ANNONCÉES étaient écrits ici
@@ -317,13 +259,17 @@ fichiers.forEach(function (f) {
          avec l'autre réécriture, ce qui décrivait un moteur qui n'existe pas. L'ordre des
          deux réécritures n'est plus écrit ici : il est LU (`prochainPrefixe`).
          La terminaison vient de la décroissance STRICTE du préfixe, pas d'un compteur. */
-      var prf = prefixe, faconne = '';
-      var gardes = preambuleQuiCompile(prf, code);
+      /* `ancres` (2026-09-09, point B2b-17) : la mémoire des noms déjà ancrés, exactement
+         celle que `lancerJs` porte de relance en relance. C'est elle qui fait qu'un nom
+         n'est ancré qu'une fois, donc que cette boucle se termine — l'ancrage ne fait pas
+         décroître le préfixe, contrairement au ré-ancrage et à l'élagage. */
+      var prf = prefixe, faconne = '', ancres = [];
+      var gardes = preambuleQuiCompile(prf, code, ancres);
       var essai = gardes.length ? jouerDerriere(gardes) : { err: 'préambule vide' };
       while (essai.err && gardes.length) {
-        var suite = prochainPrefixe(prf, essai.err);
+        var suite = prochainPrefixe(prf, essai.err, ancres);
         if (!suite) break;
-        gardes = preambuleQuiCompile(suite.prefixe, code);
+        gardes = preambuleQuiCompile(suite.prefixe, code, ancres);
         if (!gardes.length) break;
         prf = suite.prefixe; faconne = suite.facon;
         essai = jouerDerriere(gardes);
@@ -331,7 +277,8 @@ fichiers.forEach(function (f) {
       if (!essai.err) {
         parRepli = true; replies++;
         listeReplies.push(rel + ' #' + (i + 1) + '  (' + essai.lignes + ' ligne(s))' +
-          (prf !== prefixe ? (faconne === 'elague' ? '  [élagué]' : '  [ré-ancré]') : '') +
+          (faconne === 'ancre' ? '  [ancré]' :
+            prf !== prefixe ? (faconne === 'elague' ? '  [élagué]' : '  [ré-ancré]') : '') +
           (erreurAnnoncee(code, msg) ? '  ⚠ ERREUR ANNONCÉE ÉTEINTE' : ''));
         msg = null;
       }

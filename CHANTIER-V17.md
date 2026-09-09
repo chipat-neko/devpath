@@ -2680,6 +2680,119 @@ résultat avant le clic.
       ma façon de mesurer, pas dans le site. **Ne jamais lire `$?` derrière un pipe.**
       Chaîne rapide finale : **42 étapes, 144,4 s, tout vert, toutes mesurées.**
 
+- [x] **B2b-17 · LA CARTE DES BLOCS QUI RESTENT, ET LE PREMIER DÉFAUT DE MOTEUR QU'ELLE A
+      MONTRÉ : le préambule du repli gardait le bloc qui ENSEIGNE l'erreur et jetait celui
+      qui FOURNIT le nom. 42 blocs en panne → 41, et un bloc de plus rendu vivant sans que
+      le compteur ne bouge.**
+
+      **Mesure reproduite avant de toucher à quoi que ce soit** : `node tools/verif-js.js
+      --causes` rend **1 613 blocs à bouton, 42 en panne, 81 qui ne compilent pas, 35
+      fragments orphelins** — le relevé du point précédent, à l'identique.
+
+      **LA LISTE PAR CAUSE NE DIT PLUS RIEN, ET C'ÉTAIT LE VRAI BLOCAGE.** Les seize points
+      précédents ont vidé les lots homogènes ; ce qui reste, ce sont **36 messages différents
+      pour 42 blocs**, presque tous « X is not defined » avec un X chaque fois nouveau. Une
+      case par lot n'a plus de lot où mordre. La bonne question n'est donc plus « quelle
+      erreur ? » mais **« d'où viendrait le nom ? »** — et personne ne la posait.
+      `tools/preuves/sonde-origine-du-nom.js` y répond en classant chaque bloc en panne selon
+      l'endroit de la leçon où le nom manquant est écrit :
+
+      | classe | ce que cela veut dire | effectif |
+      |---|---|---|
+      | **BOUTON-AVANT** | le nom EST déclaré dans un bloc à bouton antérieur — le repli aurait dû le fournir : **c'est le MOTEUR qui est en cause, pas le contenu** | 9 |
+      | **MUET-AVANT** | déclaré dans un bloc antérieur SANS bouton : le préambule ne peut pas le donner, par construction | 10 |
+      | **PLUS-BAS** | déclaré seulement APRÈS le bloc ; le repli ne remonte pas le temps | 1 |
+      | **NULLE-PART** | aucune déclaration dans la page entière — un fragment orphelin que la règle de B2b-10 ne voit pas, parce qu'elle n'examine que les identifiants en TÊTE DE LIGNE | 17 |
+      | **AUTRE** | l'erreur n'est pas un nom manquant (return illégal, `TypeError`…) | 5 |
+
+      **PREMIER DÉFAUT TROUVÉ, ET IL ÉTAIT DANS L'ÉLAGAGE (B2b-14).** `pages/js/lecon-16` est
+      le cas d'école : son bloc #2 **enseigne la zone morte temporelle** — il écrit
+      `console.log(age);` PUIS `const age = 30;`. Mis en préambule, il rejoue cette erreur et
+      fait tomber tout ce qui suit. L'élagage cherche le bloc qui DÉCLARE le nom et retranche
+      ce qui est au-dessus ; ici le déclarant est le fautif lui-même, donc l'élagage le
+      gardait, rejouait la même erreur, puis rendait `null` : **le repli abandonnait, et le
+      bloc #4 restait en panne sur `creerCompteur`, un nom que le bloc #3 fournit pourtant.**
+      Quand le déclarant est déjà en tête, il est maintenant retiré à son tour — un préambule
+      est là pour FOURNIR des noms, jamais pour rejouer une démonstration d'erreur. La
+      décroissance du préfixe reste stricte, donc la terminaison est acquise comme avant.
+      **Mesure : 42 blocs en panne → 41.**
+
+      **SECOND DÉFAUT : LE TRI JETAIT LE FOURNISSEUR.** `preambuleQuiCompile` part du bloc le
+      plus PROCHE ; quand deux blocs entrent en collision, c'est le plus ANCIEN qui saute —
+      or c'est parfois lui qui porte le nom manquant. Le ré-ancrage (B2b-9) répondait déjà à
+      ce cas, mais **en TRONQUANT**, ce qui fait perdre tous les blocs situés après le
+      fournisseur : sur `pages/projets-js/lecon-15`, il gardait le #1 et perdait les #2 et #4,
+      pour échouer aussitôt sur le nom suivant. L'**ANCRAGE** (11ᵉ règle du repli) ne tronque
+      rien : le nom sur lequel le repli vient d'échouer est mémorisé, et le bloc qui le déclare
+      est désormais essayé EN PREMIER par le tri, donc gardé d'office ; c'est ce qui suit qui
+      est écarté en cas de collision. Un nom n'est ancré qu'une fois — c'est cette mémoire, et
+      non un compteur de tours, qui garantit la terminaison, puisque l'ancrage seul ne fait pas
+      décroître le préfixe.
+
+      ⚠️ **UN PREMIER JET RÉORDONNAIT LE PRÉAMBULE, ET C'ÉTAIT FAUX.** Pour que le tri voie le
+      fournisseur en premier, il suffisait de le DÉPLACER en fin de préfixe — sauf qu'il
+      s'exécutait alors APRÈS les blocs qui l'utilisent. Cela ne marche que pour les `function`,
+      qui sont hissées, et casse tout `const` ou `class`. **Seule la priorité de CONSERVATION
+      change ; l'ordre d'EXÉCUTION reste celui de la leçon.**
+
+      **CE QUE L'ANCRAGE A RAPPORTÉ, SANS ARRONDIR : UN BLOC.** Le compteur des pannes n'a pas
+      bougé (41 avant, 41 après) et il aurait été facile de présenter la règle comme un gain
+      nul ou comme un grand gain ; ni l'un ni l'autre n'est vrai. Les blocs aboutis passent de
+      **1 546 à 1 547**, et le bloc gagné est `projets-js/lecon-15` #6 — il était rangé parmi
+      les « erreurs annoncées » **par un faux positif** (`ERREUR_ANNONCEE` reconnaît le mot
+      « refuse », que ce bloc emploie pour dire qu'un demi-tour est interdit au serpent), donc
+      soustrait au compteur des pannes tout en affichant `etatInitial is not defined` à
+      l'apprenant. **Piste ouverte pour une case suivante : combien des 21 « erreurs annoncées »
+      sont des faux positifs du même genre, c'est-à-dire de vraies pannes cachées ?**
+
+      **PREUVE PAR LE NAVIGATEUR** — le vérificateur n'exécute pas `runner.js`, seul un vrai
+      Chrome dit ce que l'apprenant voit. `repli-navigateur.js`, `file://`, trois blocs cliqués :
+      `js/lecon-16` #4 affiche **1, 2, 1**, `projets-js/lecon-15` #6 affiche **{"x":1,"y":0}
+      puis {"x":0,"y":-1}** — dans les deux cas exactement les sorties que la page annonce en
+      commentaire — et `js/lecon-21` #3, qui passe par le nouveau chemin, rend toujours
+      « Envoyer le devis (P2) ». **3 blocs rejoués, 0 erreur, 0 requête distante.**
+
+      **CE QUI RESTE, ET POURQUOI JE NE LE FORCE PAS.** Les 8 BOUTON-AVANT restants ne sont
+      **pas** un défaut de moteur : ils sont bloqués par une **redéclaration en cascade**.
+      Mesuré sur `projets-js/lecon-15` : les blocs #1, #3 et #4 déclarent CHACUN `const jeu`,
+      donc au plus un des trois peut entrer dans un préambule qui compile — `1+4` et `3+4`
+      rendent tous deux `SyntaxError: Identifier 'jeu' has already been declared`. Or le bloc #5
+      a besoin de `etatInitial` (#1) **et** de `estPerdu` (#4). **Aucune stratégie de tri ne
+      peut satisfaire les deux** ; seule une réécriture du CONTENU le pourrait, et renommer la
+      variable de démonstration de trois blocs pour gagner deux boutons est une décision de
+      contenu, pas d'outil. Elle est laissée ouverte, chiffrée.
+
+      **DETTE D'OUTILLAGE SOLDÉE AU PASSAGE.** Les règles du bouton étaient lues dans
+      `js/runner.js` par `verif-js.js` **et par lui seul** : toute sonde voulant raisonner sur
+      les mêmes blocs devait refaire la lecture chez elle — le défaut exact mesuré au point
+      B2b-15, où deux copies du contexte du Worker rendaient deux verdicts sur les mêmes blocs.
+      Elles sont désormais dans `tools/lib/regles-bouton.js`, lues une fois, partagées par le
+      vérificateur et la sonde. Contrôle de neutralité : **1 613 / 776 / 43 / 22 / 42 / 81 / 35,
+      chiffre pour chiffre identiques avant et après le déplacement.**
+
+      ⚠️ **ET CE DÉPLACEMENT A CASSÉ UN AUTRE OUTIL, QUE LA CHAÎNE A ATTRAPÉ AU PREMIER
+      PASSAGE.** `verif-etiquette-blocs.js` lisait `dec` et `blocsJs` **par découpage de texte
+      dans `tools/verif-js.js`** ; les fonctions ayant changé de fichier, il est mort sur
+      « dec introuvable dans tools/verif-js.js », en pleine chaîne rapide (étape `js-etiq`,
+      SIGNALE). **Lire une fonction par son texte suppose qu'elle ne bouge jamais de fichier ;
+      un `require` ne suppose rien.** Corrigé, et éprouvé par injection pour vérifier qu'il peut
+      encore rougir après avoir changé de source : la borne `</figure>` retirée du motif partagé,
+      il rend **321 fichiers en écart et sort en 1** ; motif restauré, **code 0** et fichier
+      identique à l'octet près.
+
+      **CLIQUET DESCENDU À 41 ET ÉPROUVÉ DEUX FOIS**, une injection par catégorie surveillée :
+      `zzzNomQuiNExistePas(1);` (nom en tête de ligne) → **code 1**, « 36 fragments orphelins
+      contre 35 » ; `console.log(zzzNomQuiNExistePas);` (nom au milieu d'une ligne, que la règle
+      des orphelins ne voit pas) → **code 1**, « 42 blocs en panne contre 41 ». Fautes retirées,
+      `pages/algo/lecon-01.html` revenu à l'octet près, cliquet vert à 41. La sonde est déclarée
+      dans `tools/hors-chaine.json` avec ce qu'il faudrait pour l'y verser — un cliquet
+      d'ÉGALITÉ sur l'effectif BOUTON-AVANT, le seul chiffre qui accuse le moteur — et
+      `verif-chaine-declaree.js` l'avait signalée « non déclarée » avant que ce soit fait, ce
+      qui est son travail.
+
+      `verif-html.js` : **0**. `verif-donnees.js` : **aucune erreur d'invariant**. Chaîne
+      rapide finale : **42 étapes, 134,4 s, tout vert, toutes mesurées.**
+
 
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que

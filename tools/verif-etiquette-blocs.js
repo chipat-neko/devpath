@@ -31,19 +31,17 @@ var fs = require('fs');
 var path = require('path');
 var RACINE = path.resolve(__dirname, '..');
 
-/* La fonction d'extraction est LUE dans `verif-js.js`, comme les règles du bouton sont
-   lues dans `runner.js` : ce contrôle doit juger CE QUE L'OUTIL FAIT, pas une copie. */
+/* La fonction d'extraction est PRISE OÙ ELLE EST ÉCRITE, jamais recopiée : ce contrôle
+   doit juger CE QUE L'OUTIL FAIT.
+   ⚠️ ELLE ÉTAIT LUE PAR DÉCOUPAGE DE TEXTE DANS `tools/verif-js.js`, ET CELA A CASSÉ
+   (2026-09-09, point B2b-17). Le jour où `dec` et `blocsJs` ont quitté `verif-js.js` pour
+   `tools/lib/regles-bouton.js` — afin que les sondes cessent d'en tenir une seconde copie —
+   ce contrôle est mort sur « dec introuvable dans tools/verif-js.js », en pleine chaîne.
+   Lire une fonction par son texte suppose qu'elle ne bouge jamais de fichier ; un `require`
+   ne suppose rien et casse bruyamment si le module disparaît. La chaîne rapide a d'ailleurs
+   attrapé la panne au premier passage, ce qui est exactement son travail. */
 function lireBlocsJs() {
-  var src = fs.readFileSync(path.join(RACINE, 'tools', 'verif-js.js'), 'utf8');
-  function corps(nom) {
-    var i = src.indexOf('function ' + nom + '(');
-    if (i < 0) throw new Error(nom + ' introuvable dans tools/verif-js.js');
-    var j = src.indexOf('\n}', i);
-    if (j < 0) throw new Error('fin de ' + nom + ' introuvable');
-    return src.slice(i, j + 2);
-  }
-  var fab = new Function('fs', corps('dec') + '\n' + corps('blocsJs') + '\nreturn blocsJs;');
-  return fab(fs);
+  return require('./lib/regles-bouton.js').blocsJs;
 }
 
 /* L'AUTRE VOIE : on découpe le fichier en figures, et chaque figure est jugée SEULE.
