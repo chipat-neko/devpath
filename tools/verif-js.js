@@ -366,7 +366,7 @@ if (!CAUSES) {
 if (cibles.length) { console.log('\n  (cliquet inactif : des cibles ont ete passees en argument)'); process.exit(0); }
 if (FIXER) {
   fs.writeFileSync(ATTENDU, JSON.stringify({ ko: ko, total: total, nonCompilables: nonCompilables,
-    orphelins: orphelins, horsPortee: horsPortee,
+    orphelins: orphelins, horsPortee: horsPortee, annoncees: annoncees,
     note: 'Nombre de blocs JS en panne au dernier releve. Il ne doit jamais augmenter. ' +
           'Le descendre apres une reparation : node tools/verif-js.js --fixer',
     note2: 'nonCompilables : blocs que `new Function` refuse de compiler, donc prives de ' +
@@ -376,6 +376,12 @@ if (FIXER) {
            'fournit, donc prives de bouton par runner.js. Meme raison que ci-dessus, et ' +
            'elle a ete MESUREE : un appel de fonction inexistante ajoute par erreur ferait ' +
            'simplement disparaitre le bouton, sans faire monter les pannes.',
+    note5: 'annoncees : blocs dont la page ECRIT l\'erreur en commentaire. C\'est la SECONDE ' +
+           'categorie qui soustrait un bloc au verdict, donc elle a le meme cliquet d\'EGALITE ' +
+           'que horsPortee, et pour la meme raison MESUREE : au point B2b-18, cinq blocs y ' +
+           'etaient absous par un mot de commentaire qui parlait d\'autre chose, et un vrai ' +
+           'Chrome les a montres affichant une ligne rouge a l\'apprenant. Une categorie qui ne ' +
+           'rougit que dans un sens est un endroit ou cacher une vraie panne.',
     note4: 'horsPortee : blocs qui emploient une globale que le VRAI Worker possede et que ' +
            'Node ne peut pas fournir sans l\'inventer (indexedDB, caches). Ils marchent chez ' +
            'l\'apprenant et sont soustraits au verdict : ce cliquet-la exige donc l\'EGALITE, ' +
@@ -423,6 +429,19 @@ if (typeof ref.horsPortee === 'number' && horsPortee !== ref.horsPortee) {
     ref.horsPortee + ' a la reference.');
   console.log('  Cette categorie ECHAPPE au verdict : son effectif ne bouge pas sans decision.' +
               ' Les voir : node tools/verif-js.js --causes');
+  process.exit(1);
+}
+/* LE CINQUIEME CLIQUET, second a exiger l'EGALITE (2026-09-09, point B2b-18). « Erreur
+   annoncee » est, avec « hors de portee », l'autre categorie qui RETIRE un bloc du verdict :
+   elle merite donc la meme garde. La mesure qui l'a fondee : le motif francais absolvait un
+   bloc des qu'un commentaire quelconque contenait « erreur », « refuse » ou « echoue », sans
+   jamais regarder QUELLE erreur le bloc produit. Cinq blocs y dormaient, tous confirmes en
+   panne par un clic dans un vrai Chrome. */
+if (typeof ref.annoncees === 'number' && annoncees !== ref.annoncees) {
+  console.log('\nCLIQUET : ' + annoncees + ' erreur(s) annoncee(s), contre ' + ref.annoncees +
+    ' a la reference.');
+  console.log('  Cette categorie ECHAPPE au verdict : son effectif ne bouge pas sans decision.' +
+              ' Les voir : node tools/verif-js.js | grep ANN');
   process.exit(1);
 }
 if (typeof ref.orphelins === 'number' && orphelins < ref.orphelins) {

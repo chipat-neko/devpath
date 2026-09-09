@@ -2793,6 +2793,74 @@ résultat avant le clic.
       `verif-html.js` : **0**. `verif-donnees.js` : **aucune erreur d'invariant**. Chaîne
       rapide finale : **42 étapes, 134,4 s, tout vert, toutes mesurées.**
 
+- [x] **B2b-18 · LA CATÉGORIE QUI ABSOLVAIT SANS REGARDER : « erreur annoncée » pardonnait
+      N'IMPORTE QUELLE erreur dès qu'un commentaire, N'IMPORTE lequel, contenait le mot
+      « erreur » ou « refuse ». Cinq blocs y dormaient, et un vrai Chrome les montre tous
+      affichant une ligne rouge à l'apprenant. Le cliquet monte de 41 à 46 — ce n'est pas
+      une régression, c'est la fin d'une dissimulation.**
+
+      **La piste vient du point précédent**, qui avait trouvé le premier cas par hasard :
+      `projets-js/lecon-15` #6 écrit « demi-tour interdit … refuse » pour décrire une règle
+      du jeu de serpent, et se voyait pardonner un `etatInitial is not defined` sans aucun
+      rapport. La question posée était : **combien des 21 « erreurs annoncées » sont du même
+      genre, c'est-à-dire de vraies pannes cachées ?**
+
+      **L'INSTRUMENT, ET CE QU'IL MESURE.** `tools/preuves/sonde-annonce-liee.js` demande, pour
+      chaque bloc absous, si l'annonce parle bien de l'erreur OBTENUE. Le lien exigé est le
+      plus simple qui soit vérifiable : quand l'erreur nomme un identifiant, un commentaire du
+      bloc doit citer **ce nom**. Relevé sur les 21 :
+
+      | | | |
+      |---|---|---|
+      | **LIÉE** | le commentaire cite le nom en cause | **5** — `interne`, `message`, `carre`, `age`, `ligne` |
+      | **NON-LIÉE** | aucun commentaire ne cite le nom | **5** |
+      | **SANS-NOM** | l'erreur ne nomme aucun identifiant (`throw` de la leçon, `Assignment to constant variable`) | **11** |
+
+      **LES CINQ NON-LIÉES, ET CE QUE LEUR ANNONCE DISAIT VRAIMENT** — le décalage se voit à
+      l'œil nu : `js/lecon-33` #5 échoue sur `form` et son commentaire parle d'un « message
+      d'erreur personnalisé sur la confirmation » ; `js/lecon-63` #7 échoue sur `saisie` et
+      annonce « le pattern Result : l'échec fait partie du retour » ; #11 échoue sur `champ`
+      et annonce « échec attendu, traité localement » ; `js/lecon-65` #5 échoue sur
+      `creerStore` et affiche une trace d'abonnés ; `nodejs/lecon-22` #2 échoue sur
+      `UserSchema` et annonce « lève une ZodError si invalide ». **Aucune de ces cinq phrases
+      ne parle de l'erreur que le bloc produit.**
+
+      **PREUVE PAR LE NAVIGATEUR, ET ELLE EST SANS APPEL** (`repli-navigateur.js`, `file://`) :
+      les 5 blocs cliqués dans un vrai Chrome rendent **5 lignes rouges — `form is not
+      defined`, `saisie is not defined`, `champ is not defined`, `creerStore is not defined`,
+      `UserSchema is not defined` — 0 rejoué, 0 sans erreur, 0 requête distante.** Le
+      vérificateur les comptait verts ; l'apprenant lisait la panne.
+
+      **LA RÈGLE DURCIE, ET CE QU'ELLE NE TOUCHE PAS.** `erreurAnnoncee` exige désormais, POUR
+      LES SEULES ERREURS QUI NOMMENT UN IDENTIFIANT, que le nom figure dans un commentaire. Les
+      erreurs qui ne nomment personne restent jugées comme avant : le critère n'a pas de prise
+      sur elles, et prétendre le contraire aurait fait basculer 11 blocs sans preuve. Mesure
+      après durcissement : **annoncées 21 → 16, EN PANNE 41 → 46, aboutis 1 547 → 1 548.**
+
+      ⚠️ **LE CLIQUET MONTE, ET IL FALLAIT L'ÉCRIRE PLUTÔT QUE DE L'ÉVITER.** La règle du
+      chantier est qu'un cliquet ne monte pas ; ici, les 5 blocs n'étaient pas verts, ils
+      étaient CACHÉS — la hausse de 41 à 46 est exactement l'effectif prouvé par Chrome, ni un
+      de plus ni un de moins, et les 41 précédents sont tous encore là. Choisir de rester à 41
+      en gardant la catégorie fourre-tout aurait été le seul vrai mensonge.
+
+      **ET LE TROU EST FERMÉ POUR DE BON : cinquième cliquet, second à exiger l'ÉGALITÉ.**
+      « Erreur annoncée » est, avec « hors de portée » (B2b-16), l'autre catégorie qui RETIRE un
+      bloc du verdict ; elle reçoit donc la même garde, pour la raison mesurée ici même. Son
+      effectif (16) ne peut plus bouger sans décision. **Éprouvé dans les DEUX sens** — c'est la
+      leçon du cours mobile, un cliquet qui ne surveille qu'un sens laisse la faille entière :
+      durcissement retiré → **21 contre 16, code 1** ; commentaire « erreur volontaire : phrase »
+      ajouté à `js/lecon-27` → **17 contre 16, code 1** ; les deux fichiers restaurés, référence
+      revenue à 16/46. Stabilité vérifiée avant de poser la garde (piège B1e, le cliquet qui
+      rougit au hasard) : **deux relevés consécutifs rendent 16 et 46, à l'identique.**
+
+      La sonde est déclarée dans `tools/hors-chaine.json` : son compte NON-LIÉE vaut désormais 0
+      **par construction**, donc la brancher ajouterait une étape incapable de rien trouver. Ce
+      qu'elle garde à juger, et qui reste ouvert : **les 11 SANS-NOM, dont l'annonce n'est reliée
+      à l'erreur par aucun critère à ce jour.**
+
+      `verif-chaine-declaree.js` : **OK, 13 hors chaîne, 13 déclarés**. Chaîne rapide finale :
+      **42 étapes, 122,7 s, tout vert, toutes mesurées.**
+
 
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que

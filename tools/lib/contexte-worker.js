@@ -197,8 +197,31 @@ function commentairesDe(code) {
   code.replace(/(^|[^:"'`\\])\/\/[^\n]*/gm, function (c) { out.push(c); return c; });
   return out.join('\n');
 }
+/* ⚠️ L'ANNONCE DOIT PARLER DE L'ERREUR OBTENUE (2026-09-09, point B2b-18).
+ * Le motif français ci-dessus absout un bloc dès qu'un commentaire — n'IMPORTE lequel —
+ * contient « erreur », « refuse », « échoue », « invalide »… Il ne regarde jamais QUELLE
+ * erreur le bloc produit : c'est un blanc-seing, et il en cachait cinq, toutes vues par
+ * l'apprenant. `projets-js/lecon-15` #6 écrivait « demi-tour interdit … refuse » pour
+ * décrire une règle du jeu de serpent et se voyait pardonner un `etatInitial is not
+ * defined` sans rapport (trouvé au point B2b-17) ; `js/lecon-63` #11 dit « échec attendu,
+ * traité localement » et échouait en réalité sur `champ is not defined`.
+ *
+ * Le lien exigé est le plus simple qui soit vérifiable, et il ne vaut QUE pour les erreurs
+ * qui nomment un identifiant : le commentaire doit citer CE nom. Une leçon qui montre
+ * volontairement qu'un nom n'existe pas l'écrit toujours — les cinq annonces légitimes du
+ * site le font (`interne`, `message`, `carre`, `age`, `ligne`). Les erreurs qui ne nomment
+ * personne (`TypeError` d'un `throw` de la leçon, `Assignment to constant variable`) ne sont
+ * pas concernées : elles restent jugées comme avant.
+ * Mesuré dans un vrai Chrome (`repli-navigateur.js`, `file://`) : les 5 blocs que ce
+ * durcissement fait basculer affichent tous une ligne rouge au clic. */
+function annonceNommeLErreur(code, msg) {
+  var m = /^ReferenceError: (?:([A-Za-z_$À-ɏ][\w$À-ɏ]*) is not defined|Cannot access '([^']+)' before initialization)/.exec(String(msg || ''));
+  if (!m) return true;                      // l'erreur ne nomme personne : critère sans prise
+  var nom = (m[1] || m[2]).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp('(?:^|[^\\w$À-ɏ])' + nom + '(?![\\w$À-ɏ])').test(commentairesDe(code));
+}
 function erreurAnnoncee(code, msg) {
-  if (ERREUR_ANNONCEE.test(code)) return true;
+  if (ERREUR_ANNONCEE.test(code)) return annonceNommeLErreur(code, msg);
   if (!msg) return false;
   var m = /^([A-Za-z]*Error)\b:?\s*([\s\S]*)$/.exec(msg);
   if (!m) return false;
@@ -212,4 +235,5 @@ function erreurAnnoncee(code, msg) {
 }
 
 module.exports = { GLOBALES_WORKER: GLOBALES_WORKER, contexteWorker: contexteWorker, fmtArgs: fmtArgs, ERREUR_ANNONCEE: ERREUR_ANNONCEE, erreurAnnoncee: erreurAnnoncee,
+  annonceNommeLErreur: annonceNommeLErreur, commentairesDe: commentairesDe,
   HORS_PORTEE: HORS_PORTEE, estHorsPortee: estHorsPortee };
