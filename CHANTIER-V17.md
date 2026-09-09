@@ -531,15 +531,52 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
 Un bouton « Tester » qui rend une erreur est pire qu'une absence de bouton : le panneau **promet** un
 résultat avant le clic.
 
-- [ ] **B1 · Les blocs SQL : 124 sur 303 en erreur (40,9 %).** Par cours : `sql` 128/215, `bdd` 50/70,
-      **`data-eng` 1/17**, `securite` 0/1. Causes mesurées : 51 « no such column », 39 « no such table »,
-      21 « near … ». Trois tentatives de démolition ont échoué : le vérificateur ne diverge pas du
-      navigateur (`js/runner.js:331-341` fait exactement la même chose), les boutons existent bien
-      (8 boutons cliqués dans un vrai Chrome sur `data-eng`, 8 erreurs), et ce ne sont pas des erreurs
-      pédagogiques (sur `pages/sql/lecon-10.html`, 11 erreurs sur 13 portent sur une colonne `points`
-      que `runner.js:201` ne déclare pas ; sur les 124, **2 seulement** démontrent une contrainte).
-      Commencer par `data-eng`. Descendre le cliquet de `tools/verif-sql-attendu.json` — calé sur 124
-      depuis le 2026-08-26, donc **vert avec 124 boutons morts** — à chaque lot. Une case par cours.
+- [x] **B1 · Les blocs SQL : 124 en erreur sur 303 au départ → 4 sur 260, et ces 4 sont ceux qui
+      DOIVENT échouer.** Le site n'a plus aucune vraie panne SQL. Clos par les six sous-points B1a à
+      B1e ; ce qui suit est le bilan, chaque chiffre étant justifié dans sa case.
+
+      | cours | au départ | à l'arrivée |
+      |---|---|---|
+      | `sql` | 128 aboutis sur 215 | **187 / 187 (100 %)** |
+      | `bdd` | 50 / 70 | **58 / 62 (94 %)**, les 4 restants sont des démonstrations d'erreur voulues |
+      | `data-eng` | 1 / 17 | **11 / 11 (100 %)** |
+      | `securite` | 0 / 1 | bloc MySQL écarté, la page n'a plus de bouton mort |
+
+      **Ce que le chantier a réellement corrigé n'était pas 124 fautes d'écriture.** Sur les 120 blocs
+      traités, la très grande majorité relevait de trois causes structurelles, et non de leçons
+      fautives : des **règles du moteur qui se trompaient de question** (la règle du seed lisait les
+      commentaires comme du code ; elle jugeait « autonome » un bloc qui LIT une table qu'il ne crée
+      pas), un **décor incomplet** (les leçons interrogeaient des schémas qu'elles déclarent ailleurs
+      dans leur page, or chaque bloc part d'une base neuve), et des **dialectes comparés** — c'est le
+      sujet même de plusieurs leçons — que rien ne distinguait de SQLite.
+
+      **Quatre règles ont été ajoutées au moteur, toutes de la même famille** : *ce que la leçon écrit
+      l'emporte sur le décor*. Un bloc qui crée une table ne reçoit pas celle du décor (B1a) ; les
+      commentaires ne comptent dans aucune décision (B1c-1) ; une vue du décor n'existe que pour le
+      bloc qui écrit son nom sans la définir (B1b-2) ; une leçon qui ajoute une colonne l'emporte sur
+      le décor qui la porte déjà (B1c-2). Chacune est déclarée UNE FOIS dans `js/runner.js` et **lue**
+      par `tools/verif-sql.js` — jamais recopiée, pour que le vérificateur ne puisse pas mesurer autre
+      chose que ce que voit l'apprenant.
+
+      **Deux contrôles ont été ajoutés, et ils regardent dans la direction que le cliquet ne couvre
+      pas.** Le cliquet ne rougit qu'à la HAUSSE du nombre d'erreurs : une leçon qui cesse de démontrer
+      ce qu'elle annonce fait BAISSER ce nombre et passait donc pour une bonne nouvelle.
+      `verif-sql-demonstrations.json` corrige cet angle mort en CONTRAIGNANT les 4 blocs qui doivent
+      échouer à échouer avec leur message exact (B1c-2). Et `sql-lecon.js` ne rend plus de verdict vert
+      quand il n'a rien lu : « rien lu » n'est plus confondu avec « le moteur a dit qu'il ne pouvait
+      pas » (B1e).
+
+      **Ce que ce point apprend sur la méthode**, et qui vaut au-delà du SQL :
+      · **mesurer l'impact d'un motif AVANT de l'écrire** a évité de retirer un seul bouton vivant sur
+        les 27 marqueurs de dialecte ajoutés — et a montré que `reverse()` existe dans SQLite alors que
+        la leçon affirmait le contraire ;
+      · **rejouer le scénario complet après chaque correction** a rattrapé trois régressions qu'aucune
+        relecture n'aurait vues (`clients.pays`, `commandes_clients` deux fois) ;
+      · **éprouver un contrôle par injection** a trouvé deux défauts dans les contrôles eux-mêmes,
+        écrits le jour même — un compteur incrémenté trop tôt, une détection testée sur le mauvais
+        texte — plus un faux positif d'un garde-fou dès son premier emploi réel ;
+      · **un outil peut mentir en silence** : `verif-controles.js` a attrapé un `\b` devenu un vrai
+        U+0008 dans mon script de mesure, qui annonçait « 0 bloc concerné » là où la réponse est 1.
 
 - [x] **B1a · `data-eng` : 16 blocs en erreur sur 17 → 0 sur 11.** Mesure reproduite avant de toucher
       à quoi que ce soit : `node tools/verif-sql.js` rendait exactement les chiffres du plan (303 blocs,
@@ -860,7 +897,27 @@ résultat avant le clic.
       « EXIT=0 » sur une injection qui sortait bel et bien en 1. C'est le code de `tail`. Il est déjà
       consigné en B1a ; il se paie une fois de plus.
 
-- [ ] **B1d · `securite` : l'unique bloc SQL du cours est en erreur.**
+- [x] **B1d · `securite` : l'unique bloc SQL du cours est du MySQL, il n'a rien à faire sous un
+      bouton. Le site n'a plus AUCUNE vraie panne SQL : 4 blocs en erreur sur 260, et les 4 sont les
+      démonstrations voulues de `bdd`, conformes à leur déclaration.** Le bloc écrit
+      `PREPARE recherche FROM '…'` puis `EXECUTE recherche USING @nom` — la forme MySQL des requêtes
+      préparées CÔTÉ SERVEUR, que SQLite n'expose que par son API C et jamais en SQL. Mesuré sur le
+      moteur du dépôt avant d'écrire le marqueur : « near "PREPARE" », « near "EXECUTE" ». Le bloc
+      n'illustre d'ailleurs pas une requête à exécuter mais le PRINCIPE de la séparation code/valeurs,
+      juste après le même exemple en JavaScript. Impact mesuré : 1 bloc désigné, déjà en erreur,
+      0 vivant. Cliquet descendu à **4**.
+
+      ⚠️ **Le garde-fou écrit au point B1e a rendu un FAUX POSITIF dès son premier emploi réel, et
+      c'est ce point qui l'a révélé.** Il criait « 0 bouton posé alors que la source porte des blocs
+      SQL : MESURE MANQUÉE » — or zéro était ici la bonne réponse, le seul bloc de la page étant
+      légitimement écarté. Un garde-fou qui se trompe est pire que pas de garde-fou : il apprend à
+      ignorer ses propres alertes. Corrigé sans rien dupliquer : `sql-lecon.js` ne compte plus les
+      blocs BRUTS mais rejoue la règle du moteur — verbe SQL présent, dialecte étranger absent — avec
+      `AUTRE_SGBD` et `COMMENTAIRE_SQL` **lus dans `js/runner.js`**, comme le fait déjà `verif-sql.js`.
+      Éprouvé après correction : la page `securite` rend « 0 bloc » et sort en **0** ; la lecture des
+      boutons désactivée sur `sql/lecon-04` rend « 0 bouton POSÉ alors que **10** bloc(s) devraient en
+      porter » et sort en **1** ; remise en état, code **0**.
+      `verif.js --rapide` : 40 étapes, tout vert.
 
 - [ ] **B2 · Les blocs JavaScript : 451 sur 2 011 en erreur (22,4 %).** Mesure indépendante avec la
       règle `BROWSER_ONLY` de `js/runner.js:51` : 518 erreurs, dont **67 volontaires et annoncées en

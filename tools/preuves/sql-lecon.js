@@ -59,6 +59,38 @@ var MARGE = 5000;          // au-delà du moteur : c'est lui qui doit trancher, 
 var PAS = 250;
 var TOURS = Math.ceil((DELAI_MOTEUR + MARGE) / PAS);
 
+/* --- COMBIEN DE BOUTONS CETTE PAGE DOIT-ELLE PORTER ? ------------------------------
+ * Le garde-fou « 0 bouton posé alors que la source porte des blocs SQL » a rendu un FAUX
+ * POSITIF dès son premier emploi réel, sur `pages/securite/lecon-03.html` : la page
+ * contient bien un bloc `language-sql`, mais c'est du MySQL (`PREPARE … FROM`) que
+ * `runner.js` écarte à juste titre. Zéro bouton y est la bonne réponse.
+ * On ne compte donc pas les blocs bruts : on rejoue la règle du moteur — verbe SQL
+ * présent, dialecte étranger absent — avec les motifs LUS dans `js/runner.js`, jamais
+ * recopiés. Un garde-fou qui se trompe est pire que pas de garde-fou : il apprend à
+ * ignorer ses propres alertes. */
+var SRC_RUNNER = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
+function lireMotif(nom, drapeau) {
+  var m = SRC_RUNNER.match(new RegExp('var ' + nom + ' = (/[\\s\\S]*?/' + drapeau + ');'));
+  if (!m) { console.error('sql-lecon.js — ' + nom + ' introuvable dans js/runner.js.'); process.exit(2); }
+  return eval(m[1]);
+}
+var AUTRE_SGBD = lireMotif('AUTRE_SGBD', 'i');
+var COMMENTAIRE_SQL = lireMotif('COMMENTAIRE_SQL', 'g');
+var VERBE_SQL = /\b(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|WITH)\b/i;
+function blocsAttendus(fichier) {
+  var src = fs.readFileSync(fichier, 'utf8'), n = 0;
+  var re = /<code class="language-sql">([\s\S]*?)<\/code>/g, m;
+  while ((m = re.exec(src))) {
+    var code = m[1].replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+                   .replace(/&#39;/g, "'").replace(/&amp;/g, '&').trim();
+    if (!VERBE_SQL.test(code)) continue;
+    var nu = code.replace(new RegExp(COMMENTAIRE_SQL.source, 'g'), ' ');
+    if (AUTRE_SGBD.test(nu)) continue;
+    n++;
+  }
+  return n;
+}
+
 function dodo(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 function get(url) {
   return new Promise(function (res, rej) {
@@ -146,16 +178,15 @@ function get(url) {
        (chargement trop lent). On tranche en regardant la SOURCE : si la page contient des
        blocs `language-sql` et qu'aucun bouton n'est apparu, c'est notre mesure qui a
        échoué, pas la page — et il faut le dire au lieu de compter zéro en silence. */
-    if (n === 0) {
-      var brut = fs.readFileSync(path.join(RACINE, pages[i]), 'utf8');
-      if (/<code class="language-sql">/.test(brut)) {
-        pagesMalLues.push(pages[i]);
-        console.log(pages[i] + ' — 0 bouton POSÉ alors que la source porte des blocs SQL : ' +
-                    'MESURE MANQUÉE (page pas encore prête), et non une page sans blocs.');
-        continue;
-      }
+    var attendus = blocsAttendus(path.join(RACINE, pages[i]));
+    if (n === 0 && attendus > 0) {
+      pagesMalLues.push(pages[i]);
+      console.log(pages[i] + ' — 0 bouton POSÉ alors que ' + attendus + ' bloc(s) devraient en ' +
+                  'porter : MESURE MANQUÉE (page pas encore prête), et non une page sans blocs.');
+      continue;
     }
-    console.log(pages[i] + ' — ' + n + ' bloc(s) SQL avec bouton');
+    console.log(pages[i] + ' — ' + n + ' bloc(s) SQL avec bouton' +
+                (n !== attendus ? '  (' + attendus + ' attendu(s) d\'après la règle de runner.js)' : ''));
     /* Le bouton « Serveur requis » porterait la classe --offline : sa présence
        signifierait que la garde HTTP_OK n'a pas été levée. */
     var offline = await ev('document.querySelectorAll(\'.code-block__try--offline\').length');
