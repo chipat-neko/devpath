@@ -593,10 +593,39 @@ résultat avant le clic.
       `node … | tail` rend le code de sortie de `tail`, pas du vérificateur ; un `EXIT=0` y était donc
       un mensonge de mesure.
 
-- [ ] **B1b · `sql` : 84 blocs en erreur sur 212.** Première cause du site à elle seule. Le plan note
-      déjà une piste : sur `pages/sql/lecon-10.html`, 11 erreurs sur 13 portent sur une colonne `points`
-      absente de la base de démonstration. Vérifier d'abord si la colonne manque à la base ou si les
-      leçons se contredisent entre elles, puis descendre le cliquet.
+- [x] **B1b-1 · `sql`, le gisement des COLONNES : 84 blocs en erreur → 33.** Aboutis **128 → 171**,
+      site entier **104 → 53**. Trois quarts des échecs du cours n'étaient pas des fautes d'écriture :
+      les leçons interrogent le fil rouge avec des colonnes que la base de démonstration n'a jamais
+      eues. Ajoutées, en suivant la règle déjà écrite pour le doublon `nom`/`libelle` — deux graphies
+      de la même donnée valent mieux que vingt boutons qui rendent une erreur :
+      `clients` + `points` (10 blocs), + `age` ; `produits` + `quantite`, `remise`, `depot` (6) ;
+      `commandes` + `client`, `produit_id`, `categorie`, `mois`, `date`, `date_cmd` (20) ;
+      `ventes` + `region`, `produit`, `categorie`, `mois`, `annee`, `trimestre`, `vendu_le` (14).
+      Chaque convention suit SA leçon : `mois` vaut `'janvier'` sur `ventes` (la leçon 20 compare à ce
+      littéral) et `'2026-05'` sur `commandes` (la leçon 5 y groupe des mois ISO).
+      **ROLLUP, CUBE et PIVOT** rejoignent `AUTRE_SGBD`, après mesure sur le moteur du dépôt
+      (`tmp/essai.js` : « no such function: ROLLUP », « no such function: CUBE », « near "(" ») : les
+      **11 blocs** du site qui les emploient n'aboutissaient **aucun**, donc aucun bouton vivant retiré.
+      **Aucune régression** : à chaque étape, le nombre d'aboutis n'a fait que monter (128 → 137 → 171).
+      **Preuve par le navigateur** : `sql-lecon.js` sur les leçons 02, 04, 05, 13 et 20 — **48 blocs
+      cliqués, 48 résultats, 0 requête distante**, et les résultats sont ceux qu'annonce le texte (la
+      leçon 2 rend bien les 3 produits du dépôt de Lyon, la leçon 5 ses trois catégories, la leçon 20 sa
+      colonne « février » remplie, donc l'accent traverse intact le Blob du Worker).
+      Cliquet descendu à **53** et éprouvé : faute injectée → **code 1** ; faute retirée → **code 0**.
+      ⚠️ **Défaut d'instrument relevé au passage**, à traiter ailleurs : `tools/preuves/sql-lecon.js`
+      rend **trois « MOTEUR KO » fantômes** quand on lui passe **trois** leçons d'un coup (les trois
+      derniers blocs de la dernière page) ; les mêmes pages passées par deux, ou seules, donnent **0**.
+      Ce n'est pas le site qui échoue, c'est l'outil qui rend un verdict dépendant de la taille du lot —
+      exactement le défaut que le point A3 a corrigé sur `verif-clic.js`.
+
+- [ ] **B1b-2 · `sql`, le gisement des TABLES : 33 blocs restants.** Causes : **17 « no such table »**
+      (`ca_mensuel` ×3, `article` ×3, `ventes_produits` ×2, `tailles` ×2, `employe`, `produit`,
+      `paiements`, `main.paiements`, `lignes_panier`, `articles`, `contacts`, `clients_lyon`,
+      `commandes_clients`), **12 erreurs de syntaxe** (`near "FROM"` ×5 — à regarder de près, plusieurs
+      viennent de `SELECT … , FROM` ou d'une clause propre à PostgreSQL —, `CONSTRAINT`, `USING`,
+      `INCLUDE`, `DUPLICATE`, `GRANT`), **2 colonnes** (`creee_le`, `o.date`), un `@` et un `JOIN USING`.
+      Décider AU CAS PAR CAS : une table créée par un bloc précédent de la même page n'a pas à entrer
+      dans la base de démonstration commune ; un `GRANT` ou un `CREATE … INCLUDE` relève d'`AUTRE_SGBD`.
 
 - [ ] **B1c · `bdd` : 19 blocs en erreur sur 70.** Y regarder le « table billet already exists » : la
       nouvelle règle du seed devrait l'avoir rendu impossible, donc c'est le bloc lui-même qui crée deux

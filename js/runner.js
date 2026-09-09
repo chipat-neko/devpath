@@ -196,7 +196,10 @@
      CREATE OR REPLACE TABLE, INTERVAL 1 DAY. Aucun n'existe dans SQLite — vérifié avant
      l'ajout : sur les 19 blocs du site qu'ils désignent, ZÉRO aboutissait, donc aucun
      bouton qui marchait n'a été retiré. */
-  var AUTRE_SGBD = /\$\$|\bLANGUAGE\s+plpgsql\b|\bCREATE\s+OR\s+REPLACE\b|\bTRY_CAST\s*\(|\bSAFE_CAST\s*\(|\bDATE_DIFF\s*\(|\bDATE_TRUNC\s*\(|\bMD5\s*\(|\bINTERVAL\s+\d|\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE|TRIGGER)\b|\bMATERIALIZED\s+VIEW\b|\bFOR\s+(?:UPDATE|SHARE)\b|\bGROUPING\s+SETS\b|\bQUALIFY\b|\bMERGE\s+INTO\b|\bGENERATED\s+(?:ALWAYS|BY\s+DEFAULT)\s+AS\s+IDENTITY\b|\bISOLATION\s+LEVEL\b|\bAUTO_INCREMENT\b|\bENGINE\s*=|\bSERIAL\b|\bTRUNCATE\b|\b(?:DATE|TIMESTAMP|INTERVAL)\s+'|::|\bEXPLAIN\s+ANALYZE\b|\bSET\s+search_path\b|\bILIKE\b|\bSHOW\s+(?:TABLES|DATABASES)\b/i;
+  /* ROLLUP, CUBE et PIVOT : mesurés sur le moteur du dépôt le 2026-09-09 —
+     « no such function: ROLLUP », « no such function: CUBE », « near "(" » — et sur les
+     11 blocs du site qui les emploient, aucun n'aboutissait. */
+  var AUTRE_SGBD = /\$\$|\bLANGUAGE\s+plpgsql\b|\bCREATE\s+OR\s+REPLACE\b|\bROLLUP\s*\(|\bCUBE\s*\(|\bPIVOT\s*\(|\bTRY_CAST\s*\(|\bSAFE_CAST\s*\(|\bDATE_DIFF\s*\(|\bDATE_TRUNC\s*\(|\bMD5\s*\(|\bINTERVAL\s+\d|\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE|TRIGGER)\b|\bMATERIALIZED\s+VIEW\b|\bFOR\s+(?:UPDATE|SHARE)\b|\bGROUPING\s+SETS\b|\bQUALIFY\b|\bMERGE\s+INTO\b|\bGENERATED\s+(?:ALWAYS|BY\s+DEFAULT)\s+AS\s+IDENTITY\b|\bISOLATION\s+LEVEL\b|\bAUTO_INCREMENT\b|\bENGINE\s*=|\bSERIAL\b|\bTRUNCATE\b|\b(?:DATE|TIMESTAMP|INTERVAL)\s+'|::|\bEXPLAIN\s+ANALYZE\b|\bSET\s+search_path\b|\bILIKE\b|\bSHOW\s+(?:TABLES|DATABASES)\b/i;
 
   /* Nom des tables qu'un bloc CRÉE lui-même. Sert à décider si la base de démonstration
      doit être préchargée — voir `besoinDuSeed` dans le Worker.
@@ -209,30 +212,47 @@
   /* Base de démo (le schéma fil rouge des leçons SQL : clients/commandes/
      produits/lignes_commande). Préchargée quand le bloc ne crée pas ses tables. */
   var SEED_SQL = [
-    "CREATE TABLE clients (id INTEGER PRIMARY KEY, nom TEXT NOT NULL, ville TEXT, email TEXT);",
-    "INSERT INTO clients (id,nom,ville,email) VALUES",
-    " (1,'Camille Roy','Lyon','camille.roy@example.fr'),",
-    " (2,'Hugo Marin','Nantes','hugo.marin@example.fr'),",
-    " (3,'Ines Lopez','Lille','ines.lopez@example.fr'),",
-    " (4,'Liam Bernard','Lyon','liam.bernard@example.fr'),",
-    " (5,'Sofia Da Silva','Paris','sofia.dasilva@example.fr'),",
-    " (6,'Noe Petit','Nantes',NULL);",
+    /* `points` suit la même logique que le doublon nom/libelle ci-dessous : la leçon 10
+       du cours sql écrit `UPDATE clients SET points = …` et `INSERT INTO clients (nom,
+       ville, points)`, ce qui faisait 10 boutons morts à elle seule (2026-09-09). */
+    "CREATE TABLE clients (id INTEGER PRIMARY KEY, nom TEXT NOT NULL, ville TEXT, email TEXT, points INTEGER NOT NULL DEFAULT 0, age INTEGER);",
+    "INSERT INTO clients (id,nom,ville,email,points,age) VALUES",
+    " (1,'Camille Roy','Lyon','camille.roy@example.fr',120,34),",
+    " (2,'Hugo Marin','Nantes','hugo.marin@example.fr',50,27),",
+    " (3,'Ines Lopez','Lille','ines.lopez@example.fr',0,45),",
+    " (4,'Liam Bernard','Lyon','liam.bernard@example.fr',75,19),",
+    " (5,'Sofia Da Silva','Paris','sofia.dasilva@example.fr',30,52),",
+    " (6,'Noe Petit','Nantes',NULL,10,31);",
     /* ⚠️ « nom » ET « libelle » désignent le même produit. Ce doublon n'est pas une
        négligence : mesuré le 2026-08-26, les leçons écrivent « SELECT nom FROM
        produits » alors que ce schéma ne connaissait que « libelle » — 62 blocs
        échouaient en « no such column ». Supprimer « libelle » casserait en retour les
        26 endroits qui l'emploient. On garde donc les deux, tenus égaux. */
-    "CREATE TABLE produits (id INTEGER PRIMARY KEY, nom TEXT NOT NULL, libelle TEXT NOT NULL, prix REAL NOT NULL, categorie TEXT, stock INTEGER NOT NULL DEFAULT 0);",
-    "INSERT INTO produits (id,nom,libelle,prix,categorie,stock) VALUES",
-    " (500,'Carnet A5','Carnet A5',4.90,'Papeterie',120),",
-    " (501,'Stylo plume','Stylo plume',24.00,'Papeterie',35),",
-    " (502,'Lampe de bureau','Lampe de bureau',39.00,'Mobilier',12),",
-    " (503,'Casque audio','Casque audio',79.00,'Electronique',8),",
-    " (504,'Souris sans fil','Souris sans fil',19.90,'Electronique',54);",
-    "CREATE TABLE commandes (id INTEGER PRIMARY KEY, client_id INTEGER NOT NULL, date_achat TEXT NOT NULL, montant REAL NOT NULL);",
-    "INSERT INTO commandes (id,client_id,date_achat,montant) VALUES",
-    " (10,1,'2026-05-02',59.90),(11,1,'2026-05-18',120.00),(12,2,'2026-05-20',34.50),",
-    " (13,3,'2026-06-01',89.00),(14,4,'2026-06-03',43.90),(15,1,'2026-06-09',24.00),(16,5,'2026-06-10',98.90);",
+    /* `quantite`, `remise` et `depot` viennent des leçons 2 et 4 du cours sql, qui
+       écrivent `prix * quantite`, `COALESCE(remise, 0)` et `WHERE depot = 'Lyon'` sur
+       cette table : 6 boutons morts avant le 2026-09-09. `remise` est volontairement
+       NULL deux fois sur cinq — c'est ce que la leçon 4 démontre avec COALESCE. */
+    "CREATE TABLE produits (id INTEGER PRIMARY KEY, nom TEXT NOT NULL, libelle TEXT NOT NULL, prix REAL NOT NULL, categorie TEXT, stock INTEGER NOT NULL DEFAULT 0, quantite INTEGER NOT NULL DEFAULT 1, remise REAL, depot TEXT);",
+    "INSERT INTO produits (id,nom,libelle,prix,categorie,stock,quantite,remise,depot) VALUES",
+    " (500,'Carnet A5','Carnet A5',4.90,'Papeterie',120,3,0.50,'Lyon'),",
+    " (501,'Stylo plume','Stylo plume',24.00,'Papeterie',35,1,NULL,'Lyon'),",
+    " (502,'Lampe de bureau','Lampe de bureau',39.00,'Mobilier',12,2,4.00,'Nantes'),",
+    " (503,'Casque audio','Casque audio',79.00,'Electronique',8,1,NULL,'Nantes'),",
+    " (504,'Souris sans fil','Souris sans fil',19.90,'Electronique',54,4,2.00,'Lyon');",
+    /* Mêmes raisons pour `client`, `produit_id`, `categorie`, `mois`, `date` et
+       `date_cmd` : les leçons 5, 7, 13 et 14 les écrivent toutes sur `commandes`.
+       `client` double `client_id` comme `nom` double `libelle` au-dessus, et `date`
+       comme `date_cmd` doublent `date_achat` : trois graphies pour la même donnée,
+       tenues égales, plutôt que 20 boutons qui rendent une erreur. */
+    "CREATE TABLE commandes (id INTEGER PRIMARY KEY, client_id INTEGER NOT NULL, client TEXT, produit_id INTEGER, categorie TEXT, mois TEXT, date_achat TEXT NOT NULL, date TEXT, date_cmd TEXT, montant REAL);",
+    "INSERT INTO commandes (id,client_id,client,produit_id,categorie,mois,date_achat,date,date_cmd,montant) VALUES",
+    " (10,1,'Camille Roy',500,'Papeterie','2026-05','2026-05-02','2026-05-02','2026-05-02',59.90),",
+    " (11,1,'Camille Roy',502,'Mobilier','2026-05','2026-05-18','2026-05-18','2026-05-18',120.00),",
+    " (12,2,'Hugo Marin',504,'Electronique','2026-05','2026-05-20','2026-05-20','2026-05-20',34.50),",
+    " (13,3,'Ines Lopez',503,'Electronique','2026-06','2026-06-01','2026-06-01','2026-06-01',89.00),",
+    " (14,4,'Liam Bernard',500,'Papeterie','2026-06','2026-06-03','2026-06-03','2026-06-03',43.90),",
+    " (15,1,'Camille Roy',501,'Papeterie','2026-06','2026-06-09','2026-06-09','2026-06-09',24.00),",
+    " (16,5,'Sofia Da Silva',503,'Electronique','2026-06','2026-06-10','2026-06-10','2026-06-10',98.90);",
     "CREATE TABLE lignes_commande (commande_id INTEGER NOT NULL, produit_id INTEGER NOT NULL, quantite INTEGER NOT NULL, PRIMARY KEY (commande_id,produit_id));",
     "INSERT INTO lignes_commande (commande_id,produit_id,quantite) VALUES",
     " (10,500,2),(10,501,1),(11,502,1),(11,503,1),(12,504,1),(13,501,2),(14,500,3),(15,501,1),(16,503,1),(16,500,2);",
@@ -262,9 +282,20 @@
     "INSERT INTO employes VALUES (1,'Ada Lambert','Direction',7200,NULL),(2,'Hugo Marin','Ventes',3400,1),(3,'Ines Lopez','Ventes',3150,2),(4,'Liam Bernard','Technique',3800,1);",
     "CREATE TABLE comptes (id INTEGER PRIMARY KEY, titulaire TEXT NOT NULL, solde REAL NOT NULL);",
     "INSERT INTO comptes VALUES (1,'Camille Roy',1500.00),(2,'Hugo Marin',430.50),(3,'Ines Lopez',2780.00);",
-    "CREATE TABLE ventes (id INTEGER PRIMARY KEY, produit_id INTEGER NOT NULL, jour TEXT NOT NULL, quantite INTEGER NOT NULL, montant REAL NOT NULL);",
-    "INSERT INTO ventes VALUES (1,500,'2026-01-14',3,14.70),(2,501,'2026-02-02',1,24.00),(3,503,'2026-03-11',2,158.00),",
-    " (4,502,'2026-05-30',1,39.00),(5,504,'2026-06-08',4,79.60),(6,500,'2026-06-21',6,29.40);",
+    /* Les leçons 19, 20 et 24 lisent `ventes` avec sept colonnes descriptives que la
+       table n'avait pas : region, produit, categorie, mois, annee, trimestre, vendu_le
+       (14 boutons morts). `mois` y est le mois EN TOUTES LETTRES parce que la leçon 20
+       compare `mois = 'janvier'` ; sur `commandes`, la même colonne est au format
+       '2026-05' parce que la leçon 5 y groupe des mois ISO. Deux tables, deux
+       conventions, chacune celle de sa leçon. */
+    "CREATE TABLE ventes (id INTEGER PRIMARY KEY, produit_id INTEGER NOT NULL, jour TEXT NOT NULL, vendu_le TEXT, quantite INTEGER NOT NULL, montant REAL NOT NULL, region TEXT, produit TEXT, categorie TEXT, mois TEXT, annee INTEGER, trimestre TEXT);",
+    "INSERT INTO ventes (id,produit_id,jour,vendu_le,quantite,montant,region,produit,categorie,mois,annee,trimestre) VALUES",
+    " (1,500,'2026-01-14','2026-01-14',3,14.70,'Nord','Carnet A5','Papeterie','janvier',2026,'T1'),",
+    " (2,501,'2026-02-02','2026-02-02',1,24.00,'Nord','Stylo plume','Papeterie','février',2026,'T1'),",
+    " (3,503,'2026-03-11','2026-03-11',2,158.00,'Sud','Casque audio','Electronique','mars',2026,'T1'),",
+    " (4,502,'2026-05-30','2026-05-30',1,39.00,'Sud','Lampe de bureau','Mobilier','mai',2026,'T2'),",
+    " (5,504,'2026-06-08','2026-06-08',4,79.60,'Ouest','Souris sans fil','Electronique','juin',2026,'T2'),",
+    " (6,500,'2026-06-21','2026-06-21',6,29.40,'Ouest','Carnet A5','Papeterie','juin',2026,'T2');",
 
     /* --- le fil rouge « Vélociti » du cours data-eng : bronze → silver → gold -------
        Mesuré le 2026-09-09 : sur 17 blocs SQL du cours, UN SEUL aboutissait, et 12 des
