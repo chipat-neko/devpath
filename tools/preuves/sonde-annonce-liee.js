@@ -31,8 +31,18 @@
  *   LIÉE      l'annonce cite le nom en cause : la leçon montre bien cette erreur-là.
  *   NON-LIÉE  aucun commentaire ne cite le nom : le bloc est absous par un mot qui parle
  *             d'autre chose. Ce sont des pannes candidates, VUES PAR L'APPRENANT.
- *   SANS-NOM  l'erreur ne nomme pas d'identifiant (`TypeError` d'un `throw` de la leçon…) :
- *             hors de portée de ce critère, laissée telle quelle.
+ *   SANS-NOM  l'erreur ne nomme pas d'identifiant (`TypeError` d'un `throw` de la leçon…).
+ *
+ * LES SANS-NOM SONT JUGÉES À LEUR TOUR (2026-09-09, point B2b-19). Elles étaient la moitié
+ * du blanc-seing qui restait après B2b-18 : onze blocs absous sans que rien ne regarde. Deux
+ * liens, vérifiables tous les deux, suffisent à les couvrir :
+ *   CITÉE   un commentaire écrit le nom de l'erreur ET le début de son message (règle B2b-13) ;
+ *   JETÉE   le message est un littéral du bloc lui-même, précédé d'un `throw` : c'est le code
+ *           qui lève, la démonstration EST là (`js/lecon-63` #1 : `throw 'utilisateur
+ *           introuvable'`, et l'apprenant lit « utilisateur introuvable ») ;
+ *   REFUS   le message est celui que `js/runner.js` oppose au réseau : ni panne ni annonce,
+ *           c'est une décision du site, comptée à part par le vérificateur ;
+ *   NON-LIÉE-SANS-NOM   aucun des trois : le bloc était absous par un mot de vocabulaire.
  *
  * Elle sort en 0 quand elle atteint sa dernière ligne, en 3 sinon — la garde posée après
  * les sondes qui se sont arrêtées en silence (B2b-13, B2b-14, B2b-16).
@@ -66,7 +76,7 @@ function commentairesDe(code) {
   return out.join('\n');
 }
 
-var lies = [], nonLies = [], sansNom = [];
+var lies = [], nonLies = [], citees = [], jetees = [], refus = [], nonLiesSansNom = [];
 
 fichiers.forEach(function (f) {
   var rel = path.relative(RACINE, f).replace(/\\/g, '/');
@@ -114,11 +124,19 @@ fichiers.forEach(function (f) {
       }
       if (!err) return;
     }
+    var ou = rel + ' #' + (i + 1) + (bloc.fichier ? '  [' + bloc.fichier + ']' : '');
+    /* Le refus hors ligne du moteur est jugé AVANT tout : le vérificateur le compte à part,
+       et c'est ici qu'un blanc-seing en absolvait un et laissait son jumeau en panne. */
+    if (CTX.estRefusHorsLigne(msg)) { refus.push(ou + ' — ' + msg.split(',')[0]); return; }
     if (!CTX.erreurAnnoncee(code, msg)) return;   // pas rangé en « annoncée » : hors sujet
 
-    var ou = rel + ' #' + (i + 1) + (bloc.fichier ? '  [' + bloc.fichier + ']' : '');
     var m = /^ReferenceError: (?:([A-Za-z_$À-ɏ][\w$À-ɏ]*) is not defined|Cannot access '([^']+)' before initialization)/.exec(msg);
-    if (!m) { sansNom.push(ou + ' — ' + msg.slice(0, 60)); return; }
+    if (!m) {
+      if (CTX.annonceCiteLeMessage(code, msg)) citees.push(ou + ' — ' + msg.split('\n')[0].slice(0, 60));
+      else if (CTX.messageJeteParLeBloc(code, msg)) jetees.push(ou + ' — ' + msg.split('\n')[0].slice(0, 60));
+      else nonLiesSansNom.push(ou + ' — ' + msg.split('\n')[0].slice(0, 60));
+      return;
+    }
     var nom = m[1] || m[2];
     var com = commentairesDe(code);
     if (new RegExp('(?:^|[^\\w$À-ɏ])' + nom.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\w$À-ɏ])').test(com)) {
@@ -134,7 +152,14 @@ console.log('LIÉE (le commentaire cite le nom en cause) : ' + lies.length);
 lies.forEach(function (o) { console.log('    ' + o); });
 console.log('\nNON-LIÉE (aucun commentaire ne cite le nom) : ' + nonLies.length);
 nonLies.forEach(function (o) { console.log('    ' + o); });
-console.log('\nSANS-NOM (l\'erreur ne nomme aucun identifiant) : ' + sansNom.length);
-sansNom.forEach(function (o) { console.log('    ' + o); });
+console.log('\n--- LES ERREURS QUI NE NOMMENT AUCUN IDENTIFIANT (point B2b-19) ---');
+console.log('CITÉE (un commentaire écrit le nom de l\'erreur et le début du message) : ' + citees.length);
+citees.forEach(function (o) { console.log('    ' + o); });
+console.log('\nJETÉE (le message est un littéral que le bloc lève lui-même) : ' + jetees.length);
+jetees.forEach(function (o) { console.log('    ' + o); });
+console.log('\nREFUS HORS LIGNE (le moteur coupe le réseau et le dit : ni panne ni annonce) : ' + refus.length);
+refus.forEach(function (o) { console.log('    ' + o); });
+console.log('\nNON-LIÉE SANS NOM (absous par un mot de vocabulaire, rien d\'autre) : ' + nonLiesSansNom.length);
+nonLiesSansNom.forEach(function (o) { console.log('    ' + o); });
 console.log('\n  (sonde de RECENSEMENT : elle ne rend aucun verdict et ne corrige rien)');
 process.exit(0);

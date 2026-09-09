@@ -113,6 +113,7 @@ var fmtArgs = CTX.fmtArgs;
 var ERREUR_ANNONCEE = CTX.ERREUR_ANNONCEE;
 var erreurAnnoncee = CTX.erreurAnnoncee;
 var estHorsPortee = CTX.estHorsPortee;
+var estRefusHorsLigne = CTX.estRefusHorsLigne;
 var fichiers = [];
 if (cibles.length) cibles.forEach(function (c) { fichiers = fichiers.concat(lecons(c)); });
 else fichiers = lecons(null);
@@ -123,6 +124,7 @@ var total = 0, ok = 0, ko = 0, ecartes = 0, annoncees = 0, indecis = 0;
 var nonCompilables = 0, listeNonCompilables = [];
 var orphelins = 0, listeOrphelins = [];
 var horsPortee = 0, listeHorsPortee = [];
+var refusReseau = 0, listeRefusReseau = [];
 var causes = {};
 var parCours = {};
 
@@ -289,6 +291,19 @@ fichiers.forEach(function (f) {
         (parRepli ? ' — aboutit derrière les blocs précédents' : ''));
       return;
     }
+    /* Le moteur COUPE le reseau et le dit (point B2b-16) : ce refus n'est ni une panne du
+       contenu ni une annonce de la lecon, c'est un comportement DECIDE du site. Il est donc
+       compte a part, et le cliquet pose plus bas exige l'EGALITE. Le critere est teste AVANT
+       « erreur annoncee » : c'est precisement la que le blanc-seing du motif francais absolvait
+       l'un des deux blocs WebSocket de `nodejs/lecon-17` en laissant l'autre en panne. */
+    if (estRefusHorsLigne(msg)) {
+      refusReseau++;
+      listeRefusReseau.push(rel + ' #' + (i + 1) + (bloc.fichier ? '  [' + bloc.fichier + ']' : '') +
+        ' — ' + msg.split(',')[0]);
+      if (!SEULEMENT_ERREURS && !CAUSES) console.log('  RHL ' + rel + ' #' + (i + 1) +
+        ' — ' + msg.split(',')[0] + '  (refus hors ligne du moteur)');
+      return;
+    }
     /* Une erreur que la page ANNONCE en commentaire n'est pas une panne : c'est la leçon. */
     if (erreurAnnoncee(code, msg)) {
       annoncees++; parCours[cours].annoncees++;
@@ -324,6 +339,9 @@ if (CAUSES) {
   console.log('=== FRAGMENTS ORPHELINS (ecartes, cliquet a part) : ' + orphelins + ' ===');
   listeOrphelins.forEach(function (o) { console.log('   ' + o); });
   console.log('');
+  console.log('=== REFUS HORS LIGNE DU MOTEUR (cliquet d\'EGALITE) : ' + refusReseau + ' ===');
+  listeRefusReseau.forEach(function (o) { console.log('   ' + o); });
+  console.log('');
   console.log('=== HORS DE PORTEE DE LA MESURE (cliquet d\'EGALITE) : ' + horsPortee + ' ===');
   listeHorsPortee.forEach(function (o) { console.log('   ' + o); });
   console.log('');
@@ -344,6 +362,7 @@ console.log('  dont PAR REPLI .......... ' + replies + '  (derrière les blocs p
 console.log('  erreurs ANNONCÉES ....... ' + annoncees + '  (la page les écrit en commentaire)');
 console.log('  non concluants .......... ' + indecis + '  (plus de ' + (DELAI / 1000) + ' s : hors cliquet)');
 console.log('  hors de portee .......... ' + horsPortee + '  (globale reelle du Worker que Node ne peut pas fournir : cliquet d\'EGALITE)');
+console.log('  refus hors ligne ........ ' + refusReseau + '  (le moteur coupe le reseau et le dit : cliquet d\'EGALITE)');
 console.log('  EN PANNE ................ ' + ko);
 console.log('  NE COMPILENT PAS ....... ' + nonCompilables + '  (ecartes : pas de bouton, cliquet a part)');
 console.log('  FRAGMENTS ORPHELINS .... ' + orphelins + '  (ecartes : un nom que rien ne fournit, cliquet a part)');
@@ -366,7 +385,7 @@ if (!CAUSES) {
 if (cibles.length) { console.log('\n  (cliquet inactif : des cibles ont ete passees en argument)'); process.exit(0); }
 if (FIXER) {
   fs.writeFileSync(ATTENDU, JSON.stringify({ ko: ko, total: total, nonCompilables: nonCompilables,
-    orphelins: orphelins, horsPortee: horsPortee, annoncees: annoncees,
+    orphelins: orphelins, horsPortee: horsPortee, annoncees: annoncees, refusReseau: refusReseau,
     note: 'Nombre de blocs JS en panne au dernier releve. Il ne doit jamais augmenter. ' +
           'Le descendre apres une reparation : node tools/verif-js.js --fixer',
     note2: 'nonCompilables : blocs que `new Function` refuse de compiler, donc prives de ' +
@@ -382,6 +401,7 @@ if (FIXER) {
            'etaient absous par un mot de commentaire qui parlait d\'autre chose, et un vrai ' +
            'Chrome les a montres affichant une ligne rouge a l\'apprenant. Une categorie qui ne ' +
            'rougit que dans un sens est un endroit ou cacher une vraie panne.',
+    note6: 'refusReseau : blocs dont l\'erreur est le refus hors ligne pose par js/runner.js (fetch, XMLHttpRequest, WebSocket, EventSource). Ce n\'est pas une panne du contenu et ce n\'est pas une annonce de la lecon : c\'est une decision du site (point B2b-16). Troisieme categorie qui soustrait un bloc au verdict, donc troisieme cliquet d\'EGALITE. Mesure fondatrice : les deux blocs WebSocket de nodejs/lecon-17, meme code, recevaient deux verdicts opposes -- #3 absous par un commentaire qui parle de onerror, #9 compte en panne.',
     note4: 'horsPortee : blocs qui emploient une globale que le VRAI Worker possede et que ' +
            'Node ne peut pas fournir sans l\'inventer (indexedDB, caches). Ils marchent chez ' +
            'l\'apprenant et sont soustraits au verdict : ce cliquet-la exige donc l\'EGALITE, ' +
@@ -442,6 +462,17 @@ if (typeof ref.annoncees === 'number' && annoncees !== ref.annoncees) {
     ' a la reference.');
   console.log('  Cette categorie ECHAPPE au verdict : son effectif ne bouge pas sans decision.' +
               ' Les voir : node tools/verif-js.js | grep ANN');
+  process.exit(1);
+}
+/* LE SIXIEME CLIQUET, troisieme a exiger l'EGALITE (2026-09-09, point B2b-19). Le refus
+   hors ligne du moteur retire lui aussi un bloc du verdict : meme garde, meme raison. Il
+   n'est pas theorique -- avant qu'il existe, le meme code recevait deux verdicts opposes
+   dans la meme lecon selon qu'un commentaire contenait ou non le mot « erreur ». */
+if (typeof ref.refusReseau === 'number' && refusReseau !== ref.refusReseau) {
+  console.log('\nCLIQUET : ' + refusReseau + ' refus hors ligne, contre ' + ref.refusReseau +
+    ' a la reference.');
+  console.log('  Cette categorie ECHAPPE au verdict : son effectif ne bouge pas sans decision.' +
+              ' Les voir : node tools/verif-js.js --causes');
   process.exit(1);
 }
 if (typeof ref.orphelins === 'number' && orphelins < ref.orphelins) {

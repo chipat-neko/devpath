@@ -159,6 +159,35 @@ function estHorsPortee(msg) {
     return msg === 'ReferenceError: ' + n + ' is not defined';
   });
 }
+
+/* --- LE REFUS HORS LIGNE N'EST NI UNE PANNE NI UNE ANNONCE (2026-09-09, point B2b-19) ---
+ * `js/runner.js` remplace `fetch`, `XMLHttpRequest`, `WebSocket` et `EventSource` par un
+ * refus IMMÉDIAT et EXPLIQUÉ (décision du point B2b-16 : on ne retire aucun bouton, mais
+ * aucune page ne parle au réseau). Les trois derniers LÈVENT donc à la construction, et le
+ * bloc s'arrête là — chez l'apprenant comme ici.
+ *
+ * ⚠️ CE COMPORTEMENT DÉCIDÉ ÉTAIT JUGÉ DEUX FOIS, EN SENS CONTRAIRE, SUR LE MÊME CODE :
+ * `pages/nodejs/lecon-17.html` #3 et #9 ouvrent tous deux `new WebSocket('ws://localhost:3000')`
+ * et posent les mêmes gestionnaires ; le #3 était ABSOUS (un commentaire dit « une erreur est
+ * survenue sur la connexion », ce qui suffisait au motif français) et le #9 compté EN PANNE.
+ * Ni l'un ni l'autre n'est juste : le contenu n'a aucun défaut, et rien n'est « annoncé ».
+ * D'où une catégorie à part, sous cliquet d'ÉGALITÉ comme `horsPortee` et `annoncees`.
+ *
+ * Le texte du refus est LU dans le moteur, jamais recopié : on fabrique le message témoin en
+ * appelant l'API refusante, et on n'en garde que la phrase commune aux quatre. Si le moteur
+ * change sa phrase, ce critère la suit ; s'il cesse de refuser, il ne reconnaît plus rien. */
+var _phraseRefus = null;
+function phraseDuRefusHorsLigne() {
+  if (_phraseRefus === null) {
+    try { apisHorsLigne().WebSocket(); _phraseRefus = ''; }
+    catch (e) { _phraseRefus = String(e.message).replace(/^WebSocket\s*/, ''); }
+  }
+  return _phraseRefus;
+}
+function estRefusHorsLigne(msg) {
+  var p = phraseDuRefusHorsLigne();
+  return !!p && String(msg || '').indexOf(p) !== -1;
+}
 /* Le formatage d'une valeur affichée est LU dans `js/runner.js` (point B2b-16) : cette
    fonction en portait une copie, et la copie a divergé le jour où le moteur a cessé de
    sérialiser les `Error` en `{}`. C'est le défaut du point B2b-15, sur l'objet d'à côté. */
@@ -216,12 +245,32 @@ function commentairesDe(code) {
  * durcissement fait basculer affichent tous une ligne rouge au clic. */
 function annonceNommeLErreur(code, msg) {
   var m = /^ReferenceError: (?:([A-Za-z_$À-ɏ][\w$À-ɏ]*) is not defined|Cannot access '([^']+)' before initialization)/.exec(String(msg || ''));
-  if (!m) return true;                      // l'erreur ne nomme personne : critère sans prise
+  if (!m) return messageJeteParLeBloc(code, msg);   // voir ci-dessous : plus de blanc-seing
   var nom = (m[1] || m[2]).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp('(?:^|[^\\w$À-ɏ])' + nom + '(?![\\w$À-ɏ])').test(commentairesDe(code));
 }
-function erreurAnnoncee(code, msg) {
-  if (ERREUR_ANNONCEE.test(code)) return annonceNommeLErreur(code, msg);
+
+/* --- LA MOITIÉ DU BLANC-SEING QUI RESTAIT : LES ERREURS QUI NE NOMMENT PERSONNE ---------
+ * (2026-09-09, point B2b-19.) Le durcissement du point B2b-18 ne valait que pour les
+ * `ReferenceError` ; pour toutes les autres — `TypeError`, `RangeError`, `throw` d'une
+ * chaîne — le critère « sans prise » rendait `true`, c'est-à-dire absolvait sans regarder.
+ * Onze blocs étaient dans ce cas. Mesuré un par un : dix sont de vraies annonces, et le
+ * onzième (`nodejs/lecon-17` #3) est le refus hors ligne du moteur, absous par un commentaire
+ * qui décrit `onerror`. Le lien manquant est celui-ci : **c'est le bloc lui-même qui lève ce
+ * message**. `js/lecon-63` #1 écrit `throw 'utilisateur introuvable'` et l'erreur obtenue est
+ * « utilisateur introuvable » — la démonstration est le `throw`, il n'y a rien à réparer.
+ * Un message que le bloc ne contient pas vient d'ailleurs : du moteur, ou d'une panne.
+ * Le seuil de 8 caractères et l'exigence d'un `throw` écartent les coïncidences courtes. */
+function messageJeteParLeBloc(code, msg) {
+  var texte = String(msg || '').replace(/^[A-Za-z]*Error:\s*/, '').split('\n')[0].trim();
+  if (texte.length < 8 || !/\bthrow\b/.test(code)) return false;
+  return String(code).indexOf(texte) !== -1;
+}
+
+/* L'annonce cite l'erreur telle que l'apprenant la LIRA (point B2b-13) : le nom de l'erreur
+   ET le début de son message, dans un commentaire. Ce critère-ci est LIÉ à l'erreur obtenue,
+   il est donc essayé le premier, avant tout motif de vocabulaire. */
+function annonceCiteLeMessage(code, msg) {
   if (!msg) return false;
   var m = /^([A-Za-z]*Error)\b:?\s*([\s\S]*)$/.exec(msg);
   if (!m) return false;
@@ -233,7 +282,14 @@ function erreurAnnoncee(code, msg) {
   var debut = m[2].split(/\s+/).slice(0, 3).join(' ');
   return !!debut && com.toLowerCase().indexOf(debut.toLowerCase()) !== -1;
 }
+function erreurAnnoncee(code, msg) {
+  if (annonceCiteLeMessage(code, msg)) return true;
+  if (ERREUR_ANNONCEE.test(code)) return annonceNommeLErreur(code, msg);
+  return false;
+}
 
 module.exports = { GLOBALES_WORKER: GLOBALES_WORKER, contexteWorker: contexteWorker, fmtArgs: fmtArgs, ERREUR_ANNONCEE: ERREUR_ANNONCEE, erreurAnnoncee: erreurAnnoncee,
   annonceNommeLErreur: annonceNommeLErreur, commentairesDe: commentairesDe,
-  HORS_PORTEE: HORS_PORTEE, estHorsPortee: estHorsPortee };
+  annonceCiteLeMessage: annonceCiteLeMessage, messageJeteParLeBloc: messageJeteParLeBloc,
+  HORS_PORTEE: HORS_PORTEE, estHorsPortee: estHorsPortee,
+  phraseDuRefusHorsLigne: phraseDuRefusHorsLigne, estRefusHorsLigne: estRefusHorsLigne };

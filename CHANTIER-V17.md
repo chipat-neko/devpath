@@ -2862,6 +2862,98 @@ résultat avant le clic.
       **42 étapes, 122,7 s, tout vert, toutes mesurées.**
 
 
+- [x] **B2b-19 · LE MÊME CODE, DEUX VERDICTS OPPOSÉS DANS LA MÊME LEÇON : les deux blocs
+      WebSocket de `nodejs/lecon-17` affichent à l'apprenant exactement la même phrase, l'un
+      était ABSOUS et l'autre compté EN PANNE. Les 11 « SANS-NOM » jugées une à une, une
+      troisième catégorie créée pour ce que le moteur DÉCIDE, et l'autre moitié du blanc-seing
+      fermée. 46 blocs en panne → 45, erreurs annoncées 16 → 15, refus hors ligne = 2.**
+
+      **Mesure reproduite avant de toucher à quoi que ce soit** : `node tools/verif-js.js
+      --causes` rend **1 613 blocs à bouton, 1 548 aboutis, 46 en panne, 16 annoncées, 1 hors
+      de portée, 81 qui ne compilent pas, 35 fragments orphelins** — le relevé du point
+      précédent, à l'identique.
+
+      **LA PISTE VENAIT DU POINT B2b-18, QUI L'AVAIT LAISSÉE ÉCRITE.** Le durcissement de
+      « erreur annoncée » n'avait porté que sur les erreurs qui NOMMENT un identifiant ; pour
+      les onze autres — `TypeError`, `RangeError`, `throw` d'une chaîne — le critère rendait
+      `true`, c'est-à-dire **absolvait sans regarder**. C'était la moitié du blanc-seing, et
+      elle était restée ouverte faute de critère. Les onze ont été jugées une par une :
+
+      | classe | le lien exigé | effectif |
+      |---|---|---|
+      | **CITÉE** | un commentaire écrit le nom de l'erreur ET le début de son message (règle B2b-13) | **9** |
+      | **JETÉE** | le message est un littéral que le bloc lève lui-même (`throw`) | **1** |
+      | **REFUS HORS LIGNE** | le message est celui que `js/runner.js` oppose au réseau | **1** |
+      | **NON LIÉE** | rien de tout cela | **0** |
+
+      Neuf annonces sur onze étaient donc parfaitement liées, et le dixième l'est aussi :
+      `js/lecon-63` #1 écrit `throw 'utilisateur introuvable'` et l'apprenant lit
+      « utilisateur introuvable » — la démonstration EST le `throw`, il n'y a rien à réparer.
+      **Contrairement au point précédent, ce n'était donc pas un gisement de pannes cachées,
+      et le dire est le résultat.** Le onzième, lui, n'a rien à voir avec une annonce.
+
+      **LE ONZIÈME, ET C'EST LUI LE DÉFAUT : LE MÊME CODE JUGÉ DEUX FOIS EN SENS CONTRAIRE.**
+      `pages/nodejs/lecon-17.html` #3 et #9 ouvrent tous deux `new WebSocket('ws://localhost:3000')`
+      et posent les mêmes gestionnaires. Le #3 était **absous** — son commentaire dit « onerror :
+      une erreur est survenue sur la connexion », et le mot « erreur » suffisait au motif
+      français — pendant que le #9, qui n'emploie pas le mot, était compté **EN PANNE**. Aucun
+      des deux verdicts n'est juste : le contenu n'a aucun défaut, et rien n'est annoncé. Depuis
+      le point B2b-16, `js/runner.js` REFUSE le réseau immédiatement et l'explique ; ce refus est
+      un **comportement décidé du site**, ni une panne du contenu, ni la leçon.
+
+      **PREUVE PAR LE NAVIGATEUR, ET ELLE TRANCHE** (`repli-navigateur.js`, `file://`, un vrai
+      Chrome — le vérificateur n'exécute pas `runner.js`) : les deux blocs cliqués affichent
+      **le même message, mot pour mot** — « WebSocket : ce site fonctionne entièrement hors
+      ligne, aucune requête n'est envoyée… ». Le troisième bloc cliqué, `js/lecon-63` #1, rend
+      **« utilisateur introuvable »**, exactement le message que son propre `throw` lève.
+      **3 blocs cliqués, 0 requête distante.**
+
+      **CE QUI A ÉTÉ FAIT, EN DEUX PARTIES.**
+      **(a) Une troisième catégorie, et un sixième cliquet.** `estRefusHorsLigne` reconnaît le
+      refus du moteur — et la phrase est **LUE dans `js/runner.js`** en appelant l'API refusante,
+      jamais recopiée : si le moteur change son texte, le critère le suit ; s'il cesse de
+      refuser, il ne reconnaît plus rien. Le vérificateur la teste **avant** « erreur annoncée »,
+      c'est-à-dire exactement là où le blanc-seing tranchait. C'est la troisième catégorie qui
+      RETIRE un bloc du verdict, après « hors de portée » (B2b-16) et « erreur annoncée »
+      (B2b-18) : elle reçoit donc la même garde, **un cliquet d'ÉGALITÉ**, pour la raison
+      mesurée ici même — une catégorie hors verdict est un endroit où cacher une panne.
+      **(b) L'autre moitié du blanc-seing fermée.** Pour une erreur qui ne nomme personne,
+      l'absolution exige désormais un lien : le message cité en commentaire, ou **jeté par le
+      bloc lui-même** (`throw` présent et message littéral d'au moins 8 caractères, pour écarter
+      les coïncidences courtes). Plus aucun mot de vocabulaire ne pardonne à lui seul.
+
+      **MESURE FINALE : annoncées 16 → 15, EN PANNE 46 → 45, refus hors ligne 2, aboutis 1 548
+      inchangés.** Stabilité vérifiée avant de poser les gardes (piège B1e, le cliquet qui rougit
+      au hasard) : **deux relevés consécutifs rendent 45 / 15 / 2 / 81 / 35, chiffre pour
+      chiffre.**
+
+      ⚠️ **CE QUE LE DURCISSEMENT (b) A RAPPORTÉ SUR LE CORPUS D'AUJOURD'HUI : RIEN, ET IL FAUT
+      L'ÉCRIRE.** Son seul candidat était le bloc WebSocket, que la catégorie (a) capte en amont.
+      Sa valeur est donc entièrement préventive — mais elle est **mesurée, pas supposée** :
+      un commentaire « erreur volontaire pour la demonstration » ajouté en tête de
+      `typescript/lecon-19` #1, dont l'erreur est `TypeError: articles.reduce is not a function`,
+      **laisse le bloc EN PANNE (45, code 0)** ; la même injection avec l'ancienne règle rétablie
+      le fait basculer en « annoncée » — **16 annoncées et 44 pannes, code 1**. Une vraie panne
+      s'achetait donc au prix d'un commentaire, dans toute la famille des erreurs qui ne nomment
+      personne. Fichiers restaurés à l'octet près.
+
+      **LE SIXIÈME CLIQUET ÉPROUVÉ DANS LES DEUX SENS** — c'est la leçon du cours mobile, un
+      cliquet qui ne surveille qu'un sens laisse la faille entière : `new WebSocket(…)` injecté
+      en tête d'`algo/lecon-01` → **3 refus contre 2 à la référence, code 1** ; le WebSocket de
+      `nodejs/lecon-17` #3 remplacé par un objet muet → **1 contre 2, code 1**. Les deux pages
+      restaurées, `git status` vide, référence revenue à **45 / 15 / 2**.
+
+      **DETTE D'OUTILLAGE.** `sonde-annonce-liee.js` juge maintenant les quatre classes et
+      son entrée de `tools/hors-chaine.json` est refaite : ses comptes NON-LIÉE **et**
+      NON-LIÉE-SANS-NOM valent 0 par construction, la brancher ajouterait une étape incapable de
+      rien trouver. Ce qui reste à juger, et qui reste ouvert : **la QUALITÉ de l'annonce** —
+      neuf blocs citent le bon message, mais aucun outil ne dit si la phrase écrite au lecteur
+      décrit vraiment ce qu'il va lire.
+
+      `verif-chaine-declaree.js` : **OK, 13 hors chaîne, 13 déclarés**. `verif-html.js` : **0**.
+      `verif-donnees.js` : **25 contrôles, 0 erreur d'invariant**. Chaîne rapide finale :
+      **42 étapes, 119,3 s, tout vert, toutes mesurées.**
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf
