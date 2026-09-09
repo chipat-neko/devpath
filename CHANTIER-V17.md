@@ -390,6 +390,16 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
       touchés · zéro `cdnjs`/`fonts.googleapis`/`fonts.gstatic` introduit · aucune étape fantôme entre
       `--rapide` et `--complet`.
 
+      **PREUVE FINALE — `--complet` rejoué en entier après les correctifs (4 217,1 s) :
+      5 SIGNALE + 1 NON MESURE → 1 SIGNALE + 1 NON MESURE.** Les quatre défauts d'instrument ont
+      disparu, et ils sont désormais verts *dans la chaîne*, là où ils rougissaient :
+      `sql-lec` **OK 69,3 s** · `py-lec` **OK 25,2 s** · `lexique` **OK 2,3 s** · `mth-prg` **OK
+      4,9 s**. Ne restent que les deux vrais, chacun avec sa trace relisible : `mutants` SIGNALE
+      (192,1 s, point A8) et `clic` NON MESURE (1 361,3 s, **504 / 513** cette fois — troisième
+      valeur différente, point A9). La chaîne a aussi gagné **12,3 minutes** au passage.
+      L'en-tête d'usage de `verif.js`, qui annonçait 26 / 51 / 54 étapes là où il y en avait
+      27 / 53 / 62, a été refaite sur les mesures du jour.
+
 - [ ] **A7 · Dix-sept outils sortent en 0 — « tout va bien » — quand Chrome est introuvable.** Mesuré
       le 2026-09-09 en cherchant la cause d'A6 : `if (!CHROME) { console.log('Chrome introuvable, rien
       de mesuré.'); process.exit(0); }` dans 17 fichiers (`preuve-hors-reseau`, `verif-clic`,
@@ -411,7 +421,7 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
 
 - [ ] **A9 · `verif-clic.js` ne juge jamais tous les blocs, et l'écart varie.** Deux mesures du
       2026-09-09 : **498 / 513** blocs cliqués dans la chaîne (1 584,7 s), **512 / 513** relancé seul
-      (1 081 s). L'outil a raison de sortir en 2 plutôt que d'annoncer « tout concorde » (c'est l'acquis
+      (1 081 s), **504 / 513** au rejeu de la chaîne (1 361,3 s) — trois passages, trois valeurs. L'outil a raison de sortir en 2 plutôt que d'annoncer « tout concorde » (c'est l'acquis
       du V17/A3), mais il **ne peut pas être vert**, donc `--complet` ne peut jamais l'être non plus :
       un mode qui ne peut pas être vert cesse d'être lu. Identifier le ou les blocs perdus — la mesure
       dit qu'ils ne sont pas toujours les mêmes — et rendre la couverture soit complète, soit

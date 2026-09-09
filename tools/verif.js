@@ -16,15 +16,19 @@
      gitgraf  node tools/verif-git-graphe.js  le graphe dessine face a git log --graph
      gitscen  node tools/verif-git-scenarios.js  les situations guidees : la solution atteint le but
 
-   USAGE (durees mesurees le 2026-09-03, apres l'entree du cliquet des QCM, point B2)
-     node tools/verif.js            # 51 etapes, plusieurs minutes (le rendu pilote Chrome)
-     node tools/verif.js --rapide   # 26 etapes, 76,6 s : tout ce qui ne pilote pas Chrome,
-                                    #   moins les trois bacs a sable Git (voir l'arbitrage
-                                    #   plus bas : ils pesaient 76 % du mode a eux seuls)
-     node tools/verif.js --complet  # 54 etapes : le rendu balaie 229 pages, la fraicheur est
-                                    #   lue A L'AFFICHAGE, ET les verificateurs sont eux-memes
-                                    #   mis a l epreuve par 9 + 13 fautes injectees
-     node tools/verif.js --strict   # 51 etapes, code 1 des qu'un outil signale quoi que ce soit
+   USAGE (durees mesurees le 2026-09-09, apres le passage au port dynamique, point A6.
+   Les chiffres qui figuraient ici dataient du 2026-09-03 et etaient tous faux : 26
+   etapes annoncees en rapide pour 27, 51 pour 53, 54 pour 62. Une documentation de
+   mode qui ment est du meme bois que le mode qui tait ce qu'il ne joue pas.)
+     node tools/verif.js            # 53 etapes, plusieurs minutes (le rendu pilote Chrome)
+     node tools/verif.js --rapide   # 40 etapes, 151,1 s : tout ce qui coute 10 s ou moins,
+                                    #   plus les controles de fond ; il IMPRIME les 22 etapes
+                                    #   qu'il ne joue pas (voir l'arbitrage plus bas)
+     node tools/verif.js --complet  # 62 etapes, 4 217 s : le rendu balaie 229 pages, la
+                                    #   fraicheur est lue A L'AFFICHAGE, les verificateurs sont
+                                    #   mis a l epreuve par 9 + 13 fautes injectees, et le
+                                    #   bouton « Tester » est clique sur 75 pages
+     node tools/verif.js --strict   # 53 etapes, code 1 des qu'un outil signale quoi que ce soit
      node tools/verif.js --lister   # la liste des etapes du mode demande, sans rien lancer
      node tools/verif.js --mutations  # les 16 epreuves par injection, et rien d'autre : elles
                                     #   MODIFIENT des fichiers avant de les restaurer, et le mode
