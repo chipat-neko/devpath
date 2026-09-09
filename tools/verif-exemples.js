@@ -135,7 +135,19 @@ function blocsDe(fichier) {
   while ((m = RE_BLOCK.exec(src))) {
     const attrs = m[1] || '';
     const lang = m[2].toLowerCase();
-    const code = decode(m[3]);
+    /* ⚠️ LE « \r » DES FINS DE LIGNE WINDOWS EST RETIRÉ ICI, ET C'EST TOUT SAUF
+       COSMÉTIQUE (point A8 du chantier V17, 2026-09-09). En JavaScript, « . » ne
+       matche PAS « \r » : dans `attenduDeCommentaire`, le motif /^\s*(?:=>)\s*(.*)$/
+       échouait donc sur TOUTE ligne terminée par CRLF. Seule la DERNIÈRE ligne d'un
+       bloc (celle qui n'a pas de fin de ligne) était reconnue. Comme `core.autocrlf`
+       vaut `true` sur la machine du projet, tout le site est en CRLF sur le disque :
+       l'outil ne jugeait donc qu'UNE annonce par bloc, les comptes tombaient
+       inégaux, l'ancrage par ligne prenait le relais et concluait « conforme ancré ».
+       C'est ce qui a laissé survivre la mutation `exemple` de verif-chaine-mutations
+       — la sortie annoncée faussée, c'est-à-dire LE DÉFAUT QUI FONDE CE CHANTIER.
+       Le « \r » n'a aucune valeur pour du code qu'on exécute : on l'enlève une fois,
+       à l'entrée, plutôt que de rendre chaque motif tolérant au CR. */
+    const code = decode(m[3]).replace(/\r\n/g, '\n');
     const df = attrs.match(/data-file="([^"]*)"/i);
     blocs.push({
       fichier, lang, code,
@@ -790,7 +802,10 @@ function exosCodeDe(fichier) {
     if (!e || e.type !== 'code' || !e.run || e.run.expect == null) continue;
     const start = debuts[i];
     const zone = start == null ? '' : src.slice(start, i + 1 < debuts.length ? debuts[i + 1] : src.length);
-    const blocs = [...zone.matchAll(/<code class="language-javascript">([\s\S]*?)<\/code>/g)].map(x => decode(x[1]));
+    /* Même normalisation qu'en `blocsDe` (point A8) : ici le « \r » ne fausse aucun
+       motif, mais deux chemins qui lisent le même HTML ne doivent pas en tirer deux
+       textes différents — c'est ainsi qu'un écart réapparaît là où on ne le cherche pas. */
+    const blocs = [...zone.matchAll(/<code class="language-javascript">([\s\S]*?)<\/code>/g)].map(x => decode(x[1]).replace(/\r\n/g, '\n'));
     res.push({
       fichier, index: i, expect: e.run.expect,
       aSolution: /<details/.test(zone),

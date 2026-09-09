@@ -67,6 +67,11 @@ var MUTATIONS = [
        verif-exemples.js regarde, et le faisait passer pour aveugle. */
     avant: 'typeof 42);         //=> "number"',
     apres: 'typeof 42);         //=> "string"',
+    /* `crlf` : la page est aussi convertie en fins de ligne Windows — voir plus bas.
+       C'est la SEULE forme sous laquelle cette mutation survivait, et elle survivait
+       silencieusement : « . » ne matche pas « \r » en JavaScript, donc l'annonce
+       « //=> "string"\r » n'était pas repérée du tout. */
+    crlf: true,
     outil: 'verif-exemples.js', args: [], chrome: true,
   },
   {
@@ -181,6 +186,13 @@ choisies.forEach(function (m) {
   }
 
   var mute = m.premiere ? txt.replace(m.avant, m.apres) : txt.split(m.avant).join(m.apres);
+  /* `crlf` : la page est en plus convertie en fins de ligne Windows. Ce n'est pas un
+     détail de forme — c'est ce qui rendait la mutation `exemple` SURVIVANTE (point A8
+     du chantier V17). `core.autocrlf` vaut `true` ici : un clone frais met TOUT le
+     site en CRLF, mais l'état du disque varie selon les fichiers qu'un `git checkout`
+     a retouchés. Sans ce forçage, l'épreuve mesurerait le hasard du disque au lieu de
+     la robustesse de l'outil. */
+  if (m.crlf) mute = mute.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
   enCours = { chemin: chemin, octets: octets };
   fs.writeFileSync(chemin, mute);
 

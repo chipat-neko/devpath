@@ -444,13 +444,44 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
       est repassé **OK** : la chaîne passe de **53 → 54 étapes** en mode normal et **62 → 63** en
       `--complet`. `verif.js --rapide` **tout vert, 40 étapes, 150,4 s**.
 
-- [ ] **A8 · Une mutation SURVIVANTE : `verif-exemples.js` reste vert sur une sortie de commentaire
+- [x] **A8 · Une mutation SURVIVANTE : `verif-exemples.js` reste vert sur une sortie de commentaire
       faussée.** `node tools/verif-chaine-mutations.js` le 2026-09-09 : **9 mutations injectées, 8
       vues, 1 survivante** — « une sortie annoncée en commentaire qui ne correspond plus à ce que le
       code produit » (98,8 s). Reproduit à l'identique en chaîne et hors chaîne. C'est **le défaut
       fondateur du chantier V17 lui-même** — l'exemple faux qu'aucun outil ne rattrape — et il est
       aujourd'hui **mesuré**, plus seulement raconté. Trouver ce que la mutation change exactement,
       pourquoi `verif-exemples.js` ne le voit pas, corriger l'outil, et exiger **9 / 9**.
+
+      **FAIT le 2026-09-09.** *Reproduit d'abord* : `node tools/verif-chaine-mutations.js` →
+      **9 injectées, 8 vues, 1 survivante** (`exemple`, 90,1 s), à l'identique.
+
+      **La cause, et elle est plus grosse que la mutation.** En JavaScript, `.` ne matche **pas**
+      `\r`. Le motif `/^\s*(?:=>|➡️?|⇒)\s*(.*)$/` d'`attenduDeCommentaire` échouait donc sur **toute
+      ligne terminée par CRLF** : ni `(.*)` ni `$` ne peuvent franchir un retour chariot. Mesuré sur le
+      bloc muté, en appelant `instrumente` sur les quatre combinaisons :
+      **ancienne version · LF → 4 annonces sur 4 ; ancienne · CRLF → 1 sur 4** (seule la dernière ligne
+      du bloc, celle qui n'a pas de fin de ligne) ; **corrigée · LF → 4 ; corrigée · CRLF → 4**.
+      Avec une seule annonce pour quatre sorties, les comptes tombaient inégaux, l'appariement par
+      ligne prenait le relais, jugeait la seule ligne qu'il pouvait — et concluait « conforme ancré ».
+      L'annonce faussée n'était pas *mal jugée* : elle n'était **pas lue**.
+
+      **Portée réelle.** `core.autocrlf` vaut `true` ici : **114 leçons sur 1 629** sont en CRLF sur ce
+      disque aujourd'hui, mais un **clone frais les met toutes en CRLF**. Mesure faite sur une copie du
+      site entier converti en CRLF (les 1 629 leçons, les deux versions de l'outil lancées sur les
+      mêmes fichiers) : **1 109 annonces repérées avant, 2 063 après** — **954 annonces sur 2 063,
+      soit 46,2 %, étaient invisibles** ; 882 → 1 058 blocs jugés ; et les « conformes ancrés », c'est-à-dire
+      les blocs sauvés par le recours, retombent de **257 à 77**. Dans les deux cas **0 divergence** :
+      le contenu du site est sain, c'est bien l'instrument qui était borgne.
+
+      **Correction** : le `\r` est retiré une fois, à l'entrée (`blocsDe`), plutôt que de rendre chaque
+      motif tolérant au CR ; même normalisation dans `exosCodeDe`, par cohérence — sans effet mesuré
+      aujourd'hui (197 exos conformes avant et après), c'est une précaution, pas un correctif.
+
+      **Éprouvé.** `verif-chaine-mutations.js` : **9 injectées, 9 VUES, 0 survivante**, arbre de travail
+      identique à avant la mesure. Et la mutation `exemple` a été **rendue indépendante du disque** :
+      elle force désormais la page en CRLF (`crlf: true`), sinon l'épreuve mesurerait selon qu'un
+      `git checkout` a retouché ce fichier ou non. `verif.js --rapide` **tout vert, 40 étapes, 136,4 s** ;
+      site entier rejoué : **3 411 blocs, 1 058 porteurs d'annonce, 0 divergence**.
 
 - [ ] **A9 · `verif-clic.js` ne juge jamais tous les blocs, et l'écart varie.** Deux mesures du
       2026-09-09 : **498 / 513** blocs cliqués dans la chaîne (1 584,7 s), **512 / 513** relancé seul
