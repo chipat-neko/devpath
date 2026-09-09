@@ -3150,6 +3150,98 @@ résultat avant le clic.
 
 
 
+- [x] **B2b-23 · LA SUITE DU MÊME FICHIER, onzième règle du bouton : 4 blocs écartés, ZÉRO
+      vivant retiré — 27 blocs en panne → 23. Et l'élargissement « naturel » du critère,
+      RÉFUTÉ par la mesure avant d'être écrit.**
+
+      **Mesure reproduite d'abord** (`node tools/verif-js.js --causes`, puis
+      `tools/preuves/sonde-origine-du-nom.js`) : **1 613 blocs à bouton, 1 566 aboutis,
+      27 EN PANNE**, carte inchangée depuis B2b-22 — BOUTON-AVANT 8 · MUET-AVANT 13 ·
+      PLUS-BAS 1 · NULLE-PART 2 · AUTRE 3. Le gisement n'avait pas bougé.
+
+      **LE DÉFAUT VISÉ.** `heriteDuNavigateur` (B2b-8) n'écarte un bloc que si le nom hérité
+      **ouvre une ligne**. `pages/js/lecon-33.html` #3 lit le sien au MILIEU d'une ligne
+      racine — `const fd = new FormData(form);` — où `form` vient du `document.querySelector`
+      d'un bloc précédent : l'expression est évaluée aussitôt, le bouton ne pouvait promettre
+      qu'un « form is not defined ». Le critère « colonne zéro » rate ce cas par construction.
+
+      ⚠️ **ÉLARGIR L'USAGE, À LUI SEUL, TUE DES BLOCS VIVANTS — et c'est la mesure qui l'a
+      dit, pas un raisonnement** (`tools/preuves/sonde-heritage-profondeur.js`, qui DEMANDE
+      le statut de chaque bloc à `verif-js.js` au lieu de le recalculer, comme en B2b-20) :
+
+      | critère | blocs visés | dont **VIVANTS** |
+      |---|---|---|
+      | colonne 0 (règle actuelle) | 1 | **0** |
+      | profondeur 0 d'accolades | 18 | **10** |
+      | profondeur 0, flèches courtes coupées | 16 | **8** |
+      | n'importe où (déjà rejeté en B2b-8) | 39 | **27** |
+      | MÊME `data-file` + usage n'importe où | 17 | **10** |
+      | MÊME `data-file` + profondeur 0 | 7 | **2** |
+      | + listes de paramètres neutralisées | 5 | **1** |
+      | **+ nom absent des blocs précédents non-navigateur** | **4** | **0** |
+
+      **CE QUI FAIT LA DIFFÉRENCE N'EST PAS UNE REGEX PLUS FINE, C'EST UNE INFORMATION DE LA
+      PAGE.** Le `data-file` : quand le bloc porte le même nom de fichier qu'un bloc de
+      navigateur qui le précède, la leçon dit elle-même qu'il en est la SUITE — un extrait
+      d'`app.js` après un autre extrait d'`app.js`, pas un programme à part. L'usage n'a alors
+      plus besoin d'ouvrir la ligne. Les trois précautions qui restent sont chacune un faux
+      positif MESURÉ : la profondeur d'accolades (un nom cité dans le corps d'une fonction
+      jamais appelée ne fait rien échouer) ; les listes de paramètres (`function rendre(etat)`
+      DÉCLARE `etat` à la profondeur zéro, il ne le lit pas — c'est ce qui visait à tort
+      `projets-js/lecon-02` #3, bien vivant) ; la garde du préambule (si un bloc précédent
+      non-navigateur déclare le nom, le repli de B2b-7 peut le fournir — `js/lecon-12` #8
+      vit de cela). ⚠️ La garde est écrite sur « les blocs non-navigateur » et non sur « les
+      blocs à bouton », qui seraient pourtant le préambule exact : la liste des blocs à bouton
+      dépend des règles du bouton, donc de celle-ci — **la définition serait circulaire**.
+      La garde retenue est plus large, donc plus prudente ; mesurée, elle donne le même 4/0.
+
+      **LES 5 BLOCS VISÉS, ET LE CINQUIÈME QUI EXPLIQUE UN CLIQUET QUI BAISSE** :
+      `js/lecon-33` #3 et #5 (`form`), `projets-js/lecon-18` #4 et #5 (`audioCtx`), plus
+      `js/lecon-59` #4 — celui-là était **déjà** écarté comme fragment orphelin, il change
+      seulement de motif. D'où les orphelins qui passent de 35 à 34 : aucun bouton n'est
+      revenu, un bloc a changé de cliquet.
+
+      **Mesures.** `verif-js.js` : **1 609 blocs à bouton (−4), 1 566 aboutis (INCHANGÉ,
+      donc zéro bouton vivant perdu), 23 EN PANNE (−4)**, 81 non compilables strictement
+      inchangés, 34 orphelins (−1, le bloc ci-dessus). Preuve par Chrome (`verif-clic.js`,
+      `file://`) sur les trois pages touchées : **9 blocs attendus, 9 cliqués, couverture
+      complète, 0 divergent** — le navigateur pose exactement les boutons que l'outil prévoit.
+      Cliquet descendu à 23 et **éprouvé par injection** : `zzzNomInexistant();` en tête d'un
+      bloc vivant d'`algo/lecon-01` → **code 1**, « 35 fragments orphelins contre 34 à la
+      référence » ; faute retirée → **code 0**, page revenue à l'octet près (`git status`).
+      Chaîne : `verif-html.js` 0/0 ; `verif-donnees.js` 0 erreur ; `verif-sorties.js`
+      **0 divergent** sur 449 blocs comparés ; `verif.js --rapide` **42 étapes, tout vert,
+      119,1 s**.
+
+      ⚠️ **UNE DETTE D'OUTILLAGE QUE CETTE RÈGLE A RENDUE INTENABLE, ET LE PIÈGE QU'ELLE
+      CACHAIT.** Le contexte d'une leçon — ce qui précède côté navigateur, la page entière,
+      les blocs à bouton — était reconstruit **six fois** : dans `init()`, dans `verif-js.js`
+      et dans quatre sondes. Cette règle en demandait un septième (le `data-file`), donc six
+      endroits à modifier et la certitude d'un oubli. Un seul exemplaire désormais,
+      `REG.contexteLecon`, dont la signature devient `aUnBouton(code, RANG)` — le rang, et non
+      un contexte, parce que les règles n'ont pas toutes besoin du même. Et le piège, mesuré
+      en le corrigeant : **trois sondes avaient leur propre `blocsJs`, qui ne relevait pas le
+      `data-file`** ; la règle neuve y recevait donc un contexte VIDE et **ne s'appliquait
+      jamais** — `sonde-repli-manque.js` a continué d'annoncer 12 blocs en TRI, dont les 4 que
+      le navigateur venait d'écarter, sans le moindre signal. Une copie ne diverge pas
+      bruyamment : elle décrit un site qui n'existe plus. Découpage et parcours lus dans
+      `regles-bouton.js` : la sonde retombe à 9.
+
+      Les deux sondes neuves (`sonde-heritage-profondeur.js`, la mesure ci-dessus ;
+      `sonde-tours-du-repli.js`, qui DÉROULE tour par tour la chaîne des replis d'un bloc et
+      montre où elle s'arrête) sont déclarées dans `hors-chaine.json` avec leur raison et ce
+      qu'il faudrait pour les lever — `verif-chaine-declaree.js` les avait signalées, ce qui
+      est son travail : **82 outils dans un mode, 15 hors chaîne, tous déclarés.**
+
+      **CE QUE CE POINT NE FERME PAS, ET POURQUOI.** Les 23 blocs restants ne relèvent plus
+      d'aucune règle du bouton sûre : leur nom vient d'un bloc muet (`grille`, `quiz`,
+      `UserSchema`, `DataLoader`, `memoire`) sans partager son `data-file`, ou le repli échoue
+      sur un SECOND nom que le tri du préambule écarte pour collision (`projets-js/lecon-15`
+      #5 : `etatInitial` ancré, puis `estPerdu` que le préambule ne peut pas garder en même
+      temps — `sonde-tours-du-repli.js` le montre en trois tours). Ce sont deux chantiers
+      distincts, l'un de CONTENU (compléter les fragments, comme B2b-21), l'autre de MOTEUR
+      (un préambule qui tolère deux blocs en collision), et aucun ne se traite par une règle.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

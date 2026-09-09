@@ -346,6 +346,103 @@
     return false;
   }
 
+  /* LA SUITE DU MÊME FICHIER (2026-09-09, point B2b-23) ------------------------------
+     `heriteDuNavigateur` n'écarte un bloc que si le nom hérité OUVRE une ligne. Ce critère
+     laisse passer `pages/js/lecon-33.html` #3 (`const fd = new FormData(form);`) : le nom
+     est lu au MILIEU d'une ligne racine, l'expression est pourtant évaluée aussitôt, et le
+     bouton ne pouvait promettre qu'un « form is not defined ».
+
+     ⚠️ ÉLARGIR LE CRITÈRE D'USAGE, À LUI SEUL, TUE DES BLOCS VIVANTS, et la mesure l'a dit
+     avant qu'une ligne ne soit écrite (`tools/preuves/sonde-heritage-profondeur.js`, qui
+     DEMANDE le statut de chaque bloc à `verif-js.js` au lieu de le recalculer) :
+
+       | critère                                            | visés | dont VIVANTS |
+       |---|---|---|
+       | colonne 0 (règle actuelle, inchangée)              |   1   | **0**        |
+       | profondeur 0 d'accolades                           |  18   | **10**       |
+       | profondeur 0, flèches courtes coupées              |  16   | **8**        |
+       | n'importe où (déjà rejeté en B2b-8)                |  39   | **27**       |
+       | MÊME `data-file` + usage n'importe où              |  17   | **10**       |
+       | MÊME `data-file` + profondeur 0                    |   7   | **2**        |
+       | + listes de paramètres neutralisées                |   5   | **1**        |
+       | **+ nom absent des blocs précédents non-navigateur** | **4** | **0**      |
+
+     CE QUI FAIT LA DIFFÉRENCE N'EST PAS UNE REGEX PLUS FINE, C'EST UNE INFORMATION DE LA
+     PAGE : le `data-file`. Quand le bloc porte le même nom de fichier qu'un bloc de
+     navigateur qui le précède, la leçon dit elle-même qu'il en est la SUITE — un extrait de
+     `app.js` après un autre extrait de `app.js`, pas un programme à part. L'usage n'a alors
+     plus besoin d'ouvrir la ligne. Les trois précautions qui restent sont chacune un faux
+     positif mesuré : la profondeur d'accolades (un nom cité dans le corps d'une fonction
+     jamais appelée ne fait rien échouer), les listes de paramètres (`function rendre(etat)`
+     DÉCLARE `etat`, il ne le lit pas — c'est ce qui visait à tort `projets-js/lecon-02` #3,
+     bien vivant), et la garde du préambule (si un bloc précédent NON-navigateur déclare le
+     nom, le repli du point B2b-7 peut le fournir : `js/lecon-12` #8 vit de cela).
+     ⚠️ La garde est écrite sur les blocs « non-navigateur » et non sur « les blocs à
+     bouton », qui seraient pourtant le préambule exact : la liste des blocs à bouton dépend
+     des règles du bouton, donc de celle-ci — la définition serait circulaire. La garde
+     retenue est plus large, donc plus prudente ; mesurée, elle donne le même résultat.
+     ⚠️ Fonction LUE par `tools/verif-js.js` et `tools/verif-clic.js`, jamais recopiée. */
+  function estLaSuiteDunFichierDeNavigateur(texte, navMemeFichier, autresAvant) {
+    var liste = navMemeFichier || [], autres = autresAvant || [];
+    if (!liste.length) return false;
+    /* Commentaires, chaînes et gabarits neutralisés caractère par caractère — le code
+       d'un `${…}` reste du code, et aucune regex ne suit cette imbrication. */
+    var t = String(texte), n = t.length, net = "", i = 0;
+    while (i < n) {
+      var c = t[i];
+      if (c === "/" && t[i + 1] === "/") { while (i < n && t[i] !== "\n") { net += " "; i++; } continue; }
+      if (c === "/" && t[i + 1] === "*") {
+        net += "  "; i += 2;
+        while (i < n && !(t[i] === "*" && t[i + 1] === "/")) { net += (t[i] === "\n" ? "\n" : " "); i++; }
+        net += "  "; i += 2; continue;
+      }
+      if (c === '"' || c === "'" || c === "`") {
+        var q = c, profC = 0;
+        net += " "; i++;
+        while (i < n) {
+          var d = t[i];
+          if (d === "\\") { net += "  "; i += 2; continue; }
+          if (q === "`" && d === "$" && t[i + 1] === "{") { profC++; net += "  "; i += 2; continue; }
+          if (q === "`" && profC > 0 && d === "}") { profC--; net += " "; i++; continue; }
+          if (profC > 0) { net += d; i++; continue; }
+          if (d === q) { net += " "; i++; break; }
+          net += (d === "\n" ? "\n" : " "); i++;
+        }
+        continue;
+      }
+      net += c; i++;
+    }
+    net = net.replace(/(function\s*[\w$À-ɏ]*\s*|catch\s*|[\w$À-ɏ]\s*)\(([^()]*)\)(\s*(?:=>|\{))/g,
+        function (mm, av, dedans, ap) { return av + "(" + dedans.replace(/[^\n]/g, " ") + ")" + ap; })
+      .replace(/\(([^()]*)\)(\s*=>)/g, function (mm, dedans, ap) { return "(" + dedans.replace(/[^\n]/g, " ") + ")" + ap; });
+    var prof = [], p = 0, k;
+    for (k = 0; k < net.length; k++) {
+      if (net[k] === "{") { prof[k] = p; p++; }
+      else if (net[k] === "}") { p--; prof[k] = p; }
+      else prof[k] = p;
+    }
+    for (var j = 0; j < liste.length; j++) {
+      var re = /^(?:const|let|var|class|async\s+function|function)\s+([A-Za-z_$À-ɏ][\w$À-ɏ]*)/gm, m;
+      while ((m = re.exec(liste[j]))) {
+        var nom = m[1], e = nom.replace(/[$]/g, "\\$&");
+        /* GARDE, la même qu'en B2b-8 : un bloc qui déclare ou affecte le nom est autonome. */
+        if (new RegExp("(?:const|let|var|function|class)\\s+" + e + "(?![\\w$À-ɏ])").test(net)) continue;
+        if (new RegExp("(?:^|[^\\w$.À-ɏ])" + e + "\\s*=(?!=)").test(net)) continue;
+        var decl = new RegExp("^(?:const|let|var|class|async\\s+function|function)\\s+" + e + "(?![\\w$À-ɏ])", "m");
+        var fourni = false, a;
+        for (a = 0; a < autres.length; a++) { if (decl.test(autres[a])) { fourni = true; break; } }
+        if (fourni) continue;
+        var lec = new RegExp("(^|[^\\w$.À-ɏ])" + e + "(?![\\w$À-ɏ])", "g"), u;
+        while ((u = lec.exec(net))) {
+          var pos = u.index + u[1].length;
+          if (/^\s*:/.test(net.slice(pos + nom.length))) continue;
+          if (!prof[pos]) return true;
+        }
+      }
+    }
+    return false;
+  }
+
   /* `import` et `export` en TETE DE LIGNE (2026-09-09, point B2 du chantier V17) : un
      module ES ne s'evalue pas dans le Worker, qui recoit du script classique — le bouton
      rendait « Cannot use import statement outside a module », premiere cause d'echec du
@@ -1343,14 +1440,26 @@
        que ce soit : `estUnFragmentOrphelin` (point B2b-10) demande, elle, la page ENTIÈRE
        et non ce qui précède — un nom déclaré plus bas est fourni par la leçon, même si le
        repli ne peut pas le donner ; lui retirer son bouton pour cela serait un abus. */
+    /* Deux listes de plus depuis le point B2b-23, pour `estLaSuiteDunFichierDeNavigateur` :
+       les blocs de navigateur précédents QUI PORTENT LE MÊME `data-file` que celui qu'on
+       examine, et — pour sa garde — les blocs précédents qui ne sont PAS du navigateur. */
     var navAvant = [], vusNav = [], tousJs = [];
+    var navFichierAvant = [], vusNavFichier = [], autresAvant = [], vusAutres = [];
     blocs.forEach(function (block) {
       navAvant.push(vusNav.slice());
+      autresAvant.push(vusAutres.slice());
+      var fic = block.getAttribute("data-file") || "";
+      navFichierAvant.push(
+        vusNavFichier.filter(function (o) { return fic && o.f === fic; })
+                     .map(function (o) { return o.t; }));
       var c = block.querySelector("code.language-javascript");
       if (!c) return;
       tousJs.push(c.textContent);
       if (BROWSER_ONLY.test(c.textContent) || estDuDomDePage(c.textContent)) {
         vusNav.push(c.textContent);
+        vusNavFichier.push({ f: fic, t: c.textContent });
+      } else {
+        vusAutres.push(c.textContent);
       }
     });
     blocs.forEach(function (block, iBloc) {
@@ -1367,6 +1476,7 @@
             estDuDomDePage(js.textContent) || estUnServiceWorker(js.textContent) ||
             neCompilePas(js.textContent) ||
             heriteDuNavigateur(js.textContent, navAvant[iBloc]) ||
+            estLaSuiteDunFichierDeNavigateur(js.textContent, navFichierAvant[iBloc], autresAvant[iBloc]) ||
             estUnFragmentOrphelin(js.textContent, tousJs)) {
           block.setAttribute("data-runner", "skip");
           return;

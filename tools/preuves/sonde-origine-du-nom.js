@@ -77,7 +77,7 @@ fichiers.forEach(function (f) {
   blocs.forEach(function (bloc, i) {
     var code = bloc.code;
     if (!code) return;
-    if (!ctx.aUnBouton(code, ctx.navAvant[i])) return;
+    if (!ctx.aUnBouton(code, i)) return;
     var prefixe = ctx.aBouton.slice(0, vus);
     vus++;
 
@@ -141,7 +141,7 @@ fichiers.forEach(function (f) {
     blocs.forEach(function (b2, j) {
       if (!b2.code || j === i) return;
       if (!fournitLeNom(b2.code, nom)) return;
-      if (j < i) { if (ctx.aUnBouton(b2.code, ctx.navAvant[j])) avantBouton = true; else avantMuet = true; }
+      if (j < i) { if (ctx.aUnBouton(b2.code, j)) avantBouton = true; else avantMuet = true; }
       else apres = true;
     });
     var etiq = avantBouton ? 'BOUTON-AVANT' : avantMuet ? 'MUET-AVANT' : apres ? 'PLUS-BAS' : 'NULLE-PART';

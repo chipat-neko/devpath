@@ -86,7 +86,7 @@ fichiers.forEach(function (f) {
 
   blocs.forEach(function (bloc, i) {
     var code = bloc.code;
-    if (!code || !ctx.aUnBouton(code, ctx.navAvant[i])) return;
+    if (!code || !ctx.aUnBouton(code, i)) return;
     var prefixe = ctx.aBouton.slice(0, vus);
     vus++;
 

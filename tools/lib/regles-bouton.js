@@ -52,6 +52,7 @@ var estUnServiceWorker = lireFonction('estUnServiceWorker');
 var neCompilePas = lireFonction('neCompilePas');
 var heriteDuNavigateur = lireFonction('heriteDuNavigateur');
 var estUnFragmentOrphelin = lireFonction('estUnFragmentOrphelin');
+var estLaSuiteDunFichierDeNavigateur = lireFonction('estLaSuiteDunFichierDeNavigateur');
 var meriteUnRepli = lireFonction('meriteUnRepli');
 var envelopperPourRepli = lireFonction('envelopperPourRepli');
 var preambuleQuiCompile = lireFonction('preambuleQuiCompile');
@@ -96,23 +97,40 @@ function lecons(cible) {
    celle-là, et pas une autre, sert de préambule au repli. */
 function contexteLecon(blocsDuFichier) {
   var navAvant = [], vusNav = [], tousJs = [];
+  /* Depuis le point B2b-23, deux listes de plus, construites exactement comme `init()` :
+     les blocs de navigateur precedents PORTANT LE MEME `data-file`, et les blocs
+     precedents qui ne sont PAS du navigateur (la garde de la regle). */
+  var navFichierAvant = [], vusNavFichier = [], autresAvant = [], vusAutres = [];
   blocsDuFichier.forEach(function (bloc) {
     navAvant.push(vusNav.slice());
+    autresAvant.push(vusAutres.slice());
+    var fic = bloc.fichier || '';
+    navFichierAvant.push(vusNavFichier.filter(function (o) { return fic && o.f === fic; })
+                                      .map(function (o) { return o.t; }));
     if (!bloc.code) return;
     tousJs.push(bloc.code);
-    if (BROWSER_ONLY.test(bloc.code) || estDuDomDePage(bloc.code)) vusNav.push(bloc.code);
+    if (BROWSER_ONLY.test(bloc.code) || estDuDomDePage(bloc.code)) {
+      vusNav.push(bloc.code);
+      vusNavFichier.push({ f: fic, t: bloc.code });
+    } else vusAutres.push(bloc.code);
   });
-  function aUnBouton(code, ctxNav) {
+  /* ⚠️ LA SIGNATURE PREND MAINTENANT LE RANG DU BLOC, ET NON PLUS SON CONTEXTE (B2b-23).
+     Trois regles ont besoin d'un contexte different (ce qui precede cote navigateur, la
+     page entiere, les blocs du meme fichier) : les passer une a une aux appelants revenait
+     a reecrire `init()` dans chaque sonde, et c'est ainsi que les copies divergent. */
+  function aUnBouton(code, i) {
     return !(BROWSER_ONLY.test(code) || estUnFichierJson(code) || estUneSuiteDeTests(code) ||
       estUnFragmentServeur(code) || estDuDomDePage(code) || estUnServiceWorker(code) ||
-      neCompilePas(code) || heriteDuNavigateur(code, ctxNav) ||
+      neCompilePas(code) || heriteDuNavigateur(code, navAvant[i]) ||
+      estLaSuiteDunFichierDeNavigateur(code, navFichierAvant[i], autresAvant[i]) ||
       estUnFragmentOrphelin(code, tousJs));
   }
   var aBouton = [], aBoutonIdx = [];
   blocsDuFichier.forEach(function (bloc, i) {
-    if (bloc.code && aUnBouton(bloc.code, navAvant[i])) { aBouton.push(bloc.code); aBoutonIdx.push(i); }
+    if (bloc.code && aUnBouton(bloc.code, i)) { aBouton.push(bloc.code); aBoutonIdx.push(i); }
   });
   return { navAvant: navAvant, tousJs: tousJs, aBouton: aBouton, aBoutonIdx: aBoutonIdx,
+           navFichierAvant: navFichierAvant, autresAvant: autresAvant,
            aUnBouton: aUnBouton };
 }
 
@@ -128,6 +146,7 @@ module.exports = {
   neCompilePas: neCompilePas,
   heriteDuNavigateur: heriteDuNavigateur,
   estUnFragmentOrphelin: estUnFragmentOrphelin,
+  estLaSuiteDunFichierDeNavigateur: estLaSuiteDunFichierDeNavigateur,
   meriteUnRepli: meriteUnRepli,
   envelopperPourRepli: envelopperPourRepli,
   preambuleQuiCompile: preambuleQuiCompile,

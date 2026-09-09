@@ -45,6 +45,8 @@
 var fs = require('fs');
 var path = require('path');
 var vm = require('vm');
+/* Les règles du bouton et LE CONTEXTE DE LA LEÇON, écrits une seule fois (B2b-15, B2b-23). */
+var REG = require('../lib/regles-bouton.js');
 
 var RACINE = path.resolve(__dirname, '..', '..');
 
@@ -78,21 +80,12 @@ function dec(s) {
   return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
           .replace(/&#39;/g, "'").replace(/&amp;/g, '&');
 }
-function blocsJs(fichier) {
-  var src = fs.readFileSync(fichier, 'utf8'), out = [];
-  var re = /<figure class="code-block"([^>]*)>[\s\S]*?<code class="language-javascript">([\s\S]*?)<\/code>/g, m;
-  while ((m = re.exec(src))) out.push({ code: dec(m[2]).trim() });
-  return out;
-}
-function lecons() {
-  var out = [];
-  (function marche(d) {
-    var st; try { st = fs.statSync(d); } catch (e) { return; }
-    if (st.isFile()) { if (/lecon-\d+\.html$/.test(d)) out.push(d); return; }
-    for (var f of fs.readdirSync(d)) marche(path.join(d, f));
-  })(path.join(RACINE, 'pages'));
-  return out;
-}
+/* ⚠️ LE DÉCOUPAGE DES BLOCS EST CELUI DE `regles-bouton.js`, PAS UNE COPIE (B2b-23).
+   La copie locale ne relevait pas le `data-file` : la règle `estLaSuiteDunFichierDeNavigateur`
+   recevait alors un contexte VIDE et ne s'appliquait jamais, si bien que cette sonde
+   décrivait des blocs à bouton que le navigateur n'affiche plus. */
+var blocsJs = REG.blocsJs;
+var lecons = REG.lecons;
 var GLOBALES_WORKER = ['TextEncoder', 'TextDecoder', 'performance', 'EventTarget', 'Event',
   'CustomEvent', 'URL', 'URLSearchParams', 'Blob', 'AbortController', 'AbortSignal',
   'ReadableStream', 'WritableStream', 'TransformStream', 'FormData', 'Headers', 'Request',
@@ -203,26 +196,19 @@ var panneRef = 0, okRef = 0;
 lecons().forEach(function (f) {
   var rel = path.relative(RACINE, f).replace(/\\/g, '/');
   var blocs = blocsJs(f);
-  var navAvant = [], vusNav = [], tousTextesJs = [];
-  blocs.forEach(function (b) {
-    navAvant.push(vusNav.slice());
-    if (!b.code) return;
-    tousTextesJs.push(b.code);
-    if (BROWSER_ONLY.test(b.code) || estDuDomDePage(b.code)) vusNav.push(b.code);
-  });
-  function aUnBouton(code, ctxNav) {
-    return !(BROWSER_ONLY.test(code) || estUnFichierJson(code) || estUneSuiteDeTests(code) ||
-      estUnFragmentServeur(code) || estDuDomDePage(code) || estUnServiceWorker(code) ||
-      neCompilePas(code) || heriteDuNavigateur(code, ctxNav) ||
-      estUnFragmentOrphelin(code, tousTextesJs));
-  }
+  /* LE CONTEXTE DE LA LEÇON EST LU, PLUS RECOPIÉ (2026-09-09, point B2b-23) : la règle
+     `estLaSuiteDunFichierDeNavigateur` demande un contexte de plus (le `data-file` des
+     blocs de navigateur précédents), et une copie locale l'aurait ignoré en silence. */
+  var ctxL = REG.contexteLecon(blocs);
+  var navAvant = ctxL.navAvant, tousTextesJs = ctxL.tousJs;
+  var aUnBouton = ctxL.aUnBouton;
   var aBouton = [];
-  blocs.forEach(function (b, i) { if (b.code && aUnBouton(b.code, navAvant[i])) aBouton.push(b.code); });
+  blocs.forEach(function (b, i) { if (b.code && aUnBouton(b.code, i)) aBouton.push(b.code); });
   var vus = 0;
   blocs.forEach(function (b, i) {
     var code = b.code;
     if (!code) return;
-    if (!aUnBouton(code, navAvant[i])) return;
+    if (!aUnBouton(code, i)) return;
     var prefixe = aBouton.slice(0, vus);
     var tousPrec = blocs.slice(0, i).map(function (x) { return x.code; }).filter(Boolean);
     vus++;

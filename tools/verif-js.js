@@ -144,23 +144,15 @@ fichiers.forEach(function (f) {
   /* La meme passe releve AUSSI tous les textes JS de la page : `estUnFragmentOrphelin`
      (point B2b-10) demande la page ENTIERE, pas ce qui precede — un nom declare plus bas
      est fourni par la lecon, meme si le repli ne peut pas le donner. */
-  var navAvant = [], vusNav = [], tousJs = [];
-  blocsDuFichier.forEach(function (bloc) {
-    navAvant.push(vusNav.slice());
-    if (!bloc.code) return;
-    tousJs.push(bloc.code);
-    if (BROWSER_ONLY.test(bloc.code) || estDuDomDePage(bloc.code)) vusNav.push(bloc.code);
-  });
-  var aBouton = [];
-  function aUnBouton(code, ctxNav) {
-    return !(BROWSER_ONLY.test(code) || estUnFichierJson(code) || estUneSuiteDeTests(code) ||
-      estUnFragmentServeur(code) || estDuDomDePage(code) || estUnServiceWorker(code) ||
-      neCompilePas(code) || heriteDuNavigateur(code, ctxNav) ||
-      estUnFragmentOrphelin(code, tousJs));
-  }
-  blocsDuFichier.forEach(function (bloc, i) {
-    if (bloc.code && aUnBouton(bloc.code, navAvant[i])) aBouton.push(bloc.code);
-  });
+  /* ⚠️ LE CONTEXTE DE LA LEÇON N'EST PLUS RECONSTRUIT ICI (2026-09-09, point B2b-23).
+     Il l'était — les mêmes quinze lignes que dans `init()`, et que dans cinq sondes — et
+     la règle neuve du même point en demandait une seizième : le `data-file` des blocs de
+     navigateur précédents. Une règle de plus, six copies à modifier, et la certitude qu'une
+     serait oubliée. `contexteLecon` est le seul exemplaire, lu par tout le monde. */
+  var ctxLecon = REG.contexteLecon(blocsDuFichier);
+  var navAvant = ctxLecon.navAvant, tousJs = ctxLecon.tousJs;
+  var aBouton = ctxLecon.aBouton;
+  var aUnBouton = ctxLecon.aUnBouton;
   var vus = 0;
   blocsDuFichier.forEach(function (bloc, i) {
     var code = bloc.code;
@@ -187,6 +179,12 @@ fichiers.forEach(function (f) {
        `init()` : un bloc qui relève des deux doit être compté du même côté par les deux
        outils, sinon les chiffres divergent sans qu'aucune règle n'ait changé. */
     if (heriteDuNavigateur(code, navAvant[i])) { ecartes++; return; }
+    /* LA SUITE DU MEME FICHIER (2026-09-09, point B2b-23), juste apres l'heritage dont
+       elle est l'extension, et dans le meme ordre que `init()` : un bloc annonce par la
+       page comme la suite d'un extrait de navigateur du meme `data-file`. */
+    if (REG.estLaSuiteDunFichierDeNavigateur(code, ctxLecon.navFichierAvant[i], ctxLecon.autresAvant[i])) {
+      ecartes++; return;
+    }
     /* LE FRAGMENT ORPHELIN, teste en DERNIER, dans le meme ordre que `init()`.
        ⚠️ IL LUI FAUT SON PROPRE CLIQUET, POUR LA MEME RAISON QU'A `neCompilePas` — et la
        mesure l'a prouve AVANT que ce compteur n'existe : `zzzNomInexistant();` injecte en

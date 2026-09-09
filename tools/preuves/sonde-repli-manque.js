@@ -30,6 +30,8 @@
 var fs = require('fs');
 var path = require('path');
 var vm = require('vm');
+/* Les règles du bouton et LE CONTEXTE DE LA LEÇON, écrits une seule fois (B2b-15, B2b-23). */
+var REG = require('../lib/regles-bouton.js');
 
 var RACINE = path.resolve(__dirname, '..', '..');
 
@@ -84,24 +86,12 @@ function dec(s) {
 }
 /* Motif BORNÉ par `</figure>`, comme dans `tools/verif-js.js` depuis le point B2b-15 :
    non borné, il traverse les figures et associe l'attribut de l'une au code de l'autre. */
-function blocsJs(fichier) {
-  var src = fs.readFileSync(fichier, 'utf8'), out = [];
-  var re = /<figure class="code-block"([^>]*)>([\s\S]*?)<\/figure>/g, m;
-  while ((m = re.exec(src))) {
-    var c = m[2].match(/<code class="language-javascript">([\s\S]*?)<\/code>/);
-    if (c) out.push({ code: dec(c[1]).trim() });
-  }
-  return out;
-}
-function lecons() {
-  var out = [];
-  (function marche(d) {
-    var st; try { st = fs.statSync(d); } catch (e) { return; }
-    if (st.isFile()) { if (/lecon-\d+\.html$/.test(d)) out.push(d); return; }
-    for (var f of fs.readdirSync(d)) marche(path.join(d, f));
-  })(path.join(RACINE, 'pages'));
-  return out;
-}
+/* ⚠️ LE DÉCOUPAGE DES BLOCS EST CELUI DE `regles-bouton.js`, PAS UNE COPIE (B2b-23).
+   La copie locale ne relevait pas le `data-file` : la règle `estLaSuiteDunFichierDeNavigateur`
+   recevait alors un contexte VIDE et ne s'appliquait jamais, si bien que cette sonde
+   décrivait des blocs à bouton que le navigateur n'affiche plus. */
+var blocsJs = REG.blocsJs;
+var lecons = REG.lecons;
 /* LE CONTEXTE EST CELUI DE verif-js.js, LU DANS LE MEME MODULE (2026-09-09, B2b-15).
    Cette sonde en portait sa PROPRE copie, restee au console a 11 methodes et au
    structuredClone contrefait : elle mesurait donc un autre moteur que le verificateur
@@ -126,21 +116,14 @@ var detail = { APRES: [], TRI: [], 'AUTRE-ERR': [], INTROUVABLE: [] };
 lecons().forEach(function (f) {
   var rel = path.relative(RACINE, f).replace(/\\/g, '/');
   var blocs = blocsJs(f);
-  var navAvant = [], vusNav = [], tousTextesJs = [];
-  blocs.forEach(function (b) {
-    navAvant.push(vusNav.slice());
-    if (!b.code) return;
-    tousTextesJs.push(b.code);
-    if (BROWSER_ONLY.test(b.code) || estDuDomDePage(b.code)) vusNav.push(b.code);
-  });
-  function aUnBouton(code, ctxNav) {
-    return !(BROWSER_ONLY.test(code) || estUnFichierJson(code) || estUneSuiteDeTests(code) ||
-      estUnFragmentServeur(code) || estDuDomDePage(code) || estUnServiceWorker(code) ||
-      neCompilePas(code) || heriteDuNavigateur(code, ctxNav) ||
-      estUnFragmentOrphelin(code, tousTextesJs));
-  }
+  /* LE CONTEXTE DE LA LEÇON EST LU, PLUS RECOPIÉ (2026-09-09, point B2b-23) : la règle
+     `estLaSuiteDunFichierDeNavigateur` demande un contexte de plus (le `data-file` des
+     blocs de navigateur précédents), et une copie locale l'aurait ignoré en silence. */
+  var ctxL = REG.contexteLecon(blocs);
+  var navAvant = ctxL.navAvant, tousTextesJs = ctxL.tousJs;
+  var aUnBouton = ctxL.aUnBouton;
   var indexBouton = [];
-  blocs.forEach(function (b, i) { if (b.code && aUnBouton(b.code, navAvant[i])) indexBouton.push(i); });
+  blocs.forEach(function (b, i) { if (b.code && aUnBouton(b.code, i)) indexBouton.push(i); });
   var aBouton = indexBouton.map(function (i) { return blocs[i].code; });
 
   indexBouton.forEach(function (idx, rang) {
