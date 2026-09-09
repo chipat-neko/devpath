@@ -193,8 +193,21 @@
      ci-dessous), en faisant précéder le texte d'un `throw` pour qu'`eval` compile sans
      rien exécuter : **81 refusés par les deux, 1 684 acceptés par les deux, ZÉRO bloc
      refusé par `new Function` que `eval` accepterait** — le seul cas qui aurait retiré un
-     bouton vivant. Trois blocs vont dans l'autre sens (`eval` refuse un `return` racine
-     que `new Function` autorise) : gain non pris, jamais un risque.
+     bouton vivant. Trois blocs allaient dans l'autre sens (`eval` refuse un `return` racine
+     que `new Function` autorise) : gain d'abord non pris, PRIS AU POINT B2b-26.
+
+     ⚠️ LE GAIN NON PRIS ÉTAIT UN BOUTON QUI MENTAIT (2026-09-10, point B2b-26). Un bloc que
+     `new Function` accepte et que le Worker refuse garde son bouton et ne peut rendre
+     qu'une `SyntaxError` au clic — c'est précisément ce que ce chantier fait disparaître.
+     `nodejs/lecon-22` #6 en était un : cliqué dans Chrome, il affichait
+     `SyntaxError: Illegal return statement`. Les DEUX juges sont donc interrogés, et il
+     suffit qu'un seul refuse. Le second est `(0, eval)("throw 0;\n" + texte)` : le `throw`
+     en tête garantit que la compilation a lieu et que RIEN ne s'exécute — pas une ligne du
+     bloc, pas même une déclaration. Mesure faite avant l'écriture
+     (`tools/preuves/sonde-eval-contre-function.js`, statut de chaque bloc DEMANDÉ à
+     `verif-js.js`) : sur **1 603 blocs à bouton**, `new Function` accepte et `eval` refuse
+     **1 bloc, en panne, ZÉRO vivant** ; l'inverse — un bouton retiré à tort — vise
+     **0 bloc**.
      Impact mesuré AVANT écriture, en EXÉCUTANT chaque bloc désigné : 81 blocs visés,
      ZÉRO vivant, 71 déjà comptés en panne et 10 que le vérificateur classait « erreur
      annoncée » à tort — leur commentaire contient le mot « erreur », mais la leçon n'y
@@ -205,6 +218,11 @@
   function neCompilePas(texte) {
     try { new Function(String(texte)); }
     catch (e) { return e instanceof SyntaxError; }
+    /* LE SECOND JUGE, celui du Worker. `throw 0;` part avant la première ligne du bloc :
+       une `SyntaxError` ne peut venir que de la COMPILATION, et le `0` levé ensuite prouve
+       au contraire que le texte compile. */
+    try { (0, eval)("throw 0;\n" + String(texte)); }
+    catch (e2) { if (e2 instanceof SyntaxError) return true; return false; }
     return false;
   }
 

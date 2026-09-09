@@ -3412,6 +3412,60 @@ résultat avant le clic.
       `SyntaxError: Illegal return statement`, relevés au clic pendant ce point. Les 14
       autres : `js` 6, `projets-js` 6, `typescript` 1, `vue` 1.
 
+- [x] **B2b-26 · LE JUGE DE COMPILATION N'ÉTAIT PAS CELUI DU WORKER : `new Function` accepte
+      un `return` racine que `(0, eval)` refuse — 15 blocs en panne, et un bouton qui
+      affichait `SyntaxError` à l'apprenant a disparu.**
+
+      **Le défaut était ÉCRIT dans le dépôt depuis B2b-5, en toutes lettres, et personne
+      n'était allé le chercher.** Le commentaire de `neCompilePas` disait : « Trois blocs
+      vont dans l'autre sens (`eval` refuse un `return` racine que `new Function` autorise) :
+      gain non pris, jamais un risque. » Le « gain non pris » était un bloc qui GARDE son
+      bouton et ne peut rendre qu'une faute de syntaxe au clic — précisément ce que ce
+      chantier fait disparaître. Il a été retrouvé au clic pendant le point B2b-25 :
+      `nodejs/lecon-22` #6 affichait `SyntaxError: Illegal return statement` **dans Chrome**.
+
+      **MESURE AVANT ÉCRITURE** (`tools/preuves/sonde-eval-contre-function.js`, sonde neuve,
+      statut de chaque bloc DEMANDÉ à `verif-js.js` au lieu d'être recalculé) : sur les
+      **1 603 blocs à bouton**, `new Function` accepte et `eval` refuse **1 bloc — en panne,
+      ZÉRO vivant** ; l'inverse, le seul cas qui retirerait un bouton qui marche, vise
+      **0 bloc**. Les deux juges sont donc interrogés et il suffit qu'un seul refuse. Le
+      second est `(0, eval)("throw 0;\n" + texte)` : le `throw` placé en tête garantit que
+      la compilation a lieu et que **rien** ne s'exécute — pas une ligne du bloc, pas même
+      une déclaration.
+
+      **ÉPREUVE DE LA RÈGLE, cas par cas** : `return` racine → refusé ; `await` racine →
+      refusé ; `case` sans `switch` → refusé ; corps d'objet détaché → refusé ; programme
+      ordinaire → accepté ; **`function f() { return 1; }` puis son appel → accepté** (un
+      `return` DANS une fonction n'a jamais rien d'illégal, et c'est le seul faux positif
+      qui aurait coûté des centaines de boutons). **6 cas sur 6.**
+
+      **Mesures.** `verif-js.js` : **1 602 blocs à bouton (−1), 1 567 aboutis (INCHANGÉ),
+      15 EN PANNE (−1), 79 non compilables (+2), 32 orphelins (−1)**. ⚠️ **Le +2 du cliquet
+      des non-compilables demande une explication, sans quoi il ressemble à une régression**
+      : deux blocs seulement sont concernés, et un seul perd un bouton. `nodejs/lecon-22` #6
+      passe de « en panne » à « ne compile pas » (le bouton tombe) ; `securite/lecon-01` #3
+      passe de « fragment orphelin » à « ne compile pas » — **le même bloc, déjà sans
+      bouton, simplement rangé sous la bonne cause** : un `return` racine ne compile pas,
+      que le nom `requete` manque ou non. Le total des blocs écartés ne bouge donc que d'un.
+
+      **PREUVE PAR LE NAVIGATEUR.** `verif-clic.js --sorties`, Chrome `file://` : sur
+      `nodejs/lecon-22` et `securite/lecon-01`, **2 blocs cliqués sur 2 attendus, 0
+      divergent** — et la ligne `SyntaxError: Illegal return statement` a disparu de la
+      page. **Cliquet éprouvé sur la règle neuve** : `if (true) { return 1; }` injecté en
+      tête d'`algo/lecon-01` → **code 1**, « 80 blocs ne compilent pas contre 79 à la
+      référence » ; page restaurée → code 0, 15 en panne comme à la référence.
+
+      **Chaîne rejouée** : `verif-html.js` 1 629 fichiers, 0 grave 0 remarque ;
+      `verif-donnees.js` 25 contrôles, 0 erreur ; `verif.js --rapide` **52 étapes, tout
+      vert, 133,6 s**, `gardech` compris (la sonde neuve est un outil de preuve, pas un
+      vérificateur : elle n'entre pas dans la chaîne). Cliquets à **15 / 79 / 32**.
+
+      ⚠️ **PREUVE DE NON-RÉGRESSION DU POINT PRÉCÉDENT, sur un large échantillon** :
+      `verif-clic.js` sans argument (les leçons à risque) a rendu, après B2b-25,
+      **75 pages, 512 blocs attendus, 512 cliqués — couverture complète, 0 divergent**, en
+      990 s. C'est la mesure qui prouve que le renommage de la règle et la disparition de
+      la liste `navFichierAvant` n'ont désynchronisé ni le moteur ni les vérificateurs.
+
 - [x] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf
