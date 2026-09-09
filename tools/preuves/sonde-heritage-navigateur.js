@@ -107,7 +107,10 @@ function contexteWorker(sorties) {
     setInterval: function () { return 0; },
     clearTimeout: faux, clearInterval: faux,
     queueMicrotask: function (f) { try { f(); } catch (e) {} },
-    structuredClone: function (v) { return JSON.parse(JSON.stringify(v)); },
+    /* Le VRAI clonage structure, pas un JSON.parse(JSON.stringify) : la contrefacon
+       jette sur un cycle et perd Date/Set/Map, ce qui faisait declarer en panne un bloc
+       que l apprenant voit marcher (point B2b-13). Node le fournit depuis la v17. */
+    structuredClone: globalThis.structuredClone,
     self: null, globalThis: null
   };
   GLOBALES_WORKER.forEach(function (n) {
@@ -116,6 +119,15 @@ function contexteWorker(sorties) {
   ctx.self = ctx; ctx.globalThis = ctx;
   return ctx;
 }
+/* ⚠️ CETTE SONDE MOURAIT AVANT SA DERNIÈRE LIGNE (constaté le 2026-09-09, point B2b-13),
+   et sa version d'origine dans le dépôt le fait aussi — ce n'est donc pas une régression
+   du jour. Un bloc qui `await fetch(...)` rejette une promesse que personne n'attend :
+   Node tue alors le processus, et le `try/catch` autour de `runInContext` n'y peut rien,
+   puisque le rejet survient après le tour de boucle. La sonde s'arrêtait au milieu de son
+   dernier tableau, en imprimant une pile — un instrument qui meurt en route rend une
+   mesure PARTIELLE avec l'air d'une panne d'outil. Un Worker de navigateur, lui, ne meurt
+   pas sur un rejet non géré : ignorer ces rejets est donc aussi le comportement FIDÈLE. */
+process.on('unhandledRejection', function () {});
 var DELAI = 5000;
 var ERREUR_ANNONCEE = /\/\/[^\n]*\b(erreur|Erreur|ERREUR|throw|lève|leve|refuse|rejett?e|échoue|echoue|plante|invalide)\b/;
 

@@ -113,7 +113,10 @@ function contexteWorker(sorties) {
     setInterval: function () { return 0; },
     clearTimeout: faux, clearInterval: faux,
     queueMicrotask: function (f) { try { f(); } catch (e) {} },
-    structuredClone: function (v) { return JSON.parse(JSON.stringify(v)); },
+    /* Le VRAI clonage structure, pas un JSON.parse(JSON.stringify) : la contrefacon
+       jette sur un cycle et perd Date/Set/Map, ce qui faisait declarer en panne un bloc
+       que l apprenant voit marcher (point B2b-13). Node le fournit depuis la v17. */
+    structuredClone: globalThis.structuredClone,
     self: null, globalThis: null
   };
   GLOBALES_WORKER.forEach(function (n) {

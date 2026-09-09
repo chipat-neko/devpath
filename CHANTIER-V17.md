@@ -2193,6 +2193,99 @@ résultat avant le clic.
       #13 « Cannot access before initialization », les trois `throw` de `js/lecon-38`,
       `typescript/lecon-01` #1), ensuite les fragments.
 
+- [x] **B2b-13 · L'erreur ANNONCÉE PAR SON NOM, et une troisième contrefaçon dans le contexte
+      du vérificateur : 60 blocs en panne → 50, aboutis 1 537 → 1 538.**
+
+      **Mesure reproduite avant de toucher à quoi que ce soit** (`node tools/verif-js.js --causes`) :
+      1 613 blocs avec bouton, 776 écartés, **1 537 aboutis, 35 par repli, 14 annoncées, 2 non
+      concluants, 60 EN PANNE, 81 non compilables, 35 orphelins** — les chiffres laissés par B2b-12,
+      au bloc près. Le lot annoncé était celui des **erreurs VOLONTAIRES que le détecteur ne
+      reconnaît pas** : il ne connaît que des mots français (`erreur`, `throw`, `échoue`…), or une
+      leçon annonce l'erreur telle que l'apprenant la LIRA — `//=> TypeError: Assignment to constant
+      variable.`
+
+      ⚠️ **LA RÈGLE A ÉTÉ MESURÉE AVANT D'ÊTRE ÉCRITE, ET LA MESURE A CHANGÉ LA RÈGLE.**
+      `tools/preuves/sonde-erreur-nommee.js` a passé les 60 blocs en panne au crible des deux
+      formulations possibles, sans rien modifier : **7 blocs portent le nom de l'erreur ET le début
+      de son message** dans un commentaire, **3 le nom seul**, 50 rien du tout. Le nom seul aurait
+      donc paru suffisant — et c'est exactement là que se trouvait le piège.
+
+      **`pages/js/lecon-64.html` #7 portait `// TypeError (circular)` et échouait sur « TypeError:
+      Converting circular structure to JSON ».** Le nom concordait, l'annonce avait l'air juste, et
+      c'était **un défaut de ce vérificateur, pas de la leçon** : son contexte fournissait
+      `structuredClone: function (v) { return JSON.parse(JSON.stringify(v)); }` — l'exact CONTRAIRE
+      de ce que la fonction fait, alors que le sujet de la leçon est précisément que le clonage
+      structuré traverse les cycles et préserve `Date`, `Set` et `Map`. **Troisième occurrence du
+      défaut des points B2b-2 et B2b-12** : l'outil ne mesurait pas le site, il mesurait sa propre
+      pauvreté — cette fois sur une globale FABRIQUÉE, ce que le point B2b-4 mettait en garde de
+      faire. La règle du nom seul l'aurait enterré ; l'exigence du message l'a laissé en panne, donc
+      visible, donc corrigé.
+
+      **Preuve par le navigateur, avant toute correction** (`verif-clic.js --sorties`, Chrome
+      `file://`) : le bloc rend chez l'apprenant **5 lignes justes** — `JSON : TypeError`, puis
+      `true`, `true`, `true`, `true`. Node fournit le vrai `structuredClone` depuis la v17 : il
+      rejoint la liste des globales injectées, la contrefaçon disparaît. **Effet mesuré, isolé :
+      exactement 1 bloc, 60 → 59 pannes, 1 537 → 1 538 aboutis, tous les autres compteurs
+      inchangés** (diff des listes de pannes : une seule ligne).
+      ⚠️ **Écart connu et assumé** : `structuredClone` de Node rend des objets de SON royaume, donc
+      `copie.debut instanceof Date` vaut `false` dans le contexte `vm` là où le navigateur dit
+      `true` (mesuré). Ce vérificateur juge la présence d'une ERREUR, pas la sortie ; et un
+      polyfill maison serait, lui, une invention.
+
+      **(b) La règle du nom, exigeante : 59 → 52 pannes, annoncées 14 → 21, aboutis INCHANGÉS.**
+      Le nom de l'erreur levée doit figurer dans un COMMENTAIRE — un `throw new TypeError("…")` du
+      corps n'est pas une annonce faite au lecteur — **et** ce commentaire doit contenir les trois
+      premiers mots du message. Éprouvée par deux injections dans `js/lecon-02` #4, dont l'annonce
+      dit `TypeError: Assignment to constant variable.` :
+      `pi = variableFantome` → **KO, « ReferenceError: variableFantome is not defined »** (autre
+      type) ; `null.x = 1` → **KO, « TypeError: Cannot set properties of null »** (même type, autre
+      message). Remise en état : `ANN` de nouveau, md5 identique (`6f5f14c6…`).
+
+      **(c) Les deux annonces INCOMPLÈTES, corrigées dans le contenu : 52 → 50.** Restaient
+      `js/lecon-06` #10 (`//=> ReferenceError : message n'existe plus`) et `js/lecon-38` #8
+      (`// TypeError` tout court). Ce ne sont pas des cas à contourner : la page annonçait bien
+      l'erreur, mais pas telle que l'apprenant la lit. Le message exact a été **relevé au clic dans
+      Chrome** puis recopié — `ReferenceError: message is not defined (le const ne vit que dans le
+      bloc)` et `TypeError: total doit être un nombre >= 0`. Vérifié après coup sur les deux pages :
+      **26 blocs sur 26 cliqués, 0 divergent**, et les deux sorties sont mot pour mot le commentaire.
+
+      **Mesure finale : 1 613 blocs avec bouton, 776 écartés, 1 538 aboutis (95,4 %), 35 par repli,
+      23 annoncées, 2 non concluants, 50 EN PANNE, 81 non compilables, 35 orphelins.** Écartés,
+      non compilables et orphelins **inchangés** : aucun bouton n'a bougé. Cliquet descendu à **50**
+      et éprouvé : `const zzz = fantomeAbsent();` injecté dans `algo/lecon-01` → **code 1**, « 51
+      contre 50 à la référence » ; faute retirée → **code 0**, page revenue à l'octet près
+      (`269ad551…`).
+
+      **DEUX DETTES D'OUTILLAGE SOLDÉES EN CHEMIN, toutes deux trouvées en vérifiant, pas en
+      cherchant.** (1) La contrefaçon de `structuredClone` était RECOPIÉE dans quatre sondes de
+      `tools/preuves/` (`sonde-contexte-cumule`, `sonde-fragment-orphelin`,
+      `sonde-heritage-navigateur`, `sonde-preambule-elargi`) : corrigée dans les quatre, sans quoi
+      la prochaine mesure serait repartie du faux. (2) **`sonde-heritage-navigateur.js` MOURAIT
+      avant sa dernière ligne**, et sa version du dépôt le fait aussi — donc ce n'est pas une
+      régression du jour : un bloc qui `await fetch(…)` rejette une promesse que personne n'attend,
+      Node tue le processus, et le `try/catch` autour de `runInContext` n'y peut rien puisque le
+      rejet survient après le tour de boucle. Un instrument qui meurt en route rend une mesure
+      PARTIELLE sous les traits d'une panne d'outil. `process.on('unhandledRejection', …)` ignoré,
+      ce qui est aussi le comportement FIDÈLE (un Worker ne meurt pas sur un rejet non géré) :
+      la sonde va maintenant jusqu'au bout, **code 0, 97 lignes**.
+      ⚠️ **Question laissée ouverte, à ne pas oublier** : `verif-js.js` n'a pas ce garde-fou. Il
+      survit aujourd'hui parce qu'aucun bloc à bouton ne déclenche de rejet non géré, mais le jour
+      où l'un le fera, le vérificateur mourra au milieu de sa mesure au lieu de compter une panne.
+
+      **Non-régression** : `verif-html.js` **1 629 fichiers, 0 problème** ; `verif-donnees.js`
+      **0 erreur sur 25 contrôles** — il a d'abord rougi (`[I18]`, `search-index.js` publié
+      4 262 188 o contre 4 262 196 o regénérés, **+8 o**, exactement les deux commentaires
+      complétés), index régénéré par `build-index.js --write --only=search,searchlite`
+      (`search-lite.js` inchangé) ; `verif-chaine-declaree.js` **code 0, 80 outils dans un mode** ;
+      `verif.js --rapide` **41 étapes, tout vert, 125,5 s** ; `node --check` sur les 7 fichiers JS
+      touchés ; **0 URL vers un CDN**.
+
+      **Reste au gisement : 50.** Ce sont désormais presque tous des FRAGMENTS, et le lot le plus
+      homogène est celui de `js/lecon-09` (**4 blocs sur le même `user`**), suivi de `taches` (3),
+      `etatInitial` (3), `UnionFind` (2), `audioCtx` (2) : des noms qu'un bloc précédent DÉCLARE
+      mais que ni le repli ni le ré-ancrage ne rendent visibles — c'est cette mécanique-là qu'il
+      faut mesurer avant d'écrire quoi que ce soit, et non le contenu.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

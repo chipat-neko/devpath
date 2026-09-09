@@ -146,6 +146,42 @@ function lecons(cible) {
  * que la page ÉCRIT à côté du code, en commentaire, avant l'exécution. */
 var ERREUR_ANNONCEE = /\/\/[^\n]*\b(erreur|Erreur|ERREUR|throw|lève|leve|refuse|rejett?e|échoue|echoue|plante|invalide)\b/;
 
+/* --- L'ERREUR ANNONCÉE PAR SON NOM TECHNIQUE (2026-09-09, point B2b-13) ---------------
+ * Le motif ci-dessus ne connaît que des mots français. Or une leçon annonce le plus
+ * souvent l'erreur telle que l'apprenant la LIRA : `//=> TypeError: Assignment to
+ * constant variable.` Des blocs étaient donc comptés en panne alors que la page écrit,
+ * juste à côté de la ligne fautive, le message exact que le clic produit.
+ *
+ * ⚠️ LA RÈGLE EXIGE LE NOM **ET** LE DÉBUT DU MESSAGE, et ce n'est pas un excès de
+ * prudence : la mesure a montré ce que le nom seul aurait masqué. `js/lecon-64.html` #7
+ * porte `// TypeError (circular)` et échouait sur « TypeError: Converting circular
+ * structure to JSON » — le nom concordait, l'annonce avait l'air juste, et c'était en
+ * réalité un DÉFAUT DE CE VÉRIFICATEUR (son `structuredClone` contrefait, corrigé plus
+ * bas). Le nom seul l'aurait enterré ; l'exigence du message l'a laissé en panne, donc
+ * visible, donc corrigé.
+ *
+ * Le nom est cherché dans les COMMENTAIRES SEULS : un `throw new TypeError("…")` du corps
+ * n'est pas une annonce faite au lecteur, et une chaîne qui cite un nom d'erreur non plus. */
+function commentairesDe(code) {
+  var out = [];
+  code.replace(/\/\*[\s\S]*?\*\//g, function (c) { out.push(c); return c; });
+  code.replace(/(^|[^:"'`\\])\/\/[^\n]*/gm, function (c) { out.push(c); return c; });
+  return out.join('\n');
+}
+function erreurAnnoncee(code, msg) {
+  if (ERREUR_ANNONCEE.test(code)) return true;
+  if (!msg) return false;
+  var m = /^([A-Za-z]*Error)\b:?\s*([\s\S]*)$/.exec(msg);
+  if (!m) return false;
+  var com = commentairesDe(code);
+  if (!new RegExp('\\b' + m[1] + '\\b').test(com)) return false;
+  /* Les trois premiers mots du message : assez pour séparer deux `TypeError` qui n'ont
+     rien à voir, assez peu pour tolérer une fin de message qui varie — le nom de la
+     propriété lue, par exemple. */
+  var debut = m[2].split(/\s+/).slice(0, 3).join(' ');
+  return !!debut && com.toLowerCase().indexOf(debut.toLowerCase()) !== -1;
+}
+
 /* --- LES GLOBALES D'UN VRAI WORKER, ET POURQUOI CETTE LISTE EXISTE (2026-09-09, B2b-2)
  * Ce contexte a été écrit « au minimum » : console, minuteries, `self`. Résultat, il
  * déclarait EN PANNE des blocs qui marchent parfaitement chez l'apprenant, simplement
@@ -185,7 +221,7 @@ var GLOBALES_WORKER = ['TextEncoder', 'TextDecoder', 'performance', 'EventTarget
   'URL', 'URLSearchParams', 'Blob', 'AbortController', 'AbortSignal', 'ReadableStream',
   'WritableStream', 'TransformStream', 'FormData', 'Headers', 'Request', 'Response',
   'atob', 'btoa', 'PerformanceObserver', 'crypto', 'DOMException', 'MessageChannel',
-  'BroadcastChannel', 'CompressionStream', 'DecompressionStream'];
+  'BroadcastChannel', 'CompressionStream', 'DecompressionStream', 'structuredClone'];
 
 /* Le contexte d'exécution : celui du Worker, pas celui de Node.
    `console` est détourné comme dans WORKER_SRC ; les globales que le Worker possède et
@@ -225,7 +261,15 @@ function contexteWorker(sorties) {
     setInterval: function () { return 0; },
     clearTimeout: faux, clearInterval: faux,
     queueMicrotask: function (f) { try { f(); } catch (e) {} },
-    structuredClone: function (v) { return JSON.parse(JSON.stringify(v)); },
+    /* ⚠️ `structuredClone` A LONGTEMPS ÉTÉ UNE CONTREFAÇON ICI (corrigé le 2026-09-09,
+       point B2b-13) : `JSON.parse(JSON.stringify(v))`, c'est-à-dire l'exact CONTRAIRE de
+       ce que la fonction fait. Le vrai clonage structuré traverse les cycles, préserve
+       `Date`, `Set` et `Map` — c'est même la LEÇON de `pages/js/lecon-64.html`, dont un
+       bloc était donc déclaré en panne (« Converting circular structure to JSON ») alors
+       que l'apprenant y voit cinq lignes justes, mesuré au clic dans Chrome. Troisième
+       occurrence du défaut des points B2b-2 et B2b-12 : l'outil mesurait sa propre
+       pauvreté. Node fournit le VRAI `structuredClone` depuis la v17 ; il est donc
+       injecté comme les autres globales, par la liste ci-dessus. */
     self: null, globalThis: null
   };
   GLOBALES_WORKER.forEach(function (n) {
@@ -400,7 +444,7 @@ fichiers.forEach(function (f) {
         parRepli = true; replies++;
         listeReplies.push(rel + ' #' + (i + 1) + '  (' + essai.lignes + ' ligne(s))' +
           (prf !== prefixe ? '  [ré-ancré]' : '') +
-          (ERREUR_ANNONCEE.test(code) ? '  ⚠ ERREUR ANNONCÉE ÉTEINTE' : ''));
+          (erreurAnnoncee(code, msg) ? '  ⚠ ERREUR ANNONCÉE ÉTEINTE' : ''));
         msg = null;
       }
     }
@@ -411,7 +455,7 @@ fichiers.forEach(function (f) {
       return;
     }
     /* Une erreur que la page ANNONCE en commentaire n'est pas une panne : c'est la leçon. */
-    if (ERREUR_ANNONCEE.test(code)) {
+    if (erreurAnnoncee(code, msg)) {
       annoncees++; parCours[cours].annoncees++;
       if (!SEULEMENT_ERREURS && !CAUSES) console.log('  ANN ' + rel + ' #' + (i + 1) + ' — ' + msg.slice(0, 70) + '  (annoncée)');
       return;
