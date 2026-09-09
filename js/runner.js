@@ -85,9 +85,39 @@
      ⚠️ Fonction LUE par `tools/verif-js.js`, jamais recopiee. */
   function estUneSuiteDeTests(texte) {
     var t = String(texte);
-    if (!/(?:^|\n)[ \t]*(?:test|describe|it|beforeEach|afterEach|beforeAll|afterAll)\s*\(\s*['"`]/.test(t)) return false;
+    /* Forme simple : `test("…", …)`. Forme PARAMÉTRÉE : `test.each([…])("…", …)` — le
+       libellé n'y est plus le premier argument, il vient après le tableau de cas, si bien
+       que le premier motif ne le voyait pas (2026-09-09, point B2b-6 : 6 blocs du cours
+       `tests`, tous en `ReferenceError: test is not defined`). Les suffixes `.each`,
+       `.only`, `.skip`, `.todo`, `.concurrent`, `.failing` n'appartiennent qu'aux lanceurs
+       de tests : aucun programme autonome ne les porte. Impact mesuré en EXÉCUTANT chaque
+       bloc désigné : 6 visés, 6 déjà en panne, ZÉRO vivant. */
+    if (!/(?:^|\n)[ \t]*(?:test|describe|it|beforeEach|afterEach|beforeAll|afterAll)\s*\(\s*['"`]/.test(t) &&
+        !/(?:^|\n)[ \t]*(?:test|describe|it)\.(?:each|only|skip|todo|concurrent|failing)\b/.test(t)) return false;
     if (/(?:function|const|let|var)\s+(?:test|describe|it)\s*[=(]/.test(t)) return false;
     return true;
+  }
+
+  /* UN SERVICE WORKER N'EST PAS UN WEB WORKER (2026-09-09, point B2b-6). `sw.js` s'installe
+     dans un cycle de vie que le navigateur pilote : `self.addEventListener("install", …)`,
+     `"activate"`, `"fetch"`, `skipWaiting()`, `clients.claim()`. Chargé dans le Worker du
+     bouton, il enregistre des écouteurs pour des événements qui ne viendront JAMAIS.
+     ⚠️ C'EST LE PREMIER LOT OÙ LE VÉRIFICATEUR SE TROMPAIT DANS L'AUTRE SENS, et seule une
+     sonde dans un vrai Worker de Chrome (`file://`, DNS coupé) pouvait le dire :
+     `tools/verif-js.js` les comptait en panne sur « self.addEventListener is not a
+     function », un `TypeError` que son contexte `vm` FABRIQUE — car un vrai Worker possède
+     `addEventListener`, et les 7 blocs de `pages/html/lecon-42.html` s'y exécutent **sans
+     la moindre erreur, en n'affichant RIEN**. Le bouton était donc pire qu'on ne le
+     croyait : il ne rendait pas un message d'erreur, il rendait le VIDE, sous un
+     commentaire qui promet « à l'install, les 4 ressources sont en cache et dispo hors
+     ligne ». Les événements retenus n'existent que dans un service worker ; `message`, qui
+     est légitime dans un Web Worker, est délibérément absent de la liste.
+     Impact mesuré : 6 blocs visés, ZÉRO vivant.
+     ⚠️ Fonction LUE par `tools/verif-js.js` et `tools/verif-clic.js`, jamais recopiée. */
+  function estUnServiceWorker(texte) {
+    var t = String(texte);
+    if (/self\.addEventListener\s*\(\s*['"`](?:install|activate|fetch|push|sync|periodicsync|notificationclick)['"`]/.test(t)) return true;
+    return /(?:^|[^\w$.])(?:self\.skipWaiting|clients\.claim)\s*\(/.test(t);
   }
 
   /* UN FRAGMENT DE SERVEUR N'EST PAS UN PROGRAMME DU NAVIGATEUR (2026-09-09, point B2b-3).
@@ -917,7 +947,8 @@
       if (js) {
         if (BROWSER_ONLY.test(js.textContent) || estUnFichierJson(js.textContent) ||
             estUneSuiteDeTests(js.textContent) || estUnFragmentServeur(js.textContent) ||
-            estDuDomDePage(js.textContent) || neCompilePas(js.textContent)) {
+            estDuDomDePage(js.textContent) || estUnServiceWorker(js.textContent) ||
+            neCompilePas(js.textContent)) {
           block.setAttribute("data-runner", "skip");
           return;
         }

@@ -1408,6 +1408,85 @@ résultat avant le clic.
       recenser demande un balayage des 2 418 blocs `language-javascript`, c'est-à-dire une case à
       elle seule.
 
+- [x] **B2b-6 · Les deux derniers lots homogènes : suites de tests PARAMÉTRÉES et SERVICE WORKERS —
+      12 blocs écartés, ZÉRO vivant, 171 → 159. Et le vérificateur pris en défaut DANS L'AUTRE SENS
+      pour la première fois : il criait au `TypeError` là où l'apprenant ne voyait RIEN DU TOUT.**
+
+      **Mesure reproduite avant de toucher à quoi que ce soit** : 1 687 blocs avec bouton,
+      **1 492 aboutis, 171 EN PANNE, 81 non compilables** — identique au chiffre laissé par B2b-5.
+      Deux causes de tête restaient homogènes, à 6 blocs chacune.
+
+      **(a) Les suites de tests PARAMÉTRÉES : 6 blocs, ZÉRO vivant.** `estUneSuiteDeTests`, écrite en
+      B2b-1, exige un libellé entre guillemets juste après `test(`. Or la forme paramétrée s'écrit
+      `test.each([…])("somme(%i, %i) vaut %i", …)` : le libellé n'est plus le premier argument, il
+      vient **après le tableau de cas**, et le motif ne le voyait pas. Six blocs du cours `tests`
+      restaient donc en `ReferenceError: test is not defined` — la même maladie que les 36 déjà
+      traitées, sous une autre orthographe. Les suffixes retenus (`.each`, `.only`, `.skip`, `.todo`,
+      `.concurrent`, `.failing`) n'appartiennent qu'aux lanceurs : aucun programme autonome ne les
+      porte, et la garde de B2b-1 (le bloc qui définit lui-même son harnais) reste en place. Impact
+      mesuré en EXÉCUTANT chaque bloc désigné : **6 visés, 6 déjà en panne, ZÉRO vivant**
+      (`tests/lecon-07` ×4, `tests/lecon-08` #6, `tests/lecon-13` #2).
+
+      **(b) Les service workers : 6 blocs, ZÉRO vivant — et une leçon d'instrument.**
+      ⚠️ **C'EST LE PREMIER LOT OÙ LE VÉRIFICATEUR SE TROMPAIT DANS L'AUTRE SENS.** `verif-js.js` les
+      comptait en panne sur « self.addEventListener is not a function » — un `TypeError` que son
+      contexte `vm` **fabrique**, puisque son `self` est un objet nu. Un VRAI Worker, lui, possède
+      `addEventListener`. Une sonde a donc exécuté les 7 blocs de `pages/html/lecon-42.html` dans un
+      vrai Worker de Chrome (`file://`, DNS coupé, Blob → Worker par la mécanique exacte de
+      `runner.js`, console détournée comme dans `WORKER_SRC`) :
+
+      | bloc | erreur | sortie |
+      |---|---|---|
+      | `html/lecon-42` #2 #3 #5 #6 #7 #8 #9 | **aucune** (7 sur 7) | **RIEN** (7 sur 7) |
+
+      Le bouton était donc pire qu'on ne le croyait : il ne rendait pas un message d'erreur, **il
+      rendait le vide** — sous un commentaire qui promet « à l'install, les 4 ressources sont en
+      cache et dispo hors ligne ». C'est logique : un `sw.js` s'installe dans un cycle de vie que le
+      navigateur pilote, et dans le Worker du bouton il enregistre des écouteurs pour des événements
+      qui ne viendront **jamais**. Sans cette sonde, on aurait « réparé » l'instrument en ajoutant
+      `addEventListener` au contexte `vm` — et ces 6 blocs seraient devenus **verts**, muets et verts,
+      ce qui est exactement le faux vert que B2b-2 s'était interdit. Les événements retenus
+      (`install`, `activate`, `fetch`, `push`, `sync`, `periodicsync`, `notificationclick`) n'existent
+      que dans un service worker ; **`message` est délibérément absent de la liste**, car il est
+      légitime dans un Web Worker ordinaire. Impact mesuré : **6 visés, ZÉRO vivant.**
+
+      **Écriture.** `estUneSuiteDeTests` élargie et `estUnServiceWorker(texte)` ajoutée dans
+      `js/runner.js` ; `tools/verif-js.js` et `tools/verif-clic.js` les **LISENT**, jamais ne les
+      recopient.
+
+      **Mesure finale : 1 675 blocs avec bouton, 714 écartés (+12), 1 492 aboutis (89,1 %, contre
+      88,4 %), 22 annoncées, 2 non concluants, 159 EN PANNE, 81 non compilables.** Le nombre
+      d'aboutis est **rigoureusement inchangé** : 1 492 avant, 1 492 après — et il n'a pas baissé
+      d'une unité depuis B2b-2. Cliquets fixés à 159 et 81.
+
+      **Preuve par le navigateur** (`verif-clic.js`, 7 pages : 4 touchées et **3 témoins**), règles
+      actives puis neutralisées, `js/runner.js` restauré à l'octet près (md5 `6ea0df45…` identique
+      avant et après) :
+
+      | | boutons posés dans le DOM rendu |
+      |---|---|
+      | règles neutralisées | **34** cliqués sur 34 attendus |
+      | règles actives | **22** cliqués sur 22 attendus |
+
+      **12 boutons morts retirés**, exactement les 12 blocs désignés, et le compte tombe à l'unité
+      près sur la prévision faite depuis le disque (`tests/lecon-07` 1 bouton restant,
+      `tests/lecon-08` 0, `tests/lecon-13` 0, `html/lecon-42` 1, plus les témoins `js/lecon-01` 9,
+      `algo/lecon-01` 9, `formats/lecon-02` 2 = 22). **Les 3 témoins gardent leurs 20 boutons**,
+      couverture complète des deux côtés, 0 divergence.
+
+      **Non-régression** : `verif-html.js` 1 629 fichiers, **0 grave / 0 attention** ;
+      `verif-donnees.js` 25 contrôles, **0 erreur** ; `verif.js --rapide` **40 étapes, tout vert,
+      144,7 s** ; `node --check` sur les trois fichiers touchés ; 0 URL vers un CDN. Aucun fichier de
+      contenu modifié.
+
+      **Reste au gisement : 159**, et il n'y a plus de lot. Par cours : `js` 55, `projets-js` 33,
+      `algo` 18, `patterns` 10, `html` 8, `securite` 7, `tests` 6, `nodejs` 5, `vue` 4. Causes de
+      tête : 7 `bouton`, 7 `etatInitial`, 5 `Tache`, 5 `user`, 4 `ctx`, 4 `UnionFind` — c'est-à-dire
+      du **fragment interne** presque pur, un bloc qui poursuit le précédent de sa leçon. Aucune
+      règle générale ne le couvre. Les deux voies restantes sont écrites depuis B2b-3 et n'ont pas
+      bougé : réparation leçon par leçon, ou **décider que le moteur exécute un bloc dans le contexte
+      cumulé de sa leçon** — un vrai chantier, à ouvrir comme tel plutôt qu'à commencer ici.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

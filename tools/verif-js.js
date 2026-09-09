@@ -75,6 +75,7 @@ var estUnFichierJson = lireFonction('estUnFichierJson');
 var estUneSuiteDeTests = lireFonction('estUneSuiteDeTests');
 var estUnFragmentServeur = lireFonction('estUnFragmentServeur');
 var estDuDomDePage = lireFonction('estDuDomDePage');
+var estUnServiceWorker = lireFonction('estUnServiceWorker');
 var neCompilePas = lireFonction('neCompilePas');
 
 function dec(s) {
@@ -213,7 +214,8 @@ fichiers.forEach(function (f) {
     /* Même règle que runner.js : un bloc qui touche au navigateur ou à Node n'a pas
        de bouton, il ne compte donc ni dans les réussites ni dans les échecs. */
     if (BROWSER_ONLY.test(code) || estUnFichierJson(code) || estUneSuiteDeTests(code) ||
-        estUnFragmentServeur(code) || estDuDomDePage(code)) { ecartes++; return; }
+        estUnFragmentServeur(code) || estDuDomDePage(code) ||
+        estUnServiceWorker(code)) { ecartes++; return; }
     /* LES BLOCS QUI NE COMPILENT PAS SONT COMPTES A PART, ET C'EST INDISPENSABLE.
        La regle `neCompilePas` (2026-09-09, point B2b-5) retire le bouton d'un bloc que
        JavaScript refuse de compiler. Elle a un effet de bord qu'il serait grave de laisser
