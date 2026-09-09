@@ -74,6 +74,7 @@ function lireFonction(nom) {
 var estUnFichierJson = lireFonction('estUnFichierJson');
 var estUneSuiteDeTests = lireFonction('estUneSuiteDeTests');
 var estUnFragmentServeur = lireFonction('estUnFragmentServeur');
+var estDuDomDePage = lireFonction('estDuDomDePage');
 
 function dec(s) {
   return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
@@ -131,8 +132,23 @@ var ERREUR_ANNONCEE = /\/\/[^\n]*\b(erreur|Erreur|ERREUR|throw|lève|leve|refuse
  * `XMLHttpRequest`, `indexedDB` et `caches` EXISTENT aussi dans ce Worker — la mesure le
  * dit — mais ils exigent un serveur ou le réseau, que le site n'a pas. Les fournir ferait
  * ABOUTIR ici des blocs qui échouent chez l'apprenant : exactement l'inverse du but. Ils
- * restent donc hors du contexte, et un bloc qui les appelle reste compté en panne. */
+ * restent donc hors du contexte, et un bloc qui les appelle reste compté en panne.
+ *
+ * SECONDE PASSE DE LA MÊME SONDE (2026-09-09, point B2b-4), sur 30 noms du DOM cette
+ * fois. Elle a d'abord confirmé ce qu'on venait chercher — `HTMLElement`, `customElements`,
+ * `document`, `window`, `Element`, `Node`, `DOMParser`, `MutationObserver`,
+ * `IntersectionObserver`, `getComputedStyle`, `matchMedia` sont TOUS ABSENTS d'un vrai
+ * Worker — mais elle a surtout trouvé quatre noms PRÉSENTS que ce contexte n'avait pas :
+ * `CustomEvent` (essai : `new CustomEvent('t',{detail:1}).detail` → 1),
+ * `requestAnimationFrame`, `cancelAnimationFrame` et `trustedTypes`.
+ * SEUL `CustomEvent` EST AJOUTÉ, et c'est un choix mesuré, pas une prudence de principe :
+ * Node le fournit nativement, donc c'est le VRAI objet. Les trois autres devraient être
+ * FABRIQUÉS ici, c'est-à-dire inventés — et la mesure dit qu'aucun des 3 blocs concernés
+ * n'en deviendrait vivant : `pages/html/lecon-44.html` #5 et #9 échouent ensuite sur `ctx`
+ * et `canvas`, `pages/js/lecon-59.html` #4 sur `DOMPurify`. Inventer une API pour ne rien
+ * gagner, c'est le risque de B2b-2 pris à l'envers. */
 var GLOBALES_WORKER = ['TextEncoder', 'TextDecoder', 'performance', 'EventTarget', 'Event',
+  'CustomEvent',
   'URL', 'URLSearchParams', 'Blob', 'AbortController', 'AbortSignal', 'ReadableStream',
   'WritableStream', 'TransformStream', 'FormData', 'Headers', 'Request', 'Response',
   'atob', 'btoa', 'PerformanceObserver', 'crypto', 'DOMException', 'MessageChannel',
@@ -195,7 +211,7 @@ fichiers.forEach(function (f) {
     /* Même règle que runner.js : un bloc qui touche au navigateur ou à Node n'a pas
        de bouton, il ne compte donc ni dans les réussites ni dans les échecs. */
     if (BROWSER_ONLY.test(code) || estUnFichierJson(code) || estUneSuiteDeTests(code) ||
-        estUnFragmentServeur(code)) { ecartes++; return; }
+        estUnFragmentServeur(code) || estDuDomDePage(code)) { ecartes++; return; }
     total++;
     parCours[cours] = parCours[cours] || { total: 0, ok: 0, annoncees: 0 };
     parCours[cours].total++;

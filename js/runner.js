@@ -118,6 +118,34 @@
     return true;
   }
 
+  /* LE DOM D'UNE PAGE N'EXISTE PAS DANS UN WORKER (2026-09-09, point B2b-4). Un composant
+     web (`class Badge extends HTMLElement`, `customElements.define(…)`) ou un observateur
+     de mise en page (`IntersectionObserver`, `MutationObserver`, `getComputedStyle`…)
+     s'adresse à un document que le Worker n'a pas. `BROWSER_ONLY` nommait déjà `document`
+     et `window`, mais ces blocs-là ne les citent jamais : ils reçoivent leur élément par
+     `this`, et le bouton rendait « HTMLElement is not defined ».
+     ⚠️ CE LOT AVAIT ÉTÉ MESURÉ PUIS REFUSÉ AU POINT B2b-1, et pour une bonne raison : le
+     critère naturel de l'époque (`Element`, `Node`, `FormData`…) visait 37 blocs dont
+     **11 VIVANTS**, parce qu'`Element` et `Node` sont des noms de variables ordinaires.
+     Ce qui a permis de le rouvrir, ce n'est pas une meilleure idée, c'est une MESURE : une
+     sonde a demandé à un vrai Worker de Chrome (page `file://`, DNS coupé, Blob → Worker
+     comme ci-dessous) quels noms il possède. `HTMLElement`, `customElements`, `document`,
+     `window`, `Element`, `Node`, `DOMParser`, `MutationObserver`, `IntersectionObserver`,
+     `getComputedStyle`, `matchMedia` : TOUS ABSENTS. La liste retenue ne garde que des
+     noms qui n'ont aucun autre sens en JavaScript — ni `Element` ni `Node`, justement.
+     GARDE : un bloc qui déclare lui-même l'un de ces noms est autonome, on l'épargne.
+     Impact mesuré AVANT écriture, en EXÉCUTANT chaque bloc désigné : 13 blocs visés,
+     13 déjà en panne, ZÉRO vivant.
+     ⚠️ Fonction LUE par `tools/verif-js.js` et `tools/verif-clic.js`, jamais recopiée. */
+  function estDuDomDePage(texte) {
+    var t = String(texte);
+    var noms = 'HTMLElement|customElements|DOMParser|MutationObserver|IntersectionObserver|ResizeObserver|getComputedStyle|matchMedia|ShadowRoot|NodeFilter|XPathResult';
+    var m = t.match(new RegExp('extends\\s+HTML\\w*Element(?![\\w$])|(?:^|[^\\w$.À-ɏ])(' + noms + ')(?![\\w$À-ɏ])'));
+    if (!m) return false;
+    if (m[1] && new RegExp('(?:const|let|var|function|class)\\s+' + m[1] + '\\b').test(t)) return false;
+    return true;
+  }
+
   /* `import` et `export` en TETE DE LIGNE (2026-09-09, point B2 du chantier V17) : un
      module ES ne s'evalue pas dans le Worker, qui recoit du script classique — le bouton
      rendait « Cannot use import statement outside a module », premiere cause d'echec du
@@ -856,7 +884,8 @@
 
       if (js) {
         if (BROWSER_ONLY.test(js.textContent) || estUnFichierJson(js.textContent) ||
-            estUneSuiteDeTests(js.textContent) || estUnFragmentServeur(js.textContent)) {
+            estUneSuiteDeTests(js.textContent) || estUnFragmentServeur(js.textContent) ||
+            estDuDomDePage(js.textContent)) {
           block.setAttribute("data-runner", "skip");
           return;
         }

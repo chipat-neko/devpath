@@ -1213,6 +1213,74 @@ résultat avant le clic.
       alors il faut décider que le moteur exécute un bloc dans le contexte cumulé de la leçon, ce qui
       est un vrai chantier à part.
 
+- [x] **B2b-4 · Le lot DOM, refusé faute de critère sûr en B2b-1, rouvert par une SONDE : 13 blocs
+      écartés, 0 vivant. Et la même sonde a repris l'instrument en défaut — 2 blocs déclarés en panne
+      à tort. 257 → 242, aboutis 1 490 → 1 492.**
+
+      **Ce point ne s'est pas décidé par une meilleure idée, mais par une mesure.** B2b-1 avait
+      MESURÉ puis REFUSÉ ce lot : le critère naturel de l'époque (`HTMLElement|Element|Node|FormData…`)
+      visait 37 blocs **dont 11 VIVANTS**, parce qu'`Element` et `Node` sont des noms de variables
+      ordinaires. Ce qui manquait pour trancher, c'était de savoir ce qu'un vrai Worker POSSÈDE. Une
+      sonde a donc été refaite sur le modèle de B2b-2 : page `file://`, DNS coupé, Worker créé par la
+      mécanique exacte de `runner.js` (Blob → `new Worker`), interrogé sur **30 noms du DOM** puis
+      soumis à **7 essais d'exécution**.
+
+      **Résultat : `HTMLElement`, `customElements`, `document`, `window`, `Element`, `Node`,
+      `DOMParser`, `MutationObserver`, `IntersectionObserver`, `ResizeObserver`, `getComputedStyle`,
+      `matchMedia`, `ShadowRoot`, `Image`, `Audio`, `Range`, `Selection` — TOUS ABSENTS**
+      (`class X extends HTMLElement {}` → « HTMLElement is not defined » ; `new DOMParser()` →
+      « DOMParser is not defined »). Un bloc qui les emploie ne pourra jamais rien rendre à
+      l'apprenant. La règle `estDuDomDePage` ne retient donc que des noms sans autre sens en
+      JavaScript — ni `Element` ni `Node`, justement — plus le motif `extends HTML*Element`.
+      Impact mesuré en EXÉCUTANT chaque bloc désigné : **13 visés, 13 déjà en panne, ZÉRO vivant**
+      (`html/lecon-24` ×4, `lecon-30` ×4, `lecon-31`, `lecon-40` ×2, `lecon-46`, `lecon-47`).
+
+      ⚠️ **LA MÊME SONDE A TROUVÉ L'INSTRUMENT ENCORE EN DÉFAUT — B2b-2 n'avait pas tout vu.** Quatre
+      noms sont **PRÉSENTS** dans le Worker et manquaient au contexte `vm` : `CustomEvent`,
+      `requestAnimationFrame`, `cancelAnimationFrame`, `trustedTypes`. **Seul `CustomEvent` a été
+      ajouté**, et c'est encore la mesure qui l'a décidé, pas la prudence : Node le fournit
+      nativement, donc c'est le VRAI objet, tandis que les trois autres devraient être FABRIQUÉS,
+      c'est-à-dire inventés — et aucun des 3 blocs concernés n'en deviendrait vivant
+      (`html/lecon-44` #5 et #9 échouent ensuite sur `ctx` et `canvas`, `js/lecon-59` #4 sur
+      `DOMPurify`). Inventer une API pour ne rien gagner, c'est prendre le risque de B2b-2 à l'envers.
+
+      **Preuve directe que les 2 blocs gagnés sont VRAIMENT vivants**, en les exécutant dans un vrai
+      Worker de Chrome (`file://`, DNS coupé, console détournée comme `runner.js`) :
+
+      | bloc | ce que l'apprenant voit |
+      |---|---|
+      | `js/lecon-49` #6 | `42` |
+      | `js/lecon-64` #1 | `Ajouté : {"id":7,"nom":"Clavier"}` |
+
+      **Mesure finale : 1 768 blocs avec bouton, 621 écartés (+13), 1 492 aboutis (84,4 %, contre
+      1 490), 32 annoncées, 2 non concluants, 242 EN PANNE.** Le nombre d'aboutis **MONTE** de 2 et
+      n'a baissé à aucune étape. Cliquet descendu à 242.
+
+      **Preuve par le navigateur** (`verif-clic.js`, 6 pages : 3 touchées et **3 témoins**, dont
+      `js/lecon-49` qui doit GARDER son bouton), règle active puis neutralisée, `js/runner.js`
+      restauré à l'octet près (md5 `f723968c…` identique) :
+
+      | | boutons posés dans le DOM rendu |
+      |---|---|
+      | règle neutralisée | **30** cliqués sur 30 attendus |
+      | règle active | **20** cliqués sur 20 attendus |
+
+      **10 boutons de moins**, exactement les 10 blocs que la règle désigne sur ces pages
+      (`html/lecon-24` ×4, `html/lecon-30` ×4, `html/lecon-40` ×2) : les 3 témoins sont intacts, et
+      couverture complète des deux côtés, 0 divergence.
+
+      **Non-régression** : `verif-html.js` 1 629 fichiers, **0 grave / 0 attention** ;
+      `verif-donnees.js` 25 contrôles, **0 erreur** ; `verif.js --rapide` **40 étapes, tout vert, 137,4 s** ;
+      `node --check` sur les trois fichiers touchés ; 0 URL vers un CDN. `verif-clic.js` lit désormais
+      les cinq règles du bouton (dette ouverte en B2b-3 : une règle ajoutée au moteur doit être
+      ajoutée aux DEUX vérificateurs qui la lisent).
+
+      **Reste au gisement : 242**, et le lot suivant n'est plus un lot : c'est du FRAGMENT INTERNE
+      (`Tache` 5, `etatInitial` 8, `bouton` 8, `UnionFind` 4 — un bloc qui poursuit le précédent de sa
+      leçon), plus 24 `await` de tête et 15 erreurs de syntaxe. Aucune règle générale ne les couvre :
+      soit réparation leçon par leçon, soit décider que le moteur exécute un bloc dans le contexte
+      cumulé de sa leçon — un vrai chantier, à ouvrir comme tel.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf
