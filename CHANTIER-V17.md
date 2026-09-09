@@ -3090,6 +3090,65 @@ résultat avant le clic.
       (`requete`), `cicd/lecon-10` #1 (`flags`), `vue/lecon-06` #1 et #2 et `vue/lecon-10` #8
       (`Accueil`, `defineStore`). Même méthode, un cours par passe.
 
+- [x] **B2b-22 · Le reste du lot NULLE-PART, dans cinq autres cours : 6 blocs sur 8 fermés,
+      les 2 derniers refusés POUR UNE RAISON — 34 blocs en panne → 27, aboutis 1 559 → 1 566.**
+
+      **Le lot NULLE-PART est un lot de NATURES DIFFÉRENTES, et c'est ce que la passe a appris.**
+      Dans le cours `js` (B2b-21), les 11 blocs manquaient d'une DONNÉE. Ici, les 8 restants
+      manquent d'une BIBLIOTHÈQUE : `React`, `req`, `requete`, `flags`, `Accueil`, `defineStore`,
+      `z`. La question n'est donc plus « quelle donnée fournir » mais « **a-t-on le droit de
+      simuler cette bibliothèque ?** » — et la réponse n'est pas la même partout.
+
+      **Les 6 blocs fermés, et pourquoi la simulation y est légitime.**
+      · `react/lecon-02` #1 : la leçon écrit noir sur blanc, deux lignes plus bas, que « le JSX
+      produit des objets JavaScript ordinaires ». Une `React.createElement` de trois lignes ne
+      trahit rien — elle DÉMONTRE la phrase. Cliqué : `{"type":"h1","props":{"className":"titre",
+      "children":["Bonjour"]}}`.
+      · `nodejs/lecon-10` #3 : `const req = { url: "/produits?tri=prix" };` — la valeur EXACTE
+      que le bloc précédent de la même leçon annonce en commentaire. Cliqué : `/produits`
+      puis `prix`, mot pour mot les deux commentaires du bloc, qui n'avaient jamais été vérifiés.
+      · `securite/lecon-01` #2 : le sujet même de l'exercice est qu'une entrée d'URL est du
+      TEXTE. `{ query: { age: "42" } }` puis `console.log(age, typeof age)` → **`42 number`**.
+      · `cicd/lecon-10` #1 et #2 : un service de feature flags réduit à une table locale, et les
+      deux branches jouées. Cliqué : `nouveau panier` ; puis `v2 : clavier` **et** `v1 : clavier`.
+      Le #2 était en prime dans la catégorie AUTRE (`SyntaxError: Illegal return statement` : deux
+      `return` au niveau racine) — enveloppé dans la fonction que son énoncé demandait, il tombe
+      des deux catégories à la fois. **Deux accents manquants corrigés au passage** dans son
+      commentaire : « deployee, active » → « déployée, activée ».
+      · `vue/lecon-06` #1 et `vue/lecon-10` #8 : une table de routes n'est qu'un tableau
+      d'objets. Les composants réduits à `{ nom: 'Accueil' }` ne mentent pas — la table n'en voit
+      pas plus. Cliqué : `["/","/produits","/produits/:id"]` et `["/","/contact"]`.
+
+      ⚠️ **LES 2 REFUSÉS, ET LE CRITÈRE QUI LES REFUSE.** `vue/lecon-06` #2 (`defineStore`,
+      Pinia) et `nodejs/lecon-22` #5 (`z`, zod) resteraient EN PANNE. Ils pourraient être fermés
+      de la même façon — une fausse `defineStore`, un faux `z` — et **c'est précisément ce qu'il
+      ne faut pas faire** : une `ref` simulée n'est pas réactive, un `z.string().min(1)` simulé
+      ne valide pas comme zod. L'apprenant cliquerait, verrait un résultat plausible, et
+      apprendrait un comportement qui n'est pas celui de la bibliothèque. **Le critère qui sépare
+      les six des deux** : on simule ce que la leçon présente DÉJÀ comme un mécanisme (un objet
+      décrit par `createElement`, un tableau de routes, une table de flags) ; on ne simule pas ce
+      dont la leçon vend le COMPORTEMENT (la réactivité, la validation). Deux blocs en panne
+      valent mieux que deux blocs qui enseignent faux.
+
+      **Mesures.** `verif-js.js` : **1 613 blocs à bouton (inchangé), 1 566 aboutis (+7),
+      27 EN PANNE (−7)**, 81 non compilables et 35 orphelins **strictement inchangés** — aucun
+      bouton perdu ni gagné par accident. Carte refaite : **NULLE-PART 19 → 2**, AUTRE 4 → 3,
+      les autres catégories intactes (BOUTON-AVANT 8, MUET-AVANT 13, PLUS-BAS 1).
+      Preuve Chrome (`verif-clic.js --sorties`, `file://`) : 10 blocs cliqués sur 10 attendus,
+      couverture complète, **0 divergent**. Chaîne : `verif-html.js` 0/0 ; `verif-donnees.js`
+      25 contrôles 0 erreur ; `verif-sorties.js` 0 divergent ; `verif.js --rapide` **42 étapes,
+      tout vert, 119,2 s**. Cliquet descendu à **27**.
+
+      ⚠️ **Un piège d'outillage rencontré ici** : `pages/securite/lecon-01.html` est en **CRLF**
+      quand les autres leçons sont en LF. Un motif de remplacement écrit en LF n'y trouve **zéro**
+      occurrence — silencieusement. Vérifier les fins de ligne du fichier AVANT d'écrire le motif.
+      Second piège, d'affichage celui-là : `tools/preuves/montre-bloc.js` fait traverser un
+      `[\s\S]*?` entre `<figure>` et `<code>`, si bien qu'il attribue parfois au bloc le
+      `data-file` d'une figure ANTÉRIEURE — d'où le bloc JavaScript de `cicd/lecon-10` annoncé
+      « `.github/workflows/deploy.yml` » dans la carte. C'est l'étiquette qui est fausse, pas le
+      contenu ; l'outil n'a pas été corrigé dans cette passe.
+
+
 
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que

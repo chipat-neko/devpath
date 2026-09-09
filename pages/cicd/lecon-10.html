@@ -163,7 +163,16 @@
 
 <p>Le levier le plus puissant&nbsp;: <strong>découpler la livraison du code de son activation</strong>. Un <strong>feature flag</strong> (drapeau de fonctionnalité) est une condition dans le code, pilotée par une configuration <em>externe</em>. On déploie la fonctionnalité <strong>éteinte</strong> (elle est en production mais invisible), puis on l'<strong>allume</strong> quand on veut&nbsp;: pour l'équipe seule, pour 5&nbsp;% des utilisateurs, puis pour tous — le tout <em>sans redéployer</em>.</p>
 
-<figure class="code-block" data-file="un feature flag dans le code"><pre><code class="language-javascript">if (flags.isEnabled("nouveau-panier", user)) {
+<figure class="code-block" data-file="un feature flag dans le code"><pre><code class="language-javascript">// En production, `flags` interroge un service externe. Ici, une simple table.
+const config = { "nouveau-panier": ["equipe"] };
+const flags = {
+  isEnabled: (nom, u) =&gt; (config[nom] || []).includes(u.groupe),
+};
+const user = { nom: "Ada", groupe: "equipe" };
+function renderNouveauPanier() { console.log("nouveau panier"); }
+function renderAncienPanier() { console.log("ancien panier"); }
+
+if (flags.isEnabled("nouveau-panier", user)) {
   renderNouveauPanier();     // déployé, mais activé seulement si le flag est ON
 } else {
   renderAncienPanier();      // comportement inchangé tant que le flag est OFF
@@ -262,10 +271,21 @@
     - run: ./deploy.sh
 # les « required reviewers » se cochent dans Settings -> Environments</code></pre></figure></details></div>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Enrobe l'appel à une nouvelle fonctionnalité dans un feature flag, avec un repli sur l'ancien comportement.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">if (flags.isEnabled("recherche-v2", user)) {
-  return rechercheV2(query);   // deployee, active seulement si le flag est ON
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Enrobe l'appel à une nouvelle fonctionnalité dans un feature flag, avec un repli sur l'ancien comportement.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// Le service de flags et les deux implémentations, réduits au strict nécessaire
+const config = { "recherche-v2": ["equipe"] };
+const flags = { isEnabled: (nom, u) =&gt; (config[nom] || []).includes(u.groupe) };
+const rechercheV1 = (q) =&gt; "v1 : " + q;
+const rechercheV2 = (q) =&gt; "v2 : " + q;
+
+function rechercher(query, user) {
+  if (flags.isEnabled("recherche-v2", user)) {
+    return rechercheV2(query);   // déployée, activée seulement si le flag est ON
+  }
+  return rechercheV1(query);     // repli tant que le drapeau est OFF
 }
-return rechercheV1(query);     // repli tant que le drapeau est OFF</code></pre></figure></details></div>
+
+console.log(rechercher("clavier", { groupe: "equipe" }));
+console.log(rechercher("clavier", { groupe: "public" }));</code></pre></figure></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Réflexion</span></div><p>Une fonctionnalité vient d'être déployée derrière un flag et provoque des erreurs pour 5&nbsp;% des utilisateurs. Décris la réaction immédiate, puis la suite propre.</p><details><summary>Voir une solution</summary><p><strong>Immédiat</strong>&nbsp;: actionner le <strong>kill switch</strong> — basculer le flag sur OFF. La fonctionnalité disparaît instantanément pour tous, <em>sans</em> redéployer ni rollback&nbsp;; le service revient au comportement de repli. <strong>Ensuite</strong>&nbsp;: corriger la cause au calme (le code fautif est toujours en production, mais inactif), ajouter un test qui reproduit le bug, redéployer, puis <strong>réactiver progressivement</strong> (5&nbsp;% → 100&nbsp;%) en surveillant les métriques. Enfin, une fois stable, <strong>retirer le flag</strong> pour ne pas laisser de dette.</p></details></div>
 
