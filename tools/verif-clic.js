@@ -192,13 +192,33 @@ async function attendrePort(profil, attendre) {
    ⚠️ La barre d'outils N'EST PAS dans le source : `js/main.js` (enhanceCodeBlocks) la
    pose sur toute `.code-block` qui contient un `<pre>`. Le critère disque est donc
    « une figure code-block, un <pre>, un code.language-javascript, hors BROWSER_ONLY ».
-   Un premier jet qui cherchait `code-block__bar` dans le HTML comptait 0 bloc sur 48. */
-var BROWSER_ONLY = (function () {
+   Un premier jet qui cherchait `code-block__bar` dans le HTML comptait 0 bloc sur 48.
+   ⚠️ BROWSER_ONLY N'EST PLUS LA SEULE RÈGLE DU BOUTON, et cet outil ne le savait pas
+   (dette relevée et soldée le 2026-09-09, point B2b-3). Depuis B2a, `runner.js` écarte
+   aussi les FONCTIONS `estUnFichierJson`, `estUneSuiteDeTests` et `estUnFragmentServeur` :
+   8 + 36 + 38 = 82 blocs (comptés) que cet outil tenait encore pour « attendus », donc autant de
+   boutons réclamés qui ne viendraient jamais — et un « MESURE INCOMPLÈTE » perpétuel, du
+   genre qui apprend à ignorer ses propres alertes. On lit donc les quatre règles, aucune
+   n'est recopiée. */
+var reglesRunner = (function () {
   var src = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
   var m = /var BROWSER_ONLY = \/([\s\S]*?)\/;\s*\n/.exec(src);
-  if (!m) return null;
-  try { return new RegExp(m[1]); } catch (e) { return null; }
+  var motif = null;
+  if (m) { try { motif = new RegExp(m[1]); } catch (e) { motif = null; } }
+  var fns = ['estUnFichierJson', 'estUneSuiteDeTests', 'estUnFragmentServeur'].map(function (nom) {
+    var i = src.indexOf('function ' + nom + '(texte) {');
+    if (i < 0) return null;
+    var j = src.indexOf('\n  }', i);
+    if (j < 0) return null;
+    try { return eval('(' + src.slice(i, j + 4) + ')'); } catch (e) { return null; }
+  }).filter(Boolean);
+  return { motif: motif, fns: fns };
 })();
+var BROWSER_ONLY = reglesRunner.motif;
+function ecarteParRunner(code) {
+  if (BROWSER_ONLY && BROWSER_ONLY.test(code)) return true;
+  return reglesRunner.fns.some(function (f) { return f(code); });
+}
 function decode(s) {
   return String(s).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'").replace(/&amp;/g, '&');
@@ -218,7 +238,7 @@ function blocsAttendusDe(page) {
     if (/\sdata-runner(\s*=|[\s>])/i.test(f.slice(0, f.indexOf('<pre')))) continue;
     var c = /<code[^>]*class="[^"]*language-javascript[^"]*"[^>]*>([\s\S]*?)<\/code>/.exec(f);
     if (!c) continue;
-    if (BROWSER_ONLY && BROWSER_ONLY.test(decode(c[1]))) continue;
+    if (ecarteParRunner(decode(c[1]).trim())) continue;
     n++;
   }
   return n;

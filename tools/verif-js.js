@@ -73,6 +73,7 @@ function lireFonction(nom) {
 }
 var estUnFichierJson = lireFonction('estUnFichierJson');
 var estUneSuiteDeTests = lireFonction('estUneSuiteDeTests');
+var estUnFragmentServeur = lireFonction('estUnFragmentServeur');
 
 function dec(s) {
   return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
@@ -193,7 +194,8 @@ fichiers.forEach(function (f) {
     if (!code) return;
     /* Même règle que runner.js : un bloc qui touche au navigateur ou à Node n'a pas
        de bouton, il ne compte donc ni dans les réussites ni dans les échecs. */
-    if (BROWSER_ONLY.test(code) || estUnFichierJson(code) || estUneSuiteDeTests(code)) { ecartes++; return; }
+    if (BROWSER_ONLY.test(code) || estUnFichierJson(code) || estUneSuiteDeTests(code) ||
+        estUnFragmentServeur(code)) { ecartes++; return; }
     total++;
     parCours[cours] = parCours[cours] || { total: 0, ok: 0, annoncees: 0 };
     parCours[cours].total++;

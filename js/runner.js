@@ -90,6 +90,34 @@
     return true;
   }
 
+  /* UN FRAGMENT DE SERVEUR N'EST PAS UN PROGRAMME DU NAVIGATEUR (2026-09-09, point B2b-3).
+     `app.get(...)` d'Express, `db.produits.find(...)` de MongoDB, `res.setHeader(...)` du
+     module http, `router.beforeEach(...)` de Vue Router : ces objets sont fabriqués par un
+     bloc PRÉCÉDENT de la leçon, et surtout ils supposent un serveur et une base de données
+     que le site n'a pas. Le bouton ne pouvait donc rien promettre d'autre qu'un
+     « ReferenceError: app is not defined » — première et deuxième causes d'échec du site
+     après le passage de B2b-2 (17 blocs sur `app`, 13 sur `db`).
+     LE MOTIF EXIGE LA COLONNE ZÉRO, et c'est la mesure qui l'a imposé, pas le goût : la
+     variante « indentation permise » vise 40 blocs dont **2 VIVANTS**
+     (`pages/nodejs/lecon-18.html` #11 et #14 DÉFINISSENT une fonction dont `req` et `res`
+     sont les PARAMÈTRES — le bloc ne les appelle pas, il s'exécute très bien). Une
+     utilisation en colonne zéro est forcément au niveau racine du bloc, donc jamais un
+     paramètre. Ajouter `req` à la liste a été mesuré aussi : exactement les mêmes 38 blocs,
+     donc on garde la liste la plus courte.
+     GARDE : un bloc qui DÉCLARE lui-même l'objet (`const app = …`, `function db(…)`, ou une
+     simple affectation `app = express()`) est autonome — on ne l'écarte pas.
+     Impact mesuré AVANT écriture, en EXÉCUTANT chaque bloc désigné : 38 blocs visés,
+     38 déjà en panne, ZÉRO vivant.
+     ⚠️ Fonction LUE par `tools/verif-js.js`, jamais recopiée. */
+  function estUnFragmentServeur(texte) {
+    var t = String(texte);
+    var m = t.match(/(?:^|\n)(?:await )?(app|db|res|router|prisma|mongoose)[.[]/);
+    if (!m) return false;
+    if (new RegExp('(?:const|let|var|function|class)\\s+' + m[1] + '\\b').test(t)) return false;
+    if (new RegExp('(?:^|[^\\w$.])' + m[1] + '\\s*=[^=]').test(t)) return false;
+    return true;
+  }
+
   /* `import` et `export` en TETE DE LIGNE (2026-09-09, point B2 du chantier V17) : un
      module ES ne s'evalue pas dans le Worker, qui recoit du script classique — le bouton
      rendait « Cannot use import statement outside a module », premiere cause d'echec du
@@ -828,7 +856,7 @@
 
       if (js) {
         if (BROWSER_ONLY.test(js.textContent) || estUnFichierJson(js.textContent) ||
-            estUneSuiteDeTests(js.textContent)) {
+            estUneSuiteDeTests(js.textContent) || estUnFragmentServeur(js.textContent)) {
           block.setAttribute("data-runner", "skip");
           return;
         }

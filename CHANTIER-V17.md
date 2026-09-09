@@ -1128,6 +1128,91 @@ résultat avant le clic.
       **Non-régression** : `node --check tools/verif-js.js` ; `verif.js --rapide` **40 étapes, tout
       vert, 137,7 s**. Aucun fichier de contenu touché — ce point ne modifie que l'outil.
 
+- [x] **B2b-3 · Les fragments de serveur : 38 blocs écartés, ZÉRO vivant retiré — 294 → 257. Et la
+      dette d'outillage que ce point a dû solder d'abord : `verif-clic.js` réclamait encore 82 boutons
+      qui ne viendraient jamais.**
+
+      **Mesure reproduite avant de toucher à quoi que ce soit** (`node tools/verif-js.js --causes`) :
+      1 819 blocs avec bouton, 570 écartés, **1 490 aboutis, 33 annoncées, 2 non concluants,
+      294 EN PANNE** — identique au chiffre laissé par B2b-2, le gisement n'avait pas bougé. Causes de
+      tête, exactement celles annoncées par le plan : **17 `app is not defined`, 13 `db is not
+      defined`**. Ce sont des fragments d'Express (`app.get(…)`), de MongoDB (`db.produits.find(…)`),
+      du module `http` de Node (`res.setHeader(…)`) et de Vue Router (`router.beforeEach(…)`) : leur
+      objet est fabriqué par un bloc PRÉCÉDENT de la leçon, et surtout il suppose un serveur et une
+      base que le site n'a pas. Le bouton ne pouvait promettre qu'une erreur.
+
+      ⚠️ **LA CONTRAINTE DE COLONNE ZÉRO N'EST PAS UN GOÛT D'ÉCRITURE, C'EST LA MESURE QUI L'A
+      IMPOSÉE — et sans elle ce point retirait des boutons vivants.** Trois variantes du critère ont
+      été essayées en EXÉCUTANT chaque bloc désigné :
+
+      | critère | visés | dont VIVANTS |
+      |---|---|---|
+      | indentation permise (`[ \t]*`) | 40 | **2** |
+      | colonne zéro, avec `req` | 38 | 0 |
+      | **colonne zéro, sans `req`** (retenu) | **38** | **0** |
+
+      Les deux vivants de la première variante sont `pages/nodejs/lecon-18.html` #11 et #14 : ils
+      DÉFINISSENT une fonction dont `req` et `res` sont les PARAMÈTRES — le bloc ne les appelle pas, il
+      s'exécute très bien. Une utilisation en colonne zéro est forcément au niveau racine du bloc, donc
+      jamais un paramètre. Ajouter `req` à la liste rend exactement les mêmes 38 blocs : on garde donc
+      la liste la plus courte, `app|db|res|router|prisma|mongoose`. Une **garde** épargne le bloc qui
+      déclare lui-même son objet (`const app = …`, `function db(…)`, ou la simple affectation
+      `app = express()`).
+
+      **Les 38 visés étaient TOUS déjà en panne : 37 comptés KO, plus un 38ᵉ que l'outil rangeait à
+      tort parmi les erreurs « annoncées ».** `pages/nodejs/lecon-12.html` #5 échoue bel et bien sur
+      `app is not defined`, mais son commentaire `// saute au middleware d'erreur` contient le mot
+      *erreur* : le motif `ERREUR_ANNONCEE` y voyait une erreur voulue par la leçon. D'où le
+      déplacement des annoncées de 33 à 32.
+
+      **Écriture.** `estUnFragmentServeur(texte)` dans `js/runner.js`, à côté de `estUneSuiteDeTests`,
+      branchée dans la même condition ; `tools/verif-js.js` la **LIT** par `lireFonction`, jamais ne la
+      recopie.
+
+      ⚠️ **UNE DETTE D'OUTILLAGE A DÛ ÊTRE SOLDÉE AVANT, SINON CE POINT FAISAIT ROUGIR UN AUTRE
+      VÉRIFICATEUR À TORT.** `tools/verif-clic.js` calcule sur le disque combien de boutons il ATTEND,
+      et il ne lisait que `BROWSER_ONLY` — la seule règle qui existait quand il a été écrit. Depuis
+      B2a et B2b-1, `runner.js` en applique trois autres, qui sont des FONCTIONS : `estUnFichierJson`
+      (8 blocs), `estUneSuiteDeTests` (36), et maintenant `estUnFragmentServeur` (38). **82 blocs au
+      total** que `verif-clic` aurait réclamés sans jamais les obtenir, c'est-à-dire un « MESURE
+      INCOMPLÈTE » perpétuel — le genre d'alerte qui apprend à ignorer les alertes, exactement le
+      défaut fermé au point B1e. Il lit désormais les quatre règles.
+
+      **Mesure finale : 1 781 blocs avec bouton, 608 écartés (+38), 1 490 aboutis (83,7 %, contre
+      81,9 %), 32 annoncées, 2 non concluants, 257 EN PANNE.** Le nombre d'aboutis est **inchangé à
+      l'unité près** : 1 490 avant, 1 490 après. Cliquet descendu à 257 (`--fixer`).
+
+      **Preuve par le navigateur** (le vérificateur n'exécute pas `runner.js` : seul un vrai Chrome dit
+      ce que l'apprenant voit), par `verif-clic.js` — l'outil du projet qui CLIQUE — sur 7 pages, les 4
+      touchées et **3 témoins**, règle active puis neutralisée, le fichier restauré ensuite à l'octet
+      près (md5 `123bf037…` identique avant et après) :
+
+      | | boutons posés dans le DOM rendu |
+      |---|---|
+      | règle neutralisée | **32** cliqués sur 32 attendus |
+      | règle active | **23** cliqués sur 23 attendus |
+
+      **9 boutons de moins**, et ce sont exactement les 9 blocs que la règle désigne sur ces pages
+      (`nodejs/lecon-11` #2 #3, `nosql/lecon-07` #1 #2, `securite/lecon-06` #1 #2 #4, `vue/lecon-10`
+      #7 #10) : l'écart tombe à l'unité près sur la prévision, donc **aucun témoin n'est entamé**.
+      Couverture complète dans les deux relevés, 0 divergence entre ce que la page imprime et ce que le
+      clic rend.
+
+      **Non-régression** : `verif-html.js` 1 629 fichiers, **0 grave / 0 attention** ;
+      `verif-donnees.js` 25 contrôles, **0 erreur** ; `verif.js --rapide` **40 étapes, tout vert,
+      137,0 s** ; `node --check` sur `js/runner.js`, `tools/verif-js.js` et `tools/verif-clic.js` ;
+      0 URL vers un CDN dans les trois fichiers touchés. Aucun fichier de contenu modifié : ce point ne
+      touche qu'une règle du moteur et deux vérificateurs.
+
+      **Reste au gisement : 257.** Les causes de tête sont maintenant 24 `await is only valid in
+      async`, 15 `Unexpected token`, 10 `HTMLElement is not defined`, 8 `etatInitial is not defined`,
+      8 `bouton is not defined`. Par cours : `js` 92, `projets-js` 34, `html` 29, `algo` 28,
+      `patterns` 13, `nodejs` 12, `tests` 12, `securite` 9, `vue` 9. Le reste est très majoritairement
+      du FRAGMENT INTERNE (un bloc qui poursuit le précédent de la même leçon : `Tache`, `UnionFind`,
+      `etatInitial`) — celui-là ne se débranche pas par une règle, il se répare leçon par leçon, ou
+      alors il faut décider que le moteur exécute un bloc dans le contexte cumulé de la leçon, ce qui
+      est un vrai chantier à part.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf
