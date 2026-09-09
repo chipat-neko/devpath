@@ -483,7 +483,7 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
       `git checkout` a retouché ce fichier ou non. `verif.js --rapide` **tout vert, 40 étapes, 136,4 s** ;
       site entier rejoué : **3 411 blocs, 1 058 porteurs d'annonce, 0 divergence**.
 
-- [ ] **A9 · `verif-clic.js` ne juge jamais tous les blocs, et l'écart varie.** Deux mesures du
+- [x] **A9 · `verif-clic.js` ne juge jamais tous les blocs, et l'écart varie.** Deux mesures du
       2026-09-09 : **498 / 513** blocs cliqués dans la chaîne (1 584,7 s), **512 / 513** relancé seul
       (1 081 s), **504 / 513** au rejeu de la chaîne (1 361,3 s) — trois passages, trois valeurs. L'outil a raison de sortir en 2 plutôt que d'annoncer « tout concorde » (c'est l'acquis
       du V17/A3), mais il **ne peut pas être vert**, donc `--complet` ne peut jamais l'être non plus :
@@ -491,6 +491,38 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
       dit qu'ils ne sont pas toujours les mêmes — et rendre la couverture soit complète, soit
       **explicitement bornée** (un bloc qu'on décide de ne pas juger doit être nommé et compté à part,
       comme le sont déjà les 51 « sans bloc de sortie à comparer »).
+
+      **FAIT le 2026-09-09.** *Quatrième mesure d'abord* : **512 / 513** (1 090 s) — quatre passages,
+      **quatre valeurs** (498, 512, 504, 512). Le résumé ne disait que le total : impossible de savoir
+      **où** la couverture se perdait. Premier correctif, donc : le relevé passe **par page**, et tout
+      bloc JavaScript resté sans bouton est **nommé** (fichier + `data-file`). Le passage suivant a
+      livré le coupable en une ligne : **`pages/maths/lecon-07.html : 9 / 10 — sans bouton : modulo.js`**.
+
+      **Deux causes, et une seule était celle qu'on cherchait.**
+      1. *Structurelle.* `modulo.js` porte `data-runner="skip"` **écrit dans le source** — l'auteur a
+         désactivé le bouton lui-même (c'est un `const mod = (a, n) => …`, sans affichage), et
+         `runner.js` sort aussitôt (`if (!bar || block.hasAttribute("data-runner")) return`).
+         `blocsAttendusDe` ne regardait pas cet attribut : il attendait donc **un bouton qui ne
+         viendrait jamais**. Il y a **48 blocs `data-runner="skip"` dans 8 fichiers**, dont 2 leçons ;
+         un seul tombe dans le corpus des 75 pages. **Un bloc qu'on renonce à juger doit sortir du
+         DÉNOMINATEUR, pas être retranché d'un total** : l'attendu passe à **512**.
+      2. *Temporelle.* L'attente s'arrêtait sur « nombre de boutons **stable** sur deux relevés » —
+         or deux relevés identiques peuvent tomber dans une **pause** de l'initialisation, et la page
+         est alors lue à moitié équipée. On attend désormais le **nombre attendu pour cette page-là**
+         (le compte est connu avant d'ouvrir Chrome), avec 5 s de rallonge **réservées aux pages en
+         retard** : une page complète ne paie plus l'attente d'une page lente.
+
+      **Éprouvé par injection, dans les deux sens.** Un script inline posté en fin de page **retire le
+      bouton** du premier bloc après que `runner.js` l'a posé (DOMContentLoaded + `setTimeout` 0) : le
+      source de la figure ne porte rien, donc le dénominateur ne bouge pas — c'est exactement « un bloc
+      attendu que la mesure ne juge pas ». Faute injectée → **code 2**, `pages/maths/lecon-09.html :
+      8 / 9 — sans bouton : valeur-exacte.js`. Faute retirée → **code 0**, **9 / 9**, page **restaurée à
+      l'octet près** (comparaison binaire `true`).
+
+      **Résultat** : **512 blocs cliqués sur 512 attendus, couverture complète, 0 divergent, code 0**
+      en 1 013 s (13,5 s/page) — **le premier passage vert de cet outil**, et `--complet` peut donc
+      l'être aussi. La détection de `data-runner` a été durcie au passage (casse indifférente, attribut
+      sans valeur accepté), sinon la même faute serait revenue par une simple majuscule.
 
 ---
 

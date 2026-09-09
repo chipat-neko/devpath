@@ -209,6 +209,13 @@ function blocsAttendusDe(page) {
   while ((m = re.exec(html))) {
     var f = m[0];
     if (f.indexOf('<pre') < 0) continue;
+    /* `data-runner` ÉCRIT DANS LE SOURCE = l'auteur a désactivé le bouton lui-même,
+       et `runner.js` sort aussitôt (`if (!bar || block.hasAttribute("data-runner")) return`).
+       Sans cette ligne, l'outil attendait un bouton qui ne viendrait jamais et comptait
+       un écart perpétuel : c'est le 513ᵉ bloc du point A9 — `pages/maths/lecon-07.html ::
+       modulo.js`, un `const mod = …` sans affichage, exclu exprès. Un bloc qu'on renonce
+       à juger doit être exclu du DÉNOMINATEUR, pas retranché d'un total. */
+    if (/\sdata-runner(\s*=|[\s>])/i.test(f.slice(0, f.indexOf('<pre')))) continue;
     var c = /<code[^>]*class="[^"]*language-javascript[^"]*"[^>]*>([\s\S]*?)<\/code>/.exec(f);
     if (!c) continue;
     if (BROWSER_ONLY && BROWSER_ONLY.test(decode(c[1]))) continue;
@@ -293,6 +300,10 @@ function estUnFragment(vu) {
   var attendus = 0;
   PAGES.forEach(function (pg) { attendus += blocsAttendusDe(pg); });
   var nonMesurees = [];   // pages qu'on n'a pas pu ouvrir : ni vertes ni rouges, NON MESURÉES
+  /* Point A9 : les blocs attendus qui n'ont pas reçu de bouton, PAGE PAR PAGE. Un total
+     global ne dit pas OÙ la couverture s'est perdue, et c'est justement ce qu'il fallait
+     savoir quand trois passages ont rendu trois chiffres différents. */
+  var sansBouton = 0, pagesIncompletes = [];
 
   var chronos = [];
   for (var p = 0; p < PAGES.length; p++) {
@@ -329,20 +340,48 @@ function estUnFragment(vu) {
     /* On attend un ÉTAT, jamais une durée : document complet, puis un nombre de boutons
        stable sur deux relevés. Une attente en dur de 1 400 ms lisait une page à moitié
        initialisée sans jamais le dire. */
-    var stable = 0, precedent = -1;
+    /* ⚠️ « STABLE SUR DEUX RELEVÉS » NE VEUT PAS DIRE « FINI » (point A9 du chantier
+       V17, 2026-09-09). Trois passages de la même commande ont rendu 498, 512 puis
+       504 blocs cliqués sur 513 : deux relevés identiques peuvent tomber dans une
+       PAUSE de l'initialisation, et la page est alors lue à moitié équipée — sans que
+       rien ne le dise, puisque le seul écart visible était un total global.
+       On sait pourtant, pour CETTE page, combien de boutons on attend : on attend donc
+       ce NOMBRE, et non une simple stabilité. Le plafond reste court, et ce qui manque
+       encore à la fin est NOMMÉ bloc par bloc plus bas. */
+    var attendusPage = blocsAttendusDe(page);
+    var stable = 0, precedent = -1, n = -1;
     for (var ww = 0; ww < 40; ww++) {
       await attendre(250);
-      var n = await cx.evaluer('(()=>{try{if(document.readyState!=="complete")return -1;' +
+      n = await cx.evaluer('(()=>{try{if(document.readyState!=="complete")return -1;' +
         'return document.querySelectorAll("figure.code-block .code-block__try").length}catch(e){return -1}})()');
       n = typeof n === 'number' ? n : -1;
+      if (n >= attendusPage) break;                       // le compte y est : inutile d'attendre plus
       if (n >= 0 && n === precedent) { stable++; if (stable >= 2) break; } else stable = 0;
       precedent = n;
+    }
+    /* Le compte n'y est pas : on laisse encore 5 s, mais seulement dans ce cas — une
+       page complète ne paie pas l'attente d'une page en retard. */
+    if (n >= 0 && n < attendusPage) {
+      for (var wr = 0; wr < 20; wr++) {
+        await attendre(250);
+        n = await cx.evaluer('(()=>{try{return document.querySelectorAll("figure.code-block .code-block__try").length}catch(e){return -1}})()');
+        if (typeof n === 'number' && n >= attendusPage) break;
+      }
     }
 
     var brut = await cx.evaluer('JSON.stringify([...document.querySelectorAll("figure.code-block")]' +
       '.map((f,i)=>({i,file:f.dataset.file||"",js:!!f.querySelector("code.language-javascript"),bouton:!!f.querySelector(".code-block__try")})))');
     var blocs = JSON.parse(brut || '[]');
     var execs = blocs.filter(function (b) { return b.bouton && b.js; });
+    /* CE QUI RESTE SANS BOUTON EST NOMMÉ, jamais fondu dans un total. Un bloc qu'on
+       renonce à juger doit pouvoir être relu et discuté ; un écart anonyme, non. */
+    if (execs.length < attendusPage) {
+      var orphelins = blocs.filter(function (b) { return b.js && !b.bouton; });
+      sansBouton += (attendusPage - execs.length);
+      pagesIncompletes.push(page + ' : ' + execs.length + ' / ' + attendusPage +
+        (orphelins.length ? ' — sans bouton : ' + orphelins.map(function (b) { return (b.file || '(sans nom)'); }).join(', ')
+                          : ' — aucun bloc JS sans bouton dans le DOM (la page en expose ' + blocs.length + ')'));
+    }
     var lignesPage = [];
 
     for (var k = 0; k < execs.length; k++) {
@@ -418,6 +457,11 @@ function estUnFragment(vu) {
   /* TROIS verdicts distincts, et c'est tout l'objet de la réparation : une couverture
      incomplète n'est PAS un « OK ». L'outil imprimait « concordent partout » après
      avoir jugé 26 % des blocs. */
+  if (pagesIncompletes.length) {
+    console.log('\n  PAGES DONT LA COUVERTURE EST INCOMPLÈTE (' + pagesIncompletes.length + ', ' + sansBouton + ' bloc(s)) :');
+    pagesIncompletes.forEach(function (l) { console.log('    ' + l); });
+  }
+
   if (total !== attendus || nonMesurees.length) {
     console.log('\n  MESURE INCOMPLÈTE — ' + total + ' bloc(s) cliqué(s) sur ' + attendus + ' attendu(s)' +
       (nonMesurees.length ? ', ' + nonMesurees.length + ' page(s) non ouverte(s) : ' + nonMesurees.join(', ') : '') + '.');
