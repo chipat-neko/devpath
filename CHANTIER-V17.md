@@ -3242,6 +3242,71 @@ résultat avant le clic.
       distincts, l'un de CONTENU (compléter les fragments, comme B2b-21), l'autre de MOTEUR
       (un préambule qui tolère deux blocs en collision), et aucun ne se traite par une règle.
 
+- [x] **B2b-24 · UNE ILLUSTRATION N'EST PAS DU CODE : 16 blocs `.txt` étiquetés dans un
+      langage à bouton, 9 boutons COMPTÉS DANS CHROME qui disparaissent — et l'angle mort
+      de `verif-sorties.js` mesuré au passage.**
+
+      **Le défaut trouvé en tirant le fil du point précédent.** `algo/lecon-02` #2 restait en
+      panne sur `factorielle is not defined` ; en le regardant, ce n'était pas du JavaScript
+      mais un **déroulé de récursion** (`factorielle(4) = 4 * factorielle(3) // en attente`),
+      rangé dans `deroule.txt` et étiqueté `class="language-javascript"`. `runner.js` décide du
+      bouton d'après la CLASSE, jamais d'après le nom du fichier : le site posait donc un
+      « Tester » sur une trace dessinée à la main. Le recensement a rendu **16 blocs `.txt`
+      dans ce cas : 7 en `javascript`, 7 en `markup`, 1 en `python`, 1 en `sql`.**
+
+      **CE QUE LE NAVIGATEUR EN FAISAIT VRAIMENT — mesuré, pas déduit.** La règle du chantier
+      interdit de conclure d'après le code des règles : `tools/preuves/repli-navigateur.js`
+      imprime désormais **le nombre de boutons posés par la page** (`.code-block__try`, que
+      « Tester » et « Aperçu » partagent), et les 13 pages ont été ouvertes dans un vrai
+      Chrome **avant** puis **après** correction, `file://` :
+
+      | page | avant | après |
+      |---|---|---|
+      | `algo/lecon-16` · `algo/lecon-17` | 11 · 9 | 10 · 8 |
+      | `algo/lecon-18` · `algo/lecon-19` · `algo/lecon-20` | 11 · 12 · 10 | 10 · 11 · 9 |
+      | `js/lecon-31` (deux blocs) | 3 | **1** |
+      | `algo/lecon-02` · `projets-js/lecon-14` | 11 · 5 | 10 · 4 |
+      | `python/lecon-23` · `sql/lecon-06` · `js/lecon-30` · `react/lecon-14` · `algo/lecon-10` | 5 · 7 · 8 · 1 · 8 | **inchangés** |
+
+      **9 boutons disparaissent : 7 « Aperçu »** posés sur des schémas ASCII — dont
+      `algo/lecon-16`, où l'aperçu HTML interprétait `B&lt;----C` comme une balise — **et
+      2 « Tester »** (le déroulé de `algo/lecon-02`, qui était EN PANNE ; les URLs commentées
+      de `projets-js/lecon-14`, qui n'affichaient aucune ligne). **Les 5 pages inchangées sont
+      la moitié honnête du compte** : une garde écartait déjà ces blocs (`neCompilePas` pour
+      les traces JavaScript, le filtre « pseudo-schéma » de SQL, `PAS_DU_PYTHON`) — leur seul
+      défaut était une coloration Prism qui mentait. Corriger l'étiquette reste juste ; le
+      dire évite de compter deux fois le même gain.
+
+      ⚠️ **LA CONVENTION DU SITE EST `language-plaintext`, ET UN PREMIER JET L'AVAIT MANQUÉE.**
+      Les sept premiers blocs avaient d'abord été passés à `<pre><code>` **sans classe** — la
+      forme que portent 148 blocs `.txt` du site. La mesure a montré aussitôt le prix :
+      `verif-sorties.js` en compte 93 « non jugés », le chiffre est tombé à **86**. Son motif
+      (`verif-sorties.js:78`) exige `class="language-…"` : un bloc sans classe lui est
+      **totalement invisible**, ni comparé ni compté. Repassés en `language-plaintext`
+      (766 blocs du site l'emploient), les sept redeviennent visibles et le compte revient à 93.
+
+      **L'ANGLE MORT, MESURÉ PUIS MIS SOUS SURVEILLANCE.** Question suivante : parmi les 141
+      blocs `.txt` sans classe, combien sont la SORTIE d'un programme voisin, donc rejouée par
+      personne ? Le critère de rattachement du vérificateur (`estLaSortieDe`) leur a été
+      appliqué — LU dans `verif-sorties.js`, jamais recopié : **141 invisibles, ZÉRO
+      rattaché.** Aucune sortie n'échappe aujourd'hui. Un contrôle neuf,
+      **`tools/verif-etiquette-illustration.js`**, tient les deux constats : (1) aucun bloc
+      `.txt` ne porte une classe de langage à bouton, (2) aucun bloc `.txt` sans classe n'est
+      rattachable à un programme. **Éprouvé par injection sur ses DEUX contrôles** : un
+      `deroule.txt` remis en `language-javascript` → **code 1**, bloc nommé ; une
+      `factorielle.txt` sans classe ajoutée après `factorielle.js` → **code 1**, rattachement
+      nommé ; page restaurée → **code 0**. Il est déclaré dans `verif.js` (étape `txt-etiq`,
+      1,2 s, tous les modes) — **83 outils dans un mode, 15 hors chaîne, tous déclarés.**
+
+      **Mesures.** `verif-js.js` : **1 607 blocs à bouton (−2), 1 565 aboutis (−1),
+      22 EN PANNE (−1), 77 non compilables (−4), 33 orphelins (−1)**. ⚠️ **Le bloc « vivant »
+      perdu est `projets-js/lecon-14` · `urls.txt`, qui ne contient QUE des commentaires** :
+      au clic il affichait « (aucune sortie — ajoute un console.log…) ». Le compter parmi les
+      aboutis était exact et vide de sens ; le dire vaut mieux que l'arrondir. Chaîne :
+      `verif-html.js` 0/0 ; `verif-donnees.js` 0 erreur ; `verif-sorties.js` **449 rejoués,
+      0 divergent, 93 non jugés (inchangé)** ; `verif-sql.js` sur `sql/lecon-06` 7/7 ;
+      cliquets descendus à **22 / 77 / 33**.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

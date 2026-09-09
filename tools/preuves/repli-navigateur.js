@@ -142,6 +142,11 @@ CIBLES.forEach(function (c) {
     requetes += Number(reseau) || 0;
 
     console.log('=== ' + page + ' ===');
+    /* LE NOMBRE DE BOUTONS POSÉS PAR LA PAGE, imprimé depuis le 2026-09-09 (point B2b-24) :
+       c'est la seule mesure qui dise, dans un vrai Chrome, combien de blocs `runner.js`
+       juge exécutables — « Tester » et « Aperçu » partagent la classe `code-block__try`.
+       Sans elle, on déduisait ce compte des règles au lieu de le constater. */
+    console.log('  boutons posés par la page : ' + avant);
     for (var rang of parPage[page]) {
       blocs++;
       var ok = await cx.evaluer('(()=>{const f=[...document.querySelectorAll("figure.code-block")]' +

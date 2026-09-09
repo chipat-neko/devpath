@@ -263,6 +263,11 @@ var ETAPES = [
      restait juste, le diagnostic mentait. Ce controle refait l'appariement par une AUTRE
      voie -- figure par figure, chacune jugee seule -- et coute 0,64 s MESURES. */
   { nom: "js-etiq", fichier: "verif-etiquette-blocs.js", args: [], quoi: "chaque bloc JS est nomme par le data-file de SA figure" },
+  /* Le pendant du precedent, ne du point B2b-24 : l'ETIQUETTE de langage. Un schema ASCII
+     etiquete `language-markup` recoit un bouton « Apercu » ; 16 illustrations etaient dans
+     ce cas et un vrai Chrome a compte 9 boutons reellement poses dessus. Le meme outil
+     surveille l'angle mort de verif-sorties.js, qui ne voit aucun bloc SANS classe. */
+  { nom: "txt-etiq", fichier: "verif-etiquette-illustration.js", args: [], quoi: "aucune illustration .txt etiquetee comme du code, aucune sortie invisible" },
   /* ⚠ LA REGLE FONDATRICE DU SITE, ENFIN CONTROLEE (2026-09-09, point B2b-16). « Aucune page
      ne parle au reseau » etait tenu pour acquis, et ne l'etait pas : quatre boutons « Tester »
      lancaient une VRAIE connexion sortante au clic (8 connexions vers exemple.api et
