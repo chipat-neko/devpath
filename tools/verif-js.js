@@ -100,6 +100,10 @@ var heriteDuNavigateur = lireFonction('heriteDuNavigateur');
 var meriteUnRepli = lireFonction('meriteUnRepli');
 var envelopperPourRepli = lireFonction('envelopperPourRepli');
 var preambuleQuiCompile = lireFonction('preambuleQuiCompile');
+/* Le RÉ-ANCRAGE (2026-09-09, point B2b-9) : quand le repli échoue à son tour sur un nom
+   manquant, quel préfixe RETRANCHÉ retenter. Lue elle aussi — c'est une règle qui décide
+   ce que l'apprenant voit, et deux exemplaires finiraient par diverger. */
+var preambuleReAncre = lireFonction('preambuleReAncre');
 
 function dec(s) {
   return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
@@ -321,25 +325,39 @@ fichiers.forEach(function (f) {
          de ce vérificateur faisait exactement cela et annonçait 40 blocs réparés ; dans
          Chrome, ils affichaient toujours « X is not defined ». Le tri du préambule
          (`preambuleQuiCompile`) est celui du moteur, LU dans runner.js. */
-      var gardes = preambuleQuiCompile(prefixe, code);
-      var s2 = [], ctx2brut = contexteWorker(s2), avantLeBloc = 0;
       /* Le MÊME marqueur que le Worker (`__finDuPrelude`), pour deux raisons : le script
          concaténé est alors identique au caractère près, et surtout on sait à partir d'où
          les lignes affichées appartiennent au bloc de l'apprenant — celles du préambule,
          le moteur les masque, les compter ici ferait annoncer des sorties qui n'existent
          pas pour lui. */
-      ctx2brut.__finDuPrelude = function () { avantLeBloc = s2.length; };
-      var ctx2 = vm.createContext(ctx2brut);
-      var msg2 = gardes.length ? null : 'préambule vide';
-      if (gardes.length) {
+      var jouerDerriere = function (gardes) {
+        if (!gardes.length) return { err: 'préambule vide' };
+        var s2 = [], brut = contexteWorker(s2), avantLeBloc = 0;
+        brut.__finDuPrelude = function () { avantLeBloc = s2.length; };
         try {
-          vm.runInContext(gardes.join('\n') + '\n;__finDuPrelude();\n' + envelopperPourRepli(code), ctx2,
-            { timeout: DELAI, displayErrors: false });
-        } catch (e2) { msg2 = (e2 && e2.name ? e2.name + ': ' : '') + (e2 && e2.message ? e2.message : String(e2)); }
+          vm.runInContext(gardes.join('\n') + '\n;__finDuPrelude();\n' + envelopperPourRepli(code),
+            vm.createContext(brut), { timeout: DELAI, displayErrors: false });
+        } catch (e2) {
+          return { err: (e2 && e2.name ? e2.name + ': ' : '') + (e2 && e2.message ? e2.message : String(e2)) };
+        }
+        return { err: null, lignes: s2.length - avantLeBloc };
+      };
+      var prf = prefixe;
+      var essai = jouerDerriere(preambuleQuiCompile(prf, code));
+      /* LE RÉ-ANCRAGE (point B2b-9), exactement la boucle de `lancerJs` : tant que le repli
+         échoue sur un nom manquant qu'un bloc PLUS ANCIEN du préfixe déclare, on tronque le
+         préfixe juste après lui et on rejoue. La terminaison vient de `preambuleReAncre`,
+         qui ne rend qu'un préfixe STRICTEMENT plus court — pas d'un compteur de tours. */
+      while (essai.err && meriteUnRepli(essai.err)) {
+        var prf2 = preambuleReAncre(prf, essai.err);
+        if (!prf2) break;
+        prf = prf2;
+        essai = jouerDerriere(preambuleQuiCompile(prf, code));
       }
-      if (!msg2) {
+      if (!essai.err) {
         parRepli = true; replies++;
-        listeReplies.push(rel + ' #' + (i + 1) + '  (' + (s2.length - avantLeBloc) + ' ligne(s))' +
+        listeReplies.push(rel + ' #' + (i + 1) + '  (' + essai.lignes + ' ligne(s))' +
+          (prf !== prefixe ? '  [ré-ancré]' : '') +
           (ERREUR_ANNONCEE.test(code) ? '  ⚠ ERREUR ANNONCÉE ÉTEINTE' : ''));
         msg = null;
       }

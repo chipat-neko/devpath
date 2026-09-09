@@ -2,7 +2,7 @@
 /**
  * tools/preuves/sonde-repli-manque.js — POURQUOI le repli ne sauve pas ces blocs-là.
  *
- * Après le point B2b-8 il reste 107 blocs JS en panne. Une partie échoue encore sur
+ * Après le point B2b-9 il reste 102 blocs JS en panne (107 avant lui). Une partie échoue sur
  * « X is not defined » alors que X EST déclaré, en colonne zéro, par un bloc de la même
  * leçon qui A un bouton — donc un bloc que le préambule du repli (point B2b-7) aurait dû
  * fournir. Cette sonde répond à une seule question, et par la mesure : dans ces cas-là,
@@ -16,6 +16,11 @@
  *   - INTROUVABLE : X n'est déclaré en colonne zéro par aucun bloc de la page.
  *
  * Elle ne modifie rien et ne rend aucun verdict : elle prépare la case suivante.
+ * Relevé du 2026-09-09, ré-ancrage compris : APRES 0, TRI 10, AUTRE-ERR 17, INTROUVABLE 60.
+ * Les 6 « le tri a écarté le bloc source » de la veille ont disparu — 4 sauvés par le
+ * ré-ancrage du point B2b-9, 2 repassés en AUTRE-ERR. Le TRI restant est d'une SEULE
+ * nature : le bloc source n'a pas de bouton. Lui donner le préambule a été mesuré puis
+ * refusé (0 gain, 2 pertes) : ces blocs touchent `document` ou `localStorage`.
  */
 var fs = require('fs');
 var path = require('path');
@@ -47,6 +52,7 @@ var heriteDuNavigateur = lireFonction('heriteDuNavigateur');
 var meriteUnRepli = lireFonction('meriteUnRepli');
 var envelopperPourRepli = lireFonction('envelopperPourRepli');
 var preambuleQuiCompile = lireFonction('preambuleQuiCompile');
+var preambuleReAncre = lireFonction('preambuleReAncre');
 
 function dec(s) {
   return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
@@ -145,16 +151,28 @@ lecons().forEach(function (f) {
     var nom = /^ReferenceError: (.+?) is not defined/.exec(msg);
     if (!nom) return;
     nom = nom[1];
-    /* Le repli a-t-il été tenté, et qu'a-t-il donné ? */
-    var gardes = preambuleQuiCompile(prefixe, code);
-    var s2 = [], brut = contexteWorker(s2);
-    brut.__finDuPrelude = function () {};
-    var msg2 = gardes.length ? null : 'préambule vide';
-    if (gardes.length) {
+    /* Le repli a-t-il été tenté, et qu'a-t-il donné ? RÉ-ANCRAGE COMPRIS (point B2b-9) :
+       sans lui, cette sonde classerait « TRI » cinq blocs que le moteur sauve désormais,
+       et sa réponse se périmerait dès la passe suivante. */
+    var essayer = function (gardes) {
+      if (!gardes.length) return 'préambule vide';
+      var s2 = [], brut = contexteWorker(s2);
+      brut.__finDuPrelude = function () {};
       try {
         vm.runInContext(gardes.join('\n') + '\n;__finDuPrelude();\n' + envelopperPourRepli(code),
           vm.createContext(brut), { timeout: DELAI, displayErrors: false });
-      } catch (e2) { msg2 = (e2 && e2.name ? e2.name + ': ' : '') + (e2 && e2.message ? e2.message : String(e2)); }
+      } catch (e2) { return (e2 && e2.name ? e2.name + ': ' : '') + (e2 && e2.message ? e2.message : String(e2)); }
+      return null;
+    };
+    var prf = prefixe;
+    var gardes = preambuleQuiCompile(prf, code);
+    var msg2 = essayer(gardes);
+    while (msg2 && meriteUnRepli(msg2)) {
+      var prf2 = preambuleReAncre(prf, msg2);
+      if (!prf2) break;
+      prf = prf2;
+      gardes = preambuleQuiCompile(prf, code);
+      msg2 = essayer(gardes);
     }
     if (!msg2) return;   // le repli l'a sauvé : rien à expliquer
     var ligne = rel + ' #' + (idx + 1) + '  [' + nom + ']';

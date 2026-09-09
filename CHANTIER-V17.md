@@ -1740,6 +1740,132 @@ résultat avant le clic.
       S'y ajoutent, hors « nom manquant », les 3 `return` racine qu'`eval` refuse alors que
       `new Function` les accepte (B2b-5). **Aucune règle unique ne fermera ce reste.**
 
+- [x] **B2b-9 · Le préambule RÉ-ANCRÉ : le tri gardait le bloc le plus proche et jetait celui
+      qui portait le nom manquant — 107 blocs en panne → 102, aboutis 1 522 → 1 527, ZÉRO
+      perte. Avec l'élargissement « évident » de l'autre moitié du lot mesuré puis REFUSÉ :
+      0 gain et 2 blocs vivants cassés.**
+
+      **Mesure reproduite avant de toucher à quoi que ce soit.** `node tools/verif-js.js --causes` :
+      1 648 blocs avec bouton, 741 écartés, **1 522 aboutis, 17 annoncées, 2 non concluants,
+      107 EN PANNE, 81 non compilables** — le chiffre laissé par B2b-8, à l'unité près.
+      `sonde-repli-manque.js` rejouée rend elle aussi **60 INTROUVABLE, 16 AUTRE-ERR, 16 TRI,
+      0 APRÈS**, identiques. Le gisement n'avait pas bougé.
+
+      **Le lot TRI n'était pas un lot mais DEUX, et une seule moitié était réparable.**
+      Sur les 16 : **6** ont un bloc source qui A un bouton mais que `preambuleQuiCompile` a
+      écarté, **10** ont un bloc source SANS bouton. `pages/js/lecon-21` est le cas d'école du
+      premier groupe : le bloc #1 déclare `class Tache` ET `class TachePrioritaire`, le #2
+      redéclare `TachePrioritaire`. Le tri du repli part du PLUS PROCHE et remonte : pour le
+      bloc #3 il garde donc le #2, puis refuse le #1 qui entre en collision avec lui — et le #1
+      était précisément celui qui portait `Tache`. **C'est l'ancien qui saute, jamais le récent,
+      alors que c'est l'ancien qui porte le remède.**
+
+      ⚠️ **L'ÉLARGISSEMENT ÉVIDENT DE L'AUTRE MOITIÉ EST REFUSÉ PAR LA MESURE.** Donner au
+      préambule les blocs SANS bouton — ce que le plan désignait comme « le seul lot où le repli
+      pourrait être élargi » — a été exécuté sur tout le site avant qu'une ligne ne soit écrite
+      (`tools/preuves/sonde-preambule-elargi.js`) :
+
+      | variante | gains | pertes |
+      |---|---|---|
+      | RÉ-ANCRAGE, 1 tour | 4 | 0 |
+      | **RÉ-ANCRAGE, 2 tours** (retenu) | **5** | **0** |
+      | RÉ-ANCRAGE, 3 tours · 4 · 5 · sans plafond | 5 | 0 |
+      | **PRÉFIXE ÉTENDU aux blocs sans bouton** | **0** | **2** |
+
+      Le préfixe étendu ne gagne **rien** et casse **deux blocs vivants** — `js/lecon-12` #8 et
+      `projets-js/lecon-21` #3, tombés sur `localStorage is not defined` et `document is not
+      defined`. La raison est celle qui leur a retiré leur bouton : un bloc de navigateur ne
+      s'exécute pas dans un Worker, et le mettre en préambule fait échouer le préambule ENTIER,
+      donc le bloc qui le suivait. Les 10 blocs de ce sous-lot sont hors d'atteinte de toute
+      mécanique de préambule ; c'est un fait mesuré, pas une hypothèse.
+
+      **La règle retenue ne juge toujours pas le texte.** Quand le repli échoue À SON TOUR sur
+      un « Y is not defined », on cherche le bloc le plus proche du préfixe qui déclare Y en
+      colonne zéro et on TRONQUE le préfixe juste après lui : il devient le plus proche, donc le
+      premier que le tri garde. Le reste — compilation, enveloppe, marqueur de fin de préambule —
+      est inchangé.
+      ⚠️ **LA TRONCATURE DOIT ÊTRE STRICTE, sans quoi la boucle ne s'arrête jamais** : un
+      préfixe inchangé rend un préambule inchangé, donc mot pour mot la même erreur, donc le même
+      ancrage. C'est cette décroissance — et non un compteur de tours — qui garantit la
+      terminaison. Le plafond a d'ailleurs été mesuré avant d'être écarté : **le ré-ancrage sature
+      à DEUX tours**, et 3, 4, 5 tours ou l'absence totale de plafond ne rendent pas un bloc de
+      plus. On n'écrit donc pas une constante magique qui n'aurait servi à rien.
+
+      **Impact : 5 blocs, ZÉRO perte, et pour cause — le ré-ancrage ne se déclenche que sur un
+      bloc DÉJÀ en panne**, comme le repli dont il prolonge la mécanique. Il ne peut rien
+      retirer, ni un bouton ni une sortie. Les 5 : `js/lecon-21` #3 #4 #5, `algo/lecon-25` #8,
+      `projets-js/lecon-15` #4.
+
+      **ET LA SORTIE DIT CE QUE LA LEÇON ANNONCE — vérifié une par une, pas supposé.** C'est le
+      seul contrôle qui compte ici : un bloc qui « aboutit » en affichant autre chose que sa
+      promesse serait le défaut fondateur du chantier sous un autre nom.
+
+      | bloc | ce que la page annonce en commentaire | ce que Chrome affiche au clic |
+      |---|---|---|
+      | `js/lecon-21` #3 | `// "Envoyer le devis (P2)"` | `Envoyer le devis (P2)` |
+      | `js/lecon-21` #4 | `// 1  -> on lit "toutes" sans ()` | `1` |
+      | `js/lecon-21` #5 | *(aucun `console.log`)* | `(aucune sortie — ajoute un console.log…)` |
+      | `algo/lecon-25` #8 | `// => 4`, `// => 3`, `// => 2 6` | `4`, `3`, `2 6` |
+      | `projets-js/lecon-15` #4 | `// affiche: false`, `// affiche: true` | `false`, `true` |
+
+      **Preuve par le navigateur** (le vérificateur n'exécute pas `runner.js` : seul un vrai
+      Chrome dit ce que l'apprenant voit), `tools/preuves/repli-navigateur.js`, `file://`,
+      **règle neutralisée puis active** :
+
+      | | ce que l'apprenant obtient au clic |
+      |---|---|
+      | règle neutralisée | `js/lecon-21` #3 → **ReferenceError: Tache is not defined** ; `algo/lecon-25` #8 → **inserer is not defined** ; `projets-js/lecon-15` #4 → **etatInitial is not defined** |
+      | règle active | **5 blocs cliqués, 5 rejoués, 5 sans la moindre erreur, 0 requête distante** |
+
+      `verif-clic.js` sur les 3 pages touchées : **27 blocs cliqués sur 27 attendus, couverture
+      complète, 0 divergent**, et le compte est le MÊME règle active ou neutralisée — ce qui est
+      le bon résultat : le ré-ancrage ne touche à aucun bouton, il ne change que ce que le clic
+      rend.
+
+      **Écriture.** `preambuleReAncre(prefixe, erreur)` dans `js/runner.js`, à côté de
+      `preambuleQuiCompile` ; `lancerJs` reçoit un septième argument, le préfixe COMPLET dont le
+      préambule a été tiré — il ne se retrouverait pas depuis le préambule, qui est déjà le
+      résultat du tri. `tools/verif-js.js` la **LIT**, jamais ne la recopie, et rejoue la même
+      boucle. Les deux sondes (`sonde-repli-manque.js`, `sonde-preambule-elargi.js`) la lisent
+      aussi : sans cela la première aurait continué de classer « TRI » cinq blocs désormais
+      sauvés, et se serait périmée dès la passe suivante.
+
+      ⚠️ **UNE SONDE QUI MEURT APRÈS AVOIR PARLÉ.** Le premier jet de `sonde-preambule-elargi.js`
+      a affiché ses chiffres puis s'est arrêté en défaut : `pages/js/lecon-19` rejoue un
+      `EventTarget` dont l'écouteur lève dans un microtask, `vm.runInContext` a déjà rendu la
+      main, le `try/catch` ne voit rien, et Node relance l'erreur par `process.nextTick`. Une
+      mesure dont on ne sait pas si elle est allée au bout ne vaut rien. Le navigateur, lui, se
+      contente d'écrire la ligne dans la console du Worker : la sonde l'ignore comme lui.
+
+      **Mesure finale : 1 648 blocs avec bouton, 741 écartés, 1 527 aboutis (92,7 %, contre
+      92,4 %), dont 35 par repli (contre 30), 17 annoncées, 2 non concluants, 102 EN PANNE,
+      81 non compilables.** Cliquet descendu à 102. Aucun écarté de plus : ce point ne retire
+      pas un bouton, il en répare cinq.
+
+      **Le garde-fou éprouvé par injection, dans les deux sens.** (a) `preambuleReAncre`
+      neutralisée dans `runner.js` : `verif-js.js` sort en **1**, « 107 blocs en panne contre 102
+      à la référence » ; restaurée, code **0**, md5 identique (`3372079e…`). (b)
+      `zzzNomInexistant();` injecté dans `js/lecon-21` #3 — un bloc que ce point vient de sauver,
+      donc le chemin neuf lui-même : code **1**, « 103 contre 102 » ; faute retirée, code **0**,
+      page revenue à l'octet près (md5 `0d44112c…`).
+
+      **Non-régression** : `verif-html.js` **1 629 fichiers, 0 grave / 0 attention** ;
+      `verif-donnees.js` **0 erreur** ; `verif-chaine-declaree.js` **89 outils, code 0** ;
+      `preuves/worker-src-compile.js` **code 0** ; `verif.js --rapide` **41 étapes, tout vert,
+      145,6 s** ; `node --check` sur les quatre fichiers touchés ; **0 URL vers un CDN**. Aucun
+      fichier de contenu modifié : ce point ne touche que le moteur, ses vérificateurs et ses
+      sondes.
+
+      **Reste au gisement : 102.** Par cours : `js` 41, `projets-js` 13, `patterns` 8,
+      `securite` 7, `tests` 6, `html` 4, `nodejs` 4, `vue` 4, `algo` 3, `react` 2,
+      `typescript` 2, `cicd` 2. La dissection rejouée, ré-ancrage compris, donne : **INTROUVABLE
+      60, AUTRE-ERR 17, TRI 10, APRÈS 0.** Le TRI restant est désormais d'une SEULE nature — le
+      bloc source n'a pas de bouton — et le tableau ci-dessus prouve qu'aucune mécanique de
+      préambule ne l'ouvrira. **Le repli a donc atteint sa limite : ce qui reste ne se répare
+      plus en donnant du contexte, mais en décidant, bloc par bloc, de débrancher un fragment
+      orphelin ou de le rendre autonome.** C'est un travail de CONTENU, pas de moteur, et c'est
+      la nature des 60 « introuvables ».
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

@@ -330,6 +330,39 @@
     return gardes;
   }
 
+  /* LE RÉ-ANCRAGE DU PRÉAMBULE (2026-09-09, point B2b-9) ------------------------------
+     `preambuleQuiCompile` part du bloc le PLUS PROCHE et remonte : quand un bloc récent
+     entre en collision avec un bloc ancien, c'est l'ANCIEN qui saute. Or c'est parfois
+     l'ancien qui portait le nom manquant. `pages/js/lecon-21` en est le cas d'école : le
+     bloc #1 déclare `class Tache` ET `class TachePrioritaire`, le #2 redéclare
+     `TachePrioritaire` — le #3 garde donc le #2 et perd le #1, puis échoue sur `Tache`.
+
+     La réponse ne juge toujours pas le texte : quand le repli échoue À SON TOUR sur un
+     « Y is not defined », on cherche le bloc le plus proche du préfixe qui déclare Y en
+     colonne zéro, et on TRONQUE le préfixe juste après lui — il devient le plus proche,
+     donc le premier que le tri garde. Le reste (compilation, enveloppe) est inchangé.
+
+     ⚠️ LA TRONCATURE DOIT ÊTRE STRICTE, faute de quoi la boucle ne s'arrête jamais : un
+     préfixe inchangé rend un préambule inchangé, donc mot pour mot la même erreur. C'est
+     cette décroissance — et non un compteur de tours — qui garantit la terminaison. Le
+     plafond a d'ailleurs été mesuré avant d'être écarté (`tools/preuves/sonde-preambule-elargi.js`) :
+     1 tour rend 4 blocs, 2 tours en rendent 5, et 3, 4, 5 tours ou l'absence de plafond n'en
+     rendent pas un de plus. Aucune perte à aucune profondeur, et pour cause : le ré-ancrage
+     ne se déclenche que sur un bloc DÉJÀ en panne.
+     Mesuré aussi puis REFUSÉ : donner au préambule les blocs SANS bouton (l'autre moitié du
+     lot) — **0 gain et 2 PERTES**, ces blocs touchant `document` ou `localStorage`, qui
+     n'existent pas dans le Worker. */
+  function preambuleReAncre(prefixe, erreur) {
+    var m = /^ReferenceError: (.+?) is not defined/.exec(String(erreur));
+    if (!m) return null;
+    var nom = m[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    var decl = new RegExp("^(?:const|let|var|class|async\\s+function|function)\\s+" + nom + "(?![\\w$À-ɏ])", "m");
+    for (var i = prefixe.length - 1; i >= 0; i--) {
+      if (decl.test(prefixe[i])) return i + 1 >= prefixe.length ? null : prefixe.slice(0, i + 1);
+    }
+    return null;
+  }
+
   /* QUAND rejouer. Les gains mesurés sont TOUS des « X is not defined » : c'est la seule
      panne dont un bloc précédent puisse être le remède. Rejouer sur une autre erreur (un
      `TypeError`, une division qui rate) ne gagnerait rien et ferait tourner du code pour
@@ -1282,14 +1315,17 @@
   }
 
   function runCode(codeStr, out, runBtn, block) {
-    lancerJs(codeStr, [], out, runBtn, block, null);
+    lancerJs(codeStr, [], out, runBtn, block, null, null);
   }
 
   /* `prelude` vide = l'exécution ordinaire, celle qui existait avant le repli. Non vide =
      le second essai. `secours` porte alors ce que le PREMIER essai avait affiché : si le
      repli échoue à son tour, on le remet, car c'est l'erreur du code que l'apprenant a
-     sous les yeux qui doit lui être montrée, pas celle d'un préambule qu'il n'a pas écrit. */
-  function lancerJs(codeStr, prelude, out, runBtn, block, secours) {
+     sous les yeux qui doit lui être montrée, pas celle d'un préambule qu'il n'a pas écrit.
+     `prefixe` est la liste COMPLÈTE des blocs précédents dont `prelude` a été tiré : le
+     ré-ancrage en a besoin pour retrancher, et elle ne se retrouverait pas depuis `prelude`,
+     qui est déjà le résultat du tri. */
+  function lancerJs(codeStr, prelude, out, runBtn, block, secours, prefixe) {
     out.innerHTML = '<p class="runner-output__head">Console</p>';
     var lines = 0,
       finished = false,
@@ -1340,11 +1376,28 @@
       /* LE REPLI : ce bloc a échoué SEUL sur un nom manquant, et la leçon contient des
          blocs avant lui. On le rejoue derrière eux, dans un Worker neuf. */
       if (!prelude.length && erreurVue && meriteUnRepli(erreurVue) && block) {
-        var pre = preambuleQuiCompile(preambuleDe(block), codeStr);
+        var prefixe0 = preambuleDe(block);
+        var pre = preambuleQuiCompile(prefixe0, codeStr);
         if (pre.length) {
           runBtn.classList.remove("is-running");
-          lancerJs(codeStr, pre, out, runBtn, block, journal);
+          lancerJs(codeStr, pre, out, runBtn, block, journal, prefixe0);
           return;
+        }
+      }
+      /* LE RÉ-ANCRAGE (point B2b-9) : le repli a échoué à son tour sur un nom manquant, et
+         un bloc plus ancien du préfixe le déclare — celui que le tri avait écarté au profit
+         d'un bloc plus proche. On tronque le préfixe juste après lui et on rejoue.
+         `secours` est repassé tel quel : ce qu'on remontrera en cas d'échec reste le
+         PREMIER essai, celui du bloc seul, pas celui d'un repli intermédiaire. */
+      if (prelude.length && erreurVue && meriteUnRepli(erreurVue) && prefixe && prefixe.length) {
+        var prefixe2 = preambuleReAncre(prefixe, erreurVue);
+        if (prefixe2) {
+          var pre2 = preambuleQuiCompile(prefixe2, codeStr);
+          if (pre2.length) {
+            runBtn.classList.remove("is-running");
+            lancerJs(codeStr, pre2, out, runBtn, block, secours, prefixe2);
+            return;
+          }
         }
       }
       /* Le repli n'a pas mieux fait : on remet mot pour mot le premier essai. */
