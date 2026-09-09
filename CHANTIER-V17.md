@@ -919,7 +919,7 @@ résultat avant le clic.
       porter » et sort en **1** ; remise en état, code **0**.
       `verif.js --rapide` : 40 étapes, tout vert.
 
-- [ ] **B2 · Les blocs JavaScript : 451 sur 2 011 en erreur (22,4 %).** Mesure indépendante avec la
+- [x] **B2 · Les blocs JavaScript : 451 sur 2 011 en erreur (22,4 %) — CLOS : 3 restent, tous motivés.** Mesure indépendante avec la
       règle `BROWSER_ONLY` de `js/runner.js:51` : 518 erreurs, dont **67 volontaires et annoncées en
       commentaire** — le chiffre défendable est donc 451. Causes : 92 `import statement outside a
       module`, 34 `await is only valid in async`, 34 `test is not defined`, 31 `Unexpected token
@@ -930,6 +930,22 @@ résultat avant le clic.
       aux lignes commençant par `import` ou `export` et aux blocs `data-file` en `.json` ; (b) rendre
       autonomes, ou débrancher, les fragments qui dépendent d'un bloc précédent. `CHANTIER-V14.md:497`
       en recense déjà 64 : **le gisement réel est sept fois plus gros.** Une case par lot de cours.
+
+      **CLOS LE 2026-09-10.** Le point est traité en deux temps, comme il le demandait.
+      **(a)** est fait au point B2a, qui a d'abord comblé le trou d'outillage : le chiffre de
+      451 venait d'une mesure faite une fois, à la main, par un outil qui n'a pas été
+      conservé — `tools/verif-js.js` le rend reproductible et le tient sous cliquet.
+      **(b)** est fait par les 28 cases B2b-1 à B2b-28. **Trajet complet, mesuré à chaque
+      étape : 470 blocs en panne au premier relevé de l'outil → 3.** Les 467 fermés se
+      partagent en deux moitiés qui ne se confondent pas : **douze règles du bouton** écrites
+      dans `js/runner.js` et LUES par les vérificateurs (modules ES, fichiers de données,
+      suites de tests, fragments de serveur, DOM de page, service workers, blocs que
+      JavaScript refuse de compiler, héritage du navigateur sous trois formes, fragment
+      orphelin, suite du même fichier, fonction déclarée et appelée), et **le contenu
+      complété leçon par leçon** (B2b-11, B2b-21, B2b-22, B2b-28). Aucune étape n'a fait
+      baisser le nombre de blocs qui aboutissent — c'est la contrainte que chaque case
+      vérifie, et deux fois elle a rattrapé une règle trop large avant qu'elle n'écrive
+      quoi que ce soit.
 
 - [x] **B2a · L'outil manquait, et le voici : `tools/verif-js.js`. Puis les deux élargissements du
       plan — 470 blocs en panne → 339, sans qu'un seul bouton vivant soit retiré.**
@@ -988,7 +1004,7 @@ résultat avant le clic.
       raison chiffrée ; il reste joué par le mode par défaut, `--complet` et `--strict`. Rapide
       remesuré : **134,4 s, 40 étapes, tout vert**.
 
-- [ ] **B2b · Les 339 blocs JavaScript encore en panne.** C'est la partie (b) du plan : rendre
+- [x] **B2b · Les 339 blocs JavaScript encore en panne — CLOS à 3, en 28 cases.** C'est la partie (b) du plan : rendre
       autonomes, ou débrancher, les fragments qui dépendent d'un bloc précédent. Le gisement est
       désormais MESURABLE à tout moment (`node tools/verif-js.js --causes`) et le cliquet interdit
       qu'il grossisse. Par cours : `js` 103, `tests` 46, `projets-js` 34, `html` 29, `algo` 28,
@@ -999,6 +1015,17 @@ résultat avant le clic.
       **12 `db is not defined`** (fragments Express/base qui dépendent d'un bloc précédent),
       **9 `HTMLElement is not defined`** (du DOM que `BROWSER_ONLY` ne nomme pas encore).
       Une case par lot de cours ; commencer par `test is not defined`, le plus homogène.
+
+      **CLOS LE 2026-09-10, en 28 cases.** 339 blocs en panne → **3**, et les trois sont des
+      REFUS ÉCRITS, pas des oublis : `vue/lecon-06` #2 et `nodejs/lecon-22` #5 (simuler Pinia
+      ou zod ferait enseigner un comportement qui n'est pas celui de la bibliothèque —
+      critère posé en B2b-22), `projets-js/lecon-02` #5 (le chef d'orchestre d'un projet
+      multi-leçons, dont la piste de règle — la clôture transitive de l'héritage — est
+      décrite et chiffrable en B2b-28, mais pas encore mesurée). État final de l'instrument :
+      **1 596 blocs à bouton, 1 572 aboutis (98,5 %), 3 en panne**, avec sept cliquets
+      distincts (pannes, non compilables, orphelins, hors de portée, annoncées, refus hors
+      ligne) dont quatre exigent l'ÉGALITÉ, pour qu'aucune catégorie ne devienne un endroit
+      où cacher une panne.
 
 - [x] **B2b-1 · Les suites de tests : 36 blocs écartés, ZÉRO vivant retiré — 339 blocs en panne → 303.**
 
