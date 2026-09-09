@@ -2658,6 +2658,28 @@ résultat avant le clic.
       75 pages. Le renommage du formateur dans `WORKER_SRC` n'a rien cassé de ce que les pages
       annoncent.
 
+      ⚠️ **ET LA CHAÎNE A TROUVÉ UN GARDE-FOU QUI NE POUVAIT PAS ROUGIR — dans l'heure qui a
+      suivi.** `preuves/worker-src-compile.js` est le seul contrôle capable de dire que le code
+      du Worker compile, puisque `node --check` n'y voit qu'une chaîne. Il montait ce code en ne
+      fournissant que `envelopperPourRepli` — **la seule fonction que le tableau injectait le
+      jour où il a été écrit** — et il est mort sur un `ReferenceError` dès la première nouveauté.
+      Les noms sont désormais LUS dans le tableau lui-même, donc la liste ne peut plus se périmer.
+      **L'épreuve par injection a trouvé pire** : en retirant `apisHorsLigne.toString()`, donc en
+      privant le Worker de la coupure du réseau qu'on venait d'écrire, **le contrôle restait
+      VERT** — il cherchait un NOM, et le nom figure toujours à la ligne qui l'APPELLE. La règle
+      est maintenant DÉRIVÉE : toute fonction de `runner.js` que le Worker CITE doit y être
+      DÉFINIE. Un premier jet n'exigeait qu'un appel `nom(` et restait vert en retirant
+      `formaterPourLaSortie`, qui est prise comme VALEUR (`var fmt = …`), sans parenthèses.
+      Éprouvé : **les trois injections sortent en 1, la référence en 0**, `runner.js` restauré à
+      l'octet près.
+
+      ⚠️ **UNE MESURE DE MA PART ÉTAIT FAUSSE, ET C'EST LE PIPE QUI MENTAIT.** `node
+      tools/verif.js --rapide | tail -12` rend le code de sortie de `tail`, pas celui de la
+      chaîne : j'ai lu « EXIT=0 » sur une passe qui portait une étape en échec. `verif.js` fait
+      bien `process.exit(enEchec.length ? 1 : nonMesures.length ? 2 : 0)` — le défaut était dans
+      ma façon de mesurer, pas dans le site. **Ne jamais lire `$?` derrière un pipe.**
+      Chaîne rapide finale : **42 étapes, 144,4 s, tout vert, toutes mesurées.**
+
 
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
