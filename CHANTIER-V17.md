@@ -3370,6 +3370,55 @@ résultat avant le clic.
       les preuves « page ouverte en `file://` » ne sont lancées par aucun mode. Les identifier, les
       verser, et mesurer ce qu'elles trouvent.
 
+- [x] **B5 · `verif-rendu.js` attendait une DURÉE, pas un ÉTAT — et il a rendu un
+      débordement FANTÔME de +444 px que la même page ne reproduit sur aucune de ses six
+      mesures. 235 mesures sur 1 536 avaient besoin de plus que le délai fixe.**
+
+      **Trouvé en vérifiant autre chose**, ce qui est la seule façon dont ces défauts se
+      montrent. Après le point B2b-24, une passe de contrôle du rendu a signalé **1 ERREUR** :
+      `pages/etude-inconnu.html [375px/light]`, « +444 px — `code.language-plaintext`
+      (droite 3044) · `code.language-go` (776) · `code.language-javascript` (804) ». La page
+      n'avait pas été touchée de la passe (dernier commit : `e61edec`). Relancée SEULE
+      (`--pages=…`, 3 largeurs × 2 thèmes, 6 mesures) : **0 erreur.** Un verdict rouge non
+      reproductible est pire qu'un vert — il apprend à ignorer l'outil.
+
+      **LA CAUSE, ET C'EST LA TROISIÈME FOIS DANS CE CHANTIER.** `verif-rendu.js:643`
+      attendait **700 ms fixes** après `Page.navigate`, puis mesurait. Une durée fixe ment
+      sous charge : dans une passe de 256 pages, la mise en page d'une page lourde n'est pas
+      finie au bout de 700 ms, et l'on mesure un document à moitié composé. C'est exactement
+      le défaut soldé au point **B1e** (`sql-lecon.js` : une COURSE prise pour une panne) et
+      au point **B2a** (`verif-js.js` : un dépassement de délai compté comme une erreur), et
+      le principe est déjà écrit dans `repli-navigateur.js` : *on attend un ÉTAT, pas une
+      durée*.
+
+      **Ce qui a été écrit.** La mise en page est tenue pour faite quand la largeur de
+      défilement (`documentElement.scrollWidth`) est **identique sur deux relevés
+      consécutifs**, que `document.readyState` vaut `complete` et que `document.fonts.status`
+      vaut `loaded` — relevés tous les 150 ms, plafond 3 s. Au-delà, on mesure quand même
+      **mais la page est NOMMÉE** dans le rapport (« non stabilisées ») : un instrument doit
+      dire quand il n'a pas conclu.
+
+      ⚠️ **LE PREMIER COMPTEUR ÉCRIT NE MESURAIT RIEN, ET C'EST LA MESURE QUI L'A DIT.**
+      Posé sur `tours > 0`, il s'incrémentait à chaque mesure — `largeurVue` part de −1, donc
+      le premier tour ne fait qu'établir la référence et une page déjà stable sort au tour 1.
+      Il annonçait « 6 mesures sur 6 » pour une page qui n'avait besoin d'aucune attente.
+      Corrigé en `tours > 1`, il devient discriminant : sur un lot de 12 mesures, 2.
+
+      **Mesures, la même passe avant et après.** Avant : 256 pages, 1 536 mesures,
+      **1 ERREUR** (le fantôme). Après : 256 pages, 1 536 mesures, **0 ERREUR, 0
+      avertissement, 0 page non stabilisée**, et **235 mesures sur 1 536 (15,3 %) ont demandé
+      une attente supplémentaire** — autrement dit, dans **un cas sur sept**, les 700 ms ne
+      suffisaient pas et la mesure portait sur une page encore en train de se composer. Durée
+      de la passe : environ 25 minutes, inchangée à la minute près.
+
+      ⚠️ **Un aveu de tenue du dépôt** : ce correctif de `tools/verif-rendu.js` est parti dans
+      le commit du point B3 (`git add -A` après le travail sur les neuf `rejoue-*`), au lieu
+      d'avoir le sien. Le compte rendu est ici ; le commit du point B3 en porte le diff.
+
+      **Chaîne, après les trois points de cette passe** : `verif.js --rapide` — **52 étapes,
+      tout est vert, 124,1 s** (43 étapes et 119,2 s avant l'entrée des neuf `rejoue-*` et du
+      contrôle `txt-etiq`, qui coûtent 0,4 s à eux dix).
+
 ---
 
 ## PHASE C — Les chiffres publiés devenus faux
