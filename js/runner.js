@@ -449,6 +449,32 @@
     return null;
   }
 
+  /* L'ÉLAGAGE DU PRÉAMBULE PAR LE HAUT (2026-09-09, point B2b-14) ---------------------
+     Le ré-ancrage ci-dessus coupe la FIN du préfixe ; il reste le défaut symétrique, et
+     c'est celui qui produisait le plus gros lot de pannes restantes. `pages/js/lecon-09`
+     en est le cas d'école : le bloc #3 LIT `user` sans le déclarer (son fournisseur est
+     le #2), le #4 le REDÉCLARE. Pour le bloc #5, le tri garde le #4 — le plus proche —
+     puis le #3, qui compile avec lui ; mais il écarte le #2, en collision avec le #4. Le
+     préambule est donc [#3, #4] : à l'exécution, le #3 lit `user` AVANT la déclaration du
+     #4, dans la même portée. `const` et `class` étant en zone morte temporelle, cela ne
+     rend pas « user is not defined » mais **« Cannot access 'user' before initialization »**,
+     que `meriteUnRepli` ne reconnaît pas — le repli s'arrêtait là.
+
+     La réponse ne juge toujours pas le texte : on retranche le DÉBUT du préfixe jusqu'au
+     bloc qui déclare le nom en colonne zéro, de sorte qu'aucun lecteur de ce nom ne le
+     précède plus. La terminaison vient de là encore de la décroissance STRICTE du
+     préfixe, pas d'un compteur de tours. */
+  function preambuleElague(prefixe, erreur) {
+    var m = /^ReferenceError: Cannot access '(.+?)' before initialization/.exec(String(erreur));
+    if (!m) return null;
+    var nom = m[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    var decl = new RegExp("^(?:const|let|var|class|async\\s+function|function)\\s+" + nom + "(?![\\w$À-ɏ])", "m");
+    for (var i = prefixe.length - 1; i >= 0; i--) {
+      if (decl.test(prefixe[i])) return i <= 0 ? null : prefixe.slice(i);
+    }
+    return null;
+  }
+
   /* QUAND rejouer. Les gains mesurés sont TOUS des « X is not defined » : c'est la seule
      panne dont un bloc précédent puisse être le remède. Rejouer sur une autre erreur (un
      `TypeError`, une division qui rate) ne gagnerait rien et ferait tourner du code pour
@@ -1489,6 +1515,21 @@
           if (pre2.length) {
             runBtn.classList.remove("is-running");
             lancerJs(codeStr, pre2, out, runBtn, block, secours, prefixe2);
+            return;
+          }
+        }
+      }
+      /* L'ÉLAGAGE PAR LE HAUT (point B2b-14) : le repli a échoué sur une zone morte
+         temporelle — un bloc du préambule LIT un nom que la déclaration d'un bloc plus
+         bas met en zone morte. On retranche le début du préfixe jusqu'à ce déclarant et
+         on rejoue. `secours` est repassé tel quel, pour la même raison qu'au-dessus. */
+      if (prelude.length && erreurVue && prefixe && prefixe.length) {
+        var prefixe3 = preambuleElague(prefixe, erreurVue);
+        if (prefixe3) {
+          var pre3 = preambuleQuiCompile(prefixe3, codeStr);
+          if (pre3.length) {
+            runBtn.classList.remove("is-running");
+            lancerJs(codeStr, pre3, out, runBtn, block, secours, prefixe3);
             return;
           }
         }

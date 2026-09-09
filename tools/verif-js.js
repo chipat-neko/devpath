@@ -108,6 +108,9 @@ var preambuleQuiCompile = lireFonction('preambuleQuiCompile');
    manquant, quel préfixe RETRANCHÉ retenter. Lue elle aussi — c'est une règle qui décide
    ce que l'apprenant voit, et deux exemplaires finiraient par diverger. */
 var preambuleReAncre = lireFonction('preambuleReAncre');
+/* L'ÉLAGAGE PAR LE HAUT (2026-09-09, point B2b-14) : le pendant du ré-ancrage, quand le
+   repli échoue sur une zone morte temporelle et non sur un nom manquant. Lue elle aussi. */
+var preambuleElague = lireFonction('preambuleElague');
 
 function dec(s) {
   return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
@@ -434,16 +437,23 @@ fichiers.forEach(function (f) {
          échoue sur un nom manquant qu'un bloc PLUS ANCIEN du préfixe déclare, on tronque le
          préfixe juste après lui et on rejoue. La terminaison vient de `preambuleReAncre`,
          qui ne rend qu'un préfixe STRICTEMENT plus court — pas d'un compteur de tours. */
-      while (essai.err && meriteUnRepli(essai.err)) {
-        var prf2 = preambuleReAncre(prf, essai.err);
+      /* L'ÉLAGAGE PAR LE HAUT (point B2b-14) prend le relais quand le repli échoue non pas
+         sur un nom manquant mais sur une ZONE MORTE TEMPORELLE : un bloc du préambule lit
+         un nom qu'un bloc plus bas redéclare. Même ordre que `lancerJs` — ré-ancrage
+         d'abord, élagage ensuite — sinon ce vérificateur mesurerait un autre moteur. */
+      var faconne = '';
+      while (essai.err) {
+        var prf2 = meriteUnRepli(essai.err) ? preambuleReAncre(prf, essai.err) : null;
+        var quoi = prf2 ? 're-ancre' : 'elague';
+        if (!prf2) prf2 = preambuleElague(prf, essai.err);
         if (!prf2) break;
-        prf = prf2;
+        prf = prf2; faconne = quoi;
         essai = jouerDerriere(preambuleQuiCompile(prf, code));
       }
       if (!essai.err) {
         parRepli = true; replies++;
         listeReplies.push(rel + ' #' + (i + 1) + '  (' + essai.lignes + ' ligne(s))' +
-          (prf !== prefixe ? '  [ré-ancré]' : '') +
+          (prf !== prefixe ? (faconne === 'elague' ? '  [élagué]' : '  [ré-ancré]') : '') +
           (erreurAnnoncee(code, msg) ? '  ⚠ ERREUR ANNONCÉE ÉTEINTE' : ''));
         msg = null;
       }

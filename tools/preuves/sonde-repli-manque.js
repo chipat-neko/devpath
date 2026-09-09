@@ -33,6 +33,17 @@ var vm = require('vm');
 
 var RACINE = path.resolve(__dirname, '..', '..');
 
+/* ⚠️ CETTE SONDE MOURAIT AVANT SA DERNIÈRE LIGNE (2026-09-09, point B2b-14), comme
+   `sonde-heritage-navigateur.js` le faisait pour une raison voisine. Ici l'`EventTarget`
+   de Node remet à `process.nextTick` l'exception d'un écouteur (`pages/js/lecon-64` #1
+   appelle `miseAJourBadge`, qui n'existe pas) : le `try/catch` autour de `runInContext`
+   ne peut rien pour une exception relancée au tour suivant, et le processus s'arrêtait au
+   milieu du dernier tableau. Un instrument qui meurt en route rend une mesure PARTIELLE
+   sous les traits d'une panne d'outil. Un navigateur, lui, signale l'exception d'un
+   écouteur et poursuit : l'ignorer est donc aussi le comportement FIDÈLE. */
+process.on('uncaughtException', function () {});
+process.on('unhandledRejection', function () {});
+
 function srcRunner() { return fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8'); }
 function lireMotif(nom) {
   var m = srcRunner().match(new RegExp('var ' + nom + ' = (/[\\s\\S]*?/);'));

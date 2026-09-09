@@ -2286,6 +2286,93 @@ résultat avant le clic.
       mais que ni le repli ni le ré-ancrage ne rendent visibles — c'est cette mécanique-là qu'il
       faut mesurer avant d'écrire quoi que ce soit, et non le contenu.
 
+- [x] **B2b-14 · L'ÉLAGAGE PAR LE HAUT, dixième règle du repli : 8 blocs rendus vivants, ZÉRO
+      perdu — 50 blocs en panne → 43, aboutis 1 538 → 1 546.**
+
+      **Mesure reproduite d'abord** : 1 613 blocs avec bouton, 776 écartés, 1 538 aboutis, 35 par
+      repli, 23 annoncées, 2 non concluants, **50 EN PANNE**, 81 non compilables, 35 orphelins —
+      les chiffres laissés par B2b-13. `tools/preuves/sonde-repli-manque.js`, relancée sans rien
+      modifier, range les 48 qui sont des « X is not defined » en trois familles : **APRÈS 0, TRI 10,
+      AUTRE-ERR 15, INTROUVABLE 23**. Et dans
+      les AUTRE-ERR, une même phrase revenait huit fois : **« Cannot access 'X' before
+      initialization »**.
+
+      **CE N'ÉTAIT PAS UN DÉFAUT DU CONTENU, C'ÉTAIT LE SYMÉTRIQUE DU POINT B2b-9.** Le
+      ré-ancrage coupe la FIN du préfixe ; il manquait la coupe du DÉBUT. Cas d'école,
+      `pages/js/lecon-09` : le bloc #3 LIT `user` sans le déclarer (son fournisseur est le #2), le
+      #4 le REDÉCLARE. Pour le bloc #5, le tri garde le #4 — le plus proche — puis le #3, qui
+      compile avec lui, mais écarte le #2, en collision avec le #4. Le préambule est donc
+      **[#3, #4]** : à l'exécution, le #3 lit `user` AVANT la déclaration du #4, dans la même
+      portée. `const` et `class` étant en zone morte temporelle, cela ne rend pas « user is not
+      defined » — que `meriteUnRepli` reconnaît — mais « Cannot access 'user' before
+      initialization », qu'il ne reconnaît pas. **Le repli s'arrêtait là, et l'apprenant lisait
+      l'erreur d'origine.**
+
+      `preambuleElague(prefixe, erreur)` retranche le DÉBUT du préfixe jusqu'au bloc qui déclare le
+      nom en colonne zéro : aucun lecteur de ce nom ne le précède plus. Elle ne juge pas le texte,
+      pas plus que les neuf autres règles, et sa terminaison vient de la décroissance STRICTE du
+      préfixe — pas d'un compteur de tours. Écrite dans `js/runner.js`, elle est **LUE** par
+      `verif-js.js`, jamais recopiée, et appelée dans le MÊME ORDRE que `lancerJs` (ré-ancrage
+      d'abord, élagage ensuite) : deux exemplaires divergeraient, et le vérificateur mesurerait
+      alors un moteur qui n'existe pas.
+
+      **Effet mesuré : 50 → 43 pannes, 1 538 → 1 546 aboutis, replis 35 → 43.** Écartés (776), non
+      compilables (81) et orphelins (35) **inchangés** — aucun bouton n'a bougé. Les 35 replis
+      d'avant gardent tous exactement leur nombre de lignes : **aucun bloc qui aboutissait n'a
+      changé de sortie**, ce qui était acquis d'avance puisque l'élagage ne se déclenche que
+      lorsque le repli a DÉJÀ échoué.
+
+      **PREUVE PAR LE NAVIGATEUR, ET ELLE NE S'ARRÊTE PAS À « ÇA NE PLANTE PLUS ».** Remplacer une
+      erreur par une sortie FAUSSE serait pire que l'erreur. Les huit blocs ont donc été cliqués
+      dans Chrome (`verif-clic.js --sorties`, `file://`) et comparés à ce que la leçon annonce en
+      commentaire :
+
+      | bloc | ce que la page annonce | ce que l'apprenant obtient maintenant |
+      |---|---|---|
+      | `js/lecon-09` #5 | `{ nom: "Sam", email: "a@b.fr" }` | `{"nom":"Sam","email":"a@b.fr"}` |
+      | `js/lecon-09` #11 | `"?"` | `?` |
+      | `js/lecon-09` #13 | `{ nom:"Sam", age:27 }` puis l'original intact | `{"nom":"Sam","age":27}` / `{"nom":"Sam","age":25}` |
+      | `js/lecon-09` #15 | `nom : Sam` / `age : 25` | idem |
+      | `js/lecon-09` #21 | `true` / `false` | idem |
+      | `algo/lecon-17` #7 | `affiche: 3` | `3` |
+      | `algo/lecon-17` #8 | `affiche: 19` | `19` |
+      | `js/lecon-20` #12 | `"Réviser"` / `true` | `Réviser` / `true` |
+
+      **Huit sur huit conformes.** Non-régression au clic sur les 23 pages qui contiennent un
+      repli : **196 blocs attendus, 196 cliqués (couverture complète), 0 DIVERGENT**.
+
+      ⚠️ **UN BLOC EST PASSÉ DE « ERREUR ANNONCÉE » À « ABOUTI », ET C'EST UNE CORRECTION, PAS UNE
+      PERTE** — le compteur des annoncées descend de 23 à 22, ce qui a demandé vérification.
+      `js/lecon-20` #12 était classé « annoncée » par le motif français, qui voyait « lève une
+      Error » dans **une ligne mise en commentaire, donc jamais exécutée** ; l'erreur réelle était
+      `prochainId is not defined`. Le bloc affiche maintenant sa vraie sortie. Le marqueur
+      « ⚠ ERREUR ANNONCÉE ÉTEINTE » de `--causes` reste donc à lire comme un signal à examiner, pas
+      comme un verdict : les 3 qu'il pointe aujourd'hui sont tous des annonces en ligne commentée.
+
+      **Cliquet descendu à 43 et éprouvé** : `const zzz = fantomeAbsent();` injecté dans
+      `algo/lecon-01` → **code 1**, « 44 contre 43 à la référence » ; faute retirée → **code 0**,
+      page revenue à l'octet près (`269ad551…`). L'étiquette de `--causes` distingue désormais
+      `[ré-ancré]` et `[élagué]`, sans quoi deux mécaniques différentes se lisaient pareil.
+
+      **Non-régression** : `verif.js --rapide` **41 étapes, tout vert, 124,7 s** ; `node --check`
+      sur `js/runner.js` et `tools/verif-js.js` ; **0 URL vers un CDN**. Aucun fichier de contenu
+      modifié — seuls le moteur et son vérificateur ont bougé — donc `search-index.js` inchangé.
+
+      **Reste au gisement : 43**, dont 23 INTROUVABLES (le nom manquant n'ouvre aucune ligne : il
+      est lu dans le corps d'une fonction appelée par le bloc) et une douzaine d'AUTRE-ERR en
+      cascade.
+
+      ⚠️ **UNE TROISIÈME DETTE D'INSTRUMENT, TROUVÉE ET SOLDÉE EN CHEMIN.**
+      `sonde-repli-manque.js` MOURAIT elle aussi avant sa dernière ligne, par une autre porte que
+      celle du point B2b-13 : l'`EventTarget` de Node remet à `process.nextTick` l'exception d'un
+      écouteur (`js/lecon-64` #1 appelle `miseAJourBadge`, qui n'existe pas), donc un
+      `uncaughtException` et non un `unhandledRejection`, qu'aucun `try/catch` autour de
+      `runInContext` ne peut intercepter. Les deux sont désormais ignorés — ce qu'un navigateur
+      fait aussi — et la sonde va au bout : **code 0**.
+      ⚠️ **ET ELLE EST À METTRE À JOUR** : elle recopie la boucle du repli au lieu de la lire, elle
+      ne connaît donc pas l'élagage écrit ici. Ses chiffres se lisent maintenant comme l'état
+      d'AVANT ce point — c'est exactement le défaut que `verif-js.js` évite en LISANT `runner.js`.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf
