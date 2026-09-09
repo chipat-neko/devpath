@@ -486,6 +486,131 @@
     return false;
   }
 
+  /* LA FONCTION QUE LE BLOC DÉCLARE ET QU'IL APPELLE (2026-09-10, point B2b-27) ---------
+     Les deux règles ci-dessus exigent que le nom hérité soit lu au NIVEAU RACINE. Ce qui
+     restait dans `projets-js` a une autre forme, et elle est parfaitement homogène :
+
+         function rendre() {
+           const cases = grille.querySelectorAll(".case");   // `grille` : bloc écarté
+           statutEl.textContent = …;
+         }
+         rendre();                                           // …et le bloc l'appelle
+
+     Le nom est lu à la profondeur 1 : la précaution mesurée en B2b-8 — « un nom cité dans
+     le corps d'une fonction que le bloc n'appelle jamais ne fait rien échouer » — l'épargne.
+     Mais ici LE BLOC L'APPELLE, et l'erreur est alors aussi certaine qu'à la racine.
+
+     MESURE AVANT ÉCRITURE (`tools/preuves/sonde-fonction-appelee.js`, statut de chaque bloc
+     DEMANDÉ à `verif-js.js`) :
+
+       | critère                                          | visés | dont VIVANTS |
+       |---|---|---|
+       | nom hérité cité dans un corps de fonction du bloc |  18   | **15**       |
+       | **… et la fonction est APPELÉE à la racine** (retenu) | **3** | **0**   |
+       | … et la citation sous aucune condition            |   1   | **0**        |
+
+     ⚠️ SANS LA NEUTRALISATION DES PARAMÈTRES, LA VARIANTE RETENUE VISAIT DEUX VIVANTS :
+     `nodejs/lecon-09` #12 est `function lireOptions(args) { … for (const arg of args) }` —
+     `args` y est le PARAMÈTRE, pas la globale du bloc de navigateur, et la fonction marche
+     très bien. C'est la même précaution qu'en B2b-23 et B2b-25, à un niveau de plus.
+     La variante la plus prudente (citation hors de toute condition) ne gagne qu'un bloc sur
+     trois : on garde donc « appelée », qui ne vise aucun vivant. LA LIMITE CONNUE, écrite
+     ici pour qu'elle ne se redécouvre pas : une lecture placée dans une branche jamais
+     atteinte survivrait à l'appel. Aucun bloc du site n'est dans ce cas — c'est mesuré, pas
+     supposé — et le cliquet des aboutis le dirait aussitôt.
+     Les gardes de B2b-8 sont conservées telles quelles : bloc qui déclare ou affecte le nom,
+     et nom fourni par un bloc précédent non-navigateur (le repli peut le donner).
+     ⚠️ Fonction LUE par `tools/verif-js.js` et `tools/verif-clic.js`, jamais recopiée. */
+  function heriteDuNavigateurParUneFonctionAppelee(texte, navAvant, autresAvant) {
+    var liste = navAvant || [], autres = autresAvant || [];
+    if (!liste.length) return false;
+    /* Commentaires, chaînes et gabarits neutralisés caractère par caractère (même raison
+       qu'au-dessus : aucune regex ne suit l'imbrication d'un `${…}`). */
+    var t = String(texte), n = t.length, net = "", i = 0;
+    while (i < n) {
+      var c = t[i];
+      if (c === "/" && t[i + 1] === "/") { while (i < n && t[i] !== "\n") { net += " "; i++; } continue; }
+      if (c === "/" && t[i + 1] === "*") {
+        net += "  "; i += 2;
+        while (i < n && !(t[i] === "*" && t[i + 1] === "/")) { net += (t[i] === "\n" ? "\n" : " "); i++; }
+        net += "  "; i += 2; continue;
+      }
+      if (c === '"' || c === "'" || c === "`") {
+        var q = c, profC = 0;
+        net += " "; i++;
+        while (i < n) {
+          var d = t[i];
+          if (d === "\\") { net += "  "; i += 2; continue; }
+          if (q === "`" && d === "$" && t[i + 1] === "{") { profC++; net += "  "; i += 2; continue; }
+          if (q === "`" && profC > 0 && d === "}") { profC--; net += " "; i++; continue; }
+          if (profC > 0) { net += d; i++; continue; }
+          if (d === q) { net += " "; i++; break; }
+          net += (d === "\n" ? "\n" : " "); i++;
+        }
+        continue;
+      }
+      net += c; i++;
+    }
+    var prof = [], p = 0, k;
+    for (k = 0; k < net.length; k++) {
+      if (net[k] === "{") { prof[k] = p; p++; }
+      else if (net[k] === "}") { p--; prof[k] = p; }
+      else prof[k] = p;
+    }
+    /* Les fonctions NOMMÉES déclarées en colonne zéro, avec les bornes de leur corps et la
+       liste de leurs paramètres. Une flèche affectée à un `const` demanderait de suivre
+       l'expression ; le lot mesuré n'en contient pas, et une règle ne devine pas. */
+    var fns = [], reF = /^function\s+([A-Za-z_$À-ɏ][\w$À-ɏ]*)\s*\(/gm, mf;
+    while ((mf = reF.exec(net))) {
+      var par0 = net.indexOf("(", mf.index), par1 = net.indexOf(")", par0);
+      var acc = net.indexOf("{", par1 < 0 ? mf.index + mf[0].length : par1);
+      if (acc < 0 || par1 < 0) continue;
+      var pf = 0, fin = acc;
+      for (; fin < net.length; fin++) {
+        if (net[fin] === "{") pf++;
+        else if (net[fin] === "}") { pf--; if (pf === 0) break; }
+      }
+      if (fin >= net.length) continue;
+      var params = net.slice(par0 + 1, par1).split(",").map(function (s) {
+        var mm = s.match(/[A-Za-z_$À-ɏ][\w$À-ɏ]*/);
+        return mm ? mm[0] : "";
+      }).filter(function (s) { return s; });
+      fns.push({ nom: mf[1], debut: acc, fin: fin, params: params });
+    }
+    if (!fns.length) return false;
+    for (var j = 0; j < liste.length; j++) {
+      var re = /^(?:const|let|var|class|async\s+function|function)\s+([A-Za-z_$À-ɏ][\w$À-ɏ]*)/gm, m;
+      while ((m = re.exec(liste[j]))) {
+        var nom = m[1], e = nom.replace(/[$]/g, "\\$&");
+        if (new RegExp("(?:const|let|var|function|class)\\s+" + e + "(?![\\w$À-ɏ])").test(net)) continue;
+        if (new RegExp("(?:^|[^\\w$.À-ɏ])" + e + "\\s*=(?!=)").test(net)) continue;
+        var decl = new RegExp("^(?:const|let|var|class|async\\s+function|function)\\s+" + e + "(?![\\w$À-ɏ])", "m");
+        var fourni = false, a;
+        for (a = 0; a < autres.length; a++) { if (decl.test(autres[a])) { fourni = true; break; } }
+        if (fourni) continue;
+        var lec = new RegExp("(^|[^\\w$.À-ɏ])" + e + "(?![\\w$À-ɏ])", "g"), u;
+        while ((u = lec.exec(net))) {
+          var pos = u.index + u[1].length;
+          if (/^\s*:/.test(net.slice(pos + nom.length))) continue;
+          for (k = 0; k < fns.length; k++) {
+            var fn = fns[k];
+            if (pos <= fn.debut || pos >= fn.fin) continue;
+            if (fn.params.indexOf(nom) >= 0) continue;
+            /* la fonction est-elle appelée au niveau racine du bloc ? */
+            var reA = new RegExp("(^|[^\\w$.À-ɏ])" + fn.nom.replace(/[$]/g, "\\$&") + "\\s*\\(", "g"), ua;
+            while ((ua = reA.exec(net))) {
+              var pa = ua.index + ua[1].length;
+              if (prof[pa]) continue;
+              if (/function\s*$/.test(net.slice(Math.max(0, pa - 20), pa))) continue;
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   /* `import` et `export` en TETE DE LIGNE (2026-09-09, point B2 du chantier V17) : un
      module ES ne s'evalue pas dans le Worker, qui recoit du script classique — le bouton
      rendait « Cannot use import statement outside a module », premiere cause d'echec du
@@ -1517,6 +1642,7 @@
             neCompilePas(js.textContent) ||
             heriteDuNavigateur(js.textContent, navAvant[iBloc]) ||
             heriteDuNavigateurAuNiveauRacine(js.textContent, navAvant[iBloc], autresAvant[iBloc]) ||
+            heriteDuNavigateurParUneFonctionAppelee(js.textContent, navAvant[iBloc], autresAvant[iBloc]) ||
             estUnFragmentOrphelin(js.textContent, tousJs)) {
           block.setAttribute("data-runner", "skip");
           return;

@@ -3466,6 +3466,72 @@ résultat avant le clic.
       990 s. C'est la mesure qui prouve que le renommage de la règle et la disparition de
       la liste `navFichierAvant` n'ont désynchronisé ni le moteur ni les vérificateurs.
 
+- [x] **B2b-27 · LA FONCTION QUE LE BLOC DÉCLARE ET QU'IL APPELLE, douzième règle du
+      bouton : 3 blocs écartés, ZÉRO vivant retiré — 15 blocs en panne → 12, aboutis
+      1 567 INCHANGÉS.**
+
+      **Le lot qui restait dans `projets-js` avait une forme, et elle était homogène.**
+      Après B2b-25 et B2b-26, les 15 blocs en panne se répartissaient `js` 6,
+      `projets-js` 6, `typescript` 1, `vue` 1, `nodejs` 1. Six blocs de `projets-js`
+      s'écrivaient tous ainsi : `function rendre() { … grille.querySelectorAll(".case") … }`
+      suivi de `rendre();`. Le nom hérité est lu à la **profondeur 1**, donc les deux règles
+      d'héritage l'épargnent — c'est la précaution mesurée en B2b-8 : « un nom cité dans le
+      corps d'une fonction que le bloc n'appelle jamais ne fait rien échouer ». Mais ici
+      **le bloc l'appelle**, et l'erreur est alors aussi certaine qu'à la racine.
+
+      **MESURE AVANT ÉCRITURE** (`tools/preuves/sonde-fonction-appelee.js`, sonde neuve,
+      statut de chaque bloc DEMANDÉ à `verif-js.js`) :
+
+      | critère | blocs visés | dont **VIVANTS** |
+      |---|---|---|
+      | nom hérité cité dans un corps de fonction du bloc | 18 | **15** |
+      | **… et la fonction est APPELÉE au niveau racine** (retenu) | **3** | **0** |
+      | … et la citation n'est sous aucune condition | 1 | **0** |
+
+      ⚠️ **LE PREMIER RELEVÉ VISAIT DEUX VIVANTS, ET LA CAUSE EST LA MÊME QU'EN B2b-23 ET
+      B2b-25, UN NIVEAU PLUS LOIN : LES PARAMÈTRES.** `nodejs/lecon-09` #12 est
+      `function lireOptions(args) { … for (const arg of args) … }` — `args` y est le
+      paramètre de la fonction, pas la globale née d'un bloc de navigateur, et le bloc
+      marche très bien (`{"port":"8080","verbeux":true}` au clic). Un paramètre MASQUE le
+      nom du dehors. Une fois la liste des paramètres retirée, la variante retenue passe de
+      **5 visés / 2 vivants à 3 visés / 0 vivant**. Sans cette mesure, la règle aurait
+      retiré deux boutons qui marchent.
+
+      **La variante la plus prudente ne gagne qu'un bloc sur trois**, et « appelée » n'en
+      vise aucun de vivant : c'est donc « appelée » qui est retenue, avec **sa limite écrite
+      dans le moteur** — une lecture placée dans une branche jamais atteinte survivrait à
+      l'appel ; aucun bloc du site n'est dans ce cas, et c'est mesuré, pas supposé.
+
+      **ÉPREUVE DE LA RÈGLE, cas par cas** : fonction appelée → écarté ; **fonction NON
+      appelée → gardé** ; **paramètre masquant** → gardé ; **nom fourni par un bloc
+      précédent non-navigateur** (le repli peut le donner) → gardé ; nom déclaré par le bloc
+      lui-même → gardé ; **nom cité dans un commentaire seul** → gardé ; **appel fait depuis
+      une AUTRE fonction jamais appelée** → gardé ; bloc sans aucune fonction → gardé.
+      **8 cas sur 8.**
+
+      **PREUVE PAR LE NAVIGATEUR.** `verif-clic.js --sorties`, Chrome `file://` :
+      `projets-js/lecon-10`, `lecon-19` et `lecon-04` — **8 blocs cliqués sur 8 attendus,
+      couverture complète, 0 divergent**, et les 3 blocs visés n'ont plus de bouton.
+      **Injection dans une page réelle** : `function zzzTest() { ctx.fillRect(0,0,1,1); }`
+      suivi de `zzzTest();` ajouté au bloc #2 de `projets-js/lecon-16` → la page passe de
+      **2 boutons à 1 DANS CHROME**, et `verif-js.js` dit la même chose ; page restaurée →
+      2 boutons. **Cliquet des pannes éprouvé** : `const zzz = null; zzz.x;` injecté en tête
+      d'`algo/lecon-01` → **code 1**, « 13 en panne contre 12 à la référence, un bloc JS qui
+      aboutissait est tombé » ; page restaurée → code 0.
+
+      **Mesures.** `verif-js.js` : **1 599 blocs à bouton (−3), 1 567 aboutis (INCHANGÉ),
+      12 EN PANNE (−3), 79 non compilables et 32 orphelins INCHANGÉS**. Chaîne :
+      `verif-html.js` 1 629 fichiers, 0 grave 0 remarque ; `verif-donnees.js` 25 contrôles,
+      0 erreur ; `verif.js --rapide` **52 étapes, tout vert, 130,6 s**. ⚠️ `gardech` a
+      SIGNALÉ la sonde neuve avant que ce point ne soit clos — « un vérificateur hors chaîne
+      vaut un vérificateur inexistant » — et les deux sondes de la journée sont maintenant
+      déclarées dans `tools/hors-chaine.json` avec ce qu'il faudrait pour les faire entrer.
+
+      **Ce qui reste : 12 blocs.** `js` 6 (`lecon-17` #9/#11/#16, `lecon-59` #2, `lecon-65`
+      #5/#6 — dont les deux de l'angle mort du repli sur `export`, décrit en B2b-21),
+      `projets-js` 3 (`lecon-02` #5, `lecon-10` #6, `lecon-18` #6), `typescript` 1, `vue` 1,
+      `nodejs` 1 (`lecon-22` #5, `z is not defined`, l'un des deux refus de B2b-22).
+
 - [x] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

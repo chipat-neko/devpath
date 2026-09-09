@@ -185,6 +185,11 @@ fichiers.forEach(function (f) {
     if (REG.heriteDuNavigateurAuNiveauRacine(code, ctxLecon.navAvant[i], ctxLecon.autresAvant[i])) {
       ecartes++; return;
     }
+    /* LA FONCTION QUE LE BLOC DECLARE ET APPELLE (2026-09-10, point B2b-27), juste apres,
+       et dans le meme ordre que `init()`. */
+    if (REG.heriteDuNavigateurParUneFonctionAppelee(code, ctxLecon.navAvant[i], ctxLecon.autresAvant[i])) {
+      ecartes++; return;
+    }
     /* LE FRAGMENT ORPHELIN, teste en DERNIER, dans le meme ordre que `init()`.
        ⚠️ IL LUI FAUT SON PROPRE CLIQUET, POUR LA MEME RAISON QU'A `neCompilePas` — et la
        mesure l'a prouve AVANT que ce compteur n'existe : `zzzNomInexistant();` injecte en

@@ -216,7 +216,8 @@ var reglesRunner = (function () {
   var par = {};
   ['estUnFichierJson', 'estUneSuiteDeTests', 'estUnFragmentServeur', 'estDuDomDePage',
    'estUnServiceWorker', 'neCompilePas', 'heriteDuNavigateur',
-   'heriteDuNavigateurAuNiveauRacine', 'estUnFragmentOrphelin'].forEach(function (nom) {
+   'heriteDuNavigateurAuNiveauRacine', 'heriteDuNavigateurParUneFonctionAppelee',
+   'estUnFragmentOrphelin'].forEach(function (nom) {
     var i = src.indexOf('function ' + nom + '(');
     if (i < 0) return;
     var j = src.indexOf('\n  }', i);
@@ -253,6 +254,10 @@ function ecarteParRunner(code, navAvant, tousJs, autresAvant) {
      B2b-10, une quatrième fois. */
   var sf = reglesRunner.par.heriteDuNavigateurAuNiveauRacine;
   if (sf && sf(code, navAvant || [], autresAvant || [])) return true;
+  /* ⚠️ LA QUATRIÈME RÈGLE À CONTEXTE (2026-09-10, point B2b-27) : même contexte que la
+     précédente, mais elle regarde les fonctions que le bloc déclare ET appelle. */
+  var fa = reglesRunner.par.heriteDuNavigateurParUneFonctionAppelee;
+  if (fa && fa(code, navAvant || [], autresAvant || [])) return true;
   /* ⚠️ LA SECONDE RÈGLE À CONTEXTE (point B2b-10), et elle n'a pas le même : celle-ci
      demande la page ENTIÈRE, pas ce qui précède. Sans elle, cet outil réclamait 12 boutons
      de plus que le navigateur n'en pose sur un simple échantillon de 5 pages — la dette de

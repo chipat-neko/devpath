@@ -53,6 +53,7 @@ var neCompilePas = lireFonction('neCompilePas');
 var heriteDuNavigateur = lireFonction('heriteDuNavigateur');
 var estUnFragmentOrphelin = lireFonction('estUnFragmentOrphelin');
 var heriteDuNavigateurAuNiveauRacine = lireFonction('heriteDuNavigateurAuNiveauRacine');
+var heriteDuNavigateurParUneFonctionAppelee = lireFonction('heriteDuNavigateurParUneFonctionAppelee');
 var meriteUnRepli = lireFonction('meriteUnRepli');
 var envelopperPourRepli = lireFonction('envelopperPourRepli');
 var preambuleQuiCompile = lireFonction('preambuleQuiCompile');
@@ -119,6 +120,7 @@ function contexteLecon(blocsDuFichier) {
       estUnFragmentServeur(code) || estDuDomDePage(code) || estUnServiceWorker(code) ||
       neCompilePas(code) || heriteDuNavigateur(code, navAvant[i]) ||
       heriteDuNavigateurAuNiveauRacine(code, navAvant[i], autresAvant[i]) ||
+      heriteDuNavigateurParUneFonctionAppelee(code, navAvant[i], autresAvant[i]) ||
       estUnFragmentOrphelin(code, tousJs));
   }
   var aBouton = [], aBoutonIdx = [];
@@ -142,6 +144,7 @@ module.exports = {
   heriteDuNavigateur: heriteDuNavigateur,
   estUnFragmentOrphelin: estUnFragmentOrphelin,
   heriteDuNavigateurAuNiveauRacine: heriteDuNavigateurAuNiveauRacine,
+  heriteDuNavigateurParUneFonctionAppelee: heriteDuNavigateurParUneFonctionAppelee,
   meriteUnRepli: meriteUnRepli,
   envelopperPourRepli: envelopperPourRepli,
   preambuleQuiCompile: preambuleQuiCompile,
