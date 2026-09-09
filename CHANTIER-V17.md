@@ -808,16 +808,57 @@ résultat avant le clic.
       serait lui-même l'accident). À retenir : **écrire ces scripts avec l'outil d'édition, jamais par
       heredoc** — c'est la troisième fois que ce piège se paie sur ce dépôt.
 
-- [ ] **B1e · `tools/preuves/sql-lecon.js` rend des « MOTEUR KO » qui n'existent pas.** Reproduit deux
-      fois le 2026-09-09 : trois leçons passées d'un coup → les **3 derniers blocs de la dernière page**
-      sont déclarés « MOTEUR KO » ; les mêmes pages seules ou par deux → **0**. `sql/lecon-04` : 12
-      blocs, 3 fantômes à trois pages, 0 seule. `sql/lecon-18` : 1 fantôme à deux pages, 0 seule.
-      La cause n'est pas identifiée : le verdict tombe sur `!texte` (sortie vide) après 40 × 250 ms
-      d'attente, sans distinguer « rien lu » de « le moteur a dit qu'il ne pouvait pas ». Deux choses à
-      faire : séparer ces deux cas dans le message, et trouver pourquoi la sortie reste vide en fin de
-      lot (mémoire ? Worker tué ? délai trop court quand Chrome a déjà chargé 8,6 Mo trois fois ?).
-      **Cet outil est dans `--complet`** : il peut donc faire rougir la chaîne sans qu'aucune page ne
-      soit cassée — le défaut même que le point A3 a corrigé sur `verif-clic.js`.
+- [x] **B1e · `sql-lecon.js` : les « MOTEUR KO » fantômes venaient d'une COURSE — l'outil et l'observé
+      avaient EXACTEMENT le même délai.** `js/runner.js` interrompt une requête SQL après
+      **10 000 ms** ; ce script attendait **40 × 250 ms = 10 000 ms**. Quand le moteur prenait tout son
+      budget, l'outil abandonnait au même instant et lisait une sortie vide, qu'il rangeait en
+      « MOTEUR KO ». Pire : il enchaînait aussitôt sur le bloc suivant pendant que le Worker était
+      encore occupé — d'où les fantômes par grappes CONSÉCUTIVES.
+
+      **La cause écrite dans le plan était fausse, et c'est la mesure qui l'a montré.** Le plan parlait
+      des « 3 derniers blocs de la dernière page » et cherchait du côté de la mémoire ou d'un Worker
+      tué. Rejoué quatre fois sur le même lot de trois leçons : une fois **4 fantômes sur la PREMIÈRE
+      page** (blocs 7 à 10 de `lecon-13`), trois fois **zéro**. Ce n'est donc ni la position dans le
+      lot, ni la taille du lot : c'est une course, et son verdict était **aléatoire** — un outil de
+      `--complet` qui rougit au hasard, ce qui est pire qu'un outil qui se trompe toujours.
+
+      **Correctifs.** (1) Le délai est désormais **LU dans `js/runner.js`**, jamais recopié — même
+      discipline que `AUTRE_SGBD` et `TABLE_CREEE` pour `verif-sql.js` —, et l'attente vaut ce délai
+      **plus 5 s de marge** : c'est au moteur de trancher, pas à l'outil. (2) Après un « sans réponse »,
+      on laisse le moteur finir son propre délai avant le bloc suivant, ce qui coupe la cascade.
+      (3) `Page.navigate` était suivi d'un `dodo(1500)` FIXE : remplacé par l'attente d'un ÉTAT
+      (`readyState === "complete"`, puis les boutons posés par `runner.js`). C'est ce délai-là qui
+      produisait l'autre symptôme, rencontré au point B1b-2 : « `pages/sql/lecon-08.html` — **0** bloc
+      SQL avec bouton » là où la page seule en donne **11**, tous OK. (4) **La quatrième issue
+      demandée par le plan est écrite** : « rien lu » n'est plus confondu avec « le moteur a dit qu'il
+      ne pouvait pas ». Une sortie vide s'affiche « SANS RÉPONSE (défaut de mesure) », est comptée à
+      part, et le bilan dit explicitement « ce verdict ne porte pas sur le site ». Même traitement pour
+      une page dont les boutons n'ont pas été lus alors que sa SOURCE porte des blocs `language-sql` :
+      « MESURE MANQUÉE », et non « page sans blocs ». Les deux font sortir en 1.
+
+      ⚠️ **Un second défaut, trouvé en éprouvant le correctif et pas en le relisant.** La détection du
+      « rien lu » testait le texte BRUT du panneau. Or `runner.js` pose l'en-tête « Résultat SQL » dès
+      le lancement, avant toute réponse : le texte brut n'est donc **jamais** vide une fois le bloc
+      lancé. La détection ne se déclenchait pas, et un bloc non lu était rangé dans « erreur SQL du
+      contenu » — **imputé au SITE**, sans rien faire rougir. Elle porte maintenant sur le résumé, dont
+      le nettoyage de l'en-tête a lui aussi été corrigé (`^RÉSULTAT SQL\s*` et non un espace
+      obligatoire, qui ne matchait pas quand il n'y a rien derrière).
+
+      **Éprouvé par injection, chaque garde-fou séparément, et retour à vert après chacun.** Attente de
+      l'outil ramenée à zéro → **code 1**, « 10 bloc(s) SANS RÉPONSE », « MESURE INCOMPLÈTE : ce verdict
+      ne porte pas sur le site » ; lecture des boutons désactivée → **code 1**, « 0 bouton POSÉ alors
+      que la source porte des blocs SQL : MESURE MANQUÉE » ; délai du moteur porté à 20 s dans
+      `runner.js` → l'outil annonce de lui-même « attente par bloc : **25 s**, contre 20 s au moteur »,
+      preuve qu'il LIT la valeur (`runner.js` restauré à l'octet près, `git diff` vide).
+      Lot de trois leçons rejoué **quatre fois** : 31 blocs, 31 résultats, 0 sans réponse à chaque fois.
+      Échantillon par défaut de la chaîne : 40 blocs, 38 résultats, 2 erreurs de contenu (les deux
+      démonstrations voulues de `bdd/lecon-05`), 0 requête distante, code 0.
+      ⚠️ **Honnêteté sur la preuve** : le défaut étant intermittent, une série de passages verts ne
+      démontre pas son absence. Ce qui la démontre, c'est la CAUSE identifiée (deux délais égaux) et le
+      fait que l'outil refuse désormais de rendre un verdict vert quand il n'a rien lu.
+      ⚠️ **Le piège du `| tail` s'est représenté** pendant ce point : `node … | tail` a annoncé
+      « EXIT=0 » sur une injection qui sortait bel et bien en 1. C'est le code de `tail`. Il est déjà
+      consigné en B1a ; il se paie une fois de plus.
 
 - [ ] **B1d · `securite` : l'unique bloc SQL du cours est en erreur.**
 
