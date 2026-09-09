@@ -201,7 +201,11 @@ var VARIANTES = [
      celle-ci prouve que la fonction RÉELLEMENT posée dans le moteur vise ce qui a été
      mesuré. Une maquette qui dit 27/0 pendant que le moteur en vise d'autres, c'est le
      défaut fondateur du chantier. */
-  { cle: 'runner', libelle: 'la règle LUE dans js/runner.js', lue: true }
+  { cle: 'runner', libelle: 'la règle LUE dans js/runner.js', lue: true },
+  /* PISTE B2b-9 : et si la source n'était pas seulement un bloc de NAVIGATEUR, mais
+     n'importe quel bloc écarté (fichier JSON, suite de tests, fragment de serveur, bloc
+     qui ne compile pas) ? Même critère de colonne zéro, source élargie. */
+  { cle: 'col0-tous-ecartes', libelle: 'col0/col0, source = TOUT bloc écarté', racine: true, col0: true, tous: true }
 ];
 var resultat = {};
 VARIANTES.forEach(function (v) { resultat[v.cle] = { vises: [], vivants: [], pannes: 0 }; });
@@ -230,7 +234,7 @@ fichiers.forEach(function (f) {
     var vus = 0;
     blocs.forEach(function (b) {
       if (!b.code) return;
-      if (b.raison === 'navigateur') {
+      if (b.raison === 'navigateur' || (v.tous && b.raison !== 'bouton')) {
         navAvant.push(b.code);
         (v.racine ? nomsDeclaresRacine(b.code) : nomsDeclaresPartout(b.code)).forEach(function (n) {
           offerts.push({ nom: n, source: b.n });

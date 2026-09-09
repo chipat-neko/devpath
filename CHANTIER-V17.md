@@ -1716,11 +1716,29 @@ résultat avant le clic.
       **Reste au gisement : 107.** Par cours : `js` 44, `projets-js` 14, `patterns` 8, `securite` 7,
       `tests` 6, `html` 4, `algo` 4, `nodejs` 4, `vue` 4. Causes de tête : 6 `etatInitial`,
       4 `bouton`, 4 `user`, 3 `taches`, 3 `Tache`, 3 `element`, 3 `Illegal return statement`.
-      Le reste n'est plus homogène : ce sont des fragments dont le bloc source est lui-même à
-      bouton mais placé APRÈS (l'ordre de la leçon expose la solution avant l'énoncé), des noms
-      qui ne sont déclarés nulle part dans la page, et les 3 `return` racine qu'`eval` refuse
-      alors que `new Function` les accepte (B2b-5). La prochaine case devra donc trancher lot par
-      lot, sans espérer une règle unique.
+      **Ce reste a été DISSÉQUÉ dans la même passe** (`tools/preuves/sonde-repli-manque.js`), et la
+      mesure a immédiatement démenti l'explication qui venait à l'esprit — « la leçon expose la
+      solution avant l'énoncé, donc le bloc source est plus bas » : **0 cas sur 107.** Ce que la
+      sonde trouve à la place, sur les 92 blocs qui échouent encore sur un nom manquant :
+
+      | pourquoi le repli ne les sauve pas | blocs |
+      |---|---|
+      | **INTROUVABLE** : le nom n'est déclaré NULLE PART dans la page | **60** |
+      | **TRI** : la source existe mais est dans un bloc sans bouton (10), ou écartée par `preambuleQuiCompile` faute de compiler avec le bloc (6) | **16** |
+      | **AUTRE-ERR** : le préambule passe, le repli échoue sur autre chose | **16** |
+      | **APRÈS** : le bloc source est plus bas dans la leçon | **0** |
+
+      Trois lots, trois natures, donc trois cases : les 60 « introuvables » sont de vrais
+      fragments orphelins (`taches`, `input`, `produits`, `bouton` sans son `querySelector`) —
+      là il faudra décider de débrancher, pas de réparer. Les 16 « TRI » sont le seul lot où le
+      repli pourrait être ÉLARGI. Et dans les 16 « AUTRE-ERR » se cache un sous-lot homogène de
+      **7 blocs en `Cannot access '…' before initialization`** (`js/lecon-09` ×5, `algo/lecon-17`
+      ×2) qui est un effet de l'enveloppe du repli elle-même : le bloc entouré d'accolades
+      redéclare le nom, et sa zone morte temporelle masque alors le préambule qui l'aurait
+      fourni. Ces blocs échouaient déjà seuls, donc rien n'a régressé — mais c'est une limite
+      MESURÉE de la mécanique de B2b-7, à connaître avant d'y toucher.
+      S'y ajoutent, hors « nom manquant », les 3 `return` racine qu'`eval` refuse alors que
+      `new Function` les accepte (B2b-5). **Aucune règle unique ne fermera ce reste.**
 
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
