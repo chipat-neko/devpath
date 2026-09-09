@@ -225,10 +225,78 @@
     "a{color:#2540f0}*{box-sizing:border-box}</style></head><body>";
   var PREVIEW_SUF = "</body></html>";
 
-  /* Code exécuté DANS le worker : capture la console puis évalue le code reçu. */
+  /* --- LE REPLI SUR LES BLOCS PRÉCÉDENTS (2026-09-09, point B2b-7) -------------------
+   * Les six règles ci-dessus RETIRENT un bouton qui ne peut rien promettre. Ce qui restait
+   * en panne après elles est d'une autre nature : le FRAGMENT INTERNE, un bloc qui poursuit
+   * le précédent de sa leçon (`etatInitial`, `UnionFind`, `Tache`) et qui échoue sur un
+   * simple « X is not defined ». Lui retirer son bouton serait une perte : le code est bon,
+   * il lui manque seulement ce qui a été écrit au-dessus.
+   *
+   * DEUX MÉCANIQUES ONT ÉTÉ MESURÉES AVANT D'EN ÉCRIRE UNE (tools/preuves/sonde-contexte-cumule.js) :
+   *   - le CUMUL, tous les blocs de la leçon dans un contexte partagé : 28 blocs gagnés,
+   *     mais **380 PERDUS**, tous sur « Identifier '…' has already been declared ». Deux
+   *     blocs qui déclarent chacun `const jeu` ne cohabitent pas dans une portée globale.
+   *     Rejeté.
+   *   - le REPLI, retenu : le bloc s'exécute SEUL, exactement comme avant ; s'il échoue sur
+   *     un nom manquant, ET SEULEMENT DANS CE CAS, il est rejoué dans un Worker NEUF derrière
+   *     les blocs qui le précèdent. Un bloc qui aboutit seul n'est jamais rejoué : cette
+   *     mécanique ne peut RIEN retirer. Mesure : **40 blocs gagnés sur 159**, dont 32 qui
+   *     rendent au moins une ligne à l'apprenant.
+   *
+   * L'ENVELOPPE est ce qui répond à la collision qui tue le cumul : le bloc rejoué est
+   * entouré d'accolades, donc ses `const`/`let`/`class` MASQUENT ceux du préambule au lieu
+   * d'entrer en conflit avec eux. Mesuré : sans elle, 28 gains ; avec elle, 40.
+   * ⚠️ Sauf si le bloc s'ouvre sur `"use strict"` : entre accolades ce n'est plus une
+   * directive mais une expression sans effet, et le bloc serait silencieusement DÉCLASSÉ en
+   * mode non strict. Ceux-là reçoivent une fonction, qui garde la directive. */
+  function envelopperPourRepli(texte) {
+    if (/^\s*["']use strict["']\s*;/.test(texte)) return "(function () {\n" + texte + "\n})();";
+    return "{\n" + texte + "\n}";
+  }
+
+  /* CE QUE LE PRÉAMBULE GARDE. Préambule et bloc partent dans un SEUL script (voir
+     WORKER_SRC), donc une seule collision de déclarations entre deux blocs de la leçon —
+     deux `const jeu` — suffit à faire échouer la compilation de l'ensemble, et le repli
+     entier est perdu. Mesuré : le préambule brut gagne 21 blocs là où la mécanique
+     infidèle en promettait 40. On ne garde donc du préambule que ce qui COMPILE avec le
+     bloc, en partant du plus PROCHE — c'est lui qui a le plus de chances de porter ce qui
+     manque, et un bloc plus ancien qui le contredit est écarté, pas l'inverse.
+     Là encore, aucun jugement sur le texte : c'est JavaScript qui tranche (point B2b-5). */
+  function preambuleQuiCompile(pre, texte) {
+    var gardes = [];
+    for (var i = pre.length - 1; i >= 0; i--) {
+      var essai = [pre[i]].concat(gardes);
+      try {
+        new Function(essai.join("\n") + "\n" + envelopperPourRepli(texte));
+        gardes = essai;
+      } catch (e) {
+        /* SEULE une faute de compilation écarte un bloc. Tout autre incident est un
+           défaut de ce code, pas du contenu : un `catch` muet le cacherait. */
+        if (!(e instanceof SyntaxError)) throw e;
+      }
+    }
+    return gardes;
+  }
+
+  /* QUAND rejouer. Les gains mesurés sont TOUS des « X is not defined » : c'est la seule
+     panne dont un bloc précédent puisse être le remède. Rejouer sur une autre erreur (un
+     `TypeError`, une division qui rate) ne gagnerait rien et ferait tourner du code pour
+     rien. Le message reçu du Worker a la forme « Nom: texte ». */
+  function meriteUnRepli(texte) {
+    return /^ReferenceError: .+ is not defined/.test(String(texte));
+  }
+
+  /* Code exécuté DANS le worker : capture la console puis évalue le code reçu.
+     Il accepte soit une chaîne (le bloc seul, cas ordinaire), soit un objet
+     { code, prelude } : les textes du préambule sont alors évalués D'ABORD, en silence —
+     l'apprenant a demandé le résultat de SON bloc, pas celui des précédents. */
   var WORKER_SRC = [
+    envelopperPourRepli.toString(),
     "self.onmessage = function (ev) {",
-    "  var code = ev.data;",
+    "  var recu = ev.data;",
+    "  var code = typeof recu === 'string' ? recu : recu.code;",
+    "  var prelude = (recu && recu.prelude) || [];",
+    "  var muet = prelude.length > 0;",
     "  function fmt(v) {",
     '    if (typeof v === "string") return v;',
     '    if (v === undefined) return "undefined";',
@@ -237,13 +305,26 @@
     "    try { return JSON.stringify(v); } catch (e) { return String(v); }",
     "  }",
     "  function send(level, args) {",
+    "    if (muet) return;",
     '    self.postMessage({ level: level, text: Array.prototype.slice.call(args).map(fmt).join(" ") });',
     "  }",
     '  ["log", "info", "debug"].forEach(function (l) { console[l] = function () { send("log", arguments); }; });',
     '  console.warn = function () { send("warn", arguments); };',
     '  console.error = function () { send("error", arguments); };',
+    /* ⚠️ UN SEUL `eval`, ET C'EST TOUTE LA DIFFÉRENCE. Un premier jet évaluait le préambule
+       bloc par bloc : dans un `eval`, seuls `var` et `function` deviennent globaux — les
+       déclarations LEXICALES (`const`, `let`, `class`) disparaissent à la fin de l'appel. Un
+       `class UnionFind` évalué à part ne laissait donc rien, et les blocs annoncés gagnés
+       affichaient toujours « UnionFind is not defined » dans Chrome, alors que le
+       vérificateur les disait réparés — son `vm.runInContext`, lui, conserve ces liaisons.
+       Préambule et bloc partent donc dans le MÊME script. Le marqueur `__finDuPrelude`
+       rouvre l'affichage exactement au moment où le code de l'apprenant commence. */
+    "  if (prelude.length) {",
+    "    self.__finDuPrelude = function () { muet = false; };",
+    "    code = prelude.join('\\n') + '\\n;self.__finDuPrelude();\\n' + envelopperPourRepli(code);",
+    "  }",
     "  try { (0, eval)(code); }",
-    '  catch (err) { send("error", [err && err.message ? err.name + ": " + err.message : String(err)]); }',
+    '  catch (err) { muet = false; send("error", [err && err.message ? err.name + ": " + err.message : String(err)]); }',
     "  self.postMessage({ done: true });",
     "};",
   ].join("\n");
@@ -1027,14 +1108,14 @@
 
     tryBtn.remove();
     var runBtn = addBtn(bar, "code-block__run", ICON_PLAY + "<span>Exécuter</span>", function () {
-      runCode(ed.ta.value, out, runBtn);
+      runCode(ed.ta.value, out, runBtn, block);
     });
     addBtn(bar, "code-block__reset", ICON_RESET + "<span>Init</span>", function () {
       ed.reset();
       ed.ta.focus();
     });
     ed.ta.focus();
-    runCode(ed.ta.value, out, runBtn);
+    runCode(ed.ta.value, out, runBtn, block);
   }
 
   /* ----------------------------------------------- Mode Python (Pyodide) */
@@ -1115,19 +1196,62 @@
   }
 
   /* --------------------------------------------------- Exécution sandboxée */
-  function runCode(codeStr, out, runBtn) {
+  /* Les blocs JavaScript À BOUTON qui précèdent celui-ci dans la leçon, dans l'ordre du
+     document et dans leur état COURANT : si l'apprenant a modifié un bloc plus haut, c'est
+     SA version qui sert de préambule, pas celle du disque. */
+  function preambuleDe(block) {
+    var pre = [];
+    var blocs = $all(".code-block");
+    for (var i = 0; i < blocs.length; i++) {
+      if (blocs[i] === block) break;
+      if (blocs[i].getAttribute("data-runner") !== "js") continue;
+      var ta = blocs[i].querySelector("textarea");
+      var code = blocs[i].querySelector("code.language-javascript");
+      var texte = ta ? ta.value : code ? code.textContent : "";
+      if (texte) pre.push(texte);
+    }
+    return pre;
+  }
+
+  function runCode(codeStr, out, runBtn, block) {
+    lancerJs(codeStr, [], out, runBtn, block, null);
+  }
+
+  /* `prelude` vide = l'exécution ordinaire, celle qui existait avant le repli. Non vide =
+     le second essai. `secours` porte alors ce que le PREMIER essai avait affiché : si le
+     repli échoue à son tour, on le remet, car c'est l'erreur du code que l'apprenant a
+     sous les yeux qui doit lui être montrée, pas celle d'un préambule qu'il n'a pas écrit. */
+  function lancerJs(codeStr, prelude, out, runBtn, block, secours) {
     out.innerHTML = '<p class="runner-output__head">Console</p>';
     var lines = 0,
       finished = false,
       worker = null,
       url = null;
+    var journal = [],
+      erreurVue = null;
     runBtn.classList.add("is-running");
 
+    /* ⚠️ Cette ligne est une NOTE du moteur, pas une sortie du programme, et elle porte une
+       classe qui le dit : `verif-clic.js` compare au caractère près ce que la page imprime
+       à ce que le clic rend, et une phrase de commentaire glissée en tête ferait diverger
+       tous les blocs repliés. Le style reste celui d'une ligne discrète (`--empty`) : aucun
+       CSS n'est ajouté. */
+    if (prelude.length) {
+      line("note", prelude.length > 1
+        ? "(les " + prelude.length + " blocs JavaScript qui précèdent dans la leçon ont été" +
+          " exécutés avant celui-ci — leurs affichages sont masqués)"
+        : "(le bloc JavaScript qui précède dans la leçon a été exécuté avant celui-ci —" +
+          " son affichage est masqué)");
+    }
+
     function line(level, text) {
+      journal.push([level, text]);
+      if (level === "error") erreurVue = text;
       var cls = "runner-output__line";
       if (level === "error") cls += " runner-output__line--error";
       else if (level === "warn") cls += " runner-output__line--warn";
       else if (level === "empty") cls += " runner-output__line--empty";
+      else if (level === "note") cls += " runner-output__line--empty runner-output__line--note";
       var p = document.createElement("div");
       p.className = cls;
       p.textContent = text;
@@ -1144,6 +1268,33 @@
         if (worker) worker.terminate();
       } catch (e) {}
       if (url) URL.revokeObjectURL(url);
+
+      /* LE REPLI : ce bloc a échoué SEUL sur un nom manquant, et la leçon contient des
+         blocs avant lui. On le rejoue derrière eux, dans un Worker neuf. */
+      if (!prelude.length && erreurVue && meriteUnRepli(erreurVue) && block) {
+        var pre = preambuleQuiCompile(preambuleDe(block), codeStr);
+        if (pre.length) {
+          runBtn.classList.remove("is-running");
+          lancerJs(codeStr, pre, out, runBtn, block, journal);
+          return;
+        }
+      }
+      /* Le repli n'a pas mieux fait : on remet mot pour mot le premier essai. */
+      if (prelude.length && erreurVue && secours) {
+        out.innerHTML = '<p class="runner-output__head">Console</p>';
+        secours.forEach(function (l) {
+          var cls = "runner-output__line";
+          if (l[0] === "error") cls += " runner-output__line--error";
+          else if (l[0] === "warn") cls += " runner-output__line--warn";
+          else if (l[0] === "empty") cls += " runner-output__line--empty";
+          var p = document.createElement("div");
+          p.className = cls;
+          p.textContent = l[1];
+          out.appendChild(p);
+        });
+        runBtn.classList.remove("is-running");
+        return;
+      }
       runBtn.classList.remove("is-running");
       if (lines === 0 && !out.querySelector(".runner-output__line--error")) {
         line("empty", "(aucune sortie — ajoute un console.log pour afficher un résultat)");
@@ -1182,7 +1333,7 @@
     };
 
     try {
-      worker.postMessage(codeStr);
+      worker.postMessage(prelude.length ? { code: codeStr, prelude: prelude } : codeStr);
     } catch (e) {
       line("error", "Erreur : " + (e && e.message));
       end();

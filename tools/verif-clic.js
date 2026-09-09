@@ -421,7 +421,11 @@ function estUnFragment(vu) {
         var enCours = await cx.evaluer('(()=>{const f=document.querySelectorAll("figure.code-block")[' + b.i + '];' +
           'return f.querySelector("button.is-running")?1:0})()');
         vu = await cx.evaluer('(()=>{const o=window.__f.querySelector(".runner-output");if(!o)return "";' +
-          'const l=[...o.querySelectorAll(".runner-output__line")];if(!l.length)return "";' +
+          /* ⚠️ `--note` est une ligne du MOTEUR, pas du programme : depuis le repli (point
+             B2b-7), runner.js écrit en tête d'un bloc rejoué « les N blocs qui précèdent
+             ont été exécutés avant celui-ci ». La compter ferait diverger, à la ligne 1,
+             tout bloc replié qui a un bloc de sortie apparié. */
+          'const l=[...o.querySelectorAll(".runner-output__line:not(.runner-output__line--note)")];if(!l.length)return "";' +
           'return l.map(x=>x.textContent).join("\\n")})()') || '';
         if (!enCours && vu && !/Exécution|en cours/i.test(vu)) break;
       }

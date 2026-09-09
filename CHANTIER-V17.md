@@ -1487,6 +1487,127 @@ résultat avant le clic.
       bougé : réparation leçon par leçon, ou **décider que le moteur exécute un bloc dans le contexte
       cumulé de sa leçon** — un vrai chantier, à ouvrir comme tel plutôt qu'à commencer ici.
 
+- [x] **B2b-7 · Le fragment interne, traité par le MOTEUR et non par une règle : le bloc en panne
+      est REJOUÉ derrière les blocs qui le précèdent. 159 blocs en panne → 131, et les aboutis
+      montent de 1 492 à 1 522 — pour la première fois de tout ce point, on ne retire pas des
+      boutons, on en fait MARCHER. Avec la mécanique évidente mesurée puis REJETÉE (28 gagnés
+      contre 380 perdus), et l'instrument pris en défaut par le navigateur EN PLEIN MILIEU.**
+
+      **Mesure reproduite avant de toucher à quoi que ce soit** (`node tools/verif-js.js --causes`) :
+      1 675 blocs avec bouton, 714 écartés, **1 492 aboutis, 22 annoncées, 2 non concluants,
+      159 EN PANNE, 81 non compilables** — identique au chiffre laissé par B2b-6.
+
+      **Le plan proposait deux voies, et il fallait chiffrer la seconde avant de la prendre.**
+      B2b-6 concluait : « réparation leçon par leçon, ou décider que le moteur exécute un bloc
+      dans le contexte cumulé de sa leçon ». `tools/preuves/sonde-contexte-cumule.js` a mesuré
+      le CUMUL sur les 1 675 blocs : **28 gagnés, 380 PERDUS** — et 380 pertes sur 380 portent
+      le même message, « Identifier '…' has already been declared ». Deux blocs d'une même leçon
+      qui déclarent chacun `const jeu` ne cohabitent pas dans une portée globale. La voie
+      annoncée par le plan était donc une catastrophe chiffrée : rejetée.
+
+      **Ce qui la remplace ne peut RIEN perdre, par construction.** Le bloc s'exécute SEUL,
+      exactement comme avant ; s'il échoue sur « X is not defined », et seulement dans ce cas,
+      il est rejoué dans un Worker NEUF derrière les blocs à bouton qui le précèdent. Un bloc
+      qui aboutit seul n'est jamais rejoué. Trois pièces, toutes dans `js/runner.js` et toutes
+      LUES par les vérificateurs, jamais recopiées : `meriteUnRepli` (quand), `envelopperPourRepli`
+      (le bloc rejoué est entouré d'accolades, pour que ses `const` MASQUENT ceux du préambule au
+      lieu d'entrer en conflit ; une fonction si le bloc porte `"use strict"`, sinon la directive
+      serait déclassée) et `preambuleQuiCompile` (ce qu'on garde du préambule).
+
+      ⚠️ **LE VÉRIFICATEUR A ANNONCÉ 40 BLOCS RÉPARÉS, LE NAVIGATEUR EN A RENDU ZÉRO — et c'est
+      la partie la plus importante de ce point.** Écrit d'abord avec `vm.runInContext` appliqué
+      à chaque bloc du préambule, l'outil mesurait 40 gains. Une sonde Chrome
+      (`tools/preuves/repli-navigateur.js`, `file://`, aucune requête) a cliqué les blocs pour
+      de vrai : `algo/lecon-17` #3 et #4 affichaient toujours « ReferenceError: UnionFind is not
+      defined ». Cause : le Worker évalue par `(0, eval)(code)`, et **dans un eval, seuls `var` et
+      `function` deviennent globaux — les déclarations LEXICALES (`const`, `let`, `class`)
+      disparaissent avec l'appel**, alors qu'un script `vm` les conserve dans son contexte. Un
+      préambule passé bloc par bloc ne laisse donc rien d'une `class`. Préambule et bloc partent
+      maintenant dans UN SEUL script, avec un marqueur `__finDuPrelude` qui rouvre l'affichage
+      pile là où le code de l'apprenant commence. Sans cette sonde, ce point livrait 40 réparations
+      imaginaires sous un vérificateur vert : exactement le défaut fondateur du chantier.
+
+      **Les six variantes, mesurées et non raisonnées** (`sonde-contexte-cumule.js`) :
+
+      | variante | gagne | fidèle au Worker ? |
+      |---|---|---|
+      | séparé, bloc nu | 28 | **non** |
+      | séparé, bloc enveloppé | 40 | **non** |
+      | concaténé, bloc nu | 17 | oui |
+      | concaténé, enveloppé | 21 | oui |
+      | concaténé, enveloppé, préambule = TOUS les blocs | 19 | oui |
+      | **concaténé, enveloppé, préambule TRIÉ** (retenue) | **28** | oui |
+
+      Le tri est ce qui rattrape les 7 derniers : préambule et bloc formant un seul script, une
+      seule collision entre deux blocs de la leçon fait échouer la compilation de l'ensemble. On
+      ne garde donc du préambule que ce qui COMPILE avec le bloc, en partant du plus PROCHE —
+      c'est encore JavaScript qui tranche, jamais un jugement sur le texte (règle de B2b-5).
+
+      **Mesure finale : 1 675 blocs avec bouton, 1 522 aboutis (90,9 %, contre 89,1 %), dont
+      30 PAR REPLI, 20 annoncées, 2 non concluants, 131 EN PANNE, 81 non compilables.** Le
+      nombre d'aboutis n'a pas baissé d'une unité et MONTE de 30 ; `algo` passe de 18 blocs en
+      panne à **4**. Cliquet descendu à 131. Les 2 « annoncées » de moins sont deux blocs dont le
+      commentaire contient le mot *erreur* sans qu'aucune leçon n'enseigne de faute
+      (`projets-js/lecon-20` #9, `algo/lecon-28` #2) : ils rendent maintenant leur sortie.
+
+      **Preuve par le navigateur, les 30 blocs cliqués UN PAR UN** (`repli-navigateur.js`,
+      Chrome, `file://`, 26 pages + 3 témoins) : **33 blocs cliqués, 30 rejoués, 33 sans la
+      moindre ligne d'erreur, 0 requête distante**. Et la sortie rendue est celle que la page
+      ANNONCE, vérifiée commentaire par commentaire sur un échantillon de six :
+
+      | bloc | ce que la page annonce | ce que l'apprenant obtient |
+      |---|---|---|
+      | `js/lecon-06` #2 | `Bonjour` ×3 | `Bonjour` ×3 |
+      | `js/lecon-20` #8 | `true`, `true`, `false`, `true` | idem, 4 lignes |
+      | `algo/lecon-05` #5 | `[1, 2, 3, 4, 5, 6]` | `[1,2,3,4,5,6]` |
+      | `algo/lecon-06` #2 | `[1, 2, 3, 5, 8]` | `[1,2,3,5,8]` |
+      | `algo/lecon-12` #5 | 3 listes de voisins | les 3, à l'identique |
+      | `projets-js/lecon-20` #9 | `false`, `true`, `"gagne"` | `false`, `true`, `gagne` |
+
+      Les 3 témoins (`js/lecon-01`, `algo/lecon-01`, `formats/lecon-02`) rendent exactement ce
+      qu'ils rendaient. Une note discrète prévient l'apprenant (« le bloc JavaScript qui précède
+      dans la leçon a été exécuté avant celui-ci — son affichage est masqué ») ; elle porte une
+      classe `--note` que `verif-clic.js` EXCLUT de sa comparaison, sans quoi tout bloc replié
+      apparié à un bloc `.txt` aurait divergé à la ligne 1.
+
+      **Le vérificateur et le navigateur, confrontés bloc à bloc, disent la même chose** :
+      `algo/lecon-17` #3 et #4 réparés, #7 et #8 toujours en panne — l'outil et Chrome tombent
+      d'accord dans les deux sens. `verif-clic.js` sur 6 pages (3 touchées, 3 témoins) :
+      **40 blocs cliqués sur 40 attendus, couverture complète, 0 divergence**.
+
+      ⚠️ **UN TROISIÈME ANGLE MORT TROUVÉ EN CHEMIN, ET FERMÉ : le code du Worker n'était compilé
+      par personne.** `WORKER_SRC` n'est pas un fichier mais un TABLEAU DE CHAÎNES assemblé dans
+      `runner.js` — le repli vient d'y ajouter une trentaine de lignes, et `node --check
+      js/runner.js` n'en voit rien. Éprouvé : une faute injectée dans ce tableau
+      (`"var recu = ;"`) laisse **`node --check` PASSER**, tandis que la nouvelle étape
+      `preuves/worker-src-compile.js` sort en **1** ; faute retirée, code **0**, fichier restauré
+      à l'octet près (md5 `8dfc2e88…` identique avant et après). Elle est versée dans
+      `verif.js` (étape `wrksrc`, 0,0 s), et `repli-navigateur.js` est déclaré dans
+      `hors-chaine.json` avec sa raison et ce qu'il faudrait pour l'y verser — le garde-fou
+      `gardech` avait d'ailleurs signalé les deux, ce qui est son travail.
+
+      ⚠️ **ET UN QUATRIÈME, DANS MES PROPRES OUTILS DE MESURE.** Le garde-fou d'exceptions de la
+      sonde, installé dès le chargement, avalait aussi les erreurs de DÉMARRAGE : une règle mal
+      lue dans `runner.js` a fait sortir la sonde en **code 0 avec un fichier de résultats VIDE**.
+      Un outil qui ne peut plus échouer, dans la passe même où l'on en ferme deux autres. Corrigé :
+      le garde-fou n'est armé qu'au moment d'exécuter du contenu, et il COMPTE ce qu'il avale.
+
+      **Non-régression** : `verif-html.js` 1 629 fichiers, **0 grave / 0 attention** ;
+      `verif-donnees.js` **0 erreur** ; `verif.js --rapide` **41 étapes, tout vert, 145,1 s** ;
+      `node --check` sur les quatre fichiers touchés ; 0 URL vers un CDN. Aucun fichier de contenu
+      modifié : ce point ne touche que le moteur et ses vérificateurs.
+
+      **Reste au gisement : 131.** Par cours : `js` 48, `projets-js` 29, `html` 8, `patterns` 8,
+      `securite` 7, `tests` 6, `nodejs` 5, `algo` 4, `vue` 4. Causes de tête : 7 `bouton`,
+      6 `etatInitial`, 4 `user`, 4 `ctx`, 3 `taches`, 3 `Tache`, 3 `form`, 3 `element` — le
+      fragment interne SUBSISTE là où son préambule dépend du DOM (`bouton`, `form`, `ctx`,
+      `element` viennent tous d'un `document.querySelector` dans un bloc que `BROWSER_ONLY`
+      écarte, donc le repli ne peut rien pour eux). C'est un lot homogène, et c'est la prochaine
+      case : un bloc dont le nom manquant est défini par un bloc précédent ÉCARTÉ comme code de
+      navigateur est lui-même du code de navigateur — règle à mesurer avec la prudence habituelle.
+      S'y ajoutent 3 `Illegal return statement`, ces blocs qu'`eval` refuse alors que
+      `new Function` les accepte, déjà repérés en B2b-5.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

@@ -158,6 +158,12 @@ var ETAPES = [
      une panne muette -- le moteur demarrerait avec une version qui n'est plus celle
      du depot. Cette etape relit chaque chaine et la compare caractere par caractere. */
   { nom: "moteurs", fichier: "build-sources-worker.js", args: [], quoi: "le code des moteurs, copie en chaine pour le Worker, est identique a l'original" },
+  /* MEME ANGLE MORT, AUTRE CHAINE. Le code qui tourne dans le Worker JavaScript n'est pas
+     un fichier : c'est un TABLEAU DE CHAINES assemble dans js/runner.js (WORKER_SRC). Ni
+     `node --check js/runner.js` ni aucun autre controle ne le compile -- une faute y
+     resterait invisible jusqu'au clic de l'apprenant, et le repli (point B2b-7) vient d'y
+     ajouter une trentaine de lignes. Cette etape reconstruit la chaine et la compile. */
+  { nom: "wrksrc ", fichier: "preuves/worker-src-compile.js", args: [], quoi: "le code du Worker JS, assemble en chaine, compile pour de vrai" },
   /* Les marques de FRAICHEUR (V15-E2) datent ce qui perime. E1 et E2 ont mesure
      qu'aucun motif ne sait TROUVER le perissable -- 87 % des affirmations
      perissables de `react` n'ont ni version, ni date, ni superlatif -- donc la

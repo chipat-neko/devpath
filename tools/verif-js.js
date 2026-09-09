@@ -26,6 +26,17 @@
  * (voir CONTEXTE ci-dessous). Un bloc qui n'échoue QUE dans Node serait un faux positif : le
  * mode `--erreurs` affiche donc toujours le message, pour qu'il soit jugeable à l'œil.
  *
+ * LE REPLI (2026-09-09, point B2b-7). Depuis ce jour, `runner.js` ne se contente plus
+ * d'exécuter le bloc seul : s'il échoue sur « X is not defined », il le REJOUE derrière les
+ * blocs à bouton qui le précèdent dans la leçon. Ce vérificateur fait exactement pareil —
+ * même préambule, même tri (`preambuleQuiCompile`), même enveloppe, même marqueur de fin de
+ * préambule — sans quoi il compterait en panne des blocs que l'apprenant voit marcher.
+ * ⚠️ La fidélité tient ici à un détail qui a failli passer : préambule et bloc partent dans
+ * UN SEUL script. Un premier jet exécutait le préambule bloc par bloc, ce que `vm` permet ;
+ * mais le Worker évalue par `(0, eval)`, où les déclarations LEXICALES d'un appel ne
+ * survivent pas à cet appel. L'outil annonçait 40 blocs réparés ; dans Chrome, ils
+ * affichaient toujours « X is not defined ».
+ *
  *   node tools/verif-js.js                  # tous les blocs JS du site
  *   node tools/verif-js.js pages/nodejs     # un dossier ou un fichier
  *   node tools/verif-js.js --erreurs        # ne lister que les blocs en échec
@@ -65,7 +76,7 @@ var BROWSER_ONLY = lireMotif('BROWSER_ONLY');
    navigateur, sinon il mesure autre chose. */
 function lireFonction(nom) {
   var src = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
-  var i = src.indexOf('function ' + nom + '(texte) {');
+  var i = src.indexOf('function ' + nom + '(');
   if (i < 0) throw new Error(nom + ' introuvable dans js/runner.js');
   var j = src.indexOf('\n  }', i);
   if (j < 0) throw new Error('fin de ' + nom + ' introuvable');
@@ -77,6 +88,12 @@ var estUnFragmentServeur = lireFonction('estUnFragmentServeur');
 var estDuDomDePage = lireFonction('estDuDomDePage');
 var estUnServiceWorker = lireFonction('estUnServiceWorker');
 var neCompilePas = lireFonction('neCompilePas');
+/* Le REPLI (2026-09-09, point B2b-7) : quand rejouer, et comment envelopper le bloc rejoué.
+   Ces deux règles sont LUES elles aussi — si ce vérificateur devinait l'enveloppe au lieu de
+   la lire, il mesurerait un moteur qui n'existe pas. */
+var meriteUnRepli = lireFonction('meriteUnRepli');
+var envelopperPourRepli = lireFonction('envelopperPourRepli');
+var preambuleQuiCompile = lireFonction('preambuleQuiCompile');
 
 function dec(s) {
   return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
@@ -205,10 +222,27 @@ var nonCompilables = 0, listeNonCompilables = [];
 var causes = {};
 var parCours = {};
 
+var replies = 0, listeReplies = [];
+
 fichiers.forEach(function (f) {
   var rel = path.relative(RACINE, f).replace(/\\/g, '/');
   var cours = rel.split('/')[1];
-  blocsJs(f).forEach(function (bloc, i) {
+  var blocsDuFichier = blocsJs(f);
+  /* LE PRÉAMBULE DU REPLI. Le moteur (`preambuleDe` dans runner.js) rejoue un bloc tombé
+     sur un nom manquant derrière les blocs À BOUTON qui le précèdent dans la leçon — donc
+     ceux, et seulement ceux, que ce vérificateur retient lui aussi. On les collecte au
+     premier passage : un bloc n'est jamais son propre préambule. */
+  var aBouton = [];
+  function aUnBouton(code) {
+    return !(BROWSER_ONLY.test(code) || estUnFichierJson(code) || estUneSuiteDeTests(code) ||
+      estUnFragmentServeur(code) || estDuDomDePage(code) || estUnServiceWorker(code) ||
+      neCompilePas(code));
+  }
+  blocsDuFichier.forEach(function (bloc) {
+    if (bloc.code && aUnBouton(bloc.code)) aBouton.push(bloc.code);
+  });
+  var vus = 0;
+  blocsDuFichier.forEach(function (bloc, i) {
     var code = bloc.code;
     if (!code) return;
     /* Même règle que runner.js : un bloc qui touche au navigateur ou à Node n'a pas
@@ -230,6 +264,8 @@ fichiers.forEach(function (f) {
       return;
     }
     total++;
+    var prefixe = aBouton.slice(0, vus);
+    vus++;
     parCours[cours] = parCours[cours] || { total: 0, ok: 0, annoncees: 0 };
     parCours[cours].total++;
 
@@ -254,9 +290,46 @@ fichiers.forEach(function (f) {
       if (!SEULEMENT_ERREURS && !CAUSES) console.log('  ??? ' + rel + ' #' + (i + 1) + ' — non concluant : plus de ' + (DELAI / 1000) + ' s');
       return;
     }
+    /* --- LE REPLI, REPRODUIT À L'IDENTIQUE DU MOTEUR (2026-09-09, point B2b-7) ---------
+     * `runner.js` rejoue un bloc tombé sur « X is not defined » derrière les blocs à bouton
+     * qui le précèdent, dans un Worker NEUF et entre accolades. Ce vérificateur doit faire
+     * exactement pareil, sinon il compte en panne des blocs que l'apprenant voit marcher.
+     * Les deux règles (`meriteUnRepli`, `envelopperPourRepli`) sont LUES dans runner.js. */
+    var parRepli = false;
+    if (msg && prefixe.length && meriteUnRepli(msg)) {
+      /* ⚠️ UN SEUL script, préambule et bloc ensemble — pas un appel par bloc. Le Worker
+         évalue par `(0, eval)`, où les déclarations LEXICALES d'un appel ne survivent pas :
+         un préambule passé bloc par bloc n'y laisserait rien d'une `class`. Un premier jet
+         de ce vérificateur faisait exactement cela et annonçait 40 blocs réparés ; dans
+         Chrome, ils affichaient toujours « X is not defined ». Le tri du préambule
+         (`preambuleQuiCompile`) est celui du moteur, LU dans runner.js. */
+      var gardes = preambuleQuiCompile(prefixe, code);
+      var s2 = [], ctx2brut = contexteWorker(s2), avantLeBloc = 0;
+      /* Le MÊME marqueur que le Worker (`__finDuPrelude`), pour deux raisons : le script
+         concaténé est alors identique au caractère près, et surtout on sait à partir d'où
+         les lignes affichées appartiennent au bloc de l'apprenant — celles du préambule,
+         le moteur les masque, les compter ici ferait annoncer des sorties qui n'existent
+         pas pour lui. */
+      ctx2brut.__finDuPrelude = function () { avantLeBloc = s2.length; };
+      var ctx2 = vm.createContext(ctx2brut);
+      var msg2 = gardes.length ? null : 'préambule vide';
+      if (gardes.length) {
+        try {
+          vm.runInContext(gardes.join('\n') + '\n;__finDuPrelude();\n' + envelopperPourRepli(code), ctx2,
+            { timeout: DELAI, displayErrors: false });
+        } catch (e2) { msg2 = (e2 && e2.name ? e2.name + ': ' : '') + (e2 && e2.message ? e2.message : String(e2)); }
+      }
+      if (!msg2) {
+        parRepli = true; replies++;
+        listeReplies.push(rel + ' #' + (i + 1) + '  (' + (s2.length - avantLeBloc) + ' ligne(s))' +
+          (ERREUR_ANNONCEE.test(code) ? '  ⚠ ERREUR ANNONCÉE ÉTEINTE' : ''));
+        msg = null;
+      }
+    }
     if (!msg) {
       ok++; parCours[cours].ok++;
-      if (!SEULEMENT_ERREURS && !CAUSES) console.log('  OK  ' + rel + ' #' + (i + 1));
+      if (!SEULEMENT_ERREURS && !CAUSES) console.log('  ' + (parRepli ? 'REP' : 'OK ') + ' ' + rel + ' #' + (i + 1) +
+        (parRepli ? ' — aboutit derrière les blocs précédents' : ''));
       return;
     }
     /* Une erreur que la page ANNONCE en commentaire n'est pas une panne : c'est la leçon. */
@@ -274,6 +347,9 @@ fichiers.forEach(function (f) {
 });
 
 if (CAUSES) {
+  console.log('=== BLOCS QUI N\'ABOUTISSENT QUE PAR LE REPLI : ' + replies + ' ===');
+  listeReplies.forEach(function (o) { console.log('   ' + o); });
+  console.log('');
   console.log('=== BLOCS QUI NE COMPILENT PAS (ecartes, cliquet a part) : ' + nonCompilables + ' ===');
   listeNonCompilables.forEach(function (o) { console.log('   ' + o); });
   console.log('');
@@ -290,6 +366,7 @@ console.log('\n=== RÉSUMÉ ===');
 console.log('  blocs JS avec bouton .... ' + total);
 console.log('  écartés (BROWSER_ONLY) .. ' + ecartes);
 console.log('  aboutissent ............. ' + ok + (total ? '  (' + (100 * ok / total).toFixed(1) + ' %)' : ''));
+console.log('  dont PAR REPLI .......... ' + replies + '  (derrière les blocs précédents de la leçon)');
 console.log('  erreurs ANNONCÉES ....... ' + annoncees + '  (la page les écrit en commentaire)');
 console.log('  non concluants .......... ' + indecis + '  (plus de ' + (DELAI / 1000) + ' s : hors cliquet)');
 console.log('  EN PANNE ................ ' + ko);
