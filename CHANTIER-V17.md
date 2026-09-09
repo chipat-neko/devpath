@@ -2482,6 +2482,79 @@ résultat avant le clic.
       contexte de mesure exclut délibérément depuis B2b-2, à rejuger au clic avant tout.
 
 
+- [ ] **B2b-16 · CE QUI RESTE DEMANDE UNE DÉCISION, PAS UNE RÈGLE — et la mesure a trouvé
+      bien plus gros que le lot visé : 26 boutons « Tester » appellent `fetch`, et
+      `verif-js.js` les compte tous ABOUTIS.** Case laissée décochée volontairement : ce
+      point n'est pas une correction, c'est un arbitrage, et il déborde du gisement des 43.
+
+      **CE QUI EST MESURÉ, ET QUI EST SÛR.** Le point B2b-2 a délibérément laissé `fetch`,
+      `WebSocket`, `XMLHttpRequest`, `indexedDB` et `caches` hors du contexte de mesure, au
+      motif écrit qu'ils « exigent un serveur ou le réseau » et que les fournir ferait
+      aboutir ici des blocs qui échouent chez l'apprenant. **Deux blocs cliqués pour de vrai
+      dans Chrome** (`repli-navigateur.js`, `file://`, 0 requête distante) disent que ce
+      motif est juste pour l'un et FAUX pour l'autre :
+
+      | bloc | ce que `verif-js.js` en dit | ce que l'apprenant obtient au clic |
+      |---|---|---|
+      | `js/lecon-32` #6 (`indexedDB`) | EN PANNE | **« Acheter du pain »** — il marche |
+      | `nodejs/lecon-17` #9 (`WebSocket`) | EN PANNE | **rien du tout, aucune erreur** |
+
+      IndexedDB est du stockage LOCAL : il n'a besoin d'aucun serveur, il fonctionne en
+      `file://`, et ce bloc écrit puis relit sa donnée. Le verdict « en panne » est donc
+      faux — quatrième occurrence du défaut « l'outil mesure sa propre pauvreté » (B2b-2,
+      B2b-12, B2b-13). Le WebSocket, lui, ne plante pas mais **ne tient pas sa promesse** :
+      la page annonce « Connecté au chat », l'apprenant n'obtient pas une ligne.
+
+      **ET LA SONDE A TROUVÉ AUTRE CHOSE, DE BIEN PLUS LARGE.**
+      `tools/preuves/sonde-reseau-sans-serveur.js` compte, pour chaque nom, les blocs À
+      BOUTON qui l'appellent et ceux qui ABOUTISSENT aujourd'hui :
+
+      | nom | blocs à bouton | déjà en panne | **comptés vivants** |
+      |---|---|---|---|
+      | `fetch` | 26 | 0 | **26** |
+      | `WebSocket` | 2 | 1 | **1** |
+      | `indexedDB` | 1 | 1 | 0 |
+      | `caches` | 1 | 0 | **1** |
+      | `EventSource`, `XMLHttpRequest` | 0 | — | — |
+
+      **Les 26 `fetch` ne sont pas comptés en panne parce que leur rejet est ASYNCHRONE** :
+      le bloc définit une fonction `async`, l'appelle, et la promesse rejetée n'atteint
+      jamais le `try/catch` du vérificateur. Ils sont donc verts sans avoir rien prouvé —
+      et chez l'apprenant, ce sont **26 boutons qui tentent une requête distante** (`js`
+      lecons 12/24/36/47/49/57/63, `projets-js` 13/14, `html/lecon-42`, `nodejs/lecon-20`,
+      `wasm/lecon-03`). Sur un site dont la règle fondatrice est qu'aucune page ne parle au
+      réseau, c'est la question la plus lourde du lot, et elle n'a jamais été posée.
+
+      **CE QU'IL FAUT DÉCIDER AVANT D'ÉCRIRE UNE LIGNE**, et pourquoi je ne l'ai pas tranché
+      seul dans cette passe :
+      1. `indexedDB` : le bloc marche, le vérificateur ne sait pas l'exécuter (Node n'a pas
+         d'IndexedDB, et en fabriquer un serait l'INVENTER — refusé au point B2b-4). Faut-il
+         une catégorie « hors de portée de la mesure », hors cliquet et listée, ou faut-il
+         accepter qu'un bloc juste reste compté faux ? Une catégorie qui sort du cliquet est
+         aussi un endroit où l'on peut cacher de vraies pannes.
+      2. `fetch` / `WebSocket` : un bouton qui lance une requête vers un serveur absent ne
+         peut rien promettre. Le lui retirer est cohérent avec `estUnFragmentServeur` — mais
+         **cela toucherait 27 blocs aujourd'hui comptés vivants**, dont des leçons entières
+         (`js/lecon-24` en donne 10 à elle seule : c'est LA leçon sur `fetch`). Retirer le
+         bouton de la leçon qui enseigne `fetch` est une décision de CONTENU, pas d'outil.
+      3. Et d'abord, une mesure qui manque : ces 26 blocs **partent-ils vraiment sur le
+         réseau au clic** ? `verif-clic.js` et `verif-rendu.js` comptent 0 requête distante
+         sur leurs échantillons, mais aucun n'a visé ces 26 pages exprès. À faire AVANT tout
+         arbitrage — si la requête ne part pas, la question change de nature.
+
+      **L'INSTRUMENT EST PRÊT ET IL EST HONNÊTE.** ⚠️ **Il s'est arrêté en silence à son
+      premier jet, et c'est la TROISIÈME sonde à qui cela arrive** (B2b-13, B2b-14). Cause
+      double, l'une cachant l'autre : `prochainPrefixe` avait été lue **sans les trois
+      fonctions qu'elle appelle** — une règle lue n'est pas forcément autonome, leçon
+      nouvelle et à retenir du point B2b-15 — et un `uncaughtException` MUET avalait la
+      `ReferenceError` qui en découlait. La boucle mourait au milieu de `nodejs/lecon-17`,
+      sans message, **en code 0**. Corrigé, et deux garde-fous restent en place : toute
+      exception non rattrapée est IMPRIMÉE, et la sonde sort en **3** tant que sa dernière
+      ligne n'est pas atteinte. Elle est déclarée dans `tools/hors-chaine.json` avec ce
+      qu'il faudrait pour l'y verser : un cliquet sur le nombre de blocs à bouton qui
+      tentent une connexion — un chiffre qui, lui, pourra rougir.
+
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf
