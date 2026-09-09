@@ -195,6 +195,81 @@ function utilise(texte, nom) {
 function utiliseEnColonneZero(texte, nom) {
   return new RegExp('^' + ech(nom) + '(?![\\w$À-ɏ])', 'm').test(texte);
 }
+/* USAGE AU NIVEAU RACINE (2026-09-09, point B2b-25) : la colonne zéro ci-dessus est SÛRE
+   mais très étroite — elle ne voit que le nom qui OUVRE une ligne. Or `rendre(etat)`,
+   `if (modeGomme) {` ou `const cases = grille.querySelectorAll(…)` sont eux aussi évalués
+   dès le clic, et l'erreur y est tout aussi certaine ; seule la colonne les rate. Le
+   critère mesuré ici est la PROFONDEUR D'ACCOLADES : le nom cité alors qu'aucune accolade
+   n'est ouverte est exécuté au niveau racine du bloc. Cité dans un corps de fonction
+   (profondeur ≥ 1), il ne fait rien échouer tant que la fonction n'est pas appelée — c'est
+   la distinction que la mesure de B2b-8 avait imposée, et elle est conservée.
+   ⚠️ Commentaires et chaînes sont neutralisés caractère par caractère, comme dans
+   `estUnFragmentOrphelin` : un mot de commentaire ou de gabarit n'est pas du code. */
+function neutraliser(texte) {
+  var t = String(texte)
+    .replace(/\/\*[\s\S]*?\*\//g, function (m) { return m.replace(/[^\n]/g, ' '); })
+    .replace(/(^|[^:\\])\/\/[^\n]*/g, function (m, p) { return p + m.slice(p.length).replace(/[^\n]/g, ' '); });
+  var net = '', i = 0, n = t.length;
+  while (i < n) {
+    var c = t[i];
+    if (c === '"' || c === "'" || c === '`') {
+      var q = c, prof = 0;
+      net += ' '; i++;
+      while (i < n) {
+        if (t[i] === '\\') { net += '  '; i += 2; continue; }
+        if (q === '`' && t[i] === '$' && t[i + 1] === '{') { prof++; net += '  '; i += 2; continue; }
+        if (q === '`' && prof > 0 && t[i] === '}') { prof--; net += ' '; i++; continue; }
+        if (prof > 0) { net += t[i]; i++; continue; }   /* le code d'un ${…} reste du code */
+        if (t[i] === q) { net += ' '; i++; break; }
+        net += (t[i] === '\n' ? '\n' : ' '); i++;
+      }
+      continue;
+    }
+    net += c; i++;
+  }
+  return net;
+}
+/* LES LISTES DE PARAMÈTRES (B2b-25). `function rendre(etat) { … }` cite `etat` à
+   profondeur 0 d'accolades, mais ce n'est PAS une lecture : c'est une liaison, et le nom
+   du dehors n'y est pour rien. Trois des dix vivants visés par la variante brute sont
+   exactement cela (`projets-js/lecon-02` #3, `nodejs/lecon-09` #12, `nodejs/lecon-23` #6).
+   On blanchit donc le contenu des parenthèses qui suivent `function`/`catch` et de celles
+   qu'un `=>` suit. */
+function neutraliserParametres(t) {
+  var out = t.split(''), i;
+  for (i = 0; i < t.length; i++) {
+    if (t[i] !== '(') continue;
+    var avant = t.slice(0, i);
+    var estParam = /(?:function\s*[\w$À-ɏ]*\s*|catch\s*)$/.test(avant);
+    /* la fermante correspondante */
+    var prof = 0, j = i;
+    for (; j < t.length; j++) {
+      if (t[j] === '(') prof++;
+      else if (t[j] === ')') { prof--; if (prof === 0) break; }
+    }
+    if (j >= t.length) continue;
+    if (!estParam && /^\s*=>/.test(t.slice(j + 1))) estParam = true;
+    if (!estParam) continue;
+    for (var k = i + 1; k < j; k++) if (out[k] !== '\n') out[k] = ' ';
+  }
+  return out.join('');
+}
+function utiliseAuNiveauRacine(texte, nom, sansParams) {
+  var t = neutraliser(texte);
+  if (sansParams) t = neutraliserParametres(t);
+  var re = new RegExp('(?:^|[^\\w$.À-ɏ])' + ech(nom) + '(?![\\w$À-ɏ])', 'g');
+  var m;
+  while ((m = re.exec(t))) {
+    var pos = m.index + m[0].length - nom.length;
+    var prof = 0;
+    for (var k = 0; k < pos; k++) {
+      if (t[k] === '{') prof++;
+      else if (t[k] === '}') prof--;
+    }
+    if (prof <= 0) return true;
+  }
+  return false;
+}
 function declareLuiMeme(texte, nom) {
   return new RegExp('(?:const|let|var|function|class)\\s+' + nom.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\w$À-ɏ])').test(texte) ||
          new RegExp('(?:^|[^\\w$.À-ɏ])' + nom.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*=(?!=)').test(texte);
@@ -208,6 +283,12 @@ var VARIANTES = [
   { cle: 'col0', libelle: 'décl. colonne 0, USAGE en colonne 0', racine: true, col0: true },
   { cle: 'col0-partout', libelle: 'décl. n\'importe où, USAGE en colonne 0', racine: false, col0: true },
   { cle: 'col0-cascade', libelle: 'idem col0, mais EN CASCADE (l\'écarté transmet)', racine: true, col0: true, cascade: true },
+  /* B2b-25 : entre « n'importe où » (31 vivants) et « colonne 0 » (0 vivant), la
+     profondeur d'accolades nulle. */
+  { cle: 'racine0', libelle: 'décl. colonne 0, usage à PROFONDEUR 0', racine: true, prof0: true },
+  { cle: 'racine0-tous-ecartes', libelle: 'idem racine0, source = TOUT bloc écarté', racine: true, prof0: true, tous: true },
+  { cle: 'racine0-p', libelle: 'racine0 + paramètres neutralisés', racine: true, prof0: true, params: true },
+  { cle: 'racine0-pr', libelle: 'racine0 + paramètres + hors portée du repli', racine: true, prof0: true, params: true, sansRepli: true },
   /* ⚠️ LA VARIANTE QUI COMPTE UNE FOIS LA RÈGLE ÉCRITE : celle qui est LUE dans
      `js/runner.js`. Les quatre ci-dessus sont des maquettes de cette sonde ; seule
      celle-ci prouve que la fonction RÉELLEMENT posée dans le moteur vise ce qui a été
@@ -261,8 +342,19 @@ fichiers.forEach(function (f) {
         herites = heriteDuNavigateur(b.code, navAvant) ? [{ nom: 'lue' }] : [];
       } else {
         herites = offerts.filter(function (o) {
-          var vu = v.col0 ? utiliseEnColonneZero(b.code, o.nom) : utilise(b.code, o.nom);
-          return vu && !declareLuiMeme(b.code, o.nom);
+          var vu = v.prof0 ? utiliseAuNiveauRacine(b.code, o.nom, v.params)
+                 : v.col0 ? utiliseEnColonneZero(b.code, o.nom)
+                 : utilise(b.code, o.nom);
+          if (!vu || declareLuiMeme(b.code, o.nom)) return false;
+          /* LE REPLI PEUT LE FOURNIR (B2b-25) : un nom que déclare AUSSI un bloc à bouton
+             précédent n'est pas manquant du tout — le préambule le donne, et le bloc vit.
+             Trois des dix vivants de la variante brute sont là (`compilation/lecon-13`). */
+          if (v.sansRepli) {
+            for (var p = 0; p < prefixe.length; p++) {
+              if (nomsDeclaresRacine(prefixe[p]).indexOf(o.nom) >= 0) return false;
+            }
+          }
+          return true;
         });
       }
       if (!herites.length) return;

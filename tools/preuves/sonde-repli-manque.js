@@ -87,9 +87,10 @@ function dec(s) {
 /* Motif BORNÉ par `</figure>`, comme dans `tools/verif-js.js` depuis le point B2b-15 :
    non borné, il traverse les figures et associe l'attribut de l'une au code de l'autre. */
 /* ⚠️ LE DÉCOUPAGE DES BLOCS EST CELUI DE `regles-bouton.js`, PAS UNE COPIE (B2b-23).
-   La copie locale ne relevait pas le `data-file` : la règle `estLaSuiteDunFichierDeNavigateur`
-   recevait alors un contexte VIDE et ne s'appliquait jamais, si bien que cette sonde
-   décrivait des blocs à bouton que le navigateur n'affiche plus. */
+   La copie locale ne relevait pas le contexte : la règle `heriteDuNavigateurAuNiveauRacine`
+   (nommée `estLaSuiteDunFichierDeNavigateur` jusqu'au point B2b-25) recevait alors un
+   contexte VIDE et ne s'appliquait jamais, si bien que cette sonde décrivait des blocs à
+   bouton que le navigateur n'affiche plus. */
 var blocsJs = REG.blocsJs;
 var lecons = REG.lecons;
 /* LE CONTEXTE EST CELUI DE verif-js.js, LU DANS LE MEME MODULE (2026-09-09, B2b-15).
@@ -117,8 +118,8 @@ lecons().forEach(function (f) {
   var rel = path.relative(RACINE, f).replace(/\\/g, '/');
   var blocs = blocsJs(f);
   /* LE CONTEXTE DE LA LEÇON EST LU, PLUS RECOPIÉ (2026-09-09, point B2b-23) : la règle
-     `estLaSuiteDunFichierDeNavigateur` demande un contexte de plus (le `data-file` des
-     blocs de navigateur précédents), et une copie locale l'aurait ignoré en silence. */
+     `heriteDuNavigateurAuNiveauRacine` demande un contexte de plus (les blocs précédents
+     qui ne sont PAS du navigateur), et une copie locale l'aurait ignoré en silence. */
   var ctxL = REG.contexteLecon(blocs);
   var navAvant = ctxL.navAvant, tousTextesJs = ctxL.tousJs;
   var aUnBouton = ctxL.aUnBouton;

@@ -346,7 +346,7 @@
     return false;
   }
 
-  /* LA SUITE DU MÊME FICHIER (2026-09-09, point B2b-23) ------------------------------
+  /* LE NOM DU NAVIGATEUR LU AU NIVEAU RACINE (2026-09-09, points B2b-23 puis B2b-25) ---
      `heriteDuNavigateur` n'écarte un bloc que si le nom hérité OUVRE une ligne. Ce critère
      laisse passer `pages/js/lecon-33.html` #3 (`const fd = new FormData(form);`) : le nom
      est lu au MILIEU d'une ligne racine, l'expression est pourtant évaluée aussitôt, et le
@@ -367,23 +367,41 @@
        | + listes de paramètres neutralisées                |   5   | **1**        |
        | **+ nom absent des blocs précédents non-navigateur** | **4** | **0**      |
 
-     CE QUI FAIT LA DIFFÉRENCE N'EST PAS UNE REGEX PLUS FINE, C'EST UNE INFORMATION DE LA
-     PAGE : le `data-file`. Quand le bloc porte le même nom de fichier qu'un bloc de
-     navigateur qui le précède, la leçon dit elle-même qu'il en est la SUITE — un extrait de
-     `app.js` après un autre extrait de `app.js`, pas un programme à part. L'usage n'a alors
-     plus besoin d'ouvrir la ligne. Les trois précautions qui restent sont chacune un faux
-     positif mesuré : la profondeur d'accolades (un nom cité dans le corps d'une fonction
-     jamais appelée ne fait rien échouer), les listes de paramètres (`function rendre(etat)`
-     DÉCLARE `etat`, il ne le lit pas — c'est ce qui visait à tort `projets-js/lecon-02` #3,
-     bien vivant), et la garde du préambule (si un bloc précédent NON-navigateur déclare le
-     nom, le repli du point B2b-7 peut le fournir : `js/lecon-12` #8 vit de cela).
+     CE QUI FAIT LA DIFFÉRENCE N'EST PAS UNE REGEX PLUS FINE. Trois précautions portent
+     tout le poids, et chacune est un faux positif mesuré : la profondeur d'accolades (un
+     nom cité dans le corps d'une fonction jamais appelée ne fait rien échouer), les listes
+     de paramètres (`function rendre(etat)` DÉCLARE `etat`, il ne le lit pas — c'est ce qui
+     visait à tort `projets-js/lecon-02` #3, bien vivant), et la garde du préambule (si un
+     bloc précédent NON-navigateur déclare le nom, le repli du point B2b-7 peut le fournir :
+     `js/lecon-12` #8 vit de cela).
      ⚠️ La garde est écrite sur les blocs « non-navigateur » et non sur « les blocs à
      bouton », qui seraient pourtant le préambule exact : la liste des blocs à bouton dépend
      des règles du bouton, donc de celle-ci — la définition serait circulaire. La garde
      retenue est plus large, donc plus prudente ; mesurée, elle donne le même résultat.
+
+     ⚠️ CE QUE LE POINT B2b-25 A CORRIGÉ ICI, ET QUI NE SE VOYAIT PAS. Deux défauts, tous
+     deux mesurés par la même sonde, statuts DEMANDÉS à `verif-js.js` :
+
+     (1) LA QUATRIÈME PRÉCAUTION ÉTAIT DE TROP. B2b-23 exigeait en plus que le bloc source
+         porte le MÊME `data-file`. Elle compensait l'absence des deux autres précautions,
+         écrites dans la foulée : une fois les paramètres neutralisés et la garde du
+         préambule en place, la lever vise **3 blocs de plus, tous les trois DÉJÀ EN PANNE,
+         ZÉRO vivant** (`nodejs/lecon-22` #2 `UserSchema`, `graphql/lecon-09` #5
+         `DataLoader`, `wasm/lecon-04` #4 `memoire`). Le `data-file` reste relevé par la
+         page, mais la règle ne s'en sert plus : un `const memoire = new WebAssembly.Memory`
+         déclaré dans un bloc de navigateur est hors d'atteinte du Worker, que le bloc
+         suivant porte ou non la même étiquette de fichier.
+
+     (2) UNE CONDITION N'EST PAS UNE LISTE DE PARAMÈTRES. Le motif qui blanchit les
+         paramètres acceptait n'importe quel identifiant collé à `(…) {` — donc `if (x) {`,
+         `while (x) {`, `for (…) {`, `switch (x) {`. La règle était AVEUGLE à toute lecture
+         faite dans une condition racine, et `projets-js/lecon-17` #5 (`if (modeGomme) {`,
+         un fragment de `pointermove` qui ne peut rendre qu'une erreur) passait au travers.
+         Les mots-clés de contrôle sont maintenant exclus du blanchiment ; `catch` reste
+         une liaison, donc blanchi. **1 bloc de plus visé, en panne, zéro vivant.**
      ⚠️ Fonction LUE par `tools/verif-js.js` et `tools/verif-clic.js`, jamais recopiée. */
-  function estLaSuiteDunFichierDeNavigateur(texte, navMemeFichier, autresAvant) {
-    var liste = navMemeFichier || [], autres = autresAvant || [];
+  function heriteDuNavigateurAuNiveauRacine(texte, navAvant, autresAvant) {
+    var liste = navAvant || [], autres = autresAvant || [];
     if (!liste.length) return false;
     /* Commentaires, chaînes et gabarits neutralisés caractère par caractère — le code
        d'un `${…}` reste du code, et aucune regex ne suit cette imbrication. */
@@ -412,8 +430,15 @@
       }
       net += c; i++;
     }
+    /* ⚠️ `(?!\b(?:if|while|for|switch)\s*\()` : sans cette garde, `if (modeGomme) {` était
+       blanchi comme une liste de paramètres et la lecture disparaissait (point B2b-25). */
     net = net.replace(/(function\s*[\w$À-ɏ]*\s*|catch\s*|[\w$À-ɏ]\s*)\(([^()]*)\)(\s*(?:=>|\{))/g,
-        function (mm, av, dedans, ap) { return av + "(" + dedans.replace(/[^\n]/g, " ") + ")" + ap; })
+        function (mm, av, dedans, ap, pos, tout) {
+          /* `av` ne capture qu'UN caractère dans la branche « identifiant collé » : le
+             mot-clé se lit donc dans le texte qui précède, pas dans le groupe. */
+          if (/(?:^|[^\w$À-ɏ])(?:if|while|for|switch)\s*$/.test(tout.slice(0, pos) + av)) return mm;
+          return av + "(" + dedans.replace(/[^\n]/g, " ") + ")" + ap;
+        })
       .replace(/\(([^()]*)\)(\s*=>)/g, function (mm, dedans, ap) { return "(" + dedans.replace(/[^\n]/g, " ") + ")" + ap; });
     var prof = [], p = 0, k;
     for (k = 0; k < net.length; k++) {
@@ -1440,24 +1465,21 @@
        que ce soit : `estUnFragmentOrphelin` (point B2b-10) demande, elle, la page ENTIÈRE
        et non ce qui précède — un nom déclaré plus bas est fourni par la leçon, même si le
        repli ne peut pas le donner ; lui retirer son bouton pour cela serait un abus. */
-    /* Deux listes de plus depuis le point B2b-23, pour `estLaSuiteDunFichierDeNavigateur` :
-       les blocs de navigateur précédents QUI PORTENT LE MÊME `data-file` que celui qu'on
-       examine, et — pour sa garde — les blocs précédents qui ne sont PAS du navigateur. */
+    /* Une liste de plus depuis le point B2b-23, pour la garde de
+       `heriteDuNavigateurAuNiveauRacine` : les blocs précédents qui ne sont PAS du
+       navigateur, donc ceux dont le repli peut encore fournir un nom.
+       ⚠️ La liste des blocs de navigateur PORTANT LE MÊME `data-file` a disparu au point
+       B2b-25 : la règle ne s'en sert plus (3 blocs de plus visés, zéro vivant). */
     var navAvant = [], vusNav = [], tousJs = [];
-    var navFichierAvant = [], vusNavFichier = [], autresAvant = [], vusAutres = [];
+    var autresAvant = [], vusAutres = [];
     blocs.forEach(function (block) {
       navAvant.push(vusNav.slice());
       autresAvant.push(vusAutres.slice());
-      var fic = block.getAttribute("data-file") || "";
-      navFichierAvant.push(
-        vusNavFichier.filter(function (o) { return fic && o.f === fic; })
-                     .map(function (o) { return o.t; }));
       var c = block.querySelector("code.language-javascript");
       if (!c) return;
       tousJs.push(c.textContent);
       if (BROWSER_ONLY.test(c.textContent) || estDuDomDePage(c.textContent)) {
         vusNav.push(c.textContent);
-        vusNavFichier.push({ f: fic, t: c.textContent });
       } else {
         vusAutres.push(c.textContent);
       }
@@ -1476,7 +1498,7 @@
             estDuDomDePage(js.textContent) || estUnServiceWorker(js.textContent) ||
             neCompilePas(js.textContent) ||
             heriteDuNavigateur(js.textContent, navAvant[iBloc]) ||
-            estLaSuiteDunFichierDeNavigateur(js.textContent, navFichierAvant[iBloc], autresAvant[iBloc]) ||
+            heriteDuNavigateurAuNiveauRacine(js.textContent, navAvant[iBloc], autresAvant[iBloc]) ||
             estUnFragmentOrphelin(js.textContent, tousJs)) {
           block.setAttribute("data-runner", "skip");
           return;

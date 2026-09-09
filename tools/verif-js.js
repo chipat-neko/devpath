@@ -179,10 +179,10 @@ fichiers.forEach(function (f) {
        `init()` : un bloc qui relève des deux doit être compté du même côté par les deux
        outils, sinon les chiffres divergent sans qu'aucune règle n'ait changé. */
     if (heriteDuNavigateur(code, navAvant[i])) { ecartes++; return; }
-    /* LA SUITE DU MEME FICHIER (2026-09-09, point B2b-23), juste apres l'heritage dont
-       elle est l'extension, et dans le meme ordre que `init()` : un bloc annonce par la
-       page comme la suite d'un extrait de navigateur du meme `data-file`. */
-    if (REG.estLaSuiteDunFichierDeNavigateur(code, ctxLecon.navFichierAvant[i], ctxLecon.autresAvant[i])) {
+    /* LE NOM DU NAVIGATEUR LU AU NIVEAU RACINE (points B2b-23 puis B2b-25), juste apres
+       l'heritage dont elle est l'extension, et dans le meme ordre que `init()` : le bloc
+       lit hors de tout corps de fonction un nom ne d'un `document.querySelector`. */
+    if (REG.heriteDuNavigateurAuNiveauRacine(code, ctxLecon.navAvant[i], ctxLecon.autresAvant[i])) {
       ecartes++; return;
     }
     /* LE FRAGMENT ORPHELIN, teste en DERNIER, dans le meme ordre que `init()`.

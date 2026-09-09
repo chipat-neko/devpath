@@ -145,6 +145,15 @@ var variantes = [
      et calculable sans rien décider : le nom n'est déclaré dans AUCUN bloc précédent qui ne
      soit pas du navigateur. Elle épargne au moins autant de blocs, jamais moins. */
   { nom: '… garde ÉLARGIE : absent de tout bloc précédent NON navigateur', memeFichier: true, horsNonNav: true,
+    test: function (net, nom) { return lecturesDe(sansParametres(net), nom).indexOf(0) >= 0; } },
+  /* B2b-25 : LA CONTRAINTE `data-file` EST-ELLE ENCORE NÉCESSAIRE ? Les deux lignes
+     ci-dessous reprennent la variante retenue en B2b-23 en LUI RETIRANT l'exigence du
+     même nom de fichier. Si elles visent des vivants, la contrainte tient ; si elles
+     rendent zéro vivant, elle ne servait qu'à compenser l'absence des deux autres
+     précautions (paramètres, garde du préambule), écrites depuis. */
+  { nom: 'TOUT bloc navigateur + profondeur 0, PARAMÈTRES neutralisés',
+    test: function (net, nom) { return lecturesDe(sansParametres(net), nom).indexOf(0) >= 0; } },
+  { nom: '… + garde ÉLARGIE (absent de tout bloc précédent NON navigateur)', horsNonNav: true,
     test: function (net, nom) { return lecturesDe(sansParametres(net), nom).indexOf(0) >= 0; } }
 ];
 

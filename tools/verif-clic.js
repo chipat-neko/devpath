@@ -216,7 +216,7 @@ var reglesRunner = (function () {
   var par = {};
   ['estUnFichierJson', 'estUneSuiteDeTests', 'estUnFragmentServeur', 'estDuDomDePage',
    'estUnServiceWorker', 'neCompilePas', 'heriteDuNavigateur',
-   'estLaSuiteDunFichierDeNavigateur', 'estUnFragmentOrphelin'].forEach(function (nom) {
+   'heriteDuNavigateurAuNiveauRacine', 'estUnFragmentOrphelin'].forEach(function (nom) {
     var i = src.indexOf('function ' + nom + '(');
     if (i < 0) return;
     var j = src.indexOf('\n  }', i);
@@ -238,7 +238,7 @@ function estNavigateur(code) {
   var f = reglesRunner.par.estDuDomDePage;
   return !!f && f(code);
 }
-function ecarteParRunner(code, navAvant, tousJs, navFichierAvant, autresAvant) {
+function ecarteParRunner(code, navAvant, tousJs, autresAvant) {
   if (BROWSER_ONLY && BROWSER_ONLY.test(code)) return true;
   var ecarte = REGLES_SEULES.some(function (n) {
     var f = reglesRunner.par[n];
@@ -247,12 +247,12 @@ function ecarteParRunner(code, navAvant, tousJs, navFichierAvant, autresAvant) {
   if (ecarte) return true;
   var h = reglesRunner.par.heriteDuNavigateur;
   if (h && h(code, navAvant || [])) return true;
-  /* ⚠️ LA TROISIÈME RÈGLE À CONTEXTE (2026-09-09, point B2b-23) : les blocs de navigateur
-     précédents QUI PORTENT LE MÊME `data-file`, et les blocs précédents non-navigateur
-     pour sa garde. Sans elle, cet outil réclamerait 4 boutons que le navigateur ne pose
-     plus — la dette de B2b-3, B2b-8 puis B2b-10, une quatrième fois. */
-  var sf = reglesRunner.par.estLaSuiteDunFichierDeNavigateur;
-  if (sf && sf(code, navFichierAvant || [], autresAvant || [])) return true;
+  /* ⚠️ LA TROISIÈME RÈGLE À CONTEXTE (points B2b-23 puis B2b-25) : les blocs de navigateur
+     précédents, et les blocs précédents non-navigateur pour sa garde. Sans elle, cet outil
+     réclamerait 8 boutons que le navigateur ne pose plus — la dette de B2b-3, B2b-8 puis
+     B2b-10, une quatrième fois. */
+  var sf = reglesRunner.par.heriteDuNavigateurAuNiveauRacine;
+  if (sf && sf(code, navAvant || [], autresAvant || [])) return true;
   /* ⚠️ LA SECONDE RÈGLE À CONTEXTE (point B2b-10), et elle n'a pas le même : celle-ci
      demande la page ENTIÈRE, pas ce qui précède. Sans elle, cet outil réclamait 12 boutons
      de plus que le navigateur n'en pose sur un simple échantillon de 5 pages — la dette de
@@ -277,24 +277,18 @@ function blocsAttendusDe(page) {
     }
   })();
   var re = /<figure class="code-block"[\s\S]*?<\/figure>/g, m, n = 0;
-  var navAvant = [], navFichier = [], autres = [];
+  var navAvant = [], autres = [];
   while ((m = re.exec(html))) {
     var f = m[0];
-    var dfm = /<figure class="code-block"([^>]*)>/.exec(f);
-    var fic = dfm ? (/data-file="([^"]*)"/.exec(dfm[1]) || ['', ''])[1] : '';
     /* LA COLLECTE DES BLOCS DE NAVIGATEUR PRÉCÈDE TOUT FILTRE, comme dans `runner.js` :
        un bloc sans `<pre>`, ou dont l'auteur a désactivé le bouton, n'est jamais candidat
        mais reste une source de noms pour ceux qui le suivent. */
     var cAv = /<code[^>]*class="[^"]*language-javascript[^"]*"[^>]*>([\s\S]*?)<\/code>/.exec(f);
     var codeAv = cAv ? decode(cAv[1]).trim() : null;
     var contexte = navAvant.slice();
-    var contexteFichier = navFichier.filter(function (o) { return fic && o.f === fic; })
-                                    .map(function (o) { return o.t; });
     var contexteAutres = autres.slice();
-    if (codeAv !== null && estNavigateur(codeAv)) {
-      navAvant.push(codeAv);
-      navFichier.push({ f: fic, t: codeAv });
-    } else if (codeAv !== null) autres.push(codeAv);
+    if (codeAv !== null && estNavigateur(codeAv)) navAvant.push(codeAv);
+    else if (codeAv !== null) autres.push(codeAv);
     if (f.indexOf('<pre') < 0) continue;
     /* `data-runner` ÉCRIT DANS LE SOURCE = l'auteur a désactivé le bouton lui-même,
        et `runner.js` sort aussitôt (`if (!bar || block.hasAttribute("data-runner")) return`).
@@ -304,7 +298,7 @@ function blocsAttendusDe(page) {
        à juger doit être exclu du DÉNOMINATEUR, pas retranché d'un total. */
     if (/\sdata-runner(\s*=|[\s>])/i.test(f.slice(0, f.indexOf('<pre')))) continue;
     if (!cAv) continue;
-    if (ecarteParRunner(codeAv, contexte, tousJs, contexteFichier, contexteAutres)) continue;
+    if (ecarteParRunner(codeAv, contexte, tousJs, contexteAutres)) continue;
     n++;
   }
   return n;

@@ -2954,9 +2954,15 @@ résultat avant le clic.
       `verif-donnees.js` : **25 contrôles, 0 erreur d'invariant**. Chaîne rapide finale :
       **42 étapes, 119,3 s, tout vert, toutes mesurées.**
 
-- [ ] **B2b-20 · Les 45 blocs qui restent, et pourquoi le lot le plus gros NE PEUT PAS être
+- [x] **B2b-20 · Les 45 blocs qui restent, et pourquoi le lot le plus gros NE PEUT PAS être
       fermé par une règle du bouton. Mesure de réfutation faite, chiffrée, avant d'écrire
-      quoi que ce soit.**
+      quoi que ce soit.** — COCHÉ le 2026-09-10 (point B2b-25) : le point était laissé
+      ouvert parce que ses 19 blocs NULLE-PART dépassaient une passe. Ils ont été repris
+      leçon par leçon en B2b-21 (11 blocs), B2b-22 (6 sur 8, les 2 derniers refusés pour une
+      raison écrite) et la carte de `sonde-origine-du-nom.js` rend aujourd'hui
+      **NULLE-PART : 2**, exactement ces deux refus. La conclusion du point — aucune règle
+      du bouton ne peut reconnaître une variable LIBRE sans analyse syntaxique — n'a pas
+      bougé d'un chiffre.
 
       **La carte, refaite après B2b-19** (`node tools/preuves/sonde-origine-du-nom.js`, qui
       examine bien **45** blocs — le même chiffre que le vérificateur, la divergence à 47
@@ -3306,6 +3312,105 @@ résultat avant le clic.
       `verif-html.js` 0/0 ; `verif-donnees.js` 0 erreur ; `verif-sorties.js` **449 rejoués,
       0 divergent, 93 non jugés (inchangé)** ; `verif-sql.js` sur `sql/lecon-06` 7/7 ;
       cliquets descendus à **22 / 77 / 33**.
+
+- [x] **B2b-25 · La règle B2b-23 était AVEUGLE aux conditions, et sa quatrième précaution
+      était de trop : 22 blocs en panne → 16, aboutis 1 565 → 1 567, et ZÉRO bouton perdu.**
+
+      **Le point s'est ouvert sur le lot `projets-js`, il s'est fermé sur deux défauts de
+      règle.** Mesure d'entrée reproduite avant de toucher à quoi que ce soit
+      (`node tools/verif-js.js --causes`) : **1 607 blocs à bouton, 1 565 aboutis, 22 EN
+      PANNE**, dont 9 dans `projets-js` — le plus gros lot restant. La carte de
+      `sonde-origine-du-nom.js` confirme au passage que le lot NULLE-PART du point B2b-20
+      est **vidé, il n'en reste que les 2 blocs refusés pour une raison en B2b-22**.
+
+      **(1) DEUX BLOCS RENDUS VIVANTS PAR UN RENOMMAGE, DANS LE CONTENU.**
+      `projets-js/lecon-15` #5 et #7 (le moteur du serpent) échouaient sur `etatInitial`,
+      un nom pourtant déclaré par le bloc #1 de la même leçon. La cause n'était pas
+      l'absence du nom mais une **collision de déclarations** : quatre blocs de démonstration
+      déclaraient chacun `const jeu` ou `let jeu`, et le préambule ne garde que ce qui
+      COMPILE avec le bloc (B2b-5) — garder le #4 faisait donc sauter le #1, qui portait
+      justement `etatInitial`. Deux variables de démonstration renommées (`jeu` → `depart`
+      dans #1, `jeu` → `partie` dans #5) suffisent : la leçon passe de **8 blocs aboutis sur
+      10 à 10 sur 10**, sans qu'une ligne de code enseigné ne change. ⚠️ Aucune règle ne
+      pouvait faire ce travail : c'est le CONTENU qui réutilisait le même nom pour quatre
+      choses différentes.
+
+      **(2) UNE CONDITION N'EST PAS UNE LISTE DE PARAMÈTRES.** En cherchant pourquoi
+      `projets-js/lecon-17` #5 (`if (modeGomme) { … }`, un fragment de `pointermove`)
+      gardait un bouton, le motif de neutralisation des paramètres de la règle B2b-23 s'est
+      révélé accepter **n'importe quel identifiant collé à `(…) {`** — donc `if (x) {`,
+      `while (x) {`, `for (…) {`, `switch (x) {`. La règle était aveugle à **toute lecture
+      faite dans une condition racine**. Les mots-clés de contrôle sont maintenant exclus du
+      blanchiment ; `catch` reste une liaison, donc blanchi.
+      ⚠️ **Les deux sondes du dépôt DIVERGEAIENT sur ce point, et c'est ce qui l'a révélé** :
+      `sonde-heritage-navigateur.js` (qui ne blanchit qu'après `function`/`catch`/`=>`)
+      visait `modeGomme`, `sonde-heritage-profondeur.js` (qui recopiait le motif de la règle)
+      ne le visait pas. Deux instruments qui ne disent pas la même chose du même bloc : le
+      désaccord était l'information.
+
+      **(3) LA QUATRIÈME PRÉCAUTION ÉTAIT DE TROP, ET C'EST LA MESURE QUI LE DIT.** B2b-23
+      exigeait en plus que le bloc source porte le **même `data-file`**. Elle compensait
+      l'absence des deux autres précautions, écrites dans la même passe. Une fois les
+      paramètres neutralisés et la garde du préambule en place, la lever ne coûte rien —
+      variantes ajoutées à `sonde-heritage-profondeur.js`, **statut de chaque bloc DEMANDÉ à
+      `verif-js.js`** au lieu d'être recalculé :
+
+      | critère | blocs visés | dont **VIVANTS** |
+      |---|---|---|
+      | colonne 0 (règle de B2b-8, inchangée) | 0 | 0 |
+      | profondeur 0 d'accolades, seule | 14 | **10** |
+      | usage n'importe où (rejeté en B2b-8) | 35 | **27** |
+      | MÊME `data-file` + profondeur 0 + paramètres + garde | 0 | 0 |
+      | **TOUT bloc navigateur + profondeur 0 + paramètres** | 4 | **1** |
+      | **… + garde du préambule (retenu)** | **3** | **0** |
+
+      Les 3 blocs gagnés sont `nodejs/lecon-22` #2 (`UserSchema`), `graphql/lecon-09` #5
+      (`DataLoader`) et `wasm/lecon-04` #4 (`memoire`) — un `new WebAssembly.Memory` déclaré
+      dans un bloc de navigateur est hors d'atteinte du Worker, que l'étiquette de fichier
+      soit la même ou non. La règle est renommée en conséquence :
+      `estLaSuiteDunFichierDeNavigateur` → **`heriteDuNavigateurAuNiveauRacine`**, et la
+      liste `navFichierAvant` disparaît de `runner.js`, de `regles-bouton.js` et de
+      `verif-clic.js` — trois endroits, parce que les vérificateurs LISENT la règle dans
+      `js/runner.js` et qu'un nom oublié y lève une erreur bruyante, jamais un silence.
+      ⚠️ La sonde `sonde-heritage-navigateur.js` a d'abord mesuré la variante SANS ses deux
+      précautions : **46 blocs visés dont 10 VIVANTS**, puis 37/1 avec les paramètres
+      neutralisés, puis **36/0** avec la garde du préambule. La règle n'a été écrite qu'après
+      la troisième ligne.
+
+      **ÉPREUVE DE LA RÈGLE, cas par cas** (`heriteDuNavigateurAuNiveauRacine` chargée depuis
+      `regles-bouton.js`, source `runner.js`) : condition racine → écarté ; boucle `while`
+      racine → écarté ; appel racine `rendre(modeGomme)` → écarté ; **paramètre**
+      `function f(modeGomme)` → gardé ; **corps de fonction** → gardé ; **commentaire seul**
+      → gardé ; **chaîne seule** → gardé ; **nom déclaré par le bloc lui-même** → gardé ;
+      **nom déclaré par un bloc précédent non-navigateur** (le repli peut le fournir) →
+      gardé. **9 cas sur 9.**
+
+      **PREUVE PAR LE NAVIGATEUR, jamais par le calcul de tête.** `verif-clic.js --sorties`,
+      Chrome `file://`, réseau non sollicité, sur les 5 pages touchées : **16 blocs cliqués
+      sur 16 attendus, couverture complète, 0 divergent**. `projets-js/lecon-15` rend ses 10
+      blocs, dont les deux réparés : #5 → `1` puis `4`, #7 → `{"x":5,"y":5} 0`,
+      `{"x":6,"y":5} 1`, `4`, `en cours` — exactement les quatre sorties que la page annonce
+      en commentaire. Les 4 blocs visés par la règle n'ont plus de bouton dans Chrome.
+      **Injection dans une page réelle** : `if (ctx) { console.log("x"); }` ajouté au bloc #2
+      de `projets-js/lecon-16` (le cas d'école des 31 vivants de B2b-8, qui cite `ctx` dans
+      des fonctions qu'il n'appelle pas) → la page passe de **2 boutons à 1 DANS CHROME**, et
+      `verif-js.js` dit la même chose ; page restaurée → 2 boutons.
+
+      **Cliquet éprouvé** : `const zzz = ;` injecté en tête d'`algo/lecon-01` → **code 1**,
+      « 78 blocs ne compilent pas contre 77 à la référence » ; page restaurée → code 0.
+
+      **Mesures.** `verif-js.js` : **1 603 blocs à bouton (−4), 1 567 aboutis (+2),
+      16 EN PANNE (−6), 77 non compilables et 33 orphelins INCHANGÉS**. Le nombre d'aboutis
+      n'a baissé à aucune étape. Chaîne rejouée : `verif-html.js` 1 629 fichiers, 0 grave
+      0 remarque ; `verif-donnees.js` 25 contrôles, 0 erreur (`search-index.js` régénéré :
+      le renommage de deux variables décale l'index de 2 octets, et l'invariant I18 l'a vu) ;
+      `verif-sorties.js` **449 rejoués, 0 divergent** ; `verif.js --rapide` **52 étapes,
+      tout vert, 130,2 s**. Cliquets descendus à **16 / 77 / 33**.
+
+      **Ce qui reste : 16 blocs, dont 2 que l'apprenant voit échouer À COUP SÛR** —
+      `nodejs/lecon-22` #5 rend `ReferenceError: z is not defined` et #6
+      `SyntaxError: Illegal return statement`, relevés au clic pendant ce point. Les 14
+      autres : `js` 6, `projets-js` 6, `typescript` 1, `vue` 1.
 
 - [x] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
