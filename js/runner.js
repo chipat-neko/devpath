@@ -231,7 +231,13 @@
      que ce que la page promet est pire qu'un bouton absent — c'est la raison d'être de
      ce chantier. Le lookahead préserve `EXPLAIN QUERY PLAN`, qui, lui, rend sous SQLite
      un plan lisible : une leçon qui l'écrira gardera son bouton. */
-  var AUTRE_SGBD = /\$\$|\bLANGUAGE\s+plpgsql\b|\bCREATE\s+OR\s+REPLACE\b|\bADD\s+CONSTRAINT\b|\bDROP\s+CONSTRAINT\b|\bALTER\s+COLUMN\b|\bMODIFY\s+(?:COLUMN\s+)?\w|\bROLLUP\s*\(|\bCUBE\s*\(|\bPIVOT\s*\(|\bTRY_CAST\s*\(|\bSAFE_CAST\s*\(|\bDATE_DIFF\s*\(|\bDATE_TRUNC\s*\(|\bMD5\s*\(|\bINTERVAL\s+\d|\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE|TRIGGER)\b|\bMATERIALIZED\s+VIEW\b|\bFOR\s+(?:UPDATE|SHARE)\b|\bGROUPING\s+SETS\b|\bQUALIFY\b|\bMERGE\s+INTO\b|\bGENERATED\s+(?:ALWAYS|BY\s+DEFAULT)\s+AS\s+IDENTITY\b|\bISOLATION\s+LEVEL\b|\bAUTO_INCREMENT\b|\bENGINE\s*=|\bSERIAL\b|\bTRUNCATE\b|\b(?:DATE|TIMESTAMP|INTERVAL)\s+'|::|\bEXPLAIN\s+ANALYZE\b|\bSET\s+search_path\b|\bILIKE\b|\bSHOW\s+(?:TABLES|DATABASES)\b|\bEXTRACT\s*\(|\bSUBSTRING\s*\([^()]*\bFROM\b|\b(?:GRANT|REVOKE)\s+(?:ALL|SELECT|INSERT|UPDATE|DELETE|EXECUTE|USAGE)\b|\bON\s+DUPLICATE\s+KEY\b|\bUSING\s+(?:GIN|GIST|SPGIST|BRIN|BTREE|HASH)\b|@[>@]|\b(?:to_tsvector|to_tsquery|ts_rank)\s*\(|\bFULLTEXT\b|\bAGAINST\s*\(|=\s*ANY\s*\(|\bINCLUDE\s*\(|\bEXPLAIN\b(?!\s+QUERY\s+PLAN)/i;
+  /* `strpos(` : la leçon 14 du cours bdd l'écrit ET le dit — « strpos et reverse sont
+     deux fonctions PostgreSQL ». Elle se trompe à moitié, et c'est la mesure qui l'a
+     montré : sur le moteur du dépôt, `reverse('abc')` est ACCEPTÉ, seul `strpos` rend
+     « no such function ». Le marqueur ne retient donc que `strpos` — ajouter `reverse`
+     aurait écarté des blocs qui n'ont aucune raison de l'être. 1 bloc désigné, déjà en
+     erreur, 0 vivant. */
+  var AUTRE_SGBD = /\$\$|\bLANGUAGE\s+plpgsql\b|\bCREATE\s+OR\s+REPLACE\b|\bADD\s+CONSTRAINT\b|\bDROP\s+CONSTRAINT\b|\bALTER\s+COLUMN\b|\bMODIFY\s+(?:COLUMN\s+)?\w|\bROLLUP\s*\(|\bCUBE\s*\(|\bPIVOT\s*\(|\bTRY_CAST\s*\(|\bSAFE_CAST\s*\(|\bDATE_DIFF\s*\(|\bDATE_TRUNC\s*\(|\bMD5\s*\(|\bINTERVAL\s+\d|\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE|TRIGGER)\b|\bMATERIALIZED\s+VIEW\b|\bFOR\s+(?:UPDATE|SHARE)\b|\bGROUPING\s+SETS\b|\bQUALIFY\b|\bMERGE\s+INTO\b|\bGENERATED\s+(?:ALWAYS|BY\s+DEFAULT)\s+AS\s+IDENTITY\b|\bISOLATION\s+LEVEL\b|\bAUTO_INCREMENT\b|\bENGINE\s*=|\bSERIAL\b|\bTRUNCATE\b|\b(?:DATE|TIMESTAMP|INTERVAL)\s+'|::|\bEXPLAIN\s+ANALYZE\b|\bSET\s+search_path\b|\bILIKE\b|\bSHOW\s+(?:TABLES|DATABASES)\b|\bEXTRACT\s*\(|\bSUBSTRING\s*\([^()]*\bFROM\b|\b(?:GRANT|REVOKE)\s+(?:ALL|SELECT|INSERT|UPDATE|DELETE|EXECUTE|USAGE)\b|\bON\s+DUPLICATE\s+KEY\b|\bUSING\s+(?:GIN|GIST|SPGIST|BRIN|BTREE|HASH)\b|@[>@]|\b(?:to_tsvector|to_tsquery|ts_rank)\s*\(|\bFULLTEXT\b|\bAGAINST\s*\(|=\s*ANY\s*\(|\bINCLUDE\s*\(|\bEXPLAIN\b(?!\s+QUERY\s+PLAN)|\bstrpos\s*\(/i;
 
   /* Nom des tables qu'un bloc CRÉE lui-même. Sert à décider si la base de démonstration
      doit être préchargée — voir `besoinDuSeed` dans le Worker.
@@ -242,6 +248,22 @@
   /* Nom des VUES qu'un bloc définit lui-même.
      ⚠️ Littérale LUE par `tools/verif-sql.js`, comme AUTRE_SGBD et TABLE_CREEE. */
   var VUE_CREEE = /\bCREATE\s+(?:TEMP(?:ORARY)?\s+)?VIEW\s+(?:IF\s+NOT\s+EXISTS\s+)?["`\[]?([A-Za-z_][A-Za-z0-9_]*)/i;
+
+  /* Table et colonne d'un `ALTER TABLE … ADD COLUMN …`, et le même principe que pour les
+     vues : UNE LEÇON QUI AJOUTE UNE COLONNE L'EMPORTE SUR LE DÉCOR QUI LA PORTE DÉJÀ.
+     Le besoin est concret et mesuré : la leçon 10 du cours bdd AJOUTE
+     `representation.places_restantes` et `commande.total` dans un bloc, puis les LIT
+     dans deux autres. Sans cette règle, il fallait choisir — porter les colonnes au
+     décor (et casser le bloc qui les ajoute, « duplicate column name ») ou ne pas les
+     porter (et laisser deux blocs morts). C'est exactement l'arbitrage perdant qu'on a
+     rencontré sur `clients.pays` à la leçon 11 du cours sql, où il a fallu renoncer.
+     La colonne est donc retirée du décor juste avant le bloc qui l'ajoute.
+     ⚠️ La forme reconnue est `ADD COLUMN <nom>`, pas `ADD <nom>` : sinon `ADD CONSTRAINT`
+     serait lu comme une colonne nommée « CONSTRAINT ». Les 9 `ADD COLUMN` du site sont
+     tous dans cette forme (vérifié). Le retrait est tenté sans garantie — SQLite refuse
+     de retirer une colonne dont un index ou une vue dépend ; l'échec est silencieux et
+     le bloc se comporte alors comme avant, donc aucune régression possible. */
+  var COLONNE_AJOUTEE = /\bALTER\s+TABLE\s+["`\[]?([A-Za-z_][A-Za-z0-9_]*)["`\]]?\s+ADD\s+COLUMN\s+["`\[]?([A-Za-z_][A-Za-z0-9_]*)/i;
 
   /* LES VUES DU DÉCOR NE SONT POSÉES QUE POUR LES BLOCS QUI LES NOMMENT, et cette
      restriction n'est pas une précaution théorique — elle a été écrite après DEUX
@@ -354,19 +376,64 @@
        s'appuient sur des schémas qu'elles déclarent AILLEURS dans la page, or chaque
        bloc s'exécute sur une base neuve. On fournit donc ici les plus cités. */
 
-    /* Le fil rouge « Rideau » du cours bdd : billetterie. */
+    /* Le fil rouge « Rideau » du cours bdd : billetterie.
+       ⚠️ La chaîne salle → zone → place et la représentation 42 ont été ajoutées le
+       2026-09-09 (point B1c-2). Elles ne sont pas décoratives : les leçons 10 et 11
+       écrivent `JOIN salle s ON s.salle_id = r.salle_id`, `JOIN zone z ON z.zone_id =
+       p.zone_id` et filtrent sur `representation_id = 42` — schéma que la leçon 4
+       DÉCLARE (« une place atteint sa salle en passant par sa zone ») mais que le décor
+       ne portait pas. La représentation 42 existe pour que ces requêtes rendent des
+       lignes plutôt que rien : un compteur à zéro n'illustre rien. */
     "CREATE TABLE spectacle (spectacle_id INTEGER PRIMARY KEY, titre TEXT NOT NULL, genre TEXT, duree_min INTEGER);",
     "INSERT INTO spectacle VALUES (1,'Nocturne','Danse',95),(2,'Le Malentendu','Theatre',110),(3,'Quatuor No 3','Musique',75);",
-    "CREATE TABLE representation (representation_id INTEGER PRIMARY KEY, spectacle_id INTEGER NOT NULL, debut TEXT NOT NULL);",
-    "INSERT INTO representation VALUES (1,1,'2026-09-12 20:30'),(2,1,'2026-09-13 20:30'),(3,2,'2026-09-19 19:00'),(4,3,'2026-10-02 18:30');",
+    "CREATE TABLE salle (salle_id INTEGER PRIMARY KEY, nom TEXT NOT NULL, ville TEXT NOT NULL, adresse TEXT);",
+    "INSERT INTO salle VALUES (1,'Théâtre du Nord','Lille','4 place du Général de Gaulle'),(2,'Salle Molière','Lyon','18 quai de Bondy');",
+    "CREATE TABLE zone (zone_id INTEGER PRIMARY KEY, salle_id INTEGER NOT NULL, nom TEXT NOT NULL, categorie TEXT NOT NULL);",
+    "INSERT INTO zone VALUES (10,1,'Parterre','Orchestre'),(11,1,'Premier balcon','Balcon'),(20,2,'Parterre','Orchestre');",
+    /* `titre` double `spectacle.titre` : la leçon 10 écrit `SELECT titre,
+       places_restantes FROM representation`, raccourci qu'elle assume. Même logique que
+       le doublon nom/libelle sur `produits`. */
+    "CREATE TABLE representation (representation_id INTEGER PRIMARY KEY, spectacle_id INTEGER NOT NULL, salle_id INTEGER, titre TEXT, debut TEXT NOT NULL, places_restantes INTEGER);",
+    /* `places_restantes` vaut 5 pour la representation 42 alors que la verite calculee
+       est 3 (5 places dans la salle 1, 2 billets vendus) : la copie a DIVERGE, ce que la
+       lecon 10 demontre et que son bloc de resynchronisation corrige. */
+    "INSERT INTO representation VALUES (1,1,1,'Nocturne','2026-09-12 20:30',2),(2,1,1,'Nocturne','2026-09-13 20:30',5),(3,2,2,'Le Malentendu','2026-09-19 19:00',0),(4,3,2,'Quatuor No 3','2026-10-02 18:30',0),(42,1,1,'Nocturne','2026-11-05 20:00',5);",
     "CREATE TABLE client (client_id INTEGER PRIMARY KEY, email TEXT NOT NULL UNIQUE, nom TEXT NOT NULL, prenom TEXT, ville TEXT);",
     "INSERT INTO client VALUES (1,'camille.roy@example.fr','Roy','Camille','Lyon'),(2,'hugo.marin@example.fr','Marin','Hugo','Nantes'),(3,'ines.lopez@example.fr','Lopez','Ines','Lille');",
-    "CREATE TABLE place (place_id INTEGER PRIMARY KEY, rangee TEXT NOT NULL, numero INTEGER NOT NULL, categorie TEXT);",
-    "INSERT INTO place VALUES (1,'A',1,'Orchestre'),(2,'A',2,'Orchestre'),(3,'B',1,'Balcon'),(4,'B',2,'Balcon');",
-    "CREATE TABLE commande (commande_id INTEGER PRIMARY KEY, client_id INTEGER NOT NULL, passee_le TEXT NOT NULL);",
-    "INSERT INTO commande VALUES (1,1,'2026-08-20'),(2,2,'2026-08-21'),(3,1,'2026-08-25');",
+    "CREATE TABLE place (place_id INTEGER PRIMARY KEY, zone_id INTEGER, rangee TEXT NOT NULL, numero INTEGER NOT NULL, categorie TEXT);",
+    "INSERT INTO place VALUES (1,10,'A',1,'Orchestre'),(2,10,'A',2,'Orchestre'),(3,11,'B',1,'Balcon'),(4,11,'B',2,'Balcon'),(12,10,'A',12,'Orchestre');",
+    /* `statut` : la transaction de la lecon 13 fait `UPDATE commande SET statut =
+       'payee'`. `total` : l'agregat STOCKE de la lecon 10 — celui de la commande 3 est
+       volontairement FAUX (25.00 contre 18.00 de billets) et la commande 4 n'a aucun
+       billet, les deux cas que le controle de coherence de la lecon doit lever. */
+    "CREATE TABLE commande (commande_id INTEGER PRIMARY KEY, client_id INTEGER NOT NULL, passee_le TEXT NOT NULL, statut TEXT NOT NULL DEFAULT 'payee', total NUMERIC);",
+    "INSERT INTO commande VALUES (1,1,'2026-08-20','payee',103.00),(2,2,'2026-08-21','payee',63.50),(3,1,'2026-08-25','payee',25.00),(4,3,'2026-08-26','en_attente',12.00);",
     "CREATE TABLE billet (billet_id INTEGER PRIMARY KEY, commande_id INTEGER NOT NULL, representation_id INTEGER NOT NULL, place_id INTEGER NOT NULL, prix_paye NUMERIC NOT NULL);",
-    "INSERT INTO billet VALUES (1,1,1,1,32.00),(2,1,1,2,32.00),(3,2,3,3,24.50),(4,3,4,4,18.00);",
+    "INSERT INTO billet VALUES (1,1,1,1,32.00),(2,1,1,2,32.00),(3,2,3,3,24.50),(4,3,4,4,18.00),(5,1,42,1,39.00),(6,2,42,12,39.00);",
+    /* Le prix d'une zone pour une séance (leçon 9, 2NF) : la leçon 11 y pose un index
+       composite `(zone_id, prix)`. */
+    "CREATE TABLE tarif (tarif_id INTEGER PRIMARY KEY, representation_id INTEGER NOT NULL, zone_id INTEGER NOT NULL, prix NUMERIC NOT NULL, UNIQUE (representation_id, zone_id));",
+    "INSERT INTO tarif VALUES (1,42,10,39.00),(2,42,11,28.00),(3,1,10,32.00);",
+    /* La leçon 13 écrit `INSERT INTO paiement (commande_id, montant, moyen,
+       effectue_le)` dans sa transaction ; aucune leçon ne déclare le schéma. */
+    "CREATE TABLE paiement (paiement_id INTEGER PRIMARY KEY AUTOINCREMENT, commande_id INTEGER NOT NULL, montant NUMERIC NOT NULL, moyen TEXT, effectue_le TEXT);",
+    "INSERT INTO paiement (commande_id,montant,moyen,effectue_le) VALUES (1,64.00,'carte','2026-08-20 10:12'),(2,24.50,'especes','2026-08-21 18:40');",
+    /* L'ANTI-PATRON de la leçon 8 (colonne « liste », violation de la 1NF) : schéma et
+       lignes repris À L'IDENTIQUE du bloc qui les déclare dans la page. */
+    "CREATE TABLE billet_multivalue (billet_id INTEGER PRIMARY KEY, client_id INTEGER NOT NULL, places TEXT);",
+    "INSERT INTO billet_multivalue VALUES (1,42,'A1,A2,A3'),(2,42,'B7');",
+    /* La table à plat de la leçon 9, AVANT normalisation. Jeu de données copié du bloc
+       `data-exos` de la même leçon — y compris la faute de frappe « Lile », qui est
+       toute la démonstration : elle fait apparaître deux villes pour une seule salle.
+       Le bouton et l'exercice auto-corrigé travaillent donc sur les mêmes lignes. */
+    "CREATE TABLE reservations (billet_id INTEGER, client_nom TEXT, spectacle_titre TEXT, salle_nom TEXT, salle_ville TEXT, prix NUMERIC);",
+    "INSERT INTO reservations VALUES",
+    " (1,'Lou','Le Cid','Théâtre du Nord','Lille',22),",
+    " (2,'Aya','Le Cid','Théâtre du Nord','Lille',22),",
+    " (3,'Noah','Ruy Blas','Théâtre du Nord','Lile',18),",
+    " (4,'Ines','Ruy Blas','Salle Molière','Lyon',30),",
+    " (5,'Zoé','Le Cid','Salle Molière','Lyon',30),",
+    " (6,'Sam','Phèdre','Le Grenier','Brest',15);",
 
     /* Schémas ponctuels du cours sql : hiérarchie, transactions, séries datées. */
     "CREATE TABLE employes (id INTEGER PRIMARY KEY, nom TEXT NOT NULL, service TEXT, salaire REAL, manager_id INTEGER);",
@@ -548,6 +615,7 @@
     "var SEED = " + JSON.stringify(SEED_SQL) + ";",
     "var MOTIF_TABLE_CREEE = " + JSON.stringify(TABLE_CREEE.source) + ";",
     "var MOTIF_VUE_CREEE = " + JSON.stringify(VUE_CREEE.source) + ";",
+    "var MOTIF_COLONNE_AJOUTEE = " + JSON.stringify(COLONNE_AJOUTEE.source) + ";",
     "var VUES_DECOR = " + JSON.stringify(SEED_VUES) + ";",
     "var MOTIF_COMMENTAIRE = " + JSON.stringify(COMMENTAIRE_SQL.source) + ";",
     /* ⚠️ LA RÈGLE DU SEED, ET POURQUOI ELLE A CHANGÉ LE 2026-09-09.
@@ -572,6 +640,11 @@
     "}",
     /* Une vue du décor n'est posée que si le bloc écrit son nom SANS la définir —
        voir SEED_VUES et les deux régressions qui ont dicté cette règle. */
+    "function colonnesAReprendre(code) {",
+    "  var re = new RegExp(MOTIF_COLONNE_AJOUTEE, 'gi'), m, nu = sansCommentaires(code), out = [];",
+    "  while ((m = re.exec(nu))) out.push([m[1], m[2]]);",
+    "  return out;",
+    "}",
     "function vuesAPoser(code) {",
     "  var nu = sansCommentaires(code), defini = [], re = new RegExp(MOTIF_VUE_CREEE, 'gi'), m;",
     "  while ((m = re.exec(nu))) defini.push(m[1].toLowerCase());",
@@ -612,6 +685,7 @@
        des violations de contraintes démontrées exprès, que rejouer met en collision. */
     "        if (besoinDuSeed(d.code)) { db.exec(SEED); }",
     "        vuesAPoser(d.code).forEach(function (v) { try { db.exec(v.sql); } catch (e) {} });",
+    "        colonnesAReprendre(d.code).forEach(function (c) { try { db.exec('ALTER TABLE \"' + c[0] + '\" DROP COLUMN \"' + c[1] + '\"'); } catch (e) {} });",
     "        var res = db.exec(d.code);",
     "        self.postMessage({ type: 'result', res: res });",
     "      } catch (e) {",

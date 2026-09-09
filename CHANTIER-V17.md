@@ -724,18 +724,89 @@ résultat avant le clic.
       `sql/lecon-18` **6 blocs sur 6**. Cliquet descendu à **47**, éprouvé : injection → **code 1**,
       retrait → **code 0**. `verif.js --rapide` : 40 étapes, tout est vert.
 
-- [ ] **B1c-2 · `bdd` : 14 blocs restants, et ils ne sont PAS tous à réparer.** Trois familles, à ne
-      surtout pas confondre : (a) **4 démonstrations d'erreur VOLONTAIRES** — `lecon-05 #1` et `#2`
-      écrivent « -> ERREUR : violation de contrainte UNIQUE » sous la requête, `lecon-14 #2` démontre
-      le piège « Cannot add a NOT NULL column », `lecon-06 #1` crée DEUX FOIS `billet` pour comparer
-      deux écritures de la même clé étrangère. Le bouton y rend une erreur, et c'est la leçon.
-      (b) **3 fragments qui dépendent d'un bloc précédent** de la même page (`duplicate column name:
-      nom`, `c.total`, `b.client_id`). (c) **7 tables propres à une leçon** (`billet_multivalue`,
-      `paiement`, `reservations`, `salle`, `zone`, `tarif`, et `representation.titre`).
-      **Le vrai travail ici est de décider comment le vérificateur DOIT compter (a).** Les masquer
-      affaiblirait le contrôle — un motif « ERREUR » en commentaire cacherait aussi les vraies pannes ;
-      les compter à part, sans les retirer du cliquet, informe sans rien affaiblir. C'est la piste à
-      suivre.
+- [x] **B1c-2 · `bdd` : 13 blocs en erreur → 4, et les 4 restants sont ceux qui DOIVENT échouer.**
+      Le cours passe de 50/63 à 58/62 (94 %) ; site entier **14 → 5**, dont 4 démonstrations voulues.
+      Il n'y avait donc plus qu'**une seule vraie panne sur tout le site** à la fin du point : l'unique
+      bloc du cours `securite` (B1d). Mesure reproduite d'abord : 13 et non 14, parce que
+      `bdd/lecon-12 #4` a été écarté par le marqueur `EXPLAIN` du point précédent.
+
+      **1) Un bloc PostgreSQL que la leçon signale elle-même.** `lecon-14 #8` emploie `strpos` et
+      `reverse`, et la leçon écrit « strpos et reverse sont deux fonctions PostgreSQL ». Elle se trompe
+      à moitié, et c'est la MESURE qui l'a montré : sur le moteur du dépôt, `reverse('abc')` est
+      **ACCEPTÉ** ; seul `strpos` rend « no such function ». Le marqueur ne retient donc que `strpos` —
+      écarter `reverse` aurait retiré des boutons sans raison. 1 bloc désigné, déjà en erreur, 0 vivant.
+
+      **2) Le décor du fil rouge « Rideau » complété — 8 blocs réparés.** Les leçons 10 et 11 écrivent
+      `JOIN salle s ON s.salle_id = r.salle_id` et `JOIN zone z ON z.zone_id = p.zone_id`, chaîne que la
+      leçon 4 DÉCLARE (« une place atteint sa salle en passant par sa zone ») mais que le décor ne
+      portait pas. Ajoutés : `salle`, `zone`, `place.zone_id`, `representation.salle_id`, `tarif`,
+      `paiement`, `billet_multivalue`, `reservations`, plus la **représentation 42** sur laquelle
+      filtrent une demi-douzaine de blocs — sans elle, ils auraient abouti en rendant zéro ligne, et
+      un compteur à zéro n'illustre rien. Comme au point précédent, rien n'est inventé :
+      `billet_multivalue` reprend le schéma et les deux lignes du bloc qui les déclare dans la page, et
+      `reservations` est **copié du bloc `data-exos` de la même leçon, faute de frappe « Lile »
+      comprise** — c'est elle qui fait apparaître deux villes pour une salle. Résultat mesuré dans le
+      navigateur : le bloc rend « Théâtre du Nord | 2 », exactement ce que l'exercice auto-corrigé
+      déclare attendu.
+
+      **3) UNE LEÇON QUI AJOUTE UNE COLONNE L'EMPORTE SUR LE DÉCOR (règle `COLONNE_AJOUTEE`).** La
+      leçon 10 AJOUTE `representation.places_restantes` et `commande.total` dans un bloc, puis les LIT
+      dans deux autres. Sans règle, l'arbitrage était perdant des deux côtés : porter les colonnes au
+      décor cassait le bloc qui les ajoute (« duplicate column name »), ne pas les porter laissait deux
+      blocs morts. **C'est exactement l'arbitrage devant lequel `clients.pays` avait fait RENONCER au
+      point B1b-2** — la règle le résout pour de bon. La colonne est retirée du décor juste avant le
+      bloc qui l'ajoute ; le retrait est tenté sans garantie (SQLite refuse de retirer une colonne dont
+      un index dépend), l'échec est silencieux et le bloc se comporte alors comme avant : **aucune
+      régression possible**. La forme reconnue est `ADD COLUMN <nom>` et non `ADD <nom>`, sinon
+      `ADD CONSTRAINT` serait lu comme une colonne nommée « CONSTRAINT » ; les 9 `ADD COLUMN` du site
+      sont tous dans cette forme. Les valeurs stockées sont choisies pour DÉMONTRER : `commande 3`
+      porte un total faux (25,00 contre 18,00 de billets) et `commande 4` n'a aucun billet — le bloc de
+      contrôle rend donc les **deux** cas que la leçon souligne, la divergence et le `COALESCE` sur la
+      somme vide (mesuré : « 3 | 25 | 18 » et « 4 | 12 | 0 »).
+
+      **4) LE CŒUR DU POINT — comment compter les 4 démonstrations d'erreur, sans rien affaiblir.**
+      Le plan posait la bonne objection : un motif « ERREUR » cherché dans les commentaires aurait aussi
+      couvert les vraies pannes des pages qui parlent d'erreurs. La réponse retenue est
+      `tools/verif-sql-demonstrations.json`, **qui n'est pas une exemption mais une CONTRAINTE** :
+      chaque bloc déclaré doit échouer, et échouer **avec le message déclaré**. Trois verdicts :
+      conforme ; **ABOUTIT** → sortie en 1 (« démonstration muette ») ; **échoue autrement** → sortie
+      en 1 (« démonstration déviée »). Un quatrième contrôle vérifie que les 4 blocs déclarés sont bien
+      tous rencontrés — sinon la déclaration ne correspond plus au site.
+      **Pourquoi cela ajoute un contrôle au lieu d'en retirer un** : le cliquet ne rougit qu'à la
+      HAUSSE du nombre d'erreurs. Une démonstration qui cesse de démontrer FAIT BAISSER ce nombre et
+      passait donc pour une bonne nouvelle — la leçon 5 aurait affiché « OK » sous un texte qui écrit
+      « -> ERREUR : violation de contrainte UNIQUE », sans que rien ne rougisse. Conformément au plan,
+      ces blocs **restent comptés** dans « en erreur » et dans le cliquet ; le résumé les distingue.
+      **Éprouvé par injection dans les trois modes de rupture**, et retour à vert après chacun :
+      second e-mail modifié dans `lecon-05 #1` pour que le bloc n'échoue plus → **code 1**, « ABOUTIT
+      alors que la page annonce “UNIQUE constraint failed: client.email” » ; message attendu dévié dans
+      la déclaration → **code 1**, « échoue “table billet already exists” au lieu de “no such table” » ;
+      numéro de bloc déplacé → **code 1**, « 3 rencontrés sur 4 déclarés ».
+      ⚠️ **Le premier jet de ce contrôle était faux, et seule l'injection l'a montré** : le compteur
+      était incrémenté AVANT le test de conformité, si bien qu'un bloc dévié comptait deux fois et
+      faisait rougir l'outil sur le mauvais message (« 5 rencontrés sur 4 déclarés » au lieu de « non
+      conforme »). Relire le code ne l'aurait pas trouvé.
+
+      **Preuve par le navigateur** : `sql-lecon.js` sur `bdd` 05, 08, 09, 10, 11, 13 — **32 blocs
+      cliqués, 30 résultats et 2 erreurs, qui sont exactement les deux démonstrations de la leçon 5,
+      au message près**. 0 requête distante. Les accents du décor ont été corrigés dans la foulée
+      (« Théâtre du Nord », « Salle Molière », « Général de Gaulle ») : ces valeurs s'affichent dans le
+      résultat, ce sont donc du contenu visible.
+      Cliquet descendu à **5** et éprouvé : injection → **code 1**, retrait → **code 0**, page revenue
+      à l'octet près. `verif-html` 0/0 ; `verif-donnees` 25 contrôles, 0 erreur ; `verif.js --rapide`
+      **40 étapes, tout vert**.
+
+      ⚠️ **UN OUTIL DE LA CHAÎNE M'A ATTRAPÉ, ET C'EST LE FAIT MARQUANT DE CE POINT.** Mon script de
+      mesure d'impact, écrit via un heredoc, contenait `\b` — que le shell a transformé en un vrai
+      **caractère backspace U+0008**. Le motif cherchait donc un caractère de contrôle et ne matchait
+      RIEN : il annonçait « 0 bloc concerné » alors que la réponse est 1. Un « 0 vivant » de ce genre
+      est le pire des mensonges de mesure, puisqu'il autorise à écrire n'importe quel marqueur. C'est
+      `verif-controles.js` (étape `caract` de la chaîne) qui l'a signalé, sur trois fichiers d'un coup
+      — **exactement le défaut pour lequel il avait été écrit**. Deux suites : les brouillons corrompus
+      sont supprimés, et le script de mesure porte maintenant un garde-fou qui refuse de tourner si un
+      motif candidat contient un caractère de contrôle (écrit en échappements, sinon le garde-fou
+      serait lui-même l'accident). À retenir : **écrire ces scripts avec l'outil d'édition, jamais par
+      heredoc** — c'est la troisième fois que ce piège se paie sur ce dépôt.
 
 - [ ] **B1e · `tools/preuves/sql-lecon.js` rend des « MOTEUR KO » qui n'existent pas.** Reproduit deux
       fois le 2026-09-09 : trois leçons passées d'un coup → les **3 derniers blocs de la dernière page**

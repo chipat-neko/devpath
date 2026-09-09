@@ -53,6 +53,29 @@ var cibles = args.filter(function (a) { return a.indexOf('--') !== 0; });
  * sous-ensemble n'est pas comparable a la reference du site entier. */
 var ATTENDU = path.join(__dirname, 'verif-sql-attendu.json');
 
+/* --- LES DÉMONSTRATIONS D'ERREUR, et pourquoi elles ne sont pas une exemption ------
+ * Quatre blocs du cours bdd échouent PARCE QUE C'EST LA LEÇON : deux violations de
+ * contrainte UNIQUE annoncées mot pour mot sous la requête, la table créée deux fois
+ * pour comparer deux écritures d'une clé étrangère, et le « Cannot add a NOT NULL
+ * column » du piège de migration. Les compter comme des pannes serait faux ; les
+ * masquer serait pire.
+ * Ce fichier de déclaration fait donc l'inverse d'une exemption : il CONTRAINT ces
+ * blocs. Chacun doit échouer, et échouer AVEC LE MESSAGE DÉCLARÉ. S'il se met à
+ * aboutir, ou à échouer autrement, l'outil sort en 1 — un contrôle que le cliquet ne
+ * pouvait pas rendre, puisqu'il ne rougit qu'à la HAUSSE du nombre d'erreurs : une
+ * démonstration qui cesse de démontrer FAIT BAISSER ce nombre, et passait donc pour
+ * une bonne nouvelle. Ces blocs restent comptés dans « en erreur » et dans le cliquet. */
+var DEMOS = path.join(__dirname, 'verif-sql-demonstrations.json');
+function lireDemonstrations() {
+  var brut;
+  try { brut = JSON.parse(fs.readFileSync(DEMOS, 'utf8')); }
+  catch (e) { console.error('verif-sql-demonstrations.json illisible : ' + e.message); process.exit(1); }
+  var index = {};
+  (brut.blocs || []).forEach(function (d) { index[d.fichier + '#' + d.bloc] = d; });
+  return index;
+}
+var DEMONSTRATIONS = lireDemonstrations();
+
 /* --- le SEED, lu dans runner.js pour qu'il ne puisse pas diverger ---------- */
 function lireSeed() {
   var src = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
@@ -93,6 +116,14 @@ function lireMotifVueCreee() {
   var src = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
   var m = src.match(/var VUE_CREEE = (\/[\s\S]*?\/i);/);
   if (!m) throw new Error('VUE_CREEE introuvable dans js/runner.js');
+  return eval(m[1]);
+}
+/* Et le motif des colonnes ajoutées : une leçon qui écrit `ALTER TABLE … ADD COLUMN c`
+   voit `c` retirée du décor juste avant (voir COLONNE_AJOUTEE dans runner.js). */
+function lireMotifColonneAjoutee() {
+  var src = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
+  var m = src.match(/var COLONNE_AJOUTEE = (\/[\s\S]*?\/i);/);
+  if (!m) throw new Error('COLONNE_AJOUTEE introuvable dans js/runner.js');
   return eval(m[1]);
 }
 function lireVuesDecor() {
@@ -169,6 +200,12 @@ initSqlJs({ wasmBinary: wasmBinary, locateFile: function (f) { return f; } }).th
   var aBesoinDuSeed = faireRegleDuSeed(lireMotifTableCreee(), SEED);
   var MOTIF_VUE = lireMotifVueCreee();
   var VUES_DECOR = lireVuesDecor();
+  var MOTIF_COLONNE = lireMotifColonneAjoutee();
+  function colonnesAReprendre(code) {
+    var re = new RegExp(MOTIF_COLONNE.source, 'gi'), m, nu = sansCommentaires(code), out = [];
+    while ((m = re.exec(nu))) out.push([m[1], m[2]]);
+    return out;
+  }
   function vuesAPoser(code) {
     var nu = sansCommentaires(code), defini = [], re = new RegExp(MOTIF_VUE.source, 'gi'), m;
     while ((m = re.exec(nu))) defini.push(m[1].toLowerCase());
@@ -183,6 +220,7 @@ initSqlJs({ wasmBinary: wasmBinary, locateFile: function (f) { return f; } }).th
 
   var AUTRE_SGBD = lireFiltreDialecte();
   var total = 0, ok = 0, ko = 0, ecartes = 0;
+  var demos = 0, demosCassees = [];
   var causes = {};
   var parCours = {};
 
@@ -202,15 +240,39 @@ initSqlJs({ wasmBinary: wasmBinary, locateFile: function (f) { return f; } }).th
       try {
         if (aBesoinDuSeed(code)) db.exec(SEED);
         vuesAPoser(code).forEach(function (v) { try { db.exec(v.sql); } catch (e) {} });
+        colonnesAReprendre(code).forEach(function (c) { try { db.exec('ALTER TABLE "' + c[0] + '" DROP COLUMN "' + c[1] + '"'); } catch (e) {} });
         db.exec(code);
         ok++; parCours[cours].ok++;
-        if (!SEULEMENT_ERREURS) console.log('  OK  ' + rel + ' #' + (i + 1));
+        /* Un bloc DÉCLARÉ comme démonstration d'erreur qui aboutit est une alerte, pas
+           une bonne nouvelle : la page annonce un refus que la base ne produit plus. */
+        if (DEMONSTRATIONS[rel + '#' + (i + 1)]) {
+          demosCassees.push(rel + ' #' + (i + 1) + ' — ABOUTIT alors que la page annonce « ' +
+            DEMONSTRATIONS[rel + '#' + (i + 1)].message + ' »');
+          console.log('  !!  ' + rel + ' #' + (i + 1) + ' — DÉMONSTRATION MUETTE : le bloc aboutit');
+        } else if (!SEULEMENT_ERREURS) console.log('  OK  ' + rel + ' #' + (i + 1));
       } catch (e) {
         ko++;
         var msg = String(e && e.message || e);
         var cle = msg.replace(/: .*/, '').replace(/"[^"]*"/g, '…');
         causes[cle] = (causes[cle] || 0) + 1;
-        console.log('  KO  ' + rel + ' #' + (i + 1) + ' — ' + msg.slice(0, 90));
+        var demo = DEMONSTRATIONS[rel + '#' + (i + 1)];
+        if (demo) {
+          /* ⚠️ le compteur `demos` ne compte QUE les conformes : le premier jet
+             l'incrémentait avant le test, si bien qu'un bloc dévié comptait deux fois
+             (une ici, une dans `demosCassees`) et faisait rougir l'outil sur le mauvais
+             message — « 5 rencontrés sur 4 déclarés » au lieu de « non conforme ».
+             Trouvé en éprouvant le contrôle par injection, pas en le relisant. */
+          if (msg.indexOf(demo.message) !== 0) {
+            demosCassees.push(rel + ' #' + (i + 1) + ' — échoue « ' + msg.slice(0, 70) +
+              ' » au lieu de « ' + demo.message + ' »');
+            console.log('  !!  ' + rel + ' #' + (i + 1) + ' — DÉMONSTRATION DÉVIÉE — ' + msg.slice(0, 70));
+          } else {
+            demos++;
+            console.log('  DEM ' + rel + ' #' + (i + 1) + ' — ' + msg.slice(0, 70) + '  (attendu)');
+          }
+        } else {
+          console.log('  KO  ' + rel + ' #' + (i + 1) + ' — ' + msg.slice(0, 90));
+        }
       }
       try { db.close(); } catch (e) {}
     });
@@ -221,7 +283,8 @@ initSqlJs({ wasmBinary: wasmBinary, locateFile: function (f) { return f; } }).th
   console.log('  blocs SQL avec bouton ... ' + total);
   console.log('  écartés (autre SGBD) .... ' + ecartes);
   console.log('  aboutissent ............. ' + ok + '  (' + (100 * part).toFixed(1) + ' %)');
-  console.log('  en erreur ............... ' + ko);
+  console.log('  en erreur ............... ' + ko +
+    (demos ? '  (dont ' + demos + ' demonstration(s) voulue(s))' : ''));
   console.log('\n--- par cours ---');
   Object.keys(parCours).sort(function (a, b) { return parCours[b].total - parCours[a].total; })
     .forEach(function (c) {
@@ -232,6 +295,25 @@ initSqlJs({ wasmBinary: wasmBinary, locateFile: function (f) { return f; } }).th
   console.log('\n--- causes d\'échec ---');
   Object.entries(causes).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 12)
     .forEach(function (e) { console.log('  ' + String(e[1]).padStart(4) + '  ' + e[0]); });
+
+  /* Le contrôle des démonstrations passe AVANT le seuil et avant le cliquet : c'est le
+     seul qui voie une leçon cesser de démontrer ce qu'elle annonce. */
+  var declarees = Object.keys(DEMONSTRATIONS).length;
+  var vues = demos + demosCassees.length;
+  if (!cibles.length && vues !== declarees) {
+    console.log('\nDEMONSTRATIONS : ' + vues + ' bloc(s) rencontre(s) sur ' + declarees +
+      ' declare(s) dans verif-sql-demonstrations.json. Un bloc declare a disparu, change de ' +
+      'numero, ou est desormais ecarte du bouton — la declaration ne correspond plus au site.');
+    process.exit(1);
+  }
+  if (demosCassees.length) {
+    console.log('\nDEMONSTRATIONS D ERREUR NON CONFORMES : ' + demosCassees.length);
+    demosCassees.forEach(function (d) { console.log('  x ' + d); });
+    console.log('  La page annonce un refus de la base. Si le bloc aboutit, ou echoue autrement,');
+    console.log('  le bouton contredit le texte : corriger la page OU la declaration.');
+    process.exit(1);
+  }
+  if (demos) console.log('\n  ' + demos + ' demonstration(s) d erreur conforme(s) a leur declaration.');
 
   if (part < SEUIL) {
     console.log('\nSOUS LE SEUIL de ' + (100 * SEUIL).toFixed(0) + ' % — le moteur ou la base de démonstration a régressé.');
