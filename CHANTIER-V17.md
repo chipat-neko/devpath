@@ -2482,10 +2482,15 @@ résultat avant le clic.
       contexte de mesure exclut délibérément depuis B2b-2, à rejuger au clic avant tout.
 
 
-- [ ] **B2b-16 · CE QUI RESTE DEMANDE UNE DÉCISION, PAS UNE RÈGLE — et la mesure a trouvé
-      bien plus gros que le lot visé : 26 boutons « Tester » appellent `fetch`, et
-      `verif-js.js` les compte tous ABOUTIS.** Case laissée décochée volontairement : ce
-      point n'est pas une correction, c'est un arbitrage, et il déborde du gisement des 43.
+- [x] **B2b-16 · LA RÈGLE FONDATRICE DU SITE N'ÉTAIT PAS TENUE : quatre boutons « Tester »
+      lançaient une VRAIE connexion sortante au clic. Mesuré à 8 connexions, ramené à 0, sans
+      retirer un seul bouton — et le message d'erreur que l'apprenant lisait était `{}`.**
+
+      **LE RELEVÉ DE LA PASSE PRÉCÉDENTE — conservé tel quel, car c'est lui qui a trouvé le
+      gisement : 26 boutons « Tester » appellent `fetch`, et `verif-js.js` les compte tous
+      ABOUTIS.** Il posait trois questions et laissait la case ouverte, au motif que le point
+      n'était pas une correction mais un arbitrage, et qu'il débordait du gisement des 43. Les
+      trois questions sont tranchées à la fin de ce compte rendu.
 
       **CE QUI EST MESURÉ, ET QUI EST SÛR.** Le point B2b-2 a délibérément laissé `fetch`,
       `WebSocket`, `XMLHttpRequest`, `indexedDB` et `caches` hors du contexte de mesure, au
@@ -2553,6 +2558,86 @@ résultat avant le clic.
       ligne n'est pas atteinte. Elle est déclarée dans `tools/hors-chaine.json` avec ce
       qu'il faudrait pour l'y verser : un cliquet sur le nombre de blocs à bouton qui
       tentent une connexion — un chiffre qui, lui, pourra rougir.
+
+
+      **LA MESURE QUI MANQUAIT, ET QUI CHANGE TOUT.** La question 3 ci-dessus — « ces blocs
+      partent-ils vraiment sur le réseau au clic ? » — devait précéder tout arbitrage. Elle a
+      demandé un instrument neuf, `tools/preuves/sonde-clic-reseau.js`, parce qu'aucun outil du
+      dépôt ne savait y répondre : `verif-clic.js` et `verif-rendu.js` lisent
+      `performance.getEntriesByType("resource")`, qui **n'enregistre pas une requête ÉCHOUÉE** et
+      ne voit **rien de ce qui sort d'un Worker** — or c'est dans un Worker que le code de
+      l'apprenant s'exécute. Leur « 0 requête distante » ne mesurait rien ici.
+
+      La sonde ne dépend d'aucune API de la page. Chrome est lancé avec
+      `--host-resolver-rules="MAP * 127.0.0.1:<port>,EXCLUDE localhost"`, si bien que **toute
+      résolution de nom du processus atterrit sur un serveur TCP que la sonde ouvre elle-même** :
+      chaque tentative est comptée, d'où qu'elle vienne, et rien ne sort de la machine. Les 27
+      blocs sont cliqués un par un, le bruit de fond du navigateur est relevé avant le premier
+      clic et retiré, et le nom visé est lu — `Host:` d'une requête en clair, ou l'extension
+      `server_name` d'un ClientHello TLS.
+
+      **RÉSULTAT, AVANT CORRECTION : 27 blocs cliqués, 4 APPELLENT LE RÉSEAU, 8 connexions
+      sortantes tentées** — `exemple.api` ×6 (`js/lecon-24` #8, #9, #10) et `api.exemple.fr` ×2
+      (`js/lecon-49` #12). Des noms qui n'existent pas : chez l'apprenant, ce sont autant de
+      requêtes envoyées à un serveur DNS étranger depuis une page qui promet de n'en envoyer
+      aucune. La réponse à la question 3 est donc **oui, pour 4 blocs sur 27**.
+
+      **ET NON, POUR LES 23 AUTRES — POUR UNE RAISON QUI EN DIT LONG.** Ils ne partent nulle
+      part parce qu'ils **DÉFINISSENT une fonction `async` sans jamais l'appeler**. Leur bouton
+      est donc muet : la sonde imprime « RIEN À L'ÉCRAN » pour chacun, et `verif-js.js` les
+      compte pourtant ABOUTIS. Ce n'est pas le sujet de ce point — c'est un gisement distinct,
+      **23 boutons qui ne prouvent rien**, mesuré ici et à traiter ailleurs.
+
+      **CE QUI A ÉTÉ DÉCIDÉ (question 2), ET POURQUOI.** Retirer le bouton des blocs `fetch`
+      aurait touché 27 blocs vivants, dont `js/lecon-24` qui EST la leçon sur `fetch` : une
+      décision de contenu, refusée. La correction est dans le MOTEUR et ne retire aucun bouton :
+      `js/runner.js` expose désormais `apisHorsLigne()` — `fetch`, `XMLHttpRequest`, `WebSocket`
+      et `EventSource` refusent **immédiatement, localement, avec une phrase** (« ce site
+      fonctionne entièrement hors ligne, aucune requête n'est envoyée… »). Le `catch` que ces
+      leçons écrivent justement pour la panne réseau s'exécute, et l'apprenant lit un message au
+      lieu d'attendre un délai d'expiration.
+
+      **MESURE APRÈS CORRECTION, MÊME SONDE, MÊMES 27 BLOCS : 0 bloc appelle le réseau,
+      0 connexion sortante.** 8 → 0.
+
+      **LE VÉRIFICATEUR MIS EN PHASE, SANS RECOPIE.** Le motif écrit en B2b-2 pour tenir `fetch`
+      hors du contexte de mesure (« les fournir ferait aboutir ici des blocs qui échouent chez
+      l'apprenant ») est devenu FAUX le jour où le moteur les a coupés : `fetch` existe
+      maintenant chez l'apprenant. `tools/lib/contexte-worker.js` les fournit donc, mais en
+      **lisant `apisHorsLigne` dans `js/runner.js`** — jamais en la recopiant, leçon du point
+      B2b-15. `indexedDB` et `caches` restent absents : le moteur n'y touche pas, et en
+      fabriquer un ici serait l'INVENTER (refusé en B2b-4). Effet mesuré sur le comptage :
+      **aucun. 1 613 blocs à bouton, 1 546 aboutis (95,8 %), 43 en panne, avant comme après.**
+
+      ⚠️ **ET LE MESSAGE SOIGNÉ ÉTAIT INVISIBLE : la sonde a montré `Erreur réseau : {}`.** Le
+      formateur du Worker terminait par `JSON.stringify(v)` ; une `Error` n'ayant aucune
+      propriété énumérable, **toute erreur affichée par une leçon se réduisait à `{}`** — sur la
+      ligne la plus utile du panneau, celle qui explique une panne. Quatrième contrefaçon du
+      moteur trouvée dans ce chantier, après `structuredClone` (B2b-13), le `console` appauvri
+      (B2b-12) et le contexte nu (B2b-2). Corrigé par `formaterPourLaSortie`, isolée dans
+      `runner.js`, injectée dans le Worker **et lue** par `contexte-worker.js`, qui en tenait une
+      copie destinée à diverger. Vérifié au clic : `js/lecon-24` #8 affiche désormais
+      « Erreur réseau : Error: fetch : ce site fonctionne entièrement hors ligne… ».
+
+      ⚠️ **DEUX DÉFAUTS DE LA SONDE, TROUVÉS PAR LA SONDE.** Son premier jet lisait le SNI par
+      expression régulière et rendait des noms FAUX (`accounts.google.comzz`,
+      `www.google.comD`) : un nom faux traverse le filtre du bruit et se compte alors comme une
+      requête de leçon — le ClientHello est maintenant décodé champ par champ. Et `wpad`, la
+      découverte de proxy de Windows, était comptée comme une sortie de la page : c'est la pile
+      réseau du système, elle est classée en bruit nommément. Sans ces deux corrections, la
+      sonde annonçait **10 blocs « qui appellent le réseau » au lieu de 4**.
+
+      **NON-RÉGRESSION, tout exécuté après la correction** : `verif-js` 1 613 / 1 546 / 43
+      (cliquet vert), `verif-exemples --lang all` 0 divergent (693 conformes, 197 exercices
+      exécutés), `verif-sorties` 449 blocs rejoués / 0 divergent, `verif-html` 0, `verif-donnees`
+      0 erreur, 0 URL de CDN introduite.
+
+      **CE QUI RESTE OUVERT, ET C'EST LA QUESTION 1.** `js/lecon-32` #6 (`indexedDB`) marche chez
+      l'apprenant et reste compté en panne : Node n'a pas d'IndexedDB, et en fabriquer un serait
+      l'inventer. Une catégorie « hors de portée de la mesure » reste à créer — avec son PROPRE
+      cliquet, pour qu'on ne puisse rien y cacher, ce que le relevé initial redoutait à juste
+      titre. 1 bloc concerné. Le `WebSocket` de `nodejs/lecon-17` #3, lui, est réglé : il
+      n'ouvrait déjà aucune connexion sortante et affiche maintenant le message du refus.
 
 
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**

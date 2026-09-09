@@ -502,24 +502,68 @@
     return null;
   }
 
+  /* ⚠️ AUCUNE PAGE DU SITE NE PARLE AU RÉSEAU — Y COMPRIS SOUS UN BOUTON « TESTER »
+     (2026-09-09, point B2b-16). La règle fondatrice du site était tenue pour acquise, et
+     elle ne l'était pas : `tools/preuves/sonde-clic-reseau.js` a cliqué dans un vrai Chrome
+     les 27 blocs à bouton qui nomment `fetch`, `WebSocket` ou `caches`, avec toute
+     résolution de nom détournée vers un port local, et a compté **4 blocs qui lancent une
+     VRAIE connexion sortante** (`exemple.api` ×6, `api.exemple.fr` ×2 — des noms qui
+     n'existent pas, donc autant de requêtes vers un serveur DNS étranger).
+     `verif-clic.js` et `verif-rendu.js` annonçaient « 0 requête distante » : ils lisent
+     `performance.getEntriesByType("resource")`, qui n'enregistre PAS une requête ÉCHOUÉE et
+     ne voit rien de ce qui sort d'un Worker. Leur zéro ne mesurait rien ici.
+
+     On ne retire aucun bouton — retirer celui de la leçon qui ENSEIGNE `fetch` serait une
+     décision de contenu, pas d'outil. On rend le refus IMMÉDIAT, LOCAL et EXPLIQUÉ : le
+     `catch` que ces leçons écrivent justement pour la panne réseau s'exécute, et l'apprenant
+     lit une phrase au lieu d'attendre un délai d'expiration. La fonction est ISOLÉE ici pour
+     que `tools/lib/contexte-worker.js` la LISE au lieu de la recopier : le vérificateur doit
+     offrir exactement les mêmes API que le navigateur, sinon il mesure autre chose. */
+  function apisHorsLigne() {
+    var refus = function (quoi) {
+      return new Error(quoi + " : ce site fonctionne entièrement hors ligne, aucune requête n’est " +
+        "envoyée. L’exemple montre la forme de l’appel ; branche-le sur une vraie API pour le voir aboutir.");
+    };
+    return {
+      fetch: function () { return Promise.reject(refus("fetch")); },
+      XMLHttpRequest: function () { throw refus("XMLHttpRequest"); },
+      WebSocket: function () { throw refus("WebSocket"); },
+      EventSource: function () { throw refus("EventSource"); }
+    };
+  }
+
+  /* ⚠️ UNE ERREUR AFFICHÉE `{}` N'APPREND RIEN, ET C'ÉTAIT LE CAS DE TOUTES (2026-09-09,
+     point B2b-16). Ce formateur terminait par `JSON.stringify(v)` : une `Error` n'ayant
+     aucune propriété énumérable, `console.error("Erreur réseau :", err)` rendait
+     « Erreur réseau : {} » — mesuré dans Chrome sur `pages/js/lecon-24.html` #8, #9 et #10.
+     Le Worker CONTREFAISAIT donc le formatage de la console, comme `structuredClone` était
+     contrefait au point B2b-13, et c'est la ligne la plus lue du panneau de sortie : celle
+     qui explique une panne. La fonction est ISOLÉE ici pour deux raisons — l'injecter dans
+     le Worker par `toString()`, et permettre à `tools/lib/contexte-worker.js` de la LIRE
+     plutôt que d'en tenir une copie qui divergera (leçon du point B2b-15). */
+  function formaterPourLaSortie(v) {
+    if (typeof v === "string") return v;
+    if (v === undefined) return "undefined";
+    if (v === null) return "null";
+    if (typeof v === "function") return v.toString();
+    if (v instanceof Error) return (v.name || "Error") + ": " + v.message;
+    try { return JSON.stringify(v); } catch (e) { return String(v); }
+  }
+
   /* Code exécuté DANS le worker : capture la console puis évalue le code reçu.
      Il accepte soit une chaîne (le bloc seul, cas ordinaire), soit un objet
      { code, prelude } : les textes du préambule sont alors évalués D'ABORD, en silence —
      l'apprenant a demandé le résultat de SON bloc, pas celui des précédents. */
   var WORKER_SRC = [
     envelopperPourRepli.toString(),
+    apisHorsLigne.toString(),
+    formaterPourLaSortie.toString(),
     "self.onmessage = function (ev) {",
     "  var recu = ev.data;",
     "  var code = typeof recu === 'string' ? recu : recu.code;",
     "  var prelude = (recu && recu.prelude) || [];",
     "  var muet = prelude.length > 0;",
-    "  function fmt(v) {",
-    '    if (typeof v === "string") return v;',
-    '    if (v === undefined) return "undefined";',
-    '    if (v === null) return "null";',
-    '    if (typeof v === "function") return v.toString();',
-    "    try { return JSON.stringify(v); } catch (e) { return String(v); }",
-    "  }",
+    "  var fmt = formaterPourLaSortie;",
     "  function send(level, args) {",
     "    if (muet) return;",
     '    self.postMessage({ level: level, text: Array.prototype.slice.call(args).map(fmt).join(" ") });',
@@ -527,6 +571,10 @@
     '  ["log", "info", "debug"].forEach(function (l) { console[l] = function () { send("log", arguments); }; });',
     '  console.warn = function () { send("warn", arguments); };',
     '  console.error = function () { send("error", arguments); };',
+    /* Le réseau, coupé DANS le worker et non dans la page : c'est là que le code de
+       l'apprenant s'exécute, et c'est de là que partaient les 4 connexions mesurées. */
+    "  var horsLigne = apisHorsLigne();",
+    "  for (var nomApi in horsLigne) self[nomApi] = horsLigne[nomApi];",
     /* ⚠️ UN SEUL `eval`, ET C'EST TOUTE LA DIFFÉRENCE. Un premier jet évaluait le préambule
        bloc par bloc : dans un `eval`, seuls `var` et `function` deviennent globaux — les
        déclarations LEXICALES (`const`, `let`, `class`) disparaissent à la fin de l'appel. Un

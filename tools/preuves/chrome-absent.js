@@ -81,7 +81,8 @@ var CIBLES = [
   { f: "preuves/exos-code.js", args: ["pages/python/lecon-01.html"] },
   { f: "preuves/exos-texte.js", args: ["pages/python/lecon-01.html"] },
   { f: "preuves/python-lecon.js", args: ["pages/python/lecon-01.html"] },
-  { f: "preuves/sql-lecon.js", args: ["pages/sql/lecon-01.html"] }
+  { f: "preuves/sql-lecon.js", args: ["pages/sql/lecon-01.html"] },
+  { f: "preuves/sonde-clic-reseau.js", args: ["pages/js/lecon-24.html#8"] }
 ];
 
 /* -------------------------------------------------- le lanceur qui aveugle fs */

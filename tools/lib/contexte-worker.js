@@ -33,6 +33,15 @@
  * ABOUTIR ici des blocs qui échouent chez l'apprenant : exactement l'inverse du but. Ils
  * restent donc hors du contexte, et un bloc qui les appelle reste compté en panne.
  *
+ * ⚠️ CE RAISONNEMENT EST DEVENU FAUX POUR TROIS DE CES CINQ NOMS (2026-09-09, B2b-16).
+ * Depuis que `js/runner.js` COUPE le réseau dans son Worker (`apisHorsLigne`), `fetch`,
+ * `XMLHttpRequest` et `WebSocket` EXISTENT chez l'apprenant et refusent immédiatement, avec
+ * un message. Les laisser absents ici, ce serait mesurer un moteur qui n'existe plus — la
+ * cinquième occurrence de « l'outil mesure sa propre pauvreté » (B2b-2, B2b-12, B2b-13,
+ * B2b-16). Ils sont donc fournis, mais LUS dans `js/runner.js` et jamais recopiés, pour que
+ * les deux côtés ne puissent pas diverger. `indexedDB` et `caches` restent absents : le
+ * moteur ne les touche pas, et en fabriquer un ici serait l'INVENTER (refusé en B2b-4).
+ *
  * SECONDE PASSE DE LA MÊME SONDE (2026-09-09, point B2b-4), sur 30 noms du DOM cette
  * fois. Elle a d'abord confirmé ce qu'on venait chercher — `HTMLElement`, `customElements`,
  * `document`, `window`, `Element`, `Node`, `DOMParser`, `MutationObserver`,
@@ -106,17 +115,34 @@ function contexteWorker(sorties) {
   GLOBALES_WORKER.forEach(function (n) {
     if (typeof globalThis[n] !== 'undefined') ctx[n] = globalThis[n];
   });
+  var horsLigne = apisHorsLigne();
+  Object.keys(horsLigne).forEach(function (n) { ctx[n] = horsLigne[n]; });
   ctx.self = ctx; ctx.globalThis = ctx;
   return ctx;
 }
+
+/* Une fonction du moteur, LUE dans `js/runner.js` — même mécanique que les règles du bouton
+   dans `verif-js.js`. Si elle disparaît du moteur, cette lecture ÉCHOUE bruyamment plutôt
+   que de laisser les deux côtés diverger en silence. Le résultat est retenu : la lecture
+   coûte un accès disque, et `fmtArgs` est appelée à chaque ligne affichée. */
+var _lues = {};
+function lireDuRunner(nom) {
+  if (_lues[nom]) return _lues[nom];
+  var fs = require('fs'), path = require('path');
+  var src = fs.readFileSync(path.resolve(__dirname, '..', '..', 'js', 'runner.js'), 'utf8');
+  var i = src.indexOf('function ' + nom + '(');
+  if (i < 0) throw new Error(nom + ' introuvable dans js/runner.js');
+  var j = src.indexOf('\n  }', i);
+  if (j < 0) throw new Error('fin de ' + nom + ' introuvable dans js/runner.js');
+  return (_lues[nom] = eval('(' + src.slice(i, j + 4) + ')'));
+}
+function apisHorsLigne() { return lireDuRunner('apisHorsLigne')(); }
+/* Le formatage d'une valeur affichée est LU dans `js/runner.js` (point B2b-16) : cette
+   fonction en portait une copie, et la copie a divergé le jour où le moteur a cessé de
+   sérialiser les `Error` en `{}`. C'est le défaut du point B2b-15, sur l'objet d'à côté. */
 function fmtArgs(a) {
-  return Array.prototype.slice.call(a).map(function (v) {
-    if (typeof v === 'string') return v;
-    if (v === undefined) return 'undefined';
-    if (v === null) return 'null';
-    if (typeof v === 'function') return String(v);
-    try { return JSON.stringify(v); } catch (e) { return String(v); }
-  }).join(' ');
+  var f = lireDuRunner('formaterPourLaSortie');
+  return Array.prototype.slice.call(a).map(function (v) { return f(v); }).join(' ');
 }
 
 

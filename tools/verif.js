@@ -263,6 +263,15 @@ var ETAPES = [
      restait juste, le diagnostic mentait. Ce controle refait l'appariement par une AUTRE
      voie -- figure par figure, chacune jugee seule -- et coute 0,64 s MESURES. */
   { nom: "js-etiq", fichier: "verif-etiquette-blocs.js", args: [], quoi: "chaque bloc JS est nomme par le data-file de SA figure" },
+  /* ⚠ LA REGLE FONDATRICE DU SITE, ENFIN CONTROLEE (2026-09-09, point B2b-16). « Aucune page
+     ne parle au reseau » etait tenu pour acquis, et ne l'etait pas : quatre boutons « Tester »
+     lancaient une VRAIE connexion sortante au clic (8 connexions vers exemple.api et
+     api.exemple.fr). Ni verif-clic ni verif-rendu ne pouvaient le voir -- ils lisent
+     performance.getEntriesByType("resource"), qui n'enregistre pas une requete ECHOUEE et ne
+     voit rien de ce qui sort d'un Worker. Cette etape clique les 27 blocs a bouton qui nomment
+     fetch/WebSocket/caches avec toute resolution de nom detournee vers un port local, et exige
+     ZERO connexion. Pas de reference a tenir a jour : le seul chiffre acceptable est 0. */
+  { nom: "clic-net", fichier: "preuves/sonde-clic-reseau.js", args: [], quoi: "aucun bouton Tester ne lance de connexion sortante", lent: true, pourquoiLent: "il ouvre 13 Chrome et clique 27 blocs" },
   /* Les quatre suivants gardent le cours de maths, le seul du site ou une erreur est
      invisible a la relecture. Ils comblent chacun un angle mort de verif-exemples. */
   { nom: "mth-acc", fichier: "maths/module-5/verif-accept.js", args: [], quoi: "la valeur attendue d'un exercice est celle qu'affiche sa solution" },
@@ -344,7 +353,9 @@ var HORS_RAPIDE = ["verif-git-commandes.js", "verif-git-graphe.js", "verif-git-s
   /* ~37 s : il rejoue `git show` sur les 20 lecons de chacun des 25 cours traites. */
   "verif-explain-orpheline.js",
   /* 71,9 s mesures : il execute les 1 855 blocs JavaScript du site un par un. */
-  "verif-js.js"];
+  "verif-js.js",
+  /* ~180 s mesures : 13 Chrome ouverts l'un apres l'autre, 27 blocs cliques pour de vrai. */
+  "preuves/sonde-clic-reseau.js"];
 if (RAPIDE) {
   ETAPES = ETAPES.filter(function (e) { return HORS_RAPIDE.indexOf(e.fichier) === -1; });
 }
@@ -603,7 +614,7 @@ if (!RAPIDE) {
     nom: "sanschr",
     fichier: "preuves/chrome-absent.js",
     args: [],
-    quoi: "sans Chrome, les 29 outils qui le pilotent disent-ils NON MESURE plutot que OK",
+    quoi: "sans Chrome, les 30 outils qui le pilotent disent-ils NON MESURE plutot que OK",
   });
 }
 /* ⚠️ LA SEULE ETAPE QUI JUGE LES AUTRES, et elle n'est jouee qu'en mode --complet
