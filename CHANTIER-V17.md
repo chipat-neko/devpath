@@ -1994,6 +1994,113 @@ résultat avant le clic.
       c'est-à-dire de l'exécuter : **une règle de bouton ne le peut pas.** Ce qui reste se
       traite donc bloc par bloc, dans le CONTENU.
 
+- [x] **B2b-11 · Le premier lot traité DANS LE CONTENU : les 8 esquisses de patron du cours
+      `patterns` rendues exécutables — 70 blocs en panne → 62, aboutis 1 527 → 1 535, `patterns`
+      tombe à ZÉRO. Et le vérificateur qui CLIQUE rendait le même « tout concorde » avant et
+      après.**
+
+      **Mesure reproduite avant de toucher à quoi que ce soit** : `verif-js.js --causes` rend
+      **1 613 blocs avec bouton, 776 écartés, 1 527 aboutis (94,7 %), 35 par repli, 14 annoncées,
+      2 non concluants, 70 EN PANNE, 81 non compilables, 35 orphelins** — les chiffres laissés
+      par B2b-10, le gisement n'avait pas bougé.
+
+      **Le point précédent avait conclu qu'aucune règle générale ne fermerait le reste.** Le
+      premier lot homogène est donc `patterns` : **8 blocs, un cours entier, 100 % du cours.**
+      Ce sont des ESQUISSES de patron de conception — elles nomment des collaborateurs
+      (`Camion`, `Bateau`, `PizzaBuilder`, `BibliothequeTierce`, `LecteurFichier`, `Codec`,
+      `Encodeur`, `Conteneur`, `FabriqueCalculatrice`, `StrategieAddition`, `PaiementStripe`,
+      `EmailSMTP`, `ConsoleLog`, `produits`) **déclarés nulle part dans la page**, et le bouton
+      « Tester » posé dessus ne pouvait rendre qu'une `ReferenceError`.
+
+      **Rendus autonomes plutôt que débranchés**, parce que c'est le seul des deux choix qui
+      GAGNE quelque chose : un patron de conception qu'on peut exécuter et dont on lit le
+      résultat vaut mieux qu'un patron dont on a retiré le bouton. Chaque collaborateur manquant
+      est écrit en 1 à 4 lignes, et chaque bloc se termine par un `console.log` qui MONTRE ce que
+      le patron produit. Sortie **mesurée par exécution**, jamais annoncée de tête :
+
+      | bloc | ce que le clic donnait | ce que le clic donne |
+      |---|---|---|
+      | `patterns/lecon-03` #1 (fabrique) | `ReferenceError: type is not defined` | `livraison par la mer` / `livraison par la route` |
+      | `patterns/lecon-03` #3 (monteur) | `ReferenceError: PizzaBuilder is not defined` | `{"taille":"grande","pate":"fine","garnitures":["fromage","champignons"]}` |
+      | `patterns/lecon-04` #1 (adaptateur) | `ReferenceError: BibliothequeTierce is not defined` | `débité : 1999 centimes` |
+      | `patterns/lecon-04` #3 (façade) | `ReferenceError: LecteurFichier is not defined` | `sortie.mp4 (clip.mov vers mp4)` |
+      | `patterns/lecon-05` #1 (stratégie) | `ReferenceError: produits is not defined` | `souris, clavier, écran` / `clavier, écran, souris` |
+      | `patterns/lecon-06` #1 (sur-abstraction) | `ReferenceError: FabriqueCalculatrice is not defined` | `5` / `5` |
+      | `patterns/lecon-09` #2 (injection) | `ReferenceError: PaiementStripe is not defined` | 3 lignes, dont `capturé par la doublure : …` |
+      | `patterns/lecon-09` #3 (doublure) | `ReferenceError: ConsoleLog is not defined` | `action effectuée` / `true` |
+
+      ⚠️ **Le jeu de données de la stratégie a été CHOISI PAR LA MESURE, pas par l'intention.**
+      Un premier jeu (`clavier` 45, `écran` 190, `adaptateur` 12) rendait le MÊME ordre par prix
+      et par nom : la démonstration « on change d'algorithme » n'aurait rien démontré du tout.
+      Exécuté, remplacé par `souris` 25 / `clavier` 45 / `écran` 190, qui donne deux ordres
+      distincts. `localeCompare` sur `écran` n'a pas été supposé non plus : il a été lancé.
+
+      ⚠️ **Précaution de repli** : `lecon-09` #2 et #3 déclaraient tous deux `const messages`.
+      Le repli concatène les blocs précédents ; la collision `Identifier 'messages' has already
+      been declared` était en germe. #2 nomme donc sa liste `recus`.
+
+      ⚠️⚠️ **LE CONSTAT LE PLUS UTILE DE CE POINT NE PORTE PAS SUR LE CONTENU, MAIS SUR
+      L'INSTRUMENT — et c'est le fil même de ce chantier.** `verif-clic.js`, l'outil qui ouvre
+      un vrai Chrome et CLIQUE, a rendu **exactement le même verdict avant et après** :
+
+      > `29 blocs attendus, 29 cliqués, couverture complète, 0 DIVERGENT, « Ce que la page
+      > imprime et ce que l'apprenant obtient au clic concordent partout ».`
+
+      Alors qu'AVANT, 8 de ces 29 blocs affichaient une `ReferenceError` au visage de
+      l'apprenant. La cause est dans `verif-clic.js:494` : `if (!attendu) { sansSortie++;
+      continue; }` — aucune de ces cinq pages ne porte de bloc `.txt` apparié, donc les 29 blocs
+      tombent dans « sans bloc de sortie à comparer » et le texte réellement obtenu, relevé dans
+      la variable `vu`, est **jeté sans être lu**. Le compteur « fragments (rien produit /
+      erreur) », qui aurait nommé le problème, est placé APRÈS et n'est jamais atteint.
+      **Un contrôle qui ne peut pas échouer occupe la place.**
+
+      **Soldé dans la même passe : `verif-clic.js --sorties`**, qui imprime pour chaque bloc
+      cliqué le nombre de lignes et le texte que la console de la page affiche. Il ne juge rien
+      et ne change aucun code de sortie — il donne à LIRE ce que l'apprenant voit, ce qui était
+      précisément l'angle mort. C'est lui qui a produit les deux colonnes du tableau ci-dessus,
+      dans Chrome `file://`. Éprouvé dans les deux sens : sur le dépôt d'origine restauré
+      (`git checkout --`), il imprime les 8 `ReferenceError` ; sur le dépôt corrigé, les 8
+      résultats. Sans le drapeau, comportement inchangé (`lecon-06` : 4 cliqués, 0 divergent,
+      code 0).
+
+      **Les sorties du vrai Chrome sont identiques, à la ligne près, à celles mesurées dans
+      Node** — ce qui n'allait pas de soi : c'est l'écart entre les deux moteurs qui avait laissé
+      passer `compilation/lecon-08`, la raison d'être de `verif-clic.js`.
+
+      **Cliquet éprouvé sur SA faute**, injection dans un bloc que ce point vient de réparer
+      (`patterns/lecon-03` #1, `null.zz;` derrière `class Camion`) → **code 1, « 63 blocs en
+      panne contre 62 à la référence »** ; faute retirée → **code 0**, page revenue à l'octet
+      près (md5 `0e407483…`). Référence descendue à **62** par `--fixer`.
+
+      **Mesure finale : 1 613 blocs avec bouton, 776 écartés, 1 535 aboutis (95,2 %), 35 par
+      repli, 14 annoncées, 2 non concluants, 62 EN PANNE, 81 non compilables, 35 orphelins.**
+      Aboutis **+8**, pannes **−8**, et **tous les autres compteurs inchangés à l'unité près** —
+      aucun bloc vivant n'a été touché, aucun bouton n'a été retiré.
+
+      **Non-régression** : `verif-html.js` **1 629 fichiers, 0 grave / 0 attention** ;
+      `verif-donnees.js` **0 erreur sur 25 contrôles** (2 avertissements préexistants, I17 et
+      I25) ; `verif-chaine-declaree.js` **code 0** ; `verif.js --rapide` **41 étapes, tout vert,
+      132,7 s** ; `node --check` sur `verif-clic.js` ; 0 BOM, 0 CRLF, 0 URL vers un CDN.
+      ⚠️ **`verif-donnees` I18 a rougi** dès la première passe — `search-index.js` périmé de
+      141 octets, le contenu de cinq leçons ayant changé. C'est ce contrôle-là qui était vert à
+      tort en septembre : cette fois il a parlé. Régénéré par
+      `build-index.js --write --only=search,searchlite --fresh` (`search-lite.js` inchangé, non
+      réécrit), I18 revenu vert.
+
+      **Reste au gisement : 62.** Par cours : `js` 34, `projets-js` 11, `nodejs` 4, `algo` 3,
+      `vue` 3, `typescript` 2, `cicd` 2, puis 1 pour `react`, `securite`, `graphql`, `wasm`,
+      `offensive`. Le lot suivant est `js` 34, qui n'est PAS homogène : il mêle des fragments
+      d'exercice, des démonstrations d'erreur volontaires que le détecteur de commentaire ne
+      reconnaît pas (`js/lecon-02` #4 « Assignment to constant variable », `js/lecon-06` #13
+      « Cannot access before initialization », les trois `throw` de `js/lecon-38`,
+      `typescript/lecon-01` #1) et de vraies dépendances entre blocs. **À traiter en deux
+      cases : d'abord les erreurs VOLONTAIRES mal classées, ensuite les fragments.**
+
+      ⓘ **Observation portée par le nouveau drapeau, hors périmètre de cette case** : sur les 29
+      blocs de ces cinq pages, **9 affichent « (aucune sortie — ajoute un console.log pour
+      afficher un résultat) »**. Ils aboutissent, donc aucun cliquet ne les voit ; mais le clic
+      est MUET. Le gisement complet n'a pas été mesuré à l'échelle du site.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

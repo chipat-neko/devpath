@@ -128,12 +128,17 @@ class Commande {
 }
 
 // L'APPELANT choisit les implémentations concrètes
+class PaiementStripe { payer(m) { console.log("Stripe débite " + m + " euros"); } }
+class EmailSMTP      { envoyer(m) { console.log("SMTP envoie : " + m); } }
 const c = new Commande(new PaiementStripe(), new EmailSMTP());
+c.valider(19.99);
 
 // En test : des doublures, sans réseau ni vrai paiement
-const faux = { payer: () => {}, };
-const journal = { envoyer: (m) => messages.push(m) };
-const t = new Commande(faux, journal);</code></pre></figure>
+const recus = [];
+const faux = { payer: () => {} };
+const journal = { envoyer: (m) => recus.push(m) };
+new Commande(faux, journal).valider(19.99);
+console.log("capturé par la doublure : " + recus[0]);</code></pre></figure>
 <p>La classe est désormais <strong>testable</strong> (on injecte des doublures), <strong>flexible</strong> (changer d'implémentation ne la touche pas) et <strong>honnête</strong>&nbsp;: ses dépendances sont visibles dans sa signature. Il existe trois formes d'injection&nbsp;: par <strong>constructeur</strong> (la plus courante — dépendances obligatoires, objet toujours valide), par <strong>setter</strong> (dépendances optionnelles) et par <strong>interface</strong>.</p>
 <figure class="diagram">
   <svg viewBox="0 0 640 200" role="img" aria-label="Comparaison avant et après l'injection de dépendances. En haut, sans injection : la classe Commande pointe directement vers PaiementStripe, une classe concrète — dépendance rigide. En bas, avec injection : Commande dépend d'une interface Paiement, et PaiementStripe implémente cette interface ; la dépendance vers le concret est inversée.">
@@ -266,12 +271,14 @@ const t = new Commande(faux, journal);</code></pre></figure>
   faire() { this.log.ecrire("action effectuée"); }
 }
 // Production
+class ConsoleLog { ecrire(m) { console.log(m); } }
 new Service(new ConsoleLog()).faire();
 // Test : une doublure qui capture les messages
 const messages = [];
 const faux = { ecrire: (m) => messages.push(m) };
 new Service(faux).faire();
-// on peut maintenant vérifier messages[0] === "action effectuée"</code></pre></figure></details></div>
+// on peut maintenant vérifier ce que le service a écrit :
+console.log(messages[0] === "action effectuée");</code></pre></figure></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>En quoi l'injection de dépendances est-elle une application directe du «&nbsp;D&nbsp;» de SOLID (inversion des dépendances)&nbsp;? Et pourquoi parle-t-on d'inversion de <em>contrôle</em>&nbsp;?</p><details><summary>Voir une solution</summary><p>Le «&nbsp;D&nbsp;» dit&nbsp;: <em>dépendre d'abstractions, pas de concrétions</em>. En injectant une dépendance conforme à une interface (<code>Paiement</code>) plutôt qu'en instanciant une classe concrète (<code>PaiementStripe</code>), la classe <code>Commande</code> ne dépend plus que de l'abstraction — exactement le DIP. On parle d'inversion de <strong>contrôle</strong> parce que la décision «&nbsp;quelle implémentation utiliser&nbsp;» ne relève plus de la classe elle-même mais de son environnement (racine de composition ou conteneur)&nbsp;: le contrôle est <em>inversé</em>, il remonte vers l'extérieur.</p></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 4</span><span class="exercise__level">Application</span></div><p>Plutôt que de recevoir ses dépendances, une classe va les chercher dans un objet global&nbsp;: <code>const p = Services.get("paiement");</code>. Comment nomme-t-on ce procédé, souvent considéré comme un anti-pattern&nbsp;?</p><details><summary>Voir une solution</summary><p>C'est un <strong>Service Locator</strong>. Il <em>cache</em> les dépendances au lieu de les afficher dans la signature du constructeur&nbsp;: on ne peut plus savoir de quoi la classe a besoin sans lire son corps, et les tests redeviennent difficiles. La vraie injection <em>reçoit</em> ses dépendances&nbsp;; elle ne va pas les chercher.</p></details></div>
 

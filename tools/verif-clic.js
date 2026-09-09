@@ -82,6 +82,14 @@ var TOUT = args.indexOf('--tout') !== -1;
    la question a été posée le 2026-09-08, quand un balayage complet s'est révélé
    quatre fois plus lent que l'extrapolation faite sur six pages. */
 var CHRONO = args.indexOf('--chrono') !== -1;
+/* --sorties : imprime, pour CHAQUE bloc cliqué, le texte que la console de la page
+   affiche. Sans cela, une page dont aucun bloc n'a de `.txt` apparié ressort
+   « 29 sur 29, tout concorde » aussi bien quand les blocs impriment un résultat que
+   quand ils lèvent tous une ReferenceError : les deux tombent dans « sans bloc de
+   sortie à comparer ». Constaté le 2026-09-09 sur le cours `patterns`, où le compte
+   rendu identique AVANT et APRÈS réparation ne prouvait rien du tout. Ce drapeau ne
+   juge rien et ne change aucun code de sortie : il donne à LIRE ce que l'apprenant voit. */
+var SORTIES = args.indexOf('--sorties') !== -1;
 var explicites = args.filter(function (a) { return a.indexOf('--') !== 0; });
 
 var CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
@@ -472,6 +480,12 @@ function estUnFragment(vu) {
           'const l=[...o.querySelectorAll(".runner-output__line:not(.runner-output__line--note)")];if(!l.length)return "";' +
           'return l.map(x=>x.textContent).join("\\n")})()') || '';
         if (!enCours && vu && !/Exécution|en cours/i.test(vu)) break;
+      }
+      if (SORTIES) {
+        var lignesVues = String(vu || '').split('\n').filter(function (l) { return l !== ''; });
+        console.log('  ' + page + ' #' + (k + 1) + '  [' + (b.file || '(sans nom)') + ']  ' +
+          lignesVues.length + ' ligne(s)' + (lignesVues.length ? ' :' : ' — RIEN AFFICHÉ'));
+        lignesVues.forEach(function (l) { console.log('     | ' + l); });
       }
       var attendu = await cx.evaluer('(()=>{const f=document.querySelectorAll("figure.code-block")[' + b.i + '];' +
         'let n=f.nextElementSibling,c=0;while(n&&c++<4){' +
