@@ -268,6 +268,29 @@ var ETAPES = [
      ce cas et un vrai Chrome a compte 9 boutons reellement poses dessus. Le meme outil
      surveille l'angle mort de verif-sorties.js, qui ne voit aucun bloc SANS classe. */
   { nom: "txt-etiq", fichier: "verif-etiquette-illustration.js", args: [], quoi: "aucune illustration .txt etiquetee comme du code, aucune sortie invisible" },
+  /* LES NEUF LANGAGES QUE PERSONNE NE REJOUAIT (2026-09-09, point B3 du chantier V17).
+     `verif-exemples.js:837` ne connait que `javascript` et `python` -- meme `--lang all` ne
+     rend que ces deux-la -- et `verif-sorties.js:61` ne regarde que `language-javascript`.
+     Les neuf outils ci-dessous existaient depuis le chantier V15 et n'etaient lances par
+     AUCUN mode : 178 programmes, 309 lignes de sortie comparees, tous verts et tous
+     invisibles a la chaine. Le test decisif a ete REPRODUIT avant de les brancher : la
+     sortie de `pages/cpp/lecon-01.html` falsifiee (`// n = 7` -> `// n = 8`) fait sortir
+     `rejoue-cpp.js` en 1 (« 1 divergent »), tandis que `verif-exemples.js` et
+     `verif-sorties.js` sortent en 0 sans rien voir.
+     ⚠️ CE QU'ILS NE SONT PAS : des compilateurs. Aucun g++, gcc, rustc, go, javac, php ni
+     elixir n'existe sur cette machine -- ce sont des TRANSPOSITIONS JavaScript ecrites a la
+     main. Les brancher attrape une sortie EDITEE ; un bloc NEUF, non transpose, reste hors
+     de leur portee. C'est la limite a garder en tete, et elle est ecrite au point B3.
+     Cout mesure : 2,2 s pour les neuf (java 1,5 s a lui seul), donc tous les modes. */
+  { nom: "rj-cpp  ", fichier: "preuves/rejoue-cpp.js", args: [], quoi: "les sorties annoncees du cours cpp, rejouees par une transposition JS" },
+  { nom: "rj-rust ", fichier: "preuves/rejoue-rust.js", args: [], quoi: "les sorties annoncees du cours rust, rejouees par une transposition JS" },
+  { nom: "rj-go   ", fichier: "preuves/rejoue-go.js", args: [], quoi: "les sorties annoncees du cours go, rejouees par une transposition JS" },
+  { nom: "rj-java ", fichier: "preuves/rejoue-java.js", args: [], quoi: "les sorties annoncees du cours java, rejouees par une transposition JS" },
+  { nom: "rj-php  ", fichier: "preuves/rejoue-php.js", args: [], quoi: "les sorties annoncees du cours php, rejouees par une transposition JS" },
+  { nom: "rj-c    ", fichier: "preuves/rejoue-c.js", args: [], quoi: "les sorties annoncees du cours c, rejouees par une transposition JS" },
+  { nom: "rj-c#   ", fichier: "preuves/rejoue-csharp.js", args: [], quoi: "les sorties annoncees du cours csharp, rejouees par une transposition JS" },
+  { nom: "rj-elixr", fichier: "preuves/rejoue-elixir.js", args: [], quoi: "les sorties annoncees du cours elixir, rejouees par une transposition JS" },
+  { nom: "rj-bash ", fichier: "preuves/rejoue-bash.js", args: [], quoi: "les sorties annoncees du cours bash, rejouees par une transposition JS" },
   /* ⚠ LA REGLE FONDATRICE DU SITE, ENFIN CONTROLEE (2026-09-09, point B2b-16). « Aucune page
      ne parle au reseau » etait tenu pour acquis, et ne l'etait pas : quatre boutons « Tester »
      lancaient une VRAIE connexion sortante au clic (8 connexions vers exemple.api et

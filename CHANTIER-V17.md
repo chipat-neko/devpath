@@ -3307,7 +3307,7 @@ résultat avant le clic.
       0 divergent, 93 non jugés (inchangé)** ; `verif-sql.js` sur `sql/lecon-06` 7/7 ;
       cliquets descendus à **22 / 77 / 33**.
 
-- [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
+- [x] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf
       `tools/preuves/rejoue-*.js` couvrent cpp, rust, go, java, php, c, csharp, elixir, bash — **178
@@ -3320,6 +3320,51 @@ résultat avant le clic.
       compilateurs (g++, gcc, rustc, go, javac, php, elixir sont absents de la machine) mais des
       transpositions JS écrites à la main — les brancher attrape une sortie **éditée**, pas un bloc neuf
       non transposé.
+
+      **FAIT le 2026-09-09. Mesure reproduite d'abord**, `recense-chaine.js --json` :
+      les neuf `preuves/rejoue-*.js` sont bien `dansChaine:false` **et non déclarés**
+      (famille « autre », donc même le garde-fou `verif-chaine-declaree.js` ne les réclamait
+      pas). Lancés un par un : **178 programmes conformes, 0 divergent, 0 non trouvé**
+      — cpp 12, rust 14, go 17, java 28, php 15, c 26, csharp 22, elixir 40, bash 4 — pour
+      **2,2 s cumulées**, dont 1,5 s pour java à lui seul.
+
+      **LE TEST DÉCISIF DE L'AUDIT, REJOUÉ AVANT DE DÉCIDER.** `pages/cpp/lecon-01.html`,
+      `// n = 7` remplacé par `// n = 8` : `rejoue-cpp.js` sort en **1** (« 11 conformes,
+      **1 divergent** »), `verif-exemples.js --lang all` sur la même page sort en **0**
+      (« Aucune divergence »), `verif-sorties.js` aussi. Page restaurée, `rejoue-cpp.js`
+      revient à 12/0. La cécité annoncée par l'audit est donc exacte, aujourd'hui encore.
+
+      **Décision : les neuf sont versés dans TOUS les modes** (2,2 s ne justifient pas un
+      mode à part). Étapes `rj-cpp`, `rj-rust`, `rj-go`, `rj-java`, `rj-php`, `rj-c`,
+      `rj-c#`, `rj-elixr`, `rj-bash`. La chaîne passe de **43 à 52 étapes en `--rapide`**,
+      de 59 à 68 en mode par défaut, de 69 à 78 en `--complet` ; **92 outils dans un mode**
+      (contre 83), 15 hors chaîne tous déclarés.
+
+      ⚠️ **LA NUANCE QUE LE PLAN DEMANDAIT D'ÉCRIRE, ET SON CHIFFRE.** Ce ne sont pas des
+      compilateurs : aucun `g++`, `gcc`, `rustc`, `go`, `javac`, `php` ni `elixir` n'existe
+      sur cette machine — ce sont des **transpositions JavaScript écrites à la main**. Elles
+      attrapent une sortie **éditée**, jamais un bloc **neuf** non transposé. La couverture a
+      été mesurée (`tools/preuves/sonde-couverture-rejoue.js`), en prenant pour dénominateur
+      les blocs qui ANNONCENT une sortie — un bloc qui n'annonce rien n'a rien à comparer :
+
+      | cours | blocs | annoncent une sortie | rejoués | couverture |
+      |---|---|---|---|---|
+      | elixir | 168 | 43 | 40 | **93,0 %** |
+      | c | 220 | 49 | 26 | 53,1 % |
+      | java | 235 | 57 | 28 | 49,1 % |
+      | go | 198 | 42 | 17 | 40,5 % |
+      | csharp | 254 | 63 | 22 | 34,9 % |
+      | php | 206 | 52 | 15 | 28,8 % |
+      | rust | 224 | 82 | 14 | 17,1 % |
+      | cpp | 242 | 86 | 12 | 14,0 % |
+      | bash | 214 | 32 | 4 | 12,5 % |
+      | **total** | **1 961** | **506** | **178** | **35,2 %** |
+
+      Brancher ces outils protège **35,2 % des sorties annoncées de ces neuf cours**, et rien
+      de ce qui s'écrira demain. La dette est nommée dans `hors-chaine.json` avec ce qu'il
+      faudrait pour la lever : **un cliquet de couverture** — exiger que le nombre de
+      programmes rejoués par cours ne baisse jamais, et signaler tout bloc neuf qui annonce
+      une sortie sans transposition.
 
 - [ ] **B4 · Les deux preuves du seul fonctionnement qui compte sont hors chaîne.** L'audit a retenu que
       les preuves « page ouverte en `file://` » ne sont lancées par aucun mode. Les identifier, les

@@ -509,7 +509,7 @@ async function mesurerFocus(envoyer, maxTab) {
 }
 
 /* ------------------------------------------------------------------ rapport */
-var RAPPORT = { pages: 0, erreurs: [], avertissements: [], mesures: 0 };
+var RAPPORT = { pages: 0, erreurs: [], avertissements: [], mesures: 0, attentesSupp: 0, nonStabilisees: [] };
 function erreur(page, categorie, texte) {
   RAPPORT.erreurs.push({ page: page, cat: categorie, texte: texte });
 }
@@ -645,6 +645,38 @@ function avertir(page, categorie, texte) {
           expression: "document.documentElement.setAttribute('data-theme','" + theme + "')",
         });
         await attendre(120);
+        /* ⚠️ ON ATTEND UN ETAT, PAS UNE DUREE (2026-09-09, point B5 du chantier V17).
+           Ces 700 ms etaient une DUREE FIXE, et une duree fixe ment sous charge : une passe
+           de 256 pages a signale un debordement de +444 px sur `pages/etude-inconnu.html`
+           que la MEME page, mesuree seule, ne reproduit sur AUCUNE des 6 combinaisons
+           largeur x theme. Un verdict rouge non reproductible est pire qu'un vert : il
+           apprend a ignorer l'outil. C'est le defaut soldé au point B1e pour `sql-lecon.js`
+           (une COURSE prise pour une panne) et au point B2a pour `verif-js.js` (un
+           depassement de delai compte comme une erreur).
+           La mise en page est donc consideree comme faite quand la largeur de defilement
+           est IDENTIQUE sur deux releves consecutifs, que le document est `complete` et que
+           les polices sont chargees -- ce que `document.fonts.status` sait dire. Plafond a
+           3 s : au-dela, on mesure quand meme mais la page est NOMMEE comme non stabilisee,
+           parce qu'un instrument doit dire quand il n'a pas conclu. */
+        var largeurVue = -1, stable = false, tours = 0;
+        for (tours = 0; tours < 20; tours++) {
+          var et = await envoyer("Runtime.evaluate", {
+            expression: "(function(){var d=document.documentElement;return [d.scrollWidth," +
+              "document.readyState==='complete'?1:0,(document.fonts&&document.fonts.status==='loaded')?1:0];})()",
+            returnByValue: true,
+          });
+          var val = ((et.result || {}).value) || [];
+          if (val[0] === largeurVue && val[1] && val[2]) { stable = true; break; }
+          largeurVue = val[0];
+          await attendre(150);
+        }
+        /* ⚠️ LE PREMIER TOUR NE COMPTE PAS : il ne fait qu'etablir la valeur de reference
+           (`largeurVue` part de -1), si bien qu'une page deja stable sort au tour 1. Un
+           compteur pose sur `tours > 0` serait donc incremente PARTOUT et ne mesurerait
+           rien -- premier jet ecrit puis corrige par la mesure elle-meme, qui annoncait
+           « 6 mesures sur 6 » pour une page qui n'en demandait aucune. */
+        if (tours > 1) RAPPORT.attentesSupp++;
+        if (!stable) RAPPORT.nonStabilisees.push(rel + " [" + larg + "px/" + theme + "]");
 
         var out = await envoyer("Runtime.evaluate", {
           expression: "(" + SONDE.toString() + ")()",
@@ -700,6 +732,13 @@ function avertir(page, categorie, texte) {
   console.log("  mesures ............ " + RAPPORT.mesures + " (page x largeur x theme)");
   console.log("  ERREURS ............ " + RAPPORT.erreurs.length);
   console.log("  avertissements ..... " + RAPPORT.avertissements.length);
+  console.log("  mesures ayant demande une attente SUPPLEMENTAIRE : " + RAPPORT.attentesSupp +
+              "  (la duree fixe de " + ATTENTE + " ms n'y suffisait pas)");
+  if (RAPPORT.nonStabilisees.length) {
+    console.log("  ⚠ NON STABILISEES apres 3 s (mesurees quand meme, verdict a prendre avec prudence) : " +
+                RAPPORT.nonStabilisees.length);
+    RAPPORT.nonStabilisees.slice(0, 10).forEach(function (x) { console.log("      · " + x); });
+  }
 
   var ge = grouper(RAPPORT.erreurs);
   Object.keys(ge).forEach(function (cat) {
