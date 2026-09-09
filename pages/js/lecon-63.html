@@ -236,7 +236,12 @@ process.on('unhandledRejection', (raison) =&gt; journaliser(raison));</code></pr
   <figcaption>L'exception est concise mais invisible dans la signature&nbsp;; le Result est explicite mais verbeux. Règle simple&nbsp;: exception pour l'imprévu (bug, panne), Result pour l'échec attendu et local (entrée invalide).</figcaption>
 </figure>
 
-<figure class="code-block" data-file="result.js"><pre><code class="language-javascript">// Pattern Result : l'échec fait partie du retour, pas d'un throw
+<figure class="code-block" data-file="result.js"><pre><code class="language-javascript">// Simulation : dans une vraie page, saisie serait le champ &lt;input id="age"&gt;
+const saisie = { value: '142' };
+function montrerErreur(msg) { console.log('Erreur affichée : ' + msg); }
+function enregistrer(v) { console.log('Enregistré : ' + v); }
+
+// Pattern Result : l'échec fait partie du retour, pas d'un throw
 function parseAge(txt) {
   const n = Number(txt);
   if (!Number.isInteger(n) || n &lt; 0 || n &gt; 130) {
@@ -245,9 +250,11 @@ function parseAge(txt) {
   return { ok: true, value: n };
 }
 
-const r = parseAge(saisie.value);
-if (!r.ok) { montrerErreur(r.error); }   // impossible d'ignorer l'échec
-else { enregistrer(r.value); }            // value n'existe que si ok</code></pre></figure>
+for (const txt of [saisie.value, '37']) {   // une saisie invalide, puis une valide
+  const r = parseAge(txt);
+  if (!r.ok) { montrerErreur(r.error); }   // impossible d'ignorer l'échec
+  else { enregistrer(r.value); }            // value n'existe que si ok
+}</code></pre></figure>
 
 <h2>Pièges fréquents</h2>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Le <code>catch (e) {}</code> vide (ou réduit à un <code>console.log</code>) <strong>avale l'erreur</strong>&nbsp;: le programme continue dans un état incohérent, et le bug ressurgit dix étapes plus loin, indéboguable. Si tu attrapes, tu dois <em>agir</em>&nbsp;: réparer, dégrader proprement, ou relancer (avec <code>cause</code>).</p></div></div>
@@ -340,7 +347,10 @@ try { validerEmail('bidon'); }
 catch (e) {
   if (e instanceof ValidationError) surlignerChamp(e.champ); // 'email'
   else throw e; // je ne sais pas traiter → je laisse remonter
-}</code></pre></figure></details></div>
+}
+
+// Ce que ferait l'interface : signaler visuellement le champ fautif
+function surlignerChamp(nom) { console.log('Champ à surligner : ' + nom); }</code></pre></figure></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Enveloppe un appel réseau&nbsp;: si <code>fetch</code> ou le <code>.json()</code> échoue, relance une <code>Error</code> métier « Échec du chargement des articles » <strong>tout en conservant l'origine</strong>. Montre ce qu'affiche la console.</p>
 <details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">async function chargerArticles() {
@@ -374,11 +384,18 @@ catch (e) {
   return { ok: true, value: n };
 }
 
-const r = parsePrix(champ.value);
-if (!r.ok) {
-  montrerErreur(r.error);   // échec attendu, traité localement
-} else {
-  ajouterAuPanier(r.value); // value n'existe que si ok === true
+// Simulation : dans une vraie page, champ serait le champ &lt;input id="prix"&gt;
+const champ = { value: '-3' };
+function montrerErreur(msg) { console.log('Erreur affichée : ' + msg); }
+function ajouterAuPanier(v) { console.log('Ajouté au panier : ' + v); }
+
+for (const txt of [champ.value, '12.5']) { // un prix invalide, puis un valide
+  const r = parsePrix(txt);
+  if (!r.ok) {
+    montrerErreur(r.error);   // échec attendu, traité localement
+  } else {
+    ajouterAuPanier(r.value); // value n'existe que si ok === true
+  }
 }
 
 // Pourquoi Result ici : une saisie invalide est un cas ATTENDU et fréquent,

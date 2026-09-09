@@ -3004,6 +3004,93 @@ résultat avant le clic.
       (`js/lecon-27` 2, `js/lecon-28` 2, `js/lecon-63` 3, `js/lecon-65` 1, `vue` 3…) est la
       façon dont il faut le reprendre.
 
+- [x] **B2b-21 · Le lot NULLE-PART traité DANS LE CONTENU, cours par cours : les 11 blocs du
+      cours `js` — 45 blocs en panne → 34, aboutis 1 548 → 1 559, et ZÉRO bouton perdu.**
+
+      **Reprise de B2b-20 par sa propre conclusion.** Ce point n'écrit aucune règle : il applique
+      la voie (1) que la mesure de réfutation avait laissée seule ouverte — compléter le fragment
+      dans le contenu, leçon par leçon. Découpage retenu : **le cours `js`**, soit 11 des 19 blocs
+      NULLE-PART. Mesure d'entrée reproduite avant de toucher quoi que ce soit
+      (`node tools/verif-js.js --causes`) : **1 613 blocs à bouton, 1 548 aboutis, 45 EN PANNE**,
+      et la carte de `sonde-origine-du-nom.js` rend bien **NULLE-PART 19**, comme écrit au point
+      précédent.
+
+      **Les 11 blocs, et ce que le nom manquant demandait.** `js/lecon-14` #12 (`taches`),
+      `lecon-27` #2 (`phrase`) et #7 (`chat`), `lecon-28` #8 et #9 (`taches`), `lecon-36` #5
+      (`rendreListe`), `lecon-39` #5 (`produits`, `afficher`), `lecon-63` #7 (`saisie`), #8
+      (`surlignerChamp`) et #11 (`champ`), `lecon-65` #4 (`etatInitial`, `bus`). Deux cas sortent
+      du lot commun : **`lecon-27` #7 n'était pas du code** — `/chat/i` ⏎ `/chat/g` ⏎ `/chat/gi`
+      se reparse en DIVISIONS par insertion automatique de point-virgule, d'où le
+      `chat is not defined` ; il fallait nommer les trois motifs. Et **`lecon-28` #9 n'a rien
+      demandé du tout** : la donnée déclarée dans le #8 lui suffit **par le REPLI** (45 → 46
+      blocs qui n'aboutissent que derrière leurs prédécesseurs). Un bloc complété en a donc
+      réparé deux.
+
+      **Preuve par le navigateur, jamais par le calcul de tête.** `verif-clic.js --sorties`,
+      Chrome `file://`, réseau non sollicité : **63 blocs cliqués sur 63 attendus**, couverture
+      complète, **0 divergent** ; puis 29 reclics après la seconde vague de corrections, même
+      verdict. Sorties relevées : `33 %` puis `0 %` (la garde de division par zéro, que la légende
+      de `lecon-14` déclare « essentielle » et que le bloc ne montrait jamais) ;
+      `["courses","maison","urgent"]` ; `Erreur affichée : Âge invalide` **puis**
+      `Enregistré : 37` ; `notifié : {"cle":"nom","valeur":"Ada"}`, puis `Refus : nom = undefined
+      ignoré`, puis `etat.nom = Ada`. **Chaque commentaire annoncé a été réécrit sur la sortie
+      mesurée, pas l'inverse.**
+
+      ⚠️ **LA RÉGRESSION QUE J'AI MOI-MÊME INTRODUITE, ET QUE SEULE LA MESURE A VUE.** Pour dire
+      qu'un objet simulé remplace un élément de page, j'avais écrit en commentaire
+      `// dans une vraie page, saisie = document.querySelector('#age')`. `BROWSER_ONLY`
+      (`js/runner.js:356`) cherche `document` **n'importe où dans le texte du bloc, commentaires
+      compris** : les deux blocs ont perdu leur bouton. Le chiffre qui l'a trahi : le cours `js`
+      passait de **549 à 547 blocs à bouton et de 526 à 524 aboutis, pannes inchangées à 10** —
+      un compteur d'aboutis qui BAISSE sans qu'aucune panne apparaisse. Commentaire reformulé
+      (`serait le champ &lt;input id="age"&gt;`, chevrons échappés, `verif-html.js` le vérifie) :
+      1 613 / 1 559 / 34, et **81 non compilables + 35 orphelins strictement inchangés**.
+      La leçon vaut au-delà de ce point : **un mot écrit dans un commentaire retire un bouton.**
+
+      **CONTRADICTION ADVERSARIALE (4 agents, 371 082 jetons, 157 appels d'outil), et ce
+      qu'elle a rendu.** Chaque agent devait DÉMOLIR un lot de leçons en exécutant, pas en
+      jugeant. **15 fautes retenues et corrigées**, dont : `lecon-27` #7 avait perdu les `//=>`
+      qui sont la convention de la page (28 occurrences ailleurs dans le même fichier) ; le nom
+      `casse` désignait l'inverse du drapeau `i` → `sansCasse` ; `const partout = /chat/g` était
+      le premier motif `g` **nommé** de la leçon, donc une invitation au piège du `lastIndex`
+      que la leçon ne couvre nulle part (mesuré : quatre `.test()` de suite rendent
+      `true, true, true, false`) → ligne d'avertissement ajoutée ; `lecon-28` déclarait la fuite
+      `faite: true` alors qu'une autre tâche disait d'appeler le plombier ; `lecon-36` ne
+      rappelait jamais son `stop()`, si bien que la « fonction de désabonnement » que le
+      paragraphe suivant dit **indispensable** n'était pas démontrée ; `lecon-63` #11 n'exécutait
+      qu'UNE branche là où son propre énoncé exige « les deux branches d'utilisation ».
+
+      **Une faute HORS LOT, trouvée par la même passe, et corrigée :** l'antisèche de
+      `js/lecon-39` annonçait `NumberFormat {style:"percent"}` → `24,6 %`. Exécuté :
+      `new Intl.NumberFormat('fr-FR', { style: 'percent' }).format(0.246)` rend **`"25 %"`**,
+      car `maximumFractionDigits` vaut **0** par défaut pour le style `percent`. Le corps de la
+      leçon, lui, était juste (il passe `minimumFractionDigits: 1`) : c'est la cellule
+      « constructeur » de l'antisèche qui, tronquée, rendait fausse la cellule « résultat ».
+      L'apprenant qui recopiait l'antisèche obtenait `25 %`.
+
+      ⚠️ **UN ANGLE MORT DU REPLI, MESURÉ ICI ET LAISSÉ OUVERT.** `js/lecon-65` #5 et #6 restent
+      en `ReferenceError: creerStore is not defined` (catégorie MUET-AVANT, hors de ce lot) pour
+      une raison qui n'est PAS l'absence du nom : `creerStore` est déclaré deux fois dans la page,
+      mais les deux fois par `export function creerStore(…)`. Or `preambuleQuiCompile`
+      (`js/runner.js:427`) valide le préambule par `new Function(…)`, et `new Function("export …")`
+      lève une `SyntaxError` : les deux blocs déclarants sont écartés, le préambule ressort vide.
+      **Tout nom fourni uniquement par un bloc `export` est hors d'atteinte du repli** — c'est
+      une famille, pas un cas. Deux issues, non chiffrées ici : rendre les blocs autonomes leçon
+      par leçon, ou faire tomber le `export` de tête dans `preambuleQuiCompile`. La seconde touche
+      une règle du bouton : elle exige la mesure « combien de vivants » avant d'être écrite.
+
+      **Chaîne rejouée après coup** : `verif-html.js` 1 629 fichiers, 0 grave 0 remarque ;
+      `verif-donnees.js` 25 contrôles, 0 erreur (index régénérés avec `--write --fresh`, sans
+      quoi l'antisèche corrigée laissait une entrée périmée) ; `verif-sorties.js` 449 blocs
+      identiques au caractère près, 0 divergent ; `verif-exemples.js --lang all` 0 divergent ;
+      `verif.js --rapide` **42 étapes, tout vert, 117,9 s**. Cliquet descendu à **34**.
+
+      **Reste du lot NULLE-PART : 8 blocs, tous hors du cours `js`** — `react/lecon-02` #1
+      (`React`), `nodejs/lecon-10` #3 (`req`), `nodejs/lecon-22` #5 (`z`), `securite/lecon-01` #2
+      (`requete`), `cicd/lecon-10` #1 (`flags`), `vue/lecon-06` #1 et #2 et `vue/lecon-10` #8
+      (`Accueil`, `defineStore`). Même méthode, un cours par passe.
+
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf
