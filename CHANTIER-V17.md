@@ -627,9 +627,54 @@ résultat avant le clic.
       Décider AU CAS PAR CAS : une table créée par un bloc précédent de la même page n'a pas à entrer
       dans la base de démonstration commune ; un `GRANT` ou un `CREATE … INCLUDE` relève d'`AUTRE_SGBD`.
 
-- [ ] **B1c · `bdd` : 19 blocs en erreur sur 70.** Y regarder le « table billet already exists » : la
-      nouvelle règle du seed devrait l'avoir rendu impossible, donc c'est le bloc lui-même qui crée deux
-      fois la table — à confirmer avant de corriger.
+- [x] **B1c-1 · « les commentaires ne sont pas du code » : `bdd` 19 → 14, site 53 → 47.** Deux
+      décisions du moteur lisaient le texte BRUT du bloc, commentaires compris, et se trompaient :
+
+      **1) La règle du seed.** `pages/bdd/lecon-11.html` rappelle en commentaire
+      `-- CREATE TABLE client (…, email TEXT NOT NULL UNIQUE, …);`. La règle y voyait la création d'une
+      table qu'elle connaît, en concluait « bloc autonome », ne préchargeait rien — et le
+      `CREATE INDEX … ON representation` juste au-dessus rendait « no such table: main.representation ».
+      Ce n'était pas neuf : l'ancienne règle `!/CREATE\s+TABLE/i` tombait dans le même piège.
+      **2) Le filtre de dialecte.** Symétriquement, `pages/sql/lecon-18.html #4` **aboutit** alors qu'il
+      cite un `ALTER TABLE … ADD CONSTRAINT` PostgreSQL derrière `--` : juger le texte brut lui aurait
+      retiré son bouton pour une phrase de commentaire. Mesuré avant d'écrire quoi que ce soit
+      (`tmp/impact2.js`) : appliquer le filtre au code nu ne fait basculer **qu'un seul bloc** sur tout
+      le site, `sql/lecon-17 #12`, écarté jusqu'ici pour un `EXPLAIN ANALYZE` en commentaire — il
+      redevient cliquable et rejoint la liste des blocs à traiter (`no such table: factures`).
+
+      Dans la foulée, **`ADD CONSTRAINT`, `DROP CONSTRAINT`, `ALTER COLUMN` et `MODIFY`** rejoignent
+      `AUTRE_SGBD` : SQLite ne sait modifier ni une contrainte ni une colonne, et la leçon 14 du cours
+      bdd **l'écrit elle-même** (« SQLite, lui, ne sait pas ALTER une colonne »). 6 des 7 blocs
+      concernés étaient déjà en erreur ; le 7ᵉ ne l'est pas et garde son bouton, précisément parce que
+      sa clause est en commentaire.
+
+      **Preuve par le navigateur** : `bdd/lecon-11` bloc 1 rend maintenant ses 4 représentations, et
+      `sql/lecon-18` **6 blocs sur 6**. Cliquet descendu à **47**, éprouvé : injection → **code 1**,
+      retrait → **code 0**. `verif.js --rapide` : 40 étapes, tout est vert.
+
+- [ ] **B1c-2 · `bdd` : 14 blocs restants, et ils ne sont PAS tous à réparer.** Trois familles, à ne
+      surtout pas confondre : (a) **4 démonstrations d'erreur VOLONTAIRES** — `lecon-05 #1` et `#2`
+      écrivent « -> ERREUR : violation de contrainte UNIQUE » sous la requête, `lecon-14 #2` démontre
+      le piège « Cannot add a NOT NULL column », `lecon-06 #1` crée DEUX FOIS `billet` pour comparer
+      deux écritures de la même clé étrangère. Le bouton y rend une erreur, et c'est la leçon.
+      (b) **3 fragments qui dépendent d'un bloc précédent** de la même page (`duplicate column name:
+      nom`, `c.total`, `b.client_id`). (c) **7 tables propres à une leçon** (`billet_multivalue`,
+      `paiement`, `reservations`, `salle`, `zone`, `tarif`, et `representation.titre`).
+      **Le vrai travail ici est de décider comment le vérificateur DOIT compter (a).** Les masquer
+      affaiblirait le contrôle — un motif « ERREUR » en commentaire cacherait aussi les vraies pannes ;
+      les compter à part, sans les retirer du cliquet, informe sans rien affaiblir. C'est la piste à
+      suivre.
+
+- [ ] **B1e · `tools/preuves/sql-lecon.js` rend des « MOTEUR KO » qui n'existent pas.** Reproduit deux
+      fois le 2026-09-09 : trois leçons passées d'un coup → les **3 derniers blocs de la dernière page**
+      sont déclarés « MOTEUR KO » ; les mêmes pages seules ou par deux → **0**. `sql/lecon-04` : 12
+      blocs, 3 fantômes à trois pages, 0 seule. `sql/lecon-18` : 1 fantôme à deux pages, 0 seule.
+      La cause n'est pas identifiée : le verdict tombe sur `!texte` (sortie vide) après 40 × 250 ms
+      d'attente, sans distinguer « rien lu » de « le moteur a dit qu'il ne pouvait pas ». Deux choses à
+      faire : séparer ces deux cas dans le message, et trouver pourquoi la sortie reste vide en fin de
+      lot (mémoire ? Worker tué ? délai trop court quand Chrome a déjà chargé 8,6 Mo trois fois ?).
+      **Cet outil est dans `--complet`** : il peut donc faire rougir la chaîne sans qu'aucune page ne
+      soit cassée — le défaut même que le point A3 a corrigé sur `verif-clic.js`.
 
 - [ ] **B1d · `securite` : l'unique bloc SQL du cours est en erreur.**
 

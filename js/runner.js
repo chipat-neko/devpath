@@ -199,13 +199,31 @@
   /* ROLLUP, CUBE et PIVOT : mesurés sur le moteur du dépôt le 2026-09-09 —
      « no such function: ROLLUP », « no such function: CUBE », « near "(" » — et sur les
      11 blocs du site qui les emploient, aucun n'aboutissait. */
-  var AUTRE_SGBD = /\$\$|\bLANGUAGE\s+plpgsql\b|\bCREATE\s+OR\s+REPLACE\b|\bROLLUP\s*\(|\bCUBE\s*\(|\bPIVOT\s*\(|\bTRY_CAST\s*\(|\bSAFE_CAST\s*\(|\bDATE_DIFF\s*\(|\bDATE_TRUNC\s*\(|\bMD5\s*\(|\bINTERVAL\s+\d|\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE|TRIGGER)\b|\bMATERIALIZED\s+VIEW\b|\bFOR\s+(?:UPDATE|SHARE)\b|\bGROUPING\s+SETS\b|\bQUALIFY\b|\bMERGE\s+INTO\b|\bGENERATED\s+(?:ALWAYS|BY\s+DEFAULT)\s+AS\s+IDENTITY\b|\bISOLATION\s+LEVEL\b|\bAUTO_INCREMENT\b|\bENGINE\s*=|\bSERIAL\b|\bTRUNCATE\b|\b(?:DATE|TIMESTAMP|INTERVAL)\s+'|::|\bEXPLAIN\s+ANALYZE\b|\bSET\s+search_path\b|\bILIKE\b|\bSHOW\s+(?:TABLES|DATABASES)\b/i;
+  /* `ADD CONSTRAINT`, `DROP CONSTRAINT`, `ALTER COLUMN` et `MODIFY` : SQLite ne sait pas
+     modifier une contrainte ni une colonne existante — la leçon 14 du cours bdd l'écrit
+     elle-même (« SQLite, lui, ne sait pas ALTER une colonne »). 6 blocs sur les 7 du site
+     qui les emploient hors commentaire étaient déjà en erreur, le septième les cite dans
+     un commentaire et garde donc son bouton. */
+  var AUTRE_SGBD = /\$\$|\bLANGUAGE\s+plpgsql\b|\bCREATE\s+OR\s+REPLACE\b|\bADD\s+CONSTRAINT\b|\bDROP\s+CONSTRAINT\b|\bALTER\s+COLUMN\b|\bMODIFY\s+(?:COLUMN\s+)?\w|\bROLLUP\s*\(|\bCUBE\s*\(|\bPIVOT\s*\(|\bTRY_CAST\s*\(|\bSAFE_CAST\s*\(|\bDATE_DIFF\s*\(|\bDATE_TRUNC\s*\(|\bMD5\s*\(|\bINTERVAL\s+\d|\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE|TRIGGER)\b|\bMATERIALIZED\s+VIEW\b|\bFOR\s+(?:UPDATE|SHARE)\b|\bGROUPING\s+SETS\b|\bQUALIFY\b|\bMERGE\s+INTO\b|\bGENERATED\s+(?:ALWAYS|BY\s+DEFAULT)\s+AS\s+IDENTITY\b|\bISOLATION\s+LEVEL\b|\bAUTO_INCREMENT\b|\bENGINE\s*=|\bSERIAL\b|\bTRUNCATE\b|\b(?:DATE|TIMESTAMP|INTERVAL)\s+'|::|\bEXPLAIN\s+ANALYZE\b|\bSET\s+search_path\b|\bILIKE\b|\bSHOW\s+(?:TABLES|DATABASES)\b/i;
 
   /* Nom des tables qu'un bloc CRÉE lui-même. Sert à décider si la base de démonstration
      doit être préchargée — voir `besoinDuSeed` dans le Worker.
      ⚠️ Cette littérale est LUE telle quelle par `tools/verif-sql.js`, comme AUTRE_SGBD :
      la règle du bouton et la règle du vérificateur ne peuvent donc pas diverger. */
   var TABLE_CREEE = /\bCREATE\s+(?:TEMP(?:ORARY)?\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?["`\[]?([A-Za-z_][A-Za-z0-9_]*)/i;
+
+  /* ⚠️ LES COMMENTAIRES NE SONT PAS DU CODE, et l'oublier coûtait des boutons morts.
+     Mesuré le 2026-09-09 sur `pages/bdd/lecon-11.html` : le bloc RAPPELLE en commentaire
+     `-- CREATE TABLE client (…, email TEXT NOT NULL UNIQUE, …);`. La règle du seed y
+     lisait la création d'une table qu'elle connaît, en concluait « bloc autonome » et ne
+     préchargeait rien — le `CREATE INDEX … ON representation` juste au-dessus rendait
+     alors « no such table ». Les commentaires sont donc retirés AVANT toute décision.
+     (Un `--` à l'intérieur d'une chaîne littérale tromperait ce motif ; aucun bloc du
+     site n'est dans ce cas, vérifié le 2026-09-09.) */
+  var COMMENTAIRE_SQL = /--[^\n]*|\/\*[\s\S]*?\*\//g;
+  function sansCommentairesSql(sql) {
+    return String(sql).replace(new RegExp(COMMENTAIRE_SQL.source, 'g'), ' ');
+  }
 
   /* La version de sql.js n'est plus une variable de ce fichier : le moteur est
      embarqué, sa provenance et sa version (1.14.2) sont dans assets/vendor/sqljs/README.md. */
@@ -398,6 +416,7 @@
     "var SQLP = null;",
     "var SEED = " + JSON.stringify(SEED_SQL) + ";",
     "var MOTIF_TABLE_CREEE = " + JSON.stringify(TABLE_CREEE.source) + ";",
+    "var MOTIF_COMMENTAIRE = " + JSON.stringify(COMMENTAIRE_SQL.source) + ";",
     /* ⚠️ LA RÈGLE DU SEED, ET POURQUOI ELLE A CHANGÉ LE 2026-09-09.
        Elle disait : « le bloc contient CREATE TABLE, donc il est autonome, pas de seed ».
        Mesuré sur pages/data-eng : `CREATE TABLE trajets_valides AS SELECT … FROM
@@ -407,14 +426,15 @@
        crée aucune table PORTANT UN NOM QU'ELLE CONTIENT DÉJÀ (sinon « table already
        exists »). Un bloc qui crée ses propres tables reçoit désormais le seed en plus,
        ce qui ne lui retire rien et rend exécutables les tables dérivées. */
+    "function sansCommentaires(sql) { return String(sql).replace(new RegExp(MOTIF_COMMENTAIRE, 'g'), ' '); }",
     "var TABLES_SEED = (function () {",
     "  var re = new RegExp(MOTIF_TABLE_CREEE, 'gi'), m, out = [];",
-    "  while ((m = re.exec(SEED))) out.push(m[1].toLowerCase());",
+    "  while ((m = re.exec(sansCommentaires(SEED)))) out.push(m[1].toLowerCase());",
     "  return out;",
     "})();",
     "function besoinDuSeed(code) {",
-    "  var re = new RegExp(MOTIF_TABLE_CREEE, 'gi'), m;",
-    "  while ((m = re.exec(code))) { if (TABLES_SEED.indexOf(m[1].toLowerCase()) !== -1) return false; }",
+    "  var re = new RegExp(MOTIF_TABLE_CREEE, 'gi'), m, nu = sansCommentaires(code);",
+    "  while ((m = re.exec(nu))) { if (TABLES_SEED.indexOf(m[1].toLowerCase()) !== -1) return false; }",
     "  return true;",
     "}",
     "self.onmessage = function (ev) {",
@@ -585,7 +605,11 @@
            syntax error » — plus déroutant qu'un bloc sans bouton. Mesuré le 2026-08-26
            sur les 345 blocs SQL du site : ce filtre en écarte 57, dont 55 échouaient
            bel et bien, et fait passer les blocs restants de 49 % à 58 % de réussite. */
-        if (AUTRE_SGBD.test(sql.textContent)) {
+        /* ⚠️ SUR LE CODE SANS COMMENTAIRES. `pages/sql/lecon-18.html` cite en rappel,
+           derrière `--`, un `ALTER TABLE … ADD CONSTRAINT` PostgreSQL : le bloc lui-même
+           est du SQLite valide et aboutit. Juger le texte brut lui retirait son bouton
+           pour une phrase de commentaire (mesuré le 2026-09-09). */
+        if (AUTRE_SGBD.test(sansCommentairesSql(sql.textContent))) {
           block.setAttribute("data-runner", "skip");
           return;
         }

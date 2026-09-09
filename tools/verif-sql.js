@@ -86,6 +86,21 @@ function lireMotifTableCreee() {
   return eval(m[1]);
 }
 
+/* Et le motif des commentaires SQL, pour la même raison : un `-- CREATE TABLE client`
+   cité en rappel dans une leçon n'est pas une création de table. */
+function lireMotifCommentaire() {
+  var src = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
+  var m = src.match(/var COMMENTAIRE_SQL = (\/[\s\S]*?\/g);/);
+  if (!m) throw new Error('COMMENTAIRE_SQL introuvable dans js/runner.js');
+  return eval(m[1]);
+}
+var MOTIF_COMMENTAIRE = lireMotifCommentaire();
+/* Un dialecte CITÉ dans un commentaire ne rend pas le bloc inexécutable : les deux
+   décisions — poser un bouton, précharger la base — se prennent sur le code nu. */
+function sansCommentaires(sql) {
+  return String(sql).replace(new RegExp(MOTIF_COMMENTAIRE.source, 'g'), ' ');
+}
+
 function dec(s) {
   return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
           .replace(/&#39;/g, "'").replace(/&amp;/g, '&');
@@ -114,10 +129,10 @@ function lecons(cible) {
    elle porte déjà le nom (auquel cas « table already exists » serait garanti). */
 function faireRegleDuSeed(motif, seed) {
   var tablesSeed = [], re = new RegExp(motif.source, 'gi'), m;
-  while ((m = re.exec(seed))) tablesSeed.push(m[1].toLowerCase());
+  while ((m = re.exec(sansCommentaires(seed)))) tablesSeed.push(m[1].toLowerCase());
   return function (code) {
-    var r = new RegExp(motif.source, 'gi'), x;
-    while ((x = r.exec(code))) { if (tablesSeed.indexOf(x[1].toLowerCase()) !== -1) return false; }
+    var r = new RegExp(motif.source, 'gi'), x, c = sansCommentaires(code);
+    while ((x = r.exec(c))) { if (tablesSeed.indexOf(x[1].toLowerCase()) !== -1) return false; }
     return true;
   };
 }
@@ -151,7 +166,7 @@ initSqlJs({ wasmBinary: wasmBinary, locateFile: function (f) { return f; } }).th
       if (!/\b(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|WITH)\b/i.test(code)) return;
       /* Un bloc écrit pour un autre SGBD ne reçoit pas de bouton : il ne compte donc
          ni dans les réussites ni dans les échecs, mais on le dénombre. */
-      if (AUTRE_SGBD.test(code)) { ecartes++; return; }
+      if (AUTRE_SGBD.test(sansCommentaires(code))) { ecartes++; return; }
       total++;
       parCours[cours] = parCours[cours] || { total: 0, ok: 0 };
       parCours[cours].total++;
