@@ -77,6 +77,15 @@ function lireFiltreDialecte() {
   return eval(m[1]); // une littérale d'expression régulière lue dans notre propre dépôt
 }
 
+/* Même principe pour la règle du seed : le motif qui repère les tables créées par un
+   bloc est LU dans runner.js. Recopié, il aurait divergé au premier ajustement. */
+function lireMotifTableCreee() {
+  var src = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
+  var m = src.match(/var TABLE_CREEE = (\/[\s\S]*?\/i);/);
+  if (!m) throw new Error('TABLE_CREEE introuvable dans js/runner.js');
+  return eval(m[1]);
+}
+
 function dec(s) {
   return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
           .replace(/&#39;/g, "'").replace(/&amp;/g, '&');
@@ -100,9 +109,18 @@ function lecons(cible) {
   return out.filter(function (f) { return /lecon-\d+\.html$/.test(f); });
 }
 
-/* La même règle que le Worker de runner.js : la base de démonstration n'est posée
-   que si le bloc ne crée pas ses propres tables. */
-function aBesoinDuSeed(code) { return !/CREATE\s+TABLE/i.test(code); }
+/* La même règle que le Worker de runner.js, écrite une seule fois ici à partir du motif
+   qui y est lu : la base de démonstration est posée SAUF si le bloc crée une table dont
+   elle porte déjà le nom (auquel cas « table already exists » serait garanti). */
+function faireRegleDuSeed(motif, seed) {
+  var tablesSeed = [], re = new RegExp(motif.source, 'gi'), m;
+  while ((m = re.exec(seed))) tablesSeed.push(m[1].toLowerCase());
+  return function (code) {
+    var r = new RegExp(motif.source, 'gi'), x;
+    while ((x = r.exec(code))) { if (tablesSeed.indexOf(x[1].toLowerCase()) !== -1) return false; }
+    return true;
+  };
+}
 
 var initSqlJs = require(path.join(RACINE, 'assets', 'vendor', 'sqljs', 'sql-wasm.js'));
 
@@ -115,6 +133,7 @@ var wasmBinary = Buffer.from(mb[1], 'base64');
 
 initSqlJs({ wasmBinary: wasmBinary, locateFile: function (f) { return f; } }).then(function (SQL) {
   var SEED = lireSeed();
+  var aBesoinDuSeed = faireRegleDuSeed(lireMotifTableCreee(), SEED);
   var fichiers = [];
   if (cibles.length) cibles.forEach(function (c) { fichiers = fichiers.concat(lecons(c)); });
   else fichiers = lecons(null);

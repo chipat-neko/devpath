@@ -541,6 +541,69 @@ résultat avant le clic.
       Commencer par `data-eng`. Descendre le cliquet de `tools/verif-sql-attendu.json` — calé sur 124
       depuis le 2026-08-26, donc **vert avec 124 boutons morts** — à chaque lot. Une case par cours.
 
+- [x] **B1a · `data-eng` : 16 blocs en erreur sur 17 → 0 sur 11.** Mesure reproduite avant de toucher
+      à quoi que ce soit : `node tools/verif-sql.js` rendait exactement les chiffres du plan (303 blocs,
+      124 en erreur, `data-eng` 1 abouti sur 17). Les 16 échecs se sont partagés en **deux causes, pas
+      une** — et aucune des deux n'était une faute d'écriture des leçons :
+
+      **1) Une règle du moteur qui se trompait de question (10 blocs).** `js/runner.js` décidait de
+      précharger la base de démonstration ainsi : « le bloc contient `CREATE TABLE`, donc il est
+      autonome, pas de base ». Or `CREATE TABLE trajets_valides AS SELECT … FROM trajets_nettoyes`
+      contient bien `CREATE TABLE` et n'est PAS autonome : il LIT une table qu'il ne crée pas, et
+      repartait donc d'une base vide — l'erreur était garantie. La règle est devenue : on précharge
+      **sauf si le bloc crée une table dont la base porte déjà le nom** (sinon « table already exists »).
+      Effet mesuré **seul, avant tout autre changement** : 124 → 123 en erreur, 179 → 180 aboutis,
+      **aucun bloc qui marchait n'est tombé**. Le motif `TABLE_CREEE` est déclaré une seule fois dans
+      `runner.js` et **lu** par `tools/verif-sql.js` (comme `AUTRE_SGBD` l'était déjà) : la copie qui
+      dormait dans le vérificateur — `!/CREATE\s+TABLE/i` — a disparu, elle aurait divergé au premier
+      ajustement.
+
+      **2) Un cours écrit pour un autre moteur (6 blocs) et un fil rouge absent de la base (10 blocs).**
+      `data-eng` enseigne l'entrepôt moderne : `TRY_CAST`, `DATE_DIFF`, `DATE_TRUNC`, `MD5`,
+      `CREATE OR REPLACE TABLE`, `INTERVAL 1 DAY` — DuckDB, Snowflake, BigQuery. Rien de tout cela
+      n'existe dans SQLite : ces blocs ne devaient pas porter de bouton, ils sont désormais écartés par
+      `AUTRE_SGBD` comme 57 autres l'étaient déjà. **Vérifié avant d'écrire le motif** (`tmp/impact.js`,
+      puis relance ciblée) : les 19 blocs du site que ces sept marqueurs désignent étaient **tous en
+      erreur**, donc **zéro bouton qui marchait n'a été retiré**. Les 10 blocs restants interrogeaient le
+      fil rouge « Vélociti » (`bronze_trajets`, `bronze_capteurs`, `trajets_nettoyes`, `trajets`,
+      `stations`, `fichier_du_jour`) que la base de démonstration ne contenait pas ; il y est ajouté,
+      minuscule mais fidèle aux colonnes citées, et **peuplé pour que les contrôles de la leçon 10
+      démontrent ce qu'ils annoncent** : 0 ligne pour le test d'énumération, exactement 2 pour le test
+      des anomalies (une `station_end` orpheline, une durée de 300 min).
+
+      **Mesure finale, site entier** : **124 → 104 blocs en erreur**, aboutis **179 → 190**, `data-eng`
+      **1/17 → 11/11 (100 %)**. Les 20 disparus se décomposent en 11 réparés et 9 écartés à juste titre.
+
+      **Preuve par le navigateur, pas par le vérificateur** (le Worker de `runner.js` a sa propre copie
+      de la règle du seed, que `verif-sql.js` n'exécute pas) : `node tools/preuves/sql-lecon.js` sur les
+      leçons touchées, dans un vrai Chrome, `file://`, DNS coupé — **16 blocs cliqués, 16 résultats, 0
+      erreur, 0 requête distante**. `pages/data-eng/lecon-10.html` bloc 3 rend bien les deux lignes
+      annoncées ; `lecon-07` bloc 2 rendait `0` (aucune station 42 dans le jeu de données), une ligne a
+      été ajoutée pour qu'il rende `1` — un compteur à zéro n'illustre rien.
+
+      **Cliquet éprouvé par injection, dans les deux sens.** Avec la référence encore à 124, une table
+      renommée en `trajets_inexistante` dans `lecon-07` faisait 105 erreurs et l'outil restait **VERT
+      (code 0)** — la démonstration du chantier : le cliquet était descendu de 124 à 104 non pour faire
+      joli, mais parce qu'au-dessus il ne pouvait plus rien attraper. Référence descendue à 104, même
+      faute réinjectée : **code 1**, « 105 contre 104 à la référence ». Faute retirée : **code 0**. La
+      page est revenue à l'octet près (`git status` vide sous `pages/`).
+      ⚠️ Le premier essai d'injection n'avait **rien remplacé** : après un `git checkout`, le fichier
+      revient en CRLF et un motif écrit avec `\n` ne matche plus — et le script se taisait. Le script
+      d'injection dit maintenant « AUCUN REMPLACEMENT » et sort en 9. Deuxième piège du même essai :
+      `node … | tail` rend le code de sortie de `tail`, pas du vérificateur ; un `EXIT=0` y était donc
+      un mensonge de mesure.
+
+- [ ] **B1b · `sql` : 84 blocs en erreur sur 212.** Première cause du site à elle seule. Le plan note
+      déjà une piste : sur `pages/sql/lecon-10.html`, 11 erreurs sur 13 portent sur une colonne `points`
+      absente de la base de démonstration. Vérifier d'abord si la colonne manque à la base ou si les
+      leçons se contredisent entre elles, puis descendre le cliquet.
+
+- [ ] **B1c · `bdd` : 19 blocs en erreur sur 70.** Y regarder le « table billet already exists » : la
+      nouvelle règle du seed devrait l'avoir rendu impossible, donc c'est le bloc lui-même qui crée deux
+      fois la table — à confirmer avant de corriger.
+
+- [ ] **B1d · `securite` : l'unique bloc SQL du cours est en erreur.**
+
 - [ ] **B2 · Les blocs JavaScript : 451 sur 2 011 en erreur (22,4 %).** Mesure indépendante avec la
       règle `BROWSER_ONLY` de `js/runner.js:51` : 518 erreurs, dont **67 volontaires et annoncées en
       commentaire** — le chiffre défendable est donc 451. Causes : 92 `import statement outside a

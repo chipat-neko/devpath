@@ -191,7 +191,18 @@
      mesure, et ils illustrent la règle « un motif trop large casse ce qui marchait » :
      /@\w/ (variables SQL Server) attrapait toutes les ADRESSES E-MAIL des chaînes
      d'exemple, et NULLS FIRST/LAST comme RETURNING sont en réalité gérés par SQLite. */
-  var AUTRE_SGBD = /\$\$|\bLANGUAGE\s+plpgsql\b|\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE|TRIGGER)\b|\bMATERIALIZED\s+VIEW\b|\bFOR\s+(?:UPDATE|SHARE)\b|\bGROUPING\s+SETS\b|\bQUALIFY\b|\bMERGE\s+INTO\b|\bGENERATED\s+(?:ALWAYS|BY\s+DEFAULT)\s+AS\s+IDENTITY\b|\bISOLATION\s+LEVEL\b|\bAUTO_INCREMENT\b|\bENGINE\s*=|\bSERIAL\b|\bTRUNCATE\b|\b(?:DATE|TIMESTAMP|INTERVAL)\s+'|::|\bEXPLAIN\s+ANALYZE\b|\bSET\s+search_path\b|\bILIKE\b|\bSHOW\s+(?:TABLES|DATABASES)\b/i;
+  /* Les sept marqueurs ajoutés le 2026-09-09 viennent du cours data-eng, écrit pour
+     DuckDB / Snowflake / BigQuery : TRY_CAST, SAFE_CAST, DATE_DIFF, DATE_TRUNC, MD5,
+     CREATE OR REPLACE TABLE, INTERVAL 1 DAY. Aucun n'existe dans SQLite — vérifié avant
+     l'ajout : sur les 19 blocs du site qu'ils désignent, ZÉRO aboutissait, donc aucun
+     bouton qui marchait n'a été retiré. */
+  var AUTRE_SGBD = /\$\$|\bLANGUAGE\s+plpgsql\b|\bCREATE\s+OR\s+REPLACE\b|\bTRY_CAST\s*\(|\bSAFE_CAST\s*\(|\bDATE_DIFF\s*\(|\bDATE_TRUNC\s*\(|\bMD5\s*\(|\bINTERVAL\s+\d|\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE|TRIGGER)\b|\bMATERIALIZED\s+VIEW\b|\bFOR\s+(?:UPDATE|SHARE)\b|\bGROUPING\s+SETS\b|\bQUALIFY\b|\bMERGE\s+INTO\b|\bGENERATED\s+(?:ALWAYS|BY\s+DEFAULT)\s+AS\s+IDENTITY\b|\bISOLATION\s+LEVEL\b|\bAUTO_INCREMENT\b|\bENGINE\s*=|\bSERIAL\b|\bTRUNCATE\b|\b(?:DATE|TIMESTAMP|INTERVAL)\s+'|::|\bEXPLAIN\s+ANALYZE\b|\bSET\s+search_path\b|\bILIKE\b|\bSHOW\s+(?:TABLES|DATABASES)\b/i;
+
+  /* Nom des tables qu'un bloc CRÉE lui-même. Sert à décider si la base de démonstration
+     doit être préchargée — voir `besoinDuSeed` dans le Worker.
+     ⚠️ Cette littérale est LUE telle quelle par `tools/verif-sql.js`, comme AUTRE_SGBD :
+     la règle du bouton et la règle du vérificateur ne peuvent donc pas diverger. */
+  var TABLE_CREEE = /\bCREATE\s+(?:TEMP(?:ORARY)?\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?["`\[]?([A-Za-z_][A-Za-z0-9_]*)/i;
 
   /* La version de sql.js n'est plus une variable de ce fichier : le moteur est
      embarqué, sa provenance et sa version (1.14.2) sont dans assets/vendor/sqljs/README.md. */
@@ -254,6 +265,52 @@
     "CREATE TABLE ventes (id INTEGER PRIMARY KEY, produit_id INTEGER NOT NULL, jour TEXT NOT NULL, quantite INTEGER NOT NULL, montant REAL NOT NULL);",
     "INSERT INTO ventes VALUES (1,500,'2026-01-14',3,14.70),(2,501,'2026-02-02',1,24.00),(3,503,'2026-03-11',2,158.00),",
     " (4,502,'2026-05-30',1,39.00),(5,504,'2026-06-08',4,79.60),(6,500,'2026-06-21',6,29.40);",
+
+    /* --- le fil rouge « Vélociti » du cours data-eng : bronze → silver → gold -------
+       Mesuré le 2026-09-09 : sur 17 blocs SQL du cours, UN SEUL aboutissait, et 12 des
+       16 échecs étaient un « no such table » sur ces tables-là. Elles sont volontairement
+       MINUSCULES (quelques lignes) mais fidèles aux colonnes que les leçons citent, et
+       leur contenu est choisi pour que les requêtes de contrôle de la leçon 10 rendent
+       ce qu'elles annoncent : aucun type_velo hors liste, UNE station_end orpheline (999)
+       et UNE durée hors plage (300 min). */
+    "CREATE TABLE bronze_trajets (trip_id TEXT, start TEXT, \"end\" TEXT, station_start INTEGER, station_end INTEGER, bike INTEGER, type TEXT, ingere_le TEXT);",
+    "INSERT INTO bronze_trajets VALUES",
+    " ('T001','2026-05-01 08:12','2026-05-01 08:31',12,44,7301,'electrique','2026-05-02 03:00'),",
+    " ('T001','2026-05-01 08:12','2026-05-01 08:31',12,44,7301,'Electrique','2026-05-03 03:00'),",
+    " ('T002','2026-05-01 09:02','2026-05-01 09:17',44,12,7188,'mecanique','2026-05-02 03:00'),",
+    " ('T003','2026-05-01 17:40','2026-05-01 18:05',12,999,7301,'ELEC','2026-05-02 03:00'),",
+    " ('T004','01/05/2026 08:15',NULL,44,44,7042,'meca','2026-05-02 03:00');",
+    "CREATE TABLE fichier_du_jour (trip_id TEXT, start TEXT, \"end\" TEXT, station_start INTEGER, station_end INTEGER, bike INTEGER, type TEXT);",
+    "INSERT INTO fichier_du_jour VALUES",
+    " ('T005','2026-05-02 07:55','2026-05-02 08:10',12,44,7188,'electrique'),",
+    " ('T006','2026-05-02 12:30','2026-05-02 12:52',44,12,7301,'mecanique');",
+    "CREATE TABLE bronze_capteurs (event_id TEXT, station_id INTEGER, ts TEXT, velos_dispo INTEGER, bornes_libres INTEGER, ingere_le TEXT);",
+    "INSERT INTO bronze_capteurs VALUES",
+    " ('E1',12,'2026-05-01 08:00',9,7,'2026-05-01 08:05'),",
+    " ('E1',12,'2026-05-01 08:00',9,7,'2026-05-02 08:05'),",
+    " ('E2',44,'2026-05-01 08:00',3,13,'2026-05-01 08:05'),",
+    " ('E3',12,'2026-05-01 09:00',5,11,'2026-05-01 09:05');",
+    /* Le SILVER : typé, dédoublonné, avec la durée déjà calculée (leçon 6). */
+    "CREATE TABLE trajets_nettoyes (trip_id TEXT, debut TEXT, fin TEXT, duree_min INTEGER, station_start INTEGER, station_end INTEGER, bike INTEGER, type_velo TEXT, jour TEXT);",
+    "INSERT INTO trajets_nettoyes VALUES",
+    " ('T001','2026-05-01 08:12','2026-05-01 08:31',19,12,44,7301,'electrique','2026-05-01'),",
+    " ('T002','2026-05-01 09:02','2026-05-01 09:17',15,44,12,7188,'mecanique','2026-05-01'),",
+    " ('T003','2026-05-01 17:40','2026-05-01 18:05',25,12,999,7301,'electrique','2026-05-01'),",
+    " ('T007','2026-05-02 06:10','2026-05-02 11:10',300,44,12,7042,'inconnu','2026-05-02');",
+    /* La table PARTITIONNÉE des leçons 7 et 13 : le contrat de la leçon 11, plus la clé
+       de partition `date` sur laquelle porte le pruning. */
+    "CREATE TABLE trajets (trip_id TEXT, start TEXT, \"end\" TEXT, station_start INTEGER, station_end INTEGER, bike INTEGER, type TEXT, date TEXT);",
+    "INSERT INTO trajets VALUES",
+    " ('T001','2026-05-01 08:12','2026-05-01 08:31',12,44,7301,'electrique','2026-05-01'),",
+    " ('T002','2026-05-01 09:02','2026-05-01 09:17',44,12,7188,'mecanique','2026-05-01'),",
+    " ('T003','2026-05-01 17:40','2026-05-01 18:05',12,44,7301,'electrique','2026-05-01'),",
+    " ('T005','2026-05-02 07:55','2026-05-02 08:10',12,44,7188,'electrique','2026-05-02'),",
+    " ('T006','2026-05-07 12:30','2026-05-07 12:52',44,12,7301,'mecanique','2026-05-07'),",
+    /* la station 42 existe pour que la requête de la leçon 7 (« WHERE date = … AND
+       station_start = 42 ») rende 1 et non 0 : un compteur à zéro n'illustre rien. */
+    " ('T008','2026-05-01 07:20','2026-05-01 07:35',42,12,7188,'electrique','2026-05-01');",
+    "CREATE TABLE stations (station_id INTEGER PRIMARY KEY, nom TEXT NOT NULL, quartier TEXT);",
+    "INSERT INTO stations VALUES (12,'Place du Marche','Centre'),(42,'Gare Nord','Gare'),(44,'Parc des Sports','Rive Sud');",
   ].join("\n");
 
   /* Racine du site, déduite de l'URL de CE script (js/runner.js) : les leçons vivent
@@ -309,6 +366,26 @@
   var SQL_WORKER_SRC = [
     "var SQLP = null;",
     "var SEED = " + JSON.stringify(SEED_SQL) + ";",
+    "var MOTIF_TABLE_CREEE = " + JSON.stringify(TABLE_CREEE.source) + ";",
+    /* ⚠️ LA RÈGLE DU SEED, ET POURQUOI ELLE A CHANGÉ LE 2026-09-09.
+       Elle disait : « le bloc contient CREATE TABLE, donc il est autonome, pas de seed ».
+       Mesuré sur pages/data-eng : `CREATE TABLE trajets_valides AS SELECT … FROM
+       trajets_nettoyes` contient bien CREATE TABLE, mais n'est PAS autonome — il LIT une
+       table qu'il ne crée pas, et repartait donc sur une base vide, garantissant l'erreur.
+       La règle exacte est : on ne précharge la base de démonstration que si le bloc ne
+       crée aucune table PORTANT UN NOM QU'ELLE CONTIENT DÉJÀ (sinon « table already
+       exists »). Un bloc qui crée ses propres tables reçoit désormais le seed en plus,
+       ce qui ne lui retire rien et rend exécutables les tables dérivées. */
+    "var TABLES_SEED = (function () {",
+    "  var re = new RegExp(MOTIF_TABLE_CREEE, 'gi'), m, out = [];",
+    "  while ((m = re.exec(SEED))) out.push(m[1].toLowerCase());",
+    "  return out;",
+    "})();",
+    "function besoinDuSeed(code) {",
+    "  var re = new RegExp(MOTIF_TABLE_CREEE, 'gi'), m;",
+    "  while ((m = re.exec(code))) { if (TABLES_SEED.indexOf(m[1].toLowerCase()) !== -1) return false; }",
+    "  return true;",
+    "}",
     "self.onmessage = function (ev) {",
     "  var d = ev.data || {};",
     "  if (d.type === 'load') {",
@@ -339,7 +416,7 @@
        résultat était le MÊME (5 blocs aboutis) pour un mécanisme bien plus fragile.
        Une leçon n'est pas un carnet linéaire — elle enchaîne des schémas concurrents et
        des violations de contraintes démontrées exprès, que rejouer met en collision. */
-    "        if (!/CREATE\\s+TABLE/i.test(d.code)) { db.exec(SEED); }",
+    "        if (besoinDuSeed(d.code)) { db.exec(SEED); }",
     "        var res = db.exec(d.code);",
     "        self.postMessage({ type: 'result', res: res });",
     "      } catch (e) {",
