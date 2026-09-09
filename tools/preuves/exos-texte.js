@@ -52,12 +52,12 @@ var CONTRE = args.indexOf('--contre') !== -1;
    preuve — exactement ce que ce chantier combat. `--graphie=1` tape la deuxième. */
 var GRAPHIE = Number((args.filter(function (a) { return a.indexOf('--graphie=') === 0; })[0] || '').split('=')[1] || 0);
 var PAGES = args.filter(function (a) { return a.indexOf('--') !== 0; });
-if (!PAGES.length) { console.log('exos-texte.js — aucune page : passer des chemins.'); process.exit(0); }
+if (!PAGES.length) { console.log('exos-texte.js — NON MESURÉ : aucune page passée, rien n’a été ouvert.'); process.exit(2); }
 
 var CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
               'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
               '/usr/bin/google-chrome', '/usr/bin/chromium'].find(function (p) { return fs.existsSync(p); });
-if (!CHROME) { console.log('exos-texte.js — Chrome introuvable, rien de mesuré.'); process.exit(0); }
+if (!CHROME) { console.log('exos-texte.js — NON MESURÉ : Chrome introuvable, aucune page n’a été ouverte.'); process.exit(2); }
 
 process.on('uncaughtException', function (e) {
   console.log('\nexos-texte.js — ECHEC TECHNIQUE, rien n a pu etre mesure : ' + (e && e.message ? e.message : e));

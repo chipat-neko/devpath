@@ -37,7 +37,7 @@ const compte = require('./vocab/gen-lexique-compte.js');
 const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
   'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
   '/usr/bin/google-chrome', '/usr/bin/chromium'].find((p) => fs.existsSync(p));
-if (!CHROME) { console.log('verif-lexique-clic.js — Chrome introuvable, rien de mesuré.'); process.exit(0); }
+if (!CHROME) { console.log('verif-lexique-clic.js — NON MESURÉ : Chrome introuvable, aucune page n’a été ouverte.'); process.exit(2); }
 
 process.on('uncaughtException', function (e) {
   console.log('\nverif-lexique-clic.js — ÉCHEC TECHNIQUE : ' + (e && e.message ? e.message : e));

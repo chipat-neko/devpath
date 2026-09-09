@@ -55,7 +55,7 @@ var explicites = args.filter(function (a) { return a.indexOf('--') !== 0; });
 var CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
               'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
               '/usr/bin/google-chrome', '/usr/bin/chromium'].find(function (p) { return fs.existsSync(p); });
-if (!CHROME) { console.log('exos-code.js — Chrome introuvable, rien de mesuré.'); process.exit(0); }
+if (!CHROME) { console.log('exos-code.js — NON MESURÉ : Chrome introuvable, aucune page n’a été ouverte.'); process.exit(2); }
 
 /* Un échec TECHNIQUE ne doit pas rendre le même code de sortie qu'un exercice faux. */
 process.on('uncaughtException', function (e) {
@@ -82,7 +82,7 @@ function lecons() {
   return out;
 }
 var PAGES = explicites.length ? explicites : (TOUT ? lecons() : []);
-if (!PAGES.length) { console.log('exos-code.js — aucune page : passer des chemins ou --tout.'); process.exit(0); }
+if (!PAGES.length) { console.log('exos-code.js — NON MESURÉ : aucune page passée, rien n’a été ouvert.'); process.exit(2); }
 
 /* ------------------------------------------------------------------- CDP nu ----- */
 var attendre = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };

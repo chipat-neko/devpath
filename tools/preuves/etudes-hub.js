@@ -42,7 +42,7 @@ var CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
               process.env.LOCALAPPDATA + '/Google/Chrome/Application/chrome.exe'].find(function (p) {
   try { return fs.existsSync(p); } catch (e) { return false; }
 });
-if (!CHROME) { console.log('Chrome introuvable, rien de mesuré.'); process.exit(0); }
+if (!CHROME) { console.log('etudes-hub.js — NON MESURÉ : Chrome introuvable, aucune page n’a été ouverte.'); process.exit(2); }
 
 /* Ce que la table de cours.js promet. Recopié ici EXPRÈS : si les deux listes
    divergent, c'est que quelqu'un a changé l'une sans l'autre, et la preuve doit le

@@ -66,7 +66,7 @@ function cheminChrome() {
 
 function preuveNavigateur() {
   var chrome = cheminChrome();
-  if (!chrome) { console.log("  Chrome introuvable : preuve file:// non faite."); return null; }
+  if (!chrome) { console.log("  Chrome introuvable : preuve file:// NON MESURÉE."); return { nonMesure: true }; }
   var page = path.join(RACINE, "tools", "preuves", "interpreteur-navigateur.html");
   var profil = fs.mkdtempSync(path.join(os.tmpdir(), "syntaxe-chrome-"));
   var r = cp.spawnSync(chrome, [
@@ -274,11 +274,17 @@ function main() {
   });
 
   var ecartsNav = null;
+  /* Demander la preuve file:// et ne pas pouvoir la faire n'est pas « 0 ecart » :
+     c'est RIEN DE MESURE. Point A7 du chantier V17 — sans ce drapeau, l'outil
+     rendait 0, donc VERT, sur une machine sans Chrome, alors que la moitie du
+     controle qu'on venait de lui demander n'avait pas eu lieu. */
+  var navNonMesure = false;
   if (avecNavigateur && !seul) {
     console.log("");
     console.log("--- preuve file:// : la même bibliothèque, dans Chrome, depuis le disque ---");
     var nav = preuveNavigateur();
-    if (nav && nav.erreur) { ecartsNav = [nav.erreur]; console.log("  " + nav.erreur); }
+    if (nav && nav.nonMesure) { navNonMesure = true; }
+    else if (nav && nav.erreur) { ecartsNav = [nav.erreur]; console.log("  " + nav.erreur); }
     else if (nav && nav.res) {
       ecartsNav = [];
       var parNom = {};
@@ -308,9 +314,11 @@ function main() {
   console.log("  limites assumées tenues ..... " + limitesTenues + (limitesTombees.length ? " (à revoir : " + limitesTombees.join(", ") + ")" : ""));
   if (avecTrace) console.log("  traces incohérentes ......... " + pbsTrace.length + (pbsTrace.length ? " : " + pbsTrace.join(", ") : ""));
   if (ecartsNav) console.log("  écarts Chrome ⇄ Node ........ " + ecartsNav.length);
+  if (navNonMesure) console.log("  écarts Chrome ⇄ Node ........ NON MESURÉ (Chrome introuvable)");
   console.log("  durée ....................... " + (ms / 1000).toFixed(1) + " s");
   console.log("");
   if (fautifs.length || pbsTrace.length || (ecartsNav && ecartsNav.length)) { console.log("RESULTAT : ECARTS"); process.exit(1); }
+  if (navNonMesure) { console.log("RESULTAT : NON MESURÉ — la preuve file:// demandée n’a pas pu être faite"); process.exit(2); }
   console.log("RESULTAT : 0 ECART");
 }
 

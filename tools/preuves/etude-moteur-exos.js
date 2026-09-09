@@ -36,7 +36,7 @@ var CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
               process.env.LOCALAPPDATA + '/Google/Chrome/Application/chrome.exe'].find(function (p) {
   try { return fs.existsSync(p); } catch (e) { return false; }
 });
-if (!CHROME) { console.log('Chrome introuvable, rien de mesuré.'); process.exit(0); }
+if (!CHROME) { console.log('etude-moteur-exos.js — NON MESURÉ : Chrome introuvable, aucune page n’a été ouverte.'); process.exit(2); }
 
 function dodo(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 function get(url) {

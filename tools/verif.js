@@ -564,6 +564,20 @@ if (!RAPIDE) {
     quoi: "la page de cours avec une progression SEMEE : 13 liens, barre lue, aucun « bientot »",
     lent: true,
   });
+  /* CE QUE RENDENT LES OUTILS A CHROME QUAND CHROME N'EST PAS LA (point A7 du
+     chantier V17). Dix-sept d'entre eux sortaient en 0 -- « tout va bien » -- apres
+     avoir imprime « Chrome introuvable, rien de mesure » : sur une machine sans
+     Chrome, cette chaine annoncait dix-sept etapes VERTES qui n'avaient pas ouvert
+     une seule page. C'est la forme meme du defaut qui fonde le V17. L'epreuve lance
+     les VRAIS fichiers dans un node ou `fs.existsSync` est aveugle aux chemins
+     « chrome », et exige le code 2 (NON MESURE) de chacun. Elle ne modifie aucun
+     fichier du depot et ne demarre aucun navigateur : 14,6 s. */
+  ETAPES.push({
+    nom: "sanschr",
+    fichier: "preuves/chrome-absent.js",
+    args: [],
+    quoi: "sans Chrome, les 29 outils qui le pilotent disent-ils NON MESURE plutot que OK",
+  });
 }
 /* ⚠️ LA SEULE ETAPE QUI JUGE LES AUTRES, et elle n'est jouee qu'en mode --complet
    parce qu'elle MODIFIE des fichiers du depot. Elle injecte neuf fautes -- un « < »

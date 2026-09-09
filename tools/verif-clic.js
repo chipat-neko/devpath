@@ -87,7 +87,7 @@ var explicites = args.filter(function (a) { return a.indexOf('--') !== 0; });
 var CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
               'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
               '/usr/bin/google-chrome', '/usr/bin/chromium'].find(function (p) { return fs.existsSync(p); });
-if (!CHROME) { console.log('verif-clic.js — Chrome introuvable, rien de mesuré.'); process.exit(0); }
+if (!CHROME) { console.log('verif-clic.js — NON MESURÉ : Chrome introuvable, aucune page n’a été ouverte.'); process.exit(2); }
 
 /* Un echec TECHNIQUE (Chrome qui meurt, socket coupee) ne doit pas rendre le meme
    code de sortie qu une DIVERGENCE reelle : sinon un plantage se lit comme une

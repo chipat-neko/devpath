@@ -33,7 +33,7 @@ if (!PAGES.length) PAGES = ['pages/maths/lecon-13.html', 'pages/maths/lecon-06.h
 var CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
   'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
   '/usr/bin/google-chrome', '/usr/bin/chromium'].find(function (p) { return fs.existsSync(p); });
-if (!CHROME) { console.log('Chrome introuvable, rien de mesuré.'); process.exit(0); }
+if (!CHROME) { console.log('verif-bilan.js — NON MESURÉ : Chrome introuvable, aucune page n’a été ouverte.'); process.exit(2); }
 
 process.on('uncaughtException', function (e) {
   console.log('ÉCHEC TECHNIQUE, rien n a pu être mesuré : ' + (e && e.message ? e.message : e));

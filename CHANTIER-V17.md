@@ -400,7 +400,7 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
       L'en-tête d'usage de `verif.js`, qui annonçait 26 / 51 / 54 étapes là où il y en avait
       27 / 53 / 62, a été refaite sur les mesures du jour.
 
-- [ ] **A7 · Dix-sept outils sortent en 0 — « tout va bien » — quand Chrome est introuvable.** Mesuré
+- [x] **A7 · Dix-sept outils sortent en 0 — « tout va bien » — quand Chrome est introuvable.** Mesuré
       le 2026-09-09 en cherchant la cause d'A6 : `if (!CHROME) { console.log('Chrome introuvable, rien
       de mesuré.'); process.exit(0); }` dans 17 fichiers (`preuve-hors-reseau`, `verif-clic`,
       `verif-lexique-clic`, `verif-bilan`, `verif-cours-progression`, `python-lecon`, `sql-lecon`,
@@ -410,6 +410,39 @@ Rien d'autre ne compte tant qu'un contrôle vert peut couvrir une faute réelle.
       annonce aujourd'hui « tout est vert » pour **17 étapes qui n'ont pas ouvert une seule page**.
       Passer ces sorties en 2, et **l'éprouver** en rendant le chemin de Chrome introuvable sur une
       copie jetable (la chaîne doit alors dire NON MESURÉ, pas OK).
+
+      **FAIT le 2026-09-09.** *La mesure d'abord, et sans copie jetable* : `tools/preuves/chrome-absent.js`
+      lance les **vrais fichiers** dans un `node` où `fs.existsSync` a été rendu aveugle aux seuls
+      chemins contenant « chrome » ou « chromium ». Aucun outil n'est recopié ni retouché — c'est bien
+      lui qui s'exécute, avec la seule faute injectée qu'on veut éprouver. Premier passage sur les
+      **29 outils du dépôt qui cherchent un binaire Chrome** : **12 disaient déjà NON MESURÉ, 17
+      mentaient** (code 0). Le chiffre du plan est donc reproduit à l'identique — mais **la liste
+      diffère** : les deux `maths/module-3` et `module-4/verif-cours-progression.js` sortaient déjà en
+      2, et le 17ᵉ menteur est **`verif-interpreteur.js --navigateur`**, que personne n'avait nommé :
+      sa `preuveNavigateur()` rendait `null`, `ecartsNav` restait `null`, et l'outil imprimait
+      « RESULTAT : 0 ECART » — vert — alors que la moitié du contrôle qu'on venait de lui demander
+      n'avait pas eu lieu. Corrigés : **16 sorties `exit(0)` → `exit(2)`** avec le message refait
+      (« NON MESURÉ : Chrome introuvable, aucune page n’a été ouverte »), plus le drapeau
+      `navNonMesure` de `verif-interpreteur.js` (bilan « écarts Chrome ⇄ Node : NON MESURÉ » + code 2).
+      **Trouvé en chemin, même mensonge** : `exos-texte.js` et `exos-code.js` sortaient aussi en **0**
+      sur « aucune page : passer des chemins » — passés en 2 eux aussi (c'est ce qui masquait la
+      branche Chrome d'`exos-texte`, seul outil resté rouge au deuxième passage).
+
+      **Éprouvé dans les deux sens, comme la règle l'exige.** Après correction : **29 / 29 rendent 2
+      sans Chrome** (14,7 s). *Contre-épreuve* (`--contre`, 195,3 s) : chaque outil relancé **avec**
+      Chrome, **0 plainte à tort** — 13 étaient encore au travail au bout de 8 s, les 16 autres ont
+      rendu leur verdict sans jamais parler de Chrome. *Épreuve du garde-fou lui-même* : l'ancien
+      `exit(0)` remis dans `preuves/etude-journal.js` → `chrome-absent.js` **rougit** (code 1, « 1 outil
+      en faute : preuves/etude-journal.js (code 0) ») ; faute retirée, fichier **restauré à l'octet
+      près** (comparaison binaire `true`), retour à **0 en faute**. `verif-interpreteur.js --navigateur`
+      relancé avec Chrome : **116 programmes rejoués, 0 écart, code 0** — il n'est pas devenu rouge à
+      tort.
+
+      **Entré dans la chaîne**, sinon rien ne le lance : étape `sanschr` du mode normal (donc aussi
+      `--complet` et `--strict`), 14,6 s, aucun fichier modifié, aucun navigateur démarré.
+      `verif-chaine-declaree.js` l'a d'ailleurs réclamé de lui-même (« 1 problème : non déclaré ») puis
+      est repassé **OK** : la chaîne passe de **53 → 54 étapes** en mode normal et **62 → 63** en
+      `--complet`. `verif.js --rapide` **tout vert, 40 étapes, 150,4 s**.
 
 - [ ] **A8 · Une mutation SURVIVANTE : `verif-exemples.js` reste vert sur une sortie de commentaire
       faussée.** `node tools/verif-chaine-mutations.js` le 2026-09-09 : **9 mutations injectées, 8

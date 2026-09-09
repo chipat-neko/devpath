@@ -45,7 +45,7 @@ var CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
               process.env.LOCALAPPDATA + '/Google/Chrome/Application/chrome.exe'].find(function (p) {
   try { return fs.existsSync(p); } catch (e) { return false; }
 });
-if (!CHROME) { console.log('Chrome introuvable, rien de mesuré.'); process.exit(0); }
+if (!CHROME) { console.log('preuve-hors-reseau.js — NON MESURÉ : Chrome introuvable, aucune page n’a été ouverte.'); process.exit(2); }
 
 var args = process.argv.slice(2);
 var page = args.filter(function (a) { return a.indexOf('--') !== 0; })[0];
