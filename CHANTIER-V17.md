@@ -3532,6 +3532,107 @@ résultat avant le clic.
       `projets-js` 3 (`lecon-02` #5, `lecon-10` #6, `lecon-18` #6), `typescript` 1, `vue` 1,
       `nodejs` 1 (`lecon-22` #5, `z is not defined`, l'un des deux refus de B2b-22).
 
+- [x] **B2b-28 · LES DOUZE DERNIERS, TRAITÉS DANS LE CONTENU ET NON PAR UNE RÈGLE :
+      9 blocs fermés, ZÉRO bouton vivant perdu — 12 blocs en panne → 3, aboutis
+      1 567 → 1 572.**
+
+      **Mesure d'entrée reproduite avant de toucher à quoi que ce soit**
+      (`node tools/verif-js.js --causes`) : **1 599 blocs à bouton, 1 567 aboutis,
+      12 EN PANNE**, « comme à la référence ». Les 12 se répartissaient `js` 6,
+      `projets-js` 3, `nodejs` 1, `typescript` 1, `vue` 1 — un lot HÉTÉROGÈNE, donc sans
+      règle commune à écrire. C'est la voie (1) de B2b-20, celle de B2b-21 et B2b-22 :
+      compléter le fragment DANS LE CONTENU, bloc par bloc.
+
+      **Les 9 blocs fermés, et par quoi.**
+      · `js/lecon-17` #9 (`bouton is not defined`) : le fragment « MAUVAIS » d'un
+      `addEventListener` sans le `querySelector` qui crée le bouton — celui-ci n'existait
+      que dans le bloc « BON », plus bas. La ligne rendue au fragment le fait lire seul, et
+      `BROWSER_ONLY` l'écarte : un anti-patron du DOM n'a rien à promettre au clic.
+      · `js/lecon-17` #11 et #16 — **une correction en a réparé deux.** L'exercice demande
+      de « prédire ce qu'affiche chacun des TROIS appels », or l'appel (b) lève une
+      `TypeError` par construction : le testeur s'arrêtait là, et **(c) n'était JAMAIS
+      visible**. L'appel (b) est passé sous `try/catch` — la prédiction reste entière, la
+      troisième ligne s'affiche enfin. Effet de bord mesuré : le préambule du repli
+      s'exécute désormais jusqu'au bout, donc **#16 (`article is not defined`) aboutit sans
+      qu'on y touche** — sa panne n'était que l'ombre de la précédente.
+      · `js/lecon-59` #2 : le bloc des quatre échappements définissait `escapeHTML` sans
+      jamais le montrer, et lisait un `q` né dans un bloc de navigateur. Il reçoit la valeur
+      que son propre commentaire annonçait (`a&b=c`) et deux `console.log`.
+      · `js/lecon-65` #5 et #6 : c'est **l'angle mort du repli sur `export`**, laissé ouvert
+      et chiffré en B2b-21. La seconde issue qui y était écrite — faire tomber l'`export`
+      dans `preambuleQuiCompile` — **ne s'applique pas** : les blocs déclarants n'ont pas
+      de bouton, ils ne sont donc pas dans le préfixe, et « donner au préambule les blocs
+      SANS bouton » a déjà été mesuré puis REFUSÉ (`0 gain, 2 pertes`, note de
+      `js/runner.js:722`). Reste la première : les deux solutions reçoivent en tête un
+      **rappel du store réduit à ce que l'exercice met en jeu** (Proxy + `EventTarget` +
+      `abonner` isolant). Le #6, qui n'était qu'une phrase (`const desabonner = abonner(()
+      => rendre())`), **démontre maintenant ce qu'il affirme** : l'abonné travaille, on se
+      désabonne, plus rien ne s'affiche.
+      · `projets-js/lecon-10` #6 : la solution demandée est, par l'énoncé même, un EXTRAIT
+      du corps de `rendre()`. Remise dans son contexte (`const cases =
+      grille.querySelectorAll(".case")`), elle se lit seule et l'héritage l'écarte.
+      · `projets-js/lecon-18` #6 : même geste, avec le rappel FIDÈLE du bloc d'origine
+      (`createAnalyser`, `fftSize = 256`, `Uint8Array(frequencyBinCount)`).
+      · `typescript/lecon-19` #1 : la leçon écrivait « ⚠️ signalé : string n'a pas de
+      .reduce ». C'est vrai pour TypeScript, et muet sur ce que le clic produit. Le bloc
+      montre d'abord **l'appel correct** (`20`, mesuré) puis annonce l'erreur telle que
+      l'apprenant la lira — il tombe dans « erreur annoncée » par `annonceCiteLeMessage`,
+      pas par un mot de vocabulaire.
+
+      ⚠️ **LE PIÈGE DE B2b-21 S'EST REPRÉSENTÉ, ET LA MESURE L'A VU EN UNE MINUTE.** Pour
+      illustrer l'échappement, j'avais écrit la charge XSS canonique
+      `&lt;img src=x onerror="alert(1)"&gt;` **dans une chaîne**. `alert` est dans
+      `BROWSER_ONLY` (`js/runner.js:621`), qui cherche ses mots N'IMPORTE OÙ dans le texte :
+      la page est passée de **6 blocs à bouton à 5**, et le bloc que je venais de réparer
+      avait perdu le sien. Charge remplacée par `onerror="exfiltrer()"` : **6 blocs à
+      bouton, 6 aboutis**. La règle vaut toujours — *un mot écrit dans une chaîne ou un
+      commentaire retire un bouton* — et le chiffre qui la trahit est un compteur d'aboutis
+      qui ne monte pas.
+
+      **PREUVE PAR LE NAVIGATEUR** (`verif-clic.js --sorties`, Chrome `file://`, réseau non
+      sollicité), sur les 6 pages touchées : **28 blocs cliqués sur 28 attendus, couverture
+      complète, 0 divergent.** Les sorties relevées, qui sont la seule vérité :
+      `R2` / `TypeError : Cannot read properties of undefined (reading 'nom')` / `undefined` ;
+      `this en JS — 1200 vues` puis deux fois `this expliqué — 8400 vues` ;
+      `&amp;lt;img src=x onerror=&amp;quot;exfiltrer()&amp;quot;&amp;gt;` puis `/search?q=a%26b%3Dc` ;
+      `abonné 1 ✓` / **`Abonné en échec : Error: abonné 2 plante`** / `abonné 3 ✓` ;
+      `rendu, n = 1` ; `20` puis `TypeError: articles.reduce is not a function`. Et les trois
+      blocs débranchés n'ont plus de bouton dans Chrome.
+      ⚠️ **Le commentaire (c) de la solution de `js/lecon-17` a été réécrit SUR CETTE
+      MESURE** : il annonçait `"pas de this"`, le testeur affiche **`undefined`** — le
+      Worker évalue un script, où `this` vaut l'objet global, et non un module ES. La page
+      dit maintenant les deux, en nommant le contexte de chacun.
+
+      **Mesures.** `verif-js.js` : **1 596 blocs à bouton (−3), 1 572 aboutis (+5),
+      3 EN PANNE (−9), 16 erreurs annoncées (+1, décision explicite), 79 non compilables et
+      32 orphelins STRICTEMENT INCHANGÉS**. **Cliquet éprouvé par injection** :
+      `const zzz = null; zzz.x;` en tête d'`algo/lecon-01` → **code 1**, « 4 blocs en panne
+      contre 3 à la référence, un bloc JS qui aboutissait est tombé » ; page restaurée →
+      **code 0**. Chaîne : `verif-html.js` 1 629 fichiers, 0 grave 0 remarque ;
+      `verif-sorties.js` **449 rejoués, 449 identiques au caractère près, 0 divergent** ;
+      `verif-donnees.js` 25 contrôles, 0 erreur — **après régénération de `search-index.js`**
+      (`build-index.js --write --fresh --only=search,searchlite`), que l'invariant I18 avait
+      signalé périmé de 114 octets : six leçons réécrites déplacent l'index.
+      `verif.js --rapide` : **52 étapes, tout vert, 133,7 s**.
+
+      **CE QUI RESTE : 3 BLOCS, ET AUCUN N'EST UN OUBLI.** Deux sont les **refus motivés de
+      B2b-22** — `vue/lecon-06` #2 (`defineStore`, Pinia) et `nodejs/lecon-22` #5 (`z`, zod) :
+      simuler une bibliothèque dont la leçon vend le COMPORTEMENT enseignerait faux. Le
+      troisième, `projets-js/lecon-02` #5, est refusé ICI **pour une raison différente, et
+      elle ouvre une piste chiffrable**. Ce bloc est le chef d'orchestre d'un projet
+      multi-leçons : sa dernière ligne appelle `rendre(etat)`, et `rendre` est déclarée par
+      un bloc PRÉCÉDENT dont le corps écrit dans le DOM (`affichageEl.textContent`). Le
+      compléter demanderait de recopier toute la logique de la leçon 1, ce que la légende de
+      la page dit justement ne pas faire. **Le critère qui l'attraperait est la CLÔTURE
+      TRANSITIVE de l'héritage** : `heriteDuNavigateurParUneFonctionAppelee` (B2b-27) ne
+      regarde que les fonctions que le bloc déclare LUI-MÊME ; il resterait à traiter la
+      fonction héritée d'un bloc précédent dont le corps lit un nom du navigateur. Une
+      variante voisine, mesurable elle aussi : un bloc écarté POUR HÉRITAGE devient-il à son
+      tour un bloc « du navigateur » pour les suivants ? Elle viserait `projets-js/lecon-18`
+      #6 sans toucher au contenu. **Aucune des deux n'est écrite ici : elles exigent d'abord
+      la mesure « combien de blocs visés, combien de VIVANTS », qui est la règle de ce
+      chantier depuis B2b-8.**
+
 - [x] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf

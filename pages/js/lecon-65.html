@@ -312,7 +312,29 @@ etat.nom = undefined;   // "Refus : nom = undefined ignoré", pas de notif
 console.log('etat.nom =', etat.nom); // toujours 'Ada'</code></pre></figure></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Défi</span></div><p>Prouve l'isolation des abonnés&nbsp;: inscris trois abonnés dont le <strong>deuxième</strong> lève une erreur, puis déclenche un changement. Montre que le premier et le troisième réagissent quand même.</p>
-<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">const { etat, abonner } = creerStore({ n: 0 });
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">// Rappel du store de la leçon, réduit à ce que l'exercice met en jeu :
+function creerStore(init) {
+  const bus = new EventTarget();
+  const etat = new Proxy({ ...init }, {
+    set(cible, cle, valeur) {
+      if (cible[cle] === valeur) return true;
+      cible[cle] = valeur;
+      bus.dispatchEvent(new CustomEvent('change', { detail: { cle, valeur } }));
+      return true;
+    },
+  });
+  function abonner(fn) {
+    const handler = (e) =&gt; {
+      try { fn(e.detail); }
+      catch (err) { console.error('Abonné en échec :', err); }
+    };
+    bus.addEventListener('change', handler);
+    return () =&gt; bus.removeEventListener('change', handler);
+  }
+  return { etat, abonner };
+}
+
+const { etat, abonner } = creerStore({ n: 0 });
 
 abonner(() =&gt; console.log('abonné 1 ✓'));
 abonner(() =&gt; { throw new Error('abonné 2 plante'); }); // isolé
@@ -327,9 +349,37 @@ etat.n = 1;
 // notification AVANT le 3e et serait remontée jusqu'à `etat.n = 1`.</code></pre></figure></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Synthèse</span></div><p><code>abonner()</code> renvoie une fonction. À quoi sert-elle, et que risque un composant qui s'abonne à chaque affichage sans jamais l'appeler&nbsp;?</p>
-<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">const desabonner = abonner(() =&gt; rendre());
+<details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">// Rappel du store de la leçon, réduit à ce que l'exercice met en jeu :
+function creerStore(init) {
+  const bus = new EventTarget();
+  const etat = new Proxy({ ...init }, {
+    set(cible, cle, valeur) {
+      if (cible[cle] === valeur) return true;
+      cible[cle] = valeur;
+      bus.dispatchEvent(new CustomEvent('change', { detail: { cle, valeur } }));
+      return true;
+    },
+  });
+  function abonner(fn) {
+    const handler = (e) =&gt; {
+      try { fn(e.detail); }
+      catch (err) { console.error('Abonné en échec :', err); }
+    };
+    bus.addEventListener('change', handler);
+    return () =&gt; bus.removeEventListener('change', handler);
+  }
+  return { etat, abonner };
+}
+
+const { etat, abonner } = creerStore({ n: 0 });
+function rendre() { console.log('rendu, n =', etat.n); }
+
+const desabonner = abonner(() =&gt; rendre());
+etat.n = 1;   // "rendu, n = 1" : l'abonné travaille
+
 // ... plus tard, quand le composant disparaît :
 desabonner(); // retire l'écouteur : plus de fuite
+etat.n = 2;   // plus rien ne s'affiche : l'abonné est parti
 
 // Sans cet appel, chaque montage ajoute un abonné DE PLUS jamais retiré :
 // la liste enfle, les anciens callbacks continuent de s'exécuter (et
