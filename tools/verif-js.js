@@ -58,18 +58,21 @@ function lireMotif(nom) {
 }
 var BROWSER_ONLY = lireMotif('BROWSER_ONLY');
 
-/* La seconde règle du bouton est une FONCTION, pas un motif : un bloc qui parse
-   entièrement en JSON est un fichier de données, pas un programme. Elle est lue dans
-   runner.js pour la même raison que BROWSER_ONLY — ce vérificateur doit décider
-   exactement comme le navigateur, sinon il mesure autre chose. */
-var estUnFichierJson = (function () {
+/* Les autres règles du bouton sont des FONCTIONS, pas des motifs : un bloc qui parse
+   entièrement en JSON est un fichier de données, et un bloc qui appelle `test("…")` est
+   une suite de tests que seul un lanceur sait exécuter. Elles sont lues dans runner.js
+   pour la même raison que BROWSER_ONLY — ce vérificateur doit décider exactement comme le
+   navigateur, sinon il mesure autre chose. */
+function lireFonction(nom) {
   var src = fs.readFileSync(path.join(RACINE, 'js', 'runner.js'), 'utf8');
-  var i = src.indexOf('function estUnFichierJson(texte) {');
-  if (i < 0) throw new Error('estUnFichierJson introuvable dans js/runner.js');
+  var i = src.indexOf('function ' + nom + '(texte) {');
+  if (i < 0) throw new Error(nom + ' introuvable dans js/runner.js');
   var j = src.indexOf('\n  }', i);
-  if (j < 0) throw new Error('fin de estUnFichierJson introuvable');
+  if (j < 0) throw new Error('fin de ' + nom + ' introuvable');
   return eval('(' + src.slice(i, j + 4) + ')');
-})();
+}
+var estUnFichierJson = lireFonction('estUnFichierJson');
+var estUneSuiteDeTests = lireFonction('estUneSuiteDeTests');
 
 function dec(s) {
   return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
@@ -161,7 +164,7 @@ fichiers.forEach(function (f) {
     if (!code) return;
     /* Même règle que runner.js : un bloc qui touche au navigateur ou à Node n'a pas
        de bouton, il ne compte donc ni dans les réussites ni dans les échecs. */
-    if (BROWSER_ONLY.test(code) || estUnFichierJson(code)) { ecartes++; return; }
+    if (BROWSER_ONLY.test(code) || estUnFichierJson(code) || estUneSuiteDeTests(code)) { ecartes++; return; }
     total++;
     parCours[cours] = parCours[cours] || { total: 0, ok: 0, annoncees: 0 };
     parCours[cours].total++;

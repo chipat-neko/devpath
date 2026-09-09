@@ -69,6 +69,27 @@
     try { JSON.parse(t); return true; } catch (e) { return false; }
   }
 
+  /* UNE SUITE DE TESTS N'EST PAS UN PROGRAMME (2026-09-09, point B2b-1).
+     `test("...", ...)`, `describe`, `it`, `beforeEach` : ces noms ne sont pas fournis par
+     JavaScript, c'est un LANCEUR qui les injecte (`node --test`, Jest, Vitest, Mocha). Dans
+     le Worker, il n'y a pas de lanceur : le bouton ne rendait qu'un
+     « ReferenceError: test is not defined » — 34 blocs, deuxieme cause d'echec du site.
+     Le motif exige un DEBUT D'INSTRUCTION (debut de ligne, indentation permise) suivi d'un
+     LIBELLE entre guillemets : `test` cite dans une phrase de commentaire, ou une methode
+     `obj.test(x)`, ou un appel `test(valeur)` sans libelle, ne retirent aucun bouton.
+     GARDE : si le bloc DEFINIT lui-meme son harnais (`function test(...)`, `const it = ...`),
+     c'est un programme autonome qui s'execute tres bien — on ne l'ecarte pas. Aucun bloc du
+     site n'est dans ce cas aujourd'hui, la garde protege l'avenir.
+     Impact mesure AVANT ecriture, en EXECUTANT chaque bloc designe : 36 blocs vises,
+     36 deja en panne, ZERO vivant.
+     ⚠️ Fonction LUE par `tools/verif-js.js`, jamais recopiee. */
+  function estUneSuiteDeTests(texte) {
+    var t = String(texte);
+    if (!/(?:^|\n)[ \t]*(?:test|describe|it|beforeEach|afterEach|beforeAll|afterAll)\s*\(\s*['"`]/.test(t)) return false;
+    if (/(?:function|const|let|var)\s+(?:test|describe|it)\s*[=(]/.test(t)) return false;
+    return true;
+  }
+
   /* `import` et `export` en TETE DE LIGNE (2026-09-09, point B2 du chantier V17) : un
      module ES ne s'evalue pas dans le Worker, qui recoit du script classique — le bouton
      rendait « Cannot use import statement outside a module », premiere cause d'echec du
@@ -806,7 +827,8 @@
       var sql = block.querySelector("code.language-sql");
 
       if (js) {
-        if (BROWSER_ONLY.test(js.textContent) || estUnFichierJson(js.textContent)) {
+        if (BROWSER_ONLY.test(js.textContent) || estUnFichierJson(js.textContent) ||
+            estUneSuiteDeTests(js.textContent)) {
           block.setAttribute("data-runner", "skip");
           return;
         }

@@ -1000,6 +1000,74 @@ résultat avant le clic.
       **9 `HTMLElement is not defined`** (du DOM que `BROWSER_ONLY` ne nomme pas encore).
       Une case par lot de cours ; commencer par `test is not defined`, le plus homogène.
 
+- [x] **B2b-1 · Les suites de tests : 36 blocs écartés, ZÉRO vivant retiré — 339 blocs en panne → 303.**
+
+      **Mesure reproduite avant de toucher à quoi que ce soit** (`node tools/verif-js.js --causes`) :
+      1 855 blocs avec bouton, 534 écartés, **1 481 aboutis, 33 erreurs annoncées, 2 non concluants,
+      339 EN PANNE** — identique au chiffre laissé par B2a, donc le gisement n'avait pas bougé. Première
+      cause : **34 `ReferenceError: test is not defined`**. Ce sont des suites écrites pour un LANCEUR
+      (`node --test`, Jest, Vitest, Mocha) : `test`, `describe`, `it`, `beforeEach` ne sont pas des noms
+      de JavaScript, c'est le lanceur qui les injecte. Dans le Worker il n'y a pas de lanceur, donc le
+      bouton « Tester » ne pouvait rien promettre d'autre qu'une erreur.
+
+      **Le critère a été MESURÉ avant d'être écrit, en EXÉCUTANT chaque bloc qu'il désigne** — c'est la
+      leçon de B2a, où le critère du plan (« `data-file` en `.json` ») aurait retiré trois boutons qui
+      marchaient. Critère retenu : un DÉBUT D'INSTRUCTION (début de ligne, indentation permise) suivi de
+      `test|describe|it|beforeEach|afterEach|beforeAll|afterAll` puis d'un LIBELLÉ entre guillemets. Il ne
+      peut donc pas attraper `test` cité dans une phrase de commentaire, ni une méthode `obj.test(x)`, ni
+      un appel `test(valeur)` sans libellé. **Impact : 36 blocs visés, 36 déjà en panne, ZÉRO VIVANT** —
+      2 de plus que les 34 du plan, les deux autres échouant sur `describe`/`it` plutôt que sur `test`.
+      Une **garde** interdit d'écarter un bloc qui définit lui-même son harnais (`function test(…)`,
+      `const it = …`) : mesurée, elle ne change rien aujourd'hui (36 visés dans les deux cas), elle
+      protège l'avenir contre un programme autonome qui nommerait sa fonction `test`.
+
+      ⚠️ **UN CRITÈRE VOISIN A ÉTÉ MESURÉ PUIS REFUSÉ DANS LA MÊME PASSE.** Le plan annonce aussi
+      « 9 `HTMLElement is not defined` — du DOM que `BROWSER_ONLY` ne nomme pas encore ». Le critère
+      naturel (`HTMLElement|customElements|CustomEvent|Element|Node|DOMParser|FormData|Intersection…`)
+      vise **37 blocs dont 11 VIVANTS** : il aurait retiré onze boutons qui marchent, dont
+      `pages/neurones/lecon-12` (59 lignes de sortie), `pages/maths/lecon-12` (51 lignes) et
+      `pages/crypto/lecon-01` (14 lignes) — les mots `Element` et `Node` sont des noms de variables
+      ordinaires. Resserré aux seuls identifiants qui n'existent que dans une page, il vise encore
+      22 blocs **dont 4 vivants**. Il reste donc à faire, avec un critère plus fin : c'est une case à
+      part, pas un ajout à celle-ci.
+
+      **Écriture.** `estUneSuiteDeTests(texte)` dans `js/runner.js`, à côté de `estUnFichierJson`, et
+      branchée dans la même condition que `BROWSER_ONLY`. Côté outil, `tools/verif-js.js` la **LIT dans
+      `runner.js`** au lieu de la recopier — le lecteur ad hoc d'`estUnFichierJson` est devenu une
+      fonction `lireFonction(nom)`, pour que la prochaine règle n'ait pas à dupliquer ce code.
+
+      **Mesure finale : 1 819 blocs avec bouton, 570 écartés (+36), 1 481 aboutis (81,4 %), 33 annoncées,
+      2 non concluants, 303 EN PANNE.** Le nombre d'aboutis est **inchangé à l'unité près** : 1 481 avant,
+      1 481 après. Cliquet descendu à 303 (`--fixer`), `verif-js.js` sort en **0**.
+
+      **Preuve par le navigateur** (le vérificateur n'exécute pas `runner.js` : seul un vrai Chrome dit ce
+      que l'apprenant voit), `file://`, comptage de `data-runner` dans le DOM rendu, sur 7 pages — les 4
+      touchées et **3 témoins**. Règle neutralisée puis remise, le fichier restauré à l'octet près
+      (md5 vérifié) :
+
+      | page | avant | après |
+      |---|---|---|
+      | `tests/lecon-02` | 6 boutons | **2** |
+      | `tests/lecon-04` | 5 boutons | **2** |
+      | `tests/lecon-07` | 7 boutons | **5** |
+      | `api/lecon-13` | 2 boutons | **0** |
+      | `formats/lecon-02` (témoin B2a) | 2 boutons | **2** |
+      | `js/lecon-01` (témoin) | 9 boutons | **9** |
+      | `algo/lecon-01` (témoin) | 9 boutons | **9** |
+
+      **40 boutons → 29 : 11 boutons morts retirés, et pas un seul témoin entamé.** 0 URL distante dans
+      le DOM rendu.
+
+      **Non-régression** : `verif-html.js` 1 629 fichiers, **0 grave / 0 attention** ; `verif-donnees.js`
+      25 contrôles, **0 erreur** ; `verif.js --rapide` **40 étapes, tout vert, 136,8 s** ;
+      `node --check` sur `js/runner.js` et `tools/verif-js.js`. Aucune URL vers un CDN dans les deux
+      fichiers touchés (grep = 0).
+
+      **Reste au gisement : 303.** Les causes de tête sont maintenant 24 `await is only valid in async`,
+      16 `app is not defined`, 15 `Unexpected token`, 12 `db is not defined`, 9 `HTMLElement is not
+      defined`. Par cours : `js` 102, `projets-js` 34, `html` 29, `algo` 28, `nodejs` 26, `securite` 17,
+      `patterns` 13, `tests` 12, `vue` 11, `nosql` 10.
+
 - [ ] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que
       ces deux-là. `verif-sorties.js:61` ne regarde que `language-javascript`. Les neuf
