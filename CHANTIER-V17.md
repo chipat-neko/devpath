@@ -4496,6 +4496,13 @@ affiché à l'apprenant — et l'audit a montré que la cause est presque toujou
       recomptant l'index au commit `e61edec`), écart réel de +0,15 %. Réassembler les deux
       (`assembler.js`, `mesures.js`) **et étendre les deux preuves aux blocs de mesures**, sans quoi
       elles rederiveront au prochain commit de contenu.
+      ⚠️ **MESURE REFAITE LE 2026-09-10, APRÈS LES POINTS B4b / C1 / C2** — et elle a encore
+      bougé, ce qui est exactement le symptôme : `mesure-langages.js` rend maintenant
+      **13 176 blocs, 6 558,1 Ko, 10 614 blocs d’au moins 5 lignes, neutralisation 27,9 %**,
+      là où le plan relevait 13 175 / 6 543,4 / 10 609. La page, elle, publie toujours
+      13 174 / 6 519,3 / 10 610 / 27,8 %. Ne pas recopier les chiffres du plan : **relancer**
+      `node tools/etudes/inconnu/mesure-langages.js` au moment de réassembler, sans quoi la page
+      sera périmée le jour même de sa correction.
 
 - [ ] **C4 · `pages/examen.html` annonce « plus de 3000 questions » ; la banque en contient 6 151.**
       Corriger, et rattacher l'annonce à une mesure plutôt qu'à un nombre écrit à la main.
