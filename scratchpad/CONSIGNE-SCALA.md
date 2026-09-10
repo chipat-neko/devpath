@@ -32,6 +32,12 @@ cochait « la deuxième plus longue ».
 ⚠️ **SIMULE AVANT D'ÉCRIRE.** Compte les caractères en JS (`[...s].length`, un accent compte 1).
 **La moitié des textes proposés sans simulation cassent la fenêtre.**
 
+⚠️⚠️ **UN DISTRACTEUR NE DOIT JAMAIS FAIRE EXACTEMENT LA LONGUEUR DE LA BONNE RÉPONSE.** Ce n'est
+écrit dans aucun en-tête, et ça se déduit du code : `plan-rangs-qcm` teste `plusLong = len > bon`,
+donc à `len === bon` l'option est classée « plus courte » et sa fenêtre s'arrête à `bon − 1` — elle
+est hors bande d'un seul caractère. Un correcteur qui vise « ±3 caractères » tombe dessus tôt ou
+tard : c'est arrivé sur `typescript`, leçon 13.
+
 ⚠️⚠️ **ET NE « CORRIGE » PAS UN RANG QUI TE PARAÎT FAUX.** La cible est **17/17/17/17 sur le
 cours** : la bonne réponse est donc volontairement la plus longue sur 17 questions et la plus
 courte sur 17 autres. Sur `typescript`, **quatre relecteurs sur cinq** ont signalé « la bonne
@@ -150,6 +156,16 @@ des questions sont ouvertes à 100 % — c'est encore la leçon du cours `react`
 
 Règle : **par mot, les quatre options le portent, ou aucune** — appliquée **question par question**.
 Détail complet dans `scratchpad/REGLE-INTRUS-LEXICAL.md`.
+
+⚠️ **LA SEULE MANŒUVRE SÛRE EST L'AJOUT, PAS LE RETRAIT.** Mesuré sur `typescript` : retirer un
+mot pour fermer une configuration 3/4 le fait passer à 2/4… ou à 1/4, ce qui **rouvre la lecture
+PAR EXCÈS**. Trois retouches sur sept ont dû *conserver* un mot qu'on aurait spontanément
+supprimé. Ajoute le mot au quatrième porteur ; ne retire que si tu atteins 0/4.
+
+⚠️ **ET NE CRÉE PAS UNE CONFIGURATION 3/4 DONT L'INTRUS SERAIT LA BONNE RÉPONSE.** Sur
+`typescript`, un correcteur a écarté la formulation naturelle « teste **chaque** rang » parce que
+« chaque » était déjà sur 2 options : l'ajouter en aurait fait 3/4 avec la bonne réponse comme
+intruse — donc l'indice rouvert sur l'option **intouchable**, impossible à rattraper ensuite.
 
 ### (10) Les marques à ne pas ouvrir
 

@@ -60,6 +60,18 @@ La colonne **taux** peut être **sous l'étalon de 25 %** alors que des question
 questions sûres**. **C'est la colonne « sûres » qui décide, pas le taux** — encore la leçon du
 cours `react` : un indice de lot vaut 100 % sur le lot et 25 % sur le site.
 
+## Les deux manœuvres, et une seule est sûre
+
+**AJOUTER le mot au porteur manquant** est la seule opération qui ferme sans rien rouvrir : 3/4
+devient 4/4, 1/4 devient 2/4.
+
+**RETIRER le mot** est piégeux : 3/4 devient 2/4 (bon) *ou* 1/4 (mauvais — la lecture PAR EXCÈS
+s'ouvre). Sur `typescript`, trois retouches sur sept ont dû **conserver** un mot qu'on aurait
+spontanément supprimé, pour cette seule raison. Ne retire que si tu atteins 0/4.
+
+⚠️ **Et ne crée jamais un 3/4 dont l'intrus serait la BONNE réponse** : elle est intouchable, donc
+l'indice devient irrattrapable sans réécrire les trois distracteurs.
+
 ## Ce que l'outil ne dit pas
 
 Un mot-outil commun à trois options **par pur hasard** déclenche la même lecture qu'un mot
