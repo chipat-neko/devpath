@@ -89,6 +89,21 @@ var MUTATIONS = [
 ];
 
 var original = fs.readFileSync(CIBLE, "utf8");
+
+/* ⚠️ LES FINS DE LIGNE, ET UNE MUTATION QUI S'EST ETEINTE EN SILENCE (2026-09-10, F2).
+   `js/execution.js` est ecrit en CRLF -- comme tout fichier que l'outil d'edition de ce
+   projet reecrit, et comme tout l'arbre apres un `git stash`. Or une mutation qui porte
+   sur DEUX lignes ecrit son motif avec un simple "\n" : elle ne matche plus rien, et
+   l'epreuve la comptait « NON APPLICABLE » sans que personne n'aille voir pourquoi. Une
+   faute qu'on ne peut plus injecter, c'est un controle dont on ne sait plus s'il voit.
+   On cherche donc le motif quelles que soient les fins de ligne, et on remplace SUR LE
+   TEXTE REEL -- l'original, lui, est restaure a l'octet pres. */
+function motifSouple(texte) {
+  return new RegExp(texte.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\r?\n/g, "\\r?\\n"));
+}
+function trouve(m) { return motifSouple(m.de).test(original); }
+function applique(m) { return original.replace(motifSouple(m.de), m.vers.replace(/\r?\n/g, "\r\n")); }
+
 function restaurer() {
   try { fs.writeFileSync(CIBLE, original, "utf8"); } catch (e) { /* rien */ }
 }
@@ -120,12 +135,12 @@ console.log("[temoin] sans mutation : verificateur VERT — la mesure a un sens\
 
 var vues = 0, ratees = [], impossibles = [];
 MUTATIONS.forEach(function (m, i) {
-  if (original.indexOf(m.de) === -1) {
+  if (!trouve(m)) {
     impossibles.push(m.nom + " (le texte a muter n'existe plus dans js/execution.js)");
     console.log("[" + (i + 1) + "/" + MUTATIONS.length + "] " + m.nom + " : NON APPLICABLE");
     return;
   }
-  fs.writeFileSync(CIBLE, original.replace(m.de, m.vers), "utf8");
+  fs.writeFileSync(CIBLE, applique(m), "utf8");
   var r = lancerVerif();
   restaurer();
   if (r.code === 1) { vues++; console.log("[" + (i + 1) + "/" + MUTATIONS.length + "] " + m.nom + " : VUE"); }

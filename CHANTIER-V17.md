@@ -5207,8 +5207,50 @@ des heures de travail perdues ou invisibles.
 ## PHASE F — Contrôle final
 
 - [ ] **F1 · Non-régression.** Les vérificateurs verts en `--rapide`, `--complet` et `--strict`.
-- [ ] **F2 · Chaque garde-fou corrigé, éprouvé par injection.** Reprendre un par un les contrôles
+- [x] **F2 · Chaque garde-fou corrigé, éprouvé par injection.** Reprendre un par un les contrôles
       touchés par ce chantier, leur donner une faute, vérifier qu'ils rougissent. Publier le tableau.
+
+      **LE TABLEAU, publié le 2026-09-10.** Chaque ligne a été jouée : le contrôle est mis en
+      face d'une faute fabriquée, on relève ce qu'il dit et son code de sortie, puis on
+      restaure et on vérifie qu'il redevient vert. *Aucune de ces épreuves n'a touché la
+      production : fichiers temporaires, ou fichier réel restauré dans la foulée.*
+
+      | garde-fou | fautes injectées | vues | ce qu'il dit sous injection |
+      |---|---:|---:|---|
+      | **I27** annonce ⇄ mesure (C4) | 3 | **3** | « 6 150 questions » annoncé, 6151 mesuré · source inconnue · annonce sans nombre |
+      | **I19** compteurs affichés (C5) | 8 | **8** | dont « 1 070 → 1540 » qui rougit *aussi*, et un « 99 cours » marqué que I19 ignore et qu'I27 attrape |
+      | **`verif-etudes.js`** (C6) | 6 | **6** | dont un **assembleur cassé** → « n'est pas allé jusqu'à la comparaison », au lieu d'un silence |
+      | **lecture de l'heure de reprise** (D1) | 10 formes + 1 comparaison | **11** | les 4 formes réelles du journal, les pièges de la conversion 12 h, l'écart API/texte de 96 h |
+      | **`Get-RepriseSure`** (D2) | 6 | **6** | reprise d'hier / il y a 30 s / dans 1 min → corrigées ; dans 4 jours et 20 min → laissées |
+      | **`Get-PauseEnCours`** (D3) | 5 | **5** | date future, date passée, la reprise et non l'horodatage, deux fichiers, aucun fichier |
+      | **`Get-VerdictSante`** (D4) | 6 | **6** | dont « réparation impossible → code **2** », là où l'ancien code rendait 0 |
+      | **relecture du prompt** (D5) | 3 | **3** | mauvais plan au point 1 · jeton oublié · signature de mojibake |
+      | **`Test-DrapeauFin`** (D7) | 4 | **4** | aucun drapeau · drapeau vide · drapeau d'un autre état → tous refusés |
+      | **garde d'arrêt volontaire** (D8) | 2 (wrapper **réel**) | **2** | sort en 0,2 s sans lancer un `claude.exe` ; et le contournement explicite journalise |
+      | **`Test-VerrouVivant`** (D10) | 8 | **8** | dont le cas fondateur : même PID, autre heure de démarrage → « RECYCLÉ » |
+      | **TOTAL** | **62** | **62** | code 1 (ou 2) sous chaque injection, code 0 après restauration |
+
+      **ET LA CHAÎNE DES ÉPREUVES EXISTANTES A ÉTÉ RELANCÉE — elle a livré un défaut de
+      plus.** `verif.js --mutations` (16 épreuves, **4 938 s**) : `verif-execution-mutations.js`
+      annonçait *« RESULTAT : LE VERIFICATEUR A DES ANGLES MORTS »* avec pourtant **0 mutation
+      passée inaperçue** — 11 vues sur 12, et la douzième **« NON APPLICABLE : le texte à muter
+      n'existe plus »**. La cause n'était pas un déplacement de code : **`js/execution.js` est
+      écrit en CRLF** (349 lignes, 0 LF seul) et la mutation cherchait son motif de deux lignes
+      avec un simple `\n`. *Une faute qu'on ne peut plus injecter, c'est un contrôle dont on ne
+      sait plus s'il voit.* Le motif est désormais construit avec `\r?\n` et le remplacement se
+      fait sur le texte réel, l'original étant restauré à l'octet près. C'est le piège maison
+      des fins de ligne (l'outil d'édition écrit en CRLF ; `git stash` convertit tout l'arbre)
+      qui avait éteint une épreuve **en silence**. **Après correction : 12 fautes injectées, 12 vues,
+      0 passée inaperçue, 0 non applicable — l'épreuve retrouve sa couverture entière.**
+
+      **CE QUI RESTE OUVERT DE CE MODE, et c'est écrit sans arrondir** : le passage a compté
+      **4 épreuves « en défaut »**, dont celle qu'on vient de corriger. Relancées une par une,
+      `verif-git-graphe-mutations.js` rend **29/29**, `verif-git-commandes-mutations.js`
+      **57/57**, toutes deux en code 0 ; `preuves/execution-ancres-mutations.js` sort en
+      **code 2** (donc « non mesuré », pas « en défaut ») en signalant que *« Tout dérouler »
+      n'atteint pas le dernier pas*. Le relevé nominatif des trois autres n'a pas été refait :
+      un passage complet du mode coûte **82 minutes**, et la sortie de la passe n'a conservé
+      que ses douze dernières lignes. **À reprendre avec `--seul=` sur chacune.**
 - [x] **F3 · Mesure globale.** Blocs SQL et JS en erreur : **124 et 451 au départ**, combien à
       l'arrivée ? Outils hors chaîne : combien au départ, combien à l'arrivée ? Chiffres publiés faux :
       combien restent ?
