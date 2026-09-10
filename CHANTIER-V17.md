@@ -3969,6 +3969,22 @@ résultat avant le clic.
 
       **Reste : 24 échecs** — `algo` 10, `projets-js` 9, `offensive` 5.
 
+      ⚠️ **UN COUP D'ŒIL AU LOT SUIVANT (`offensive`) MONTRE QUE SA CAUSE N'EST PAS LA MÊME, et
+      il vaut mieux le savoir avant de commencer.** `offensive/lecon-07` : l'énoncé HTML de
+      l'exercice 2 demande « le nombre de tours de calcul à un facteur 2^14, puis la durée à
+      10^10 tours/s », et la solution publiée répond exactement à cela (`tours de calcul :
+      3276800000000000` / `duree a 10^10 tours/s : 91 h`, mesuré). Mais l'entrée `data-exos` du
+      même rang porte `expect: "3 mots de 7776 : 39 bits ; 5 mots : 65 bits"` — **un contrat qui
+      appartient à un AUTRE exercice**. C'est la faute déjà trouvée en phase B (13 exercices dont
+      le champ `accept` venait d'un autre énoncé, 8 en `regex` et 5 en `offensive`), reparue ici
+      du côté de `run.expect`. Elle ne se corrige donc PAS comme celle du cours `js` : ici c'est
+      l'entrée `data-exos` qui doit rejoindre l'énoncé, pas la solution.
+      ⚠️ Second constat au passage : l'exercice 3 de cette page est une rédaction en trois
+      phrases, et il porte pourtant un `type:"code"` — vérifier le TYPE de chaque entrée avant
+      d'en corriger l'attendu. Et la sortie de la solution écrit « duree a » sans accents, dans
+      du contenu visible : à corriger aussi (la comparaison, elle, les ignore — `normExo`
+      normalise en NFD puis retire les diacritiques).
+
 - [ ] **B4b · La couverture d'`exos-code.js` varie sans qu'elle rougisse.** Mesurée au point B4 :
       trois passes `--tout` du même dépôt ont jugé 327, 323 et 323 solutions, l'écart tenant
       aux pages où aucun champ n'est trouvé (5, 9, 9) — et la liste change d'une passe à l'autre.
