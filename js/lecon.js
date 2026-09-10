@@ -1228,12 +1228,42 @@
     if (!data || !data.length) return;
     var exercises = document.querySelectorAll(".exercise");
 
+    // Le CAPSTONE (« Projet », « Fil rouge », « Mini-projet ») ferme un cours :
+    // c'est un énoncé long, rendu ailleurs, qui n'a jamais eu de champ de réponse.
+    // Le compter comme un exercice manquant faisait crier l'avertissement ci-dessous
+    // sur des leçons où il n'y avait RIEN à corriger. Mesure du 2026-09-10 sur les
+    // 1 629 pages : 39 leçons en écart, dont 37 pour ce seul motif — et un
+    // avertissement qui crie 37 fois à tort est un avertissement qu'on cesse de lire,
+    // donc un garde-fou qui ment. Les 2 écarts restants (html/lecon-33 et
+    // archi/lecon-12) sont de vrais trous : un exercice noté sans champ de réponse.
+    //
+    // ⚠ La règle est POSITIONNELLE, et deux règles plus simples ont été mesurées puis
+    // écartées : compter les blocs non-capstone donne 51 écarts (archi/lecon-12 place
+    // son capstone en PREMIER, avec une entrée null en face) ; ne compter que les
+    // entrées non nulles en donne 152, car le null « ce bloc n'a pas de champ » est un
+    // choix éditorial présent dans 198 leçons. On se tait donc seulement quand TOUS
+    // les blocs EN EXCÈS (ceux d'indice >= data.length, jamais appariés) sont des
+    // capstones.
+    var enExces = [];
+    for (var iEx = data.length; iEx < exercises.length; iEx++) {
+      var tete = exercises[iEx].querySelector(".exercise__num");
+      var niveau = exercises[iEx].querySelector(".exercise__level");
+      enExces.push(
+        ((tete && tete.textContent) || "") + " " + ((niveau && niveau.textContent) || "")
+      );
+    }
+    var tousCapstones =
+      enExces.length > 0 &&
+      enExces.every(function (libelle) {
+        return /projet|fil rouge|capstone/i.test(libelle);
+      });
+
     // L'appariement se fait par index : toute entrée déclarée au-delà du nombre de
     // blocs .exercise présents dans la page était abandonnée SANS RIEN DIRE. On
     // signale désormais tout écart, pour qu'il cesse d'être invisible — en
     // distinguant la perte réelle (plus d'entrées que de blocs) du simple bloc
     // laissé sans champ de réponse, qui est un choix éditorial courant.
-    if (data.length !== exercises.length && window.console && console.warn) {
+    if (data.length !== exercises.length && !tousCapstones && window.console && console.warn) {
       console.warn(
         "[Syntaxe] " +
           courseId +
@@ -1248,7 +1278,9 @@
             ? "les " +
               (data.length - exercises.length) +
               " entrée(s) en excès ne sont PAS affichées (bloc .exercise manquant dans la page)."
-            : "les blocs en excès restent sans champ de réponse.")
+            : "les " +
+              (exercises.length - data.length) +
+              " bloc(s) en excès restent sans champ de réponse, et ce ne sont pas des capstones.")
       );
     }
 
