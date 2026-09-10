@@ -326,6 +326,42 @@ else { Write-Host ("  ECHEC    purge : " + $nbArchives + " archives, plus que le
 
 Remove-Item $tmpJ -Recurse -Force -ErrorAction SilentlyContinue
 
+# --- 3 octies. LE VERROU ET LE PID RECYCLE (point D10) ------------------------
+# Joue sur un faux verrou, dans un dossier temporaire, avec le PID de CE processus :
+# le verrou de production n'est jamais touche.
+Write-Host "`n--- le verrou anti-chevauchement et le PID recycle (point D10) ---"
+$tmpV = Join-Path $env:TEMP ('verrou-essai-' + [guid]::NewGuid().ToString('N').Substring(0, 8) + '.lock')
+function CasVerrou($titre, $contenu, $attenduVivant) {
+  $script:total++
+  if ($null -eq $contenu) { Remove-Item $tmpV -Force -ErrorAction SilentlyContinue }
+  else { Set-Content -Path $tmpV -Value $contenu -Encoding ascii }
+  $v = Test-VerrouVivant $tmpV
+  if ($v.Vivant -eq $attenduVivant) { Write-Host ("  OK       " + $titre + "  ->  vivant=" + $v.Vivant + " (" + $v.Pourquoi + ")"); $script:ok++ }
+  else { Write-Host ("  ECHEC    " + $titre + "  ->  vivant=" + $v.Vivant + " (" + $v.Pourquoi + "), attendu " + $attenduVivant); $script:ko++ }
+}
+$moi = Get-Process -Id $PID
+$monDemarrage = $moi.StartTime.ToString('yyyy-MM-dd HH:mm:ss')
+
+CasVerrou "aucun verrou" $null $false
+CasVerrou "verrou vide" "" $false
+CasVerrou "PID inexistant" ("pid=999999" + [Environment]::NewLine + "demarre=$monDemarrage") $false
+CasVerrou "PID vivant ET heure de demarrage exacte" `
+  ("pid=$PID" + [Environment]::NewLine + "demarre=$monDemarrage") $true
+# LE CAS QUI FONDE LE POINT : meme PID, mais le processus a demarre a un autre moment.
+CasVerrou "PID RECYCLE (meme numero, autre demarrage)" `
+  ("pid=$PID" + [Environment]::NewLine + "demarre=2020-01-01 00:00:00") $false
+CasVerrou "ancien format (un nombre seul), processus vivant" "$PID" $true
+CasVerrou "ancien format, PID mort" "999999" $false
+
+# Ecrit par la fonction de production, il doit se relire vivant.
+$script:total++
+Write-Verrou $tmpV $PID
+$v = Test-VerrouVivant $tmpV
+$porteHeure = (Get-Content $tmpV -Raw) -match 'demarre='
+if ($v.Vivant -and $porteHeure) { Write-Host "  OK       ecrit par Write-Verrou : relu vivant, et il porte l'heure de demarrage"; $script:ok++ }
+else { Write-Host ("  ECHEC    ecrit par Write-Verrou : vivant=" + $v.Vivant + " porteHeure=" + $porteHeure); $script:ko++ }
+Remove-Item $tmpV -Force -ErrorAction SilentlyContinue
+
 # --- 4. LE BRANCHEMENT, lu dans le wrapper REEL -------------------------------
 # Une lib juste dont personne ne se sert ne corrige rien : on verifie sur le
 # fichier de production qu'il la charge, qu'il passe par la decision, et que

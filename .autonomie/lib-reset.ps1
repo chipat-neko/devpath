@@ -216,6 +216,83 @@ function Get-DescriptionChaine($proj, $chaine, $planCourant) {
   return $txt
 }
 
+# LE VERROU ANTI-CHEVAUCHEMENT, ET LE PID RECYCLE (point D10).
+# Le verrou porte le PID du wrapper : on saute le reveil tant que CE processus vit.
+# Mais Windows RECYCLE les PID. Si le numero du wrapper precedent a ete repris par un
+# autre powershell -- une console ouverte, un script de Noah, un outil du depot -- le
+# controle voit << un powershell vivant >> et saute les reveils jusqu'au plafond de
+# 6 h. L'autonomie se tait alors sans qu'aucune anomalie ne soit levee : le journal
+# dit seulement << SKIP : un reveil precedent tourne encore >>, ce qui est faux.
+#
+# LA PARADE : le verrou porte AUSSI l'heure de demarrage du processus. Deux processus
+# peuvent partager un PID ; ils ne peuvent pas avoir demarre a la meme seconde ET
+# porter le meme numero. Format :
+#     pid=4760
+#     demarre=2026-09-10 06:24:39
+# Un verrou de l'ANCIEN format (un nombre seul) reste accepte avec l'ancienne regle,
+# sinon le premier reveil apres cette correction croirait le verrou mort et
+# demarrerait PAR-DESSUS la passe en cours -- exactement ce qu'il faut eviter.
+function Write-Verrou($lock, $processId) {
+  if (-not $processId) { $processId = $PID }
+  $demarre = ''
+  try { $demarre = (Get-Process -Id $processId -ErrorAction Stop).StartTime.ToString('yyyy-MM-dd HH:mm:ss') } catch {}
+  $lignes = @("pid=$processId")
+  if ($demarre) { $lignes += "demarre=$demarre" }
+  Set-Content -Path $lock -Value ($lignes -join [Environment]::NewLine) -Encoding ascii
+}
+
+# Rend .Vivant, .Pourquoi, .Pid, .AgeMinutes.
+function Test-VerrouVivant($lock) {
+  $res = [pscustomobject]@{ Vivant = $false; Pourquoi = 'aucun verrou'; Pid = 0; AgeMinutes = 0 }
+  if (-not (Test-Path $lock)) { return $res }
+  try { $res.AgeMinutes = [int]((Get-Date) - (Get-Item $lock).LastWriteTime).TotalMinutes } catch {}
+  $contenu = ''
+  try { $contenu = (Get-Content $lock -Raw -ErrorAction Stop).Trim() } catch { $res.Pourquoi = 'verrou illisible'; return $res }
+  if (-not $contenu) { $res.Pourquoi = 'verrou vide'; return $res }
+
+  $mPid = [regex]::Match($contenu, 'pid=(\d+)')
+  $mDem = [regex]::Match($contenu, 'demarre=([0-9\- :]+)')
+  if (-not $mPid.Success) {
+    # ANCIEN FORMAT : un nombre seul, sans heure de demarrage.
+    if ($contenu -match '^\d+$') {
+      $res.Pid = [int]$contenu
+      $p = Get-Process -Id $res.Pid -ErrorAction SilentlyContinue
+      if ($p -and $p.ProcessName -like 'powershell*') {
+        $res.Vivant = $true
+        $res.Pourquoi = 'ancien format : PID vivant, heure de demarrage inconnue'
+      } else { $res.Pourquoi = 'ancien format : PID mort' }
+      return $res
+    }
+    $res.Pourquoi = 'verrou de forme inconnue'
+    return $res
+  }
+
+  $res.Pid = [int]$mPid.Groups[1].Value
+  $p = Get-Process -Id $res.Pid -ErrorAction SilentlyContinue
+  if (-not $p) { $res.Pourquoi = "le processus $($res.Pid) n'existe plus"; return $res }
+  if ($p.ProcessName -notlike 'powershell*') {
+    $res.Pourquoi = "le PID $($res.Pid) est maintenant tenu par $($p.ProcessName) : numero RECYCLE"
+    return $res
+  }
+  if ($mDem.Success) {
+    $attendu = $mDem.Groups[1].Value.Trim()
+    $reel = ''
+    try { $reel = $p.StartTime.ToString('yyyy-MM-dd HH:mm:ss') } catch {}
+    if (-not $reel) {
+      $res.Vivant = $true
+      $res.Pourquoi = "heure de demarrage illisible pour $($res.Pid) : on suppose la passe vivante"
+      return $res
+    }
+    if ($reel -ne $attendu) {
+      $res.Pourquoi = "PID $($res.Pid) RECYCLE : demarre a $reel, le verrou attendait $attendu"
+      return $res
+    }
+  }
+  $res.Vivant = $true
+  $res.Pourquoi = "la passe $($res.Pid) tourne encore"
+  return $res
+}
+
 # LA ROTATION DU JOURNAL (point D9).
 # `journal.log` recevait l'INTEGRALITE de la sortie du modele et n'avait aucune
 # rotation : 622 847 octets, 7 310 lignes, 762 reveils au 2026-09-10, depuis le

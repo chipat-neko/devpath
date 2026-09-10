@@ -50,6 +50,23 @@ else {
   # Sans la lib, aucun drapeau n'est valide : on refait une passe de securite plutot
   # que d'eteindre l'autonomie sur la foi d'un fichier qu'on ne sait pas relire.
   function Test-DrapeauFin($f, $p, $c) { return [pscustomobject]@{ Valide = $false; Pourquoi = 'lib-reset.ps1 absente'; Ecrit = (Get-Date); Empreinte = '' } }
+  # Sans la lib, on retombe sur l'ancienne regle du verrou : PID vivant + nom du
+  # processus. Moins sur, mais il vaut mieux sauter un reveil que d'en lancer deux.
+  function Test-VerrouVivant($lock) {
+    $r = [pscustomobject]@{ Vivant = $false; Pourquoi = 'lib absente, regle simplifiee'; Pid = 0; AgeMinutes = 0 }
+    try { $r.AgeMinutes = [int]((Get-Date) - (Get-Item $lock).LastWriteTime).TotalMinutes } catch {}
+    try {
+      $c = (Get-Content $lock -Raw -ErrorAction Stop).Trim()
+      $m = [regex]::Match($c, '(\d+)')
+      if ($m.Success) {
+        $r.Pid = [int]$m.Groups[1].Value
+        $p = Get-Process -Id $r.Pid -ErrorAction SilentlyContinue
+        if ($p -and $p.ProcessName -like 'powershell*') { $r.Vivant = $true }
+      }
+    } catch {}
+    return $r
+  }
+  function Write-Verrou($lock, $processId) { Set-Content -Path $lock -Value ("pid=$processId") -Encoding ascii }
   function Write-DrapeauFin($f, $p, $c) { Set-Content -Path $f -Value ('date=' + (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) -Encoding ascii }
   function Build-PromptTravail($modele, $proj, $chaine, $plan, $mes) {
     $t = $modele.Replace('@@PLAN@@', $plan).Replace('@@CHAINE@@', 'chaine : ' + ($chaine -join ', '))
@@ -112,21 +129,17 @@ if (Test-Path $marqueurArret) {
 }
 
 if (Test-Path $lock) {
-  $age = (Get-Date) - (Get-Item $lock).LastWriteTime
-  $vivant = $false
-  try {
-    $pidLock = (Get-Content $lock -Raw -ErrorAction Stop).Trim()
-    if ($pidLock -match '^\d+$') {
-      $proc = Get-Process -Id ([int]$pidLock) -ErrorAction SilentlyContinue
-      if ($proc -and $proc.ProcessName -like 'powershell*') { $vivant = $true }
-    } else {
-      # Verrou de l'ancien format (fichier vide) : on retombe sur le delai.
-      if ($age.TotalMinutes -lt 90) { $vivant = $true }
-    }
-  } catch {}
-  if ($vivant -and $age.TotalHours -lt 6) {
-    Log "[$(Stamp)] SKIP : un reveil precedent tourne encore (verrou, $([int]$age.TotalMinutes) min)."
+  # Le verrou porte le PID ET l'heure de demarrage du processus (point D10) : Windows
+  # RECYCLE les PID, et un numero repris par un autre powershell faisait sauter les
+  # reveils jusqu'au plafond de 6 h, en journalisant << un reveil precedent tourne
+  # encore >> -- ce qui etait faux. Voir Test-VerrouVivant dans lib-reset.ps1.
+  $v = Test-VerrouVivant $lock
+  if ($v.Vivant -and $v.AgeMinutes -lt 360) {
+    Log "[$(Stamp)] SKIP : un reveil precedent tourne encore (verrou, $($v.AgeMinutes) min, $($v.Pourquoi))."
     exit 0
+  }
+  if (-not $v.Vivant -and $v.Pourquoi -like '*RECYCLE*') {
+    Log "[$(Stamp)] verrou perime : $($v.Pourquoi). La passe demarre."
   }
 }
 $env:Path = 'C:\Program Files\nodejs;' + $env:Path
@@ -274,7 +287,7 @@ if ($seuilHebdo -gt 0) {
 $debutPasse = Get-Date
 
 New-Item -ItemType File -Path $lock -Force | Out-Null
-Set-Content -Path $lock -Value $PID -Encoding ascii   # le verrou porte le PID : voir plus haut
+Write-Verrou $lock $PID   # PID + heure de demarrage : voir Test-VerrouVivant (point D10)
 if ($modeVerif) {
   Log "[$(Stamp)] ===== reveil autonome -- PASSE DE SECURITE (verification finale) ====="
 } else {

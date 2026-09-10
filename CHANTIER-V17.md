@@ -5079,9 +5079,42 @@ des heures de travail perdues ou invisibles.
       viennent de ce fichier. Elle se déclenchera d'elle-même vers **1 Mo**, soit ~40 jours au
       rythme mesuré.
 
-- [ ] **D10 · Le verrou anti-chevauchement peut prendre un PID recyclé pour la passe précédente** et
+- [x] **D10 · Le verrou anti-chevauchement peut prendre un PID recyclé pour la passe précédente** et
       sauter les réveils jusqu'au plafond de 6 h. Ajouter une vérification de l'heure de démarrage du
       processus, pas seulement de son nom.
+
+      **FAIT le 2026-09-10.** Le verrou portait le PID du wrapper, et le contrôle demandait
+      seulement « ce PID existe-t-il, et est-ce un `powershell*` ? ». Or Windows **recycle**
+      les numéros : une console ouverte, un script de Noah, un outil du dépôt peut hériter du
+      numéro de la passe précédente. Le wrapper aurait alors sauté **tous les réveils jusqu'au
+      plafond de 6 h**, en journalisant *« un reveil precedent tourne encore »* — une phrase
+      fausse, donc une panne qui ressemble à un fonctionnement normal.
+
+      **LA PARADE, et pourquoi c'est celle-là.** Deux processus peuvent partager un PID ; ils
+      ne peuvent pas avoir **démarré à la même seconde** avec le même numéro. Le verrou porte
+      donc `pid=` **et** `demarre=`, et `Test-VerrouVivant` exige les deux. Il nomme aussi le
+      cas où le numéro est passé à un programme d'un autre nom (*« le PID N est maintenant
+      tenu par chrome : numero RECYCLE »*).
+
+      ⚠️ **LE VERROU DE L'ANCIEN FORMAT RESTE ACCEPTÉ**, avec l'ancienne règle. Sans cette
+      précaution, le **premier** réveil après la correction aurait lu un verrou qu'il ne
+      comprend pas, l'aurait cru mort et aurait démarré **par-dessus la passe en cours** —
+      c'est-à-dire deux `claude.exe` dans le même dépôt, exactement ce que le verrou existe
+      pour empêcher. Le cas n'est pas théorique : le verrou de production contenait `4760`,
+      l'ancien format, au moment du travail.
+
+      **ÉPREUVE — 79 cas sur 79** au total, dont **8 pour le verrou**, joués sur un faux
+      verrou avec le PID du processus d'épreuve lui-même : aucun verrou · verrou vide · PID
+      inexistant → **morts** ; PID vivant **et** heure exacte → **vivant** ; **PID vivant mais
+      heure différente** → *« PID 27728 RECYCLE : demarre a 2026-09-10 08:14:10, le verrou
+      attendait 2020-01-01 00:00:00 »* — le cas qui fonde le point ; ancien format vivant →
+      vivant, ancien format mort → mort ; et le verrou écrit par `Write-Verrou` se relit
+      vivant **avec** son heure.
+
+      **ET EN CONDITIONS RÉELLES** : le wrapper de production lancé face au verrou existant
+      (ancien format, PID 4760 vivant) sort en **0,2 s, code 0**, et journalise *« SKIP : un
+      reveil precedent tourne encore (verrou, 110 min, ancien format : PID vivant, heure de
+      demarrage inconnue) »* — il saute, et il **dit sur quoi il se fonde**.
 
 ---
 
