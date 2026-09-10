@@ -5978,6 +5978,162 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
 
       ---
 
+      **37ᵉ COURS DÉTORDU — `swift` (2026-09-10) : 95,2 % → 24,2 %.** Six écrivains en parallèle
+      sur des leçons disjointes, la leçon 18 (quiz + les 12 questions du bilan) tenue à la main,
+      puis **quatre relecteurs adversariaux** et **quatre correcteurs**. **194 distracteurs sur 198
+      réécrits**, dont 137 une seconde fois au rattrapage.
+
+      | indice | avant | après |
+      |---|---:|---:|
+      | la plus longue (couverture 97,0 %) | **95,2 %** | **24,2 %** |
+      | la plus détaillée (rendement 100 %) | 85,2 % | 24,2 % |
+      | le mot technique exclusif | 77,9 % | 26,4 % |
+      | la ponctuation forte en UNION (46 questions) | 77,3 % | 25,0 % |
+      | l'incise entre parenthèses | 69,7 % | 26,8 % |
+      | le point-virgule (seul et restreint) | 68,2 % | 25,0 % |
+      | l'écho de l'énoncé | 58,3 % | 25,0 % |
+      | indice lexical (exploitables / à mettre en forme) | 26 / 66 | **0 / 0** |
+      | rangs de longueur | 64 / 2 / 0 / 0 | **16 / 17 / 15 / 18** |
+
+      Sens INVERSE : **0 alerte sur les 42 stratégies**, pire 26,3 %. Pire stratégie directe :
+      **28,2 %**, sur une couverture de **3,0 %** (2 questions) ; la première à large couverture est
+      « la DEUXIÈME plus longue » à 26,9 %.
+
+      ⚠️⚠️ **LE PLUS GROS ACQUIS N'EST PAS LE COURS : C'EST UN 44ᵉ INDICE, ET IL EST GÉNÉRAL AU
+      SITE. LE MOT FÉTICHE.** Un relecteur a compté à la main que « compilateur » figurait dans
+      **17 distracteurs sur 45** de son lot et **1 bonne réponse sur 15** : écarter les options qui
+      le portent rendait **43,3 %** chez lui, et **100 % sur trois questions** où les trois
+      distracteurs le portaient et la bonne réponse non. Remesuré sur les 66 questions (leçon de
+      `react` : *un relecteur qui mesure sur son lot extrapole faux*) : **33,5 %**, plus trois
+      autres mots au-dessus du seuil — « chaque » 32,4 %, « alors » 30,8 %, « stockage » 28,3 %.
+
+      **AUCUN DES 43 OUTILS NE LE VOYAIT, et la raison est structurelle** : `mesure-biais-qcm`
+      mesure la FORME, `mesure-lexique-qcm` compare les options à la **page**. Personne ne comparait
+      les options **entre elles**. Pire : **c'est notre propre consigne qui le fabrique** — la règle
+      du `k` demande aux écrivains de puiser dans le vocabulaire de la page, et six agents qui
+      écrivent le même jour, sur le même cours, avec la même consigne, convergent vers les mêmes
+      mots-outils. C'est la même famille que l'indice LEXICAL du cours `os` : *la correction
+      fabrique l'indice suivant*.
+
+      Outil livré : **`tools/mesure-mot-fetiche.js`** (mode `--tous` pour les 90 cours). Sur `swift`
+      **4 alertes → 0** ; son pire mot est « langage » à **27,8 %**, ce qui le place **89ᵉ sur 90**,
+      soit le deuxième cours le plus propre du site.
+
+      **MESURE SUR LES 90 COURS — 59 EN PORTENT UN.** Les pires : `groovy` « groovy » (14 bonnes /
+      1 distracteur) **43,5 %** · `graphql` « requête » (14/7) **43,3 %** · `ml` « entraînement »
+      (12/2) **41,3 %** · `erlang` « processus » (12/6) **37,7 %** · `bash` « commande » (11/4) et
+      `ux` « utilisateur » (16/13) **37,5 %** · `markdown` « texte » **36,9 %** · `archi` « métier »
+      **36,8 %**. Le défaut existe sur les cours **déjà fermés** (`lua` 30,7 %, `dataviz` 30,9 %)
+      comme sur les autres.
+
+      ⚠️ **CE QUE JE NE TRANCHE PAS, ET QU'IL FAUDRA DÉCIDER.** La lecture dominante est
+      **RESTREINDRE**, c'est-à-dire que le mot est dans les **bonnes réponses** : c'est le
+      vocabulaire du domaine — la bonne réponse d'une question sur GraphQL parle de « requête ».
+      *Est-ce un biais, ou la définition même d'une bonne réponse ?* La réponse décide s'il faut un
+      cliquet et à quel seuil ; c'est pourquoi l'outil **n'est pas câblé dans `verif.js`** : sans
+      référence figée il ne peut pas échouer, et poser une référence avant d'avoir tranché
+      figerait un seuil arbitraire. **C'est la même question que B3 avait laissée ouverte** sur la
+      densité de ponctuation et le vocabulaire du glossaire.
+
+      **CE QUE LA CONTRADICTION A RENDU** — 102 défauts sur 66 questions, dont :
+      **25 distracteurs devenus VRAIS**, la moitié portant la thèse même de la bonne réponse (le
+      copy-on-write, la définition SwiftPM des *targets* et *products*, « sans effet sur le
+      compteur » qui est exactement ce que fait `weak`, « `async let` les lance en parallèle ») ;
+      **deux questions gagnables sans connaître Swift** (`lecon-03` q1 à **100 %** — les trois
+      distracteurs partageaient une prémisse et deux étaient la même phrase ; `lecon-13` q1 à
+      **50 %** — deux options ne répondaient qu'à un volet de l'énoncé) ; une **explication
+      orpheline** ; et 30 tournures vides fabriquées par le calibrage en caractères.
+
+      **TROIS BONNES RÉPONSES ÉTAIENT FAUSSES** (le champ est « intouchable » pour l'écriture, pas
+      pour la vérité) : `swift.org` présenté comme hébergeant un REPL en ligne ; « `<` n'est pas
+      synthétisé pour les struct/**enum** », faux pour les enums depuis SE-0266 ; « une extension ne
+      peut pas ajouter de propriétés stockées », vrai des seules propriétés **d'instance**. Plus
+      **dix explications**, dont trois enseignaient une contrevérité (un `switch` non exhaustif est
+      une **erreur**, pas un avertissement ; `Identifiable` n'est pas « synthétisée » ; `@Observable`
+      est une **macro**, pas un property wrapper).
+
+      **ET DEUX BLOCS DE CODE QUI NE COMPILAIENT PAS** : `lecon-18` importait `Foundation` au-dessus
+      d'une classe `@Observable` et d'un `remove(atOffsets:)` (Observation et SwiftUI) ; `lecon-14`
+      **commettait dans sa vue racine le piège que la page dénonce trente lignes plus haut et que
+      son propre QCM sanctionne** (`let magasin = Magasin()`). Et le « Piège fréquent » de
+      `lecon-17` affirmait l'inverse de la règle : un property wrapper s'applique bien à une
+      variable locale — ce sont les **paramètres** qui ont attendu Swift 5.5 (SE-0293).
+
+      ⚠️ **COÛT MESURÉ DE CES CORRECTIONS, et c'est la leçon de méthode de la passe : toucher à une
+      bonne réponse ou à un CORPS de leçon ROUVRE l'indice lexical.** Les trois bonnes réponses ont
+      rouvert 2 questions exploitables et 3 à mettre en forme ; les corps en ont rouvert 2 et 3 de
+      plus. **Sept vagues de retouche** des distracteurs pour revenir à 0 / 0 — parce que le
+      dictionnaire de la page, sur lequel se calcule le `k`, change quand le corps change. C'est la
+      généralisation de ce que le cours `c` avait vu une fois.
+
+      **UN AVERTISSEMENT QUI CRIAIT 37 FOIS À TORT EN CACHAIT DEUX QUI DISAIENT VRAI.** Le point B4
+      avait noté le faux positif « 3 exercices pour 4 blocs `.exercise` » (le 4ᵉ est le capstone) et
+      l'avait renvoyé à la phase F : **fait ici**. Mesure sur les 1 629 pages : **39 leçons en
+      écart, 37 pour ce seul motif, et 2 vrais trous** que le bruit rendait invisibles
+      (`html/lecon-33` et `archi/lecon-12`, un exercice noté sans champ de réponse) — comblés.
+      ⚠️ **Deux règles plus simples ont été mesurées puis écartées** : compter les blocs
+      non-capstone donne **51** écarts (pire qu'avant : `archi/lecon-12` met son capstone en
+      *premier*), ne compter que les entrées non nulles en donne **152** (le `null` « ce bloc n'a
+      pas de champ » est un choix éditorial présent dans **198** leçons). La règle juste est
+      **positionnelle** : se taire seulement quand tous les blocs **en excès** sont des capstones.
+
+      **LE CONTENU QUI SE PÉRIME EN ÉTANT PUBLIÉ, sixième récurrence** : `doc/lecon-03` publie les
+      chiffres de conformité du site, que les corrections de `swift` ont périmés d'un coup (42,5 %
+      → **41,6 %** de manquement à S3 ; 2 596 → **2 536** manquements ; 3 507 → **3 567** conformes ;
+      34/89 → **35/89** cours sur S4 ; corpus de l'ancienne clause 2 645 → **2 693**).
+      ⚠️ Piège dans le piège : un remplacement global a aussi touché le **document normatif** publié
+      dans la page — qui doit rester identique à sa référence — et les deux chiffres **datés** du
+      6 septembre, qui ne doivent surtout pas suivre le corpus. Restaurés. `verif-normatif` **75/75**.
+
+      ⚠️ **LIMITE ASSUMÉE DE CETTE PASSE : aucune toolchain Swift sur la machine.** Les corrections
+      de langage sont raisonnées sur les règles et les propositions d'évolution citées (SE-0266,
+      SE-0293, SE-0317), **pas prouvées par exécution** — contrairement à toutes les mesures
+      ci-dessus, obtenues en lançant les outils. C'est le seul point de cette passe où la règle
+      fondatrice du chantier n'a pas pu s'appliquer, et il est écrit plutôt que lissé.
+
+      **Contrôles** : `mesure-qcm-intouchable` **13 atteintes, toutes délibérées et listées** (3
+      bonnes réponses + 10 explications) ; `verif-html` **0** sur 1 629 pages ; `verif-donnees`
+      **0 erreur** sur 26 invariants ; `verif-rendu` sur les pages touchées **0 erreur** (6 avant) ;
+      `verif-etudes` : chaque page est celle de son assembleur ; épreuve par injection
+      `verif-qcm-biais-mutations` **10/10** ; cliquets refigés, **`swift` marqué `traite` — 36 cours
+      verrouillés** ; index `quiz`, `search`, `pieges` régénérés.
+
+      **ÉTAT DU SITE** : **6 151 questions**, **36 cours verrouillés**, **51 cours** restent
+      au-dessus de 60 %. Les plus nocifs, remesurés : `typescript` (68 q, 92,7 %), `scala` (68,
+      91,9 %), `crypto` (68, 89,7 %), `pandas` (65, 93,8 %), `haskell` (66, 92,4 %), `securite`
+      (62, 95,2 %). **Le 38ᵉ cours est `typescript`.** La case reste **décochée**.
+
+      **LE 38ᵉ COURS EST MESURÉ ET SA CONSIGNE EST ÉCRITE — la prochaine passe démarre sur
+      l'écriture, pas sur le diagnostic.** `typescript`, 68 questions sur 20 leçons :
+
+      | indice | réussite | rendement |
+      |---|---:|---:|
+      | la plus longue (couverture **98,5 %**) | **92,6 %** | 94,0 % |
+      | la plus détaillée | 75,1 % | 93,8 % |
+      | **la ponctuation forte en UNION** (41 questions) | 70,2 % | **100 %** |
+      | le mot technique exclusif | 64,0 % | 77,1 % |
+      | l'incise entre parenthèses (34 questions) | 62,9 % | **100 %** |
+      | l'écho de l'énoncé | 61,2 % | 89,5 % |
+
+      Rangs **63 / 3 / 1 / 1** (cible 17/17/17/17), **65 questions à retoucher, 15 425 caractères** ;
+      indice lexical **61 exploitables sur 68**, 63 à mettre en forme.
+
+      ⚠️ **PREMIER COURS OÙ LA CONSIGNE PORTE LE MOT FÉTICHE**, et il en a **sept** au-dessus du
+      seuil, tous du côté des **bonnes réponses** : « erreur » et « vérifier » (8 bonnes / 1
+      distracteur) rendent **33,1 %** à qui RESTREINT son tirage ; « javascript » (7/1) et
+      « valeur » (8/2) **32,4 %** ; « renvoie » 30,9 % ; « compilation » 30,5 % ; « types » 30,3 %.
+      La consigne dit ce qu'il faut en faire : **quand c'est la bonne réponse qui porte le mot, on
+      l'AJOUTE aux distracteurs** — le retirer d'eux laisserait la bonne réponse seule à le porter
+      et retournerait l'indice à 100 %.
+
+      ⚠️ **Deux pièges propres au langage, écrits dans la consigne** : en TypeScript, `:` (annotation
+      de type) et `=>` (fonction fléchée) sont **du code**, pas de la ponctuation rédactionnelle —
+      la règle « les quatre ou aucune » s'y applique quand même.
+
+      Consigne réutilisable : `scratchpad/CONSIGNE-TYPESCRIPT.md`.
+
+      ---
+
       ## B4 NE PEUT PAS ETRE COCHEE — verdict inscrit ici le 2026-09-10 par le point E2 du chantier V17
 
       **Ce paragraphe existe pour qu'une passe future ne coche pas B4 par erreur.** Le plan a
