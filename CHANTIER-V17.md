@@ -3906,7 +3906,7 @@ résultat avant le clic.
       ROUGISSANT demande de savoir combien d'exercices chaque page porte vraiment, et c'est la
       dette ouverte en B4b.
 
-- [ ] **B4a · Les 31 solutions publiées que leur propre page refuse — 7 fermées en B4a-1, **24 restent**.** Relevé et inscrit au
+- [ ] **B4a · Les 31 solutions publiées que leur propre page refuse — 7 fermées en B4a-1, 5 en B4a-2, **19 restent**.** Relevé et inscrit au
       point B4 (`tools/preuves/exos-code-connus.json`, mesure du 2026-09-10). Ce ne sont pas
       des défauts de l'outil : la solution repliée est bien recopiée dans le champ, et le juge
       est celui de la page. Trois familles, à traiter séparément et à mesurer une par une :
@@ -3917,7 +3917,12 @@ résultat avant le clic.
       sérialisé, plusieurs lignes, valeur différente) — il faut alors décider laquelle des deux
       a raison, en exécutant. ⚠️ Ne pas corriger en alignant `run.expect` sur ce que la solution
       produit sans l'avoir jugée : c'est parfois la SOLUTION qui est fausse. Une case par cours
-      (`algo` 10, `projets-js` 9, `offensive` 5 ; le cours `js` est fait).
+      (`algo` 10, `projets-js` 9 ; les cours `js` et `offensive` sont faits).
+      ⚠️ **Les deux lots traités ont eu DEUX causes opposées, et aucune n'était dans les trois
+      familles supposées ci-dessus** : dans `js`, l'attendu avait raison et la solution avait tort
+      (B4a-1) ; dans `offensive`, la solution avait raison et c'est l'entrée `data-exos` qui
+      appartenait à un autre exercice (B4a-2). Reproduire le diagnostic AVANT de choisir le sens
+      de la correction est donc la seule méthode fiable — ne présumez pas de la famille.
 
 - [x] **B4a-1 · Les 7 solutions refusées du cours `js` : toutes fermées, et la cause n'était
       pas celle qu'on croyait — c'est la SOLUTION qui ne tenait pas le contrat, pas le contrat
@@ -3984,6 +3989,76 @@ résultat avant le clic.
       d'en corriger l'attendu. Et la sortie de la solution écrit « duree a » sans accents, dans
       du contenu visible : à corriger aussi (la comparaison, elle, les ignore — `normExo`
       normalise en NFD puis retire les diacritiques).
+
+- [x] **B4a-2 · Les 5 solutions refusées du cours `offensive` : toutes fermées, et la cause est
+      l'INVERSE de celle du cours `js` — ici la solution avait raison, et c'est l'entrée
+      `data-exos` qui appartenait à un autre exercice. 24 échecs connus → 19.**
+
+      **La mesure reproduite avant de toucher à quoi que ce soit.** `exos-code.js` sur les cinq
+      pages : **5 solutions REFUSÉES, 0 acceptée, 5 exercices sans solution repliée** (14,6 s).
+      Le relevé se reproduit à l'identique, sortie affichée comprise.
+
+      **Le diagnostic, et pourquoi il retourne la règle de B4a-1.** L'appariement entrée ⇄
+      exercice se fait par INDEX (`js/lecon.js`, `initExos` : `data.forEach(function (entry, i)
+      { … exercises[i] … })`). Or sur ces cinq pages le bloc `data-exos` décrit **trois exercices
+      qui ne sont pas ceux du HTML** : l'énoncé 2 de `lecon-07` demande « le nombre de tours de
+      calcul à un facteur 2^14, puis la durée à 10^10 tours/s », tandis que l'entrée #2 porte
+      `expect: "3 mots de 7776 : 39 bits ; 5 mots : 65 bits"`. **Les cinq solutions ont été
+      exécutées** (console capturé comme le Worker, lignes jointes par `\n`) : leur sortie est
+      **mot pour mot le bloc `solution-exo2.txt` publié en regard**, et elle répond exactement à
+      l'énoncé. C'est donc l'entrée `data-exos` qui rejoint l'énoncé — l'inverse exact du cours
+      `js`, où le `placeholder` énonçait le contrat et où la solution devait s'aligner.
+
+      **Un second défaut, trouvé par une sonde et non à l'œil — et la sonde s'est trompée
+      d'abord.** Une sonde d'appariement (type déclaré ⇄ langage de la solution repliée) donne,
+      sur **4 862 entrées du site, 8 entrées `type:"code"` dont l'exercice de même rang n'offre
+      AUCUNE solution JavaScript** — c'est-à-dire une rédaction déguisée en programme. **Cinq
+      sont ici** (l'exercice 3 de chacune des cinq pages : « décris en trois phrases… », solution
+      en `plaintext`), et ce sont exactement les cinq « exercices sans solution repliée » que
+      l'outil comptait à part, c'est-à-dire NON JUGÉS. ⚠️ Sa première version en annonçait **9** :
+      elle lisait le premier bloc de code du `.exercise`, pas celui du repli, et accusait à tort
+      `data-eng/lecon-04 #4`, dont l'énoncé montre sa ligne CSV AVANT le « Voir une solution ».
+      Corrigée pour employer le repère exact d'`exos-code.js` (`details code.language-javascript`),
+      elle rend 8. La sonde est versée à `tools/preuves/sonde-type-exos.js` et **déclarée dans
+      `tools/hors-chaine.json`** (elle ne rend aucun verdict) : `verif-chaine-declaree.js` compte
+      désormais 14 outils hors chaîne, tous déclarés. **Reste 3 : `doc/lecon-01`, `-02` et `-03`,
+      exercice 3** — trois énoncés de rédaction (« décide ce qu'il faut en faire, et défends ta
+      décision ») sous un `run.expect` chiffré (`39`, `6`, `4`) venu d'un autre exercice, sans
+      corrigé exécutable. C'est la même faute qu'ici, dans un autre cours : dette écrite dans
+      `hors-chaine.json` comme condition pour transformer la sonde en cliquet.
+
+      **Ce qui a été écrit.** Les **15 entrées** des cinq blocs `data-exos` réécrites pour
+      décrire les trois énoncés réellement présents : #1 réaligné (3 des 5 étaient hors sujet —
+      `lecon-07` demandait « le facteur qui compte le plus » là où l'énoncé parle de
+      `Chocolat2024!` ; `lecon-10` et `lecon-11` de même ; ceux de `lecon-08` et `lecon-09`
+      répondaient déjà à leur énoncé et sont gardés mot pour mot), #2 recalé sur l'énoncé avec un
+      `run.expect` **égal à la sortie mesurée**, #3 converti `code` → `text`. Au passage, les
+      `link.label` : **7 des 15 citaient une section « Revoir « … » » qui n'existe dans aucun
+      `<h2>` de la page** (« Quatre mots valent-ils mieux ? », « L'arbre de dépendances »,
+      « L'atteignabilité »…) ; **0 sur 15 après**, contrôlé programmatiquement contre les titres
+      réels. Enfin les **accents du contenu visible** : `duree a` → `durée à`, `altere/accepte/
+      REJETE` → `altéré/accepté/REJETÉ`, `SIGNALE` → `SIGNALÉ`, `fichiers ajoutes hors du depot
+      revu` → accentué, plus deux commentaires de code — dans le `console.log` **et** dans le
+      bloc `.txt` publié en regard, pour qu'ils restent identiques au caractère près. Le script
+      de correction refuse d'écrire si un motif n'apparaît pas exactement le nombre de fois
+      annoncé (règle du motif trop large) ; il a d'ailleurs bloqué au premier essai.
+
+      **PREUVE, dans un vrai Chrome.** `exos-code.js` sur les cinq pages : **5 solutions
+      acceptées, 0 refusée, 0 exercice sans solution repliée, 0 nouveau** (14,9 s).
+      `exos-texte.js` sur les mêmes : **10 réponses tapées, 10 ACCEPTÉES, 0 sans champ** — les
+      dix entrées `text`, dont les cinq rédactions reclassées, sont bien câblées et jugées.
+      `verif-clic.js --sorties` : **23 blocs cliqués sur 23 attendus, couverture complète, 0
+      divergent** (49 s) — dont les cinq sorties réaccentuées, relues telles quelles à l'écran.
+
+      **Non-régression, chiffres à l'appui.** `verif-html.js` 1 629 fichiers, **0 grave / 0
+      attention** ; `verif-sorties.js` **449 rejoués, 0 divergent** ; `verif-js.js` **1 598 blocs
+      à bouton, 1 572 aboutis (98,4 %), 4 en panne — comme à la référence** ; `verif-donnees.js`
+      **25 contrôles, 0 erreur** (2 avertissements préexistants) ; `build-index.js` en
+      comparaison sur les **cinq** cibles : quiz 6 151, flashcards 11 586, antisèches 1 577,
+      search 1 614, search-lite 1 614 — **toutes identiques au fichier cible**, rien à
+      régénérer. Zéro URL de CDN introduite. `exos-code-connus.json` : **24 → 19 entrées**.
+
+      **Reste : 19 échecs** — `algo` 10, `projets-js` 9.
 
 - [ ] **B4b · La couverture d'`exos-code.js` varie sans qu'elle rougisse.** Mesurée au point B4 :
       trois passes `--tout` du même dépôt ont jugé 327, 323 et 323 solutions, l'écart tenant
