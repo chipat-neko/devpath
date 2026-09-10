@@ -23,11 +23,21 @@
  * pas du `language-javascript` (correction/complétion). Ceux-là sont comptés à part,
  * jamais comme conformes.
  *
+ * SA COUVERTURE EST ATTENDUE, PAS CONSTATÉE (point B4b du chantier V17). Le compte
+ * d'exercices jugés variait d'une passe à l'autre — 327, 323, 323 — sans que rien ne
+ * rougisse : la mesure d'une page ouverte trop tôt trouve zéro champ et se lit comme
+ * une page sans exercice. Le nombre d'exercices `type:"code"` / `"regex"` / `"sql"`
+ * est donc RELEVÉ SUR LE DISQUE avant d'ouvrir Chrome, et exigé. C'est la réparation
+ * faite pour `verif-clic.js` au point A3, appliquée ici.
+ *
  * USAGE
  *   node tools/preuves/exos-code.js pages/vue/lecon-03.html …   pages précises
  *   node tools/preuves/exos-code.js --tout                      toutes les leçons à exercice de code
  *   node tools/preuves/exos-code.js --echantillon=12            les 12 plus récemment modifiées
- * CODE DE SORTIE : 1 s'il existe au moins un échec, 2 si rien n'a pu être mesuré.
+ * CODE DE SORTIE : 1 s'il existe au moins un échec NOUVEAU (ou une entrée périmée du
+ * relevé), 2 si la mesure est incomplète — rien mesuré, ou moins d'exercices jugés
+ * que la page n'en déclare. Un « je n'ai pas pu mesurer » n'est pas un « tout va bien »
+ * (doctrine du point A5) et n'est pas non plus une faute de contenu.
  */
 
 var cp = require('child_process');
@@ -83,6 +93,44 @@ function lecons() {
   });
   return out;
 }
+/* ------------------------------------------------- LA COUVERTURE ATTENDUE ------
+   Relevée sur le DISQUE, indépendamment du navigateur : c'est le seul compte qu'un
+   Chrome lent ne peut pas fausser. `js/lecon.js` apparie les entrées du bloc
+   `data-exos` aux blocs `.exercise` PAR INDEX et abandonne les entrées en excès
+   (`if (!entry || !exercises[i]) return;`) : l'attendu s'arrête donc au nombre de
+   blocs `.exercise` présents dans la page, sinon on exigerait des champs que le
+   moteur ne crée pas.
+   TROIS COMPTES DISTINCTS, parce qu'ils ne se jugent pas pareil :
+    · `champs`  — tout ce qui reçoit un champ de saisie, quel que soit le type ;
+                  c'est l'état qu'on ATTEND avant de mesurer.
+    · `stricts` — les `code` / `regex` / `sql`, dont l'absence FAIT ÉCHOUER.
+    · `python`  — comptés à part : leur verdict dépend du chargement de Pyodide
+                  (8,27 Mo), un écart y est signalé mais ne rougit pas. */
+function exosAttendusDe(page) {
+  var vide = { champs: 0, stricts: 0, python: 0, lisible: false };
+  var h;
+  try { h = fs.readFileSync(path.resolve(RACINE, page), 'utf8'); } catch (e) { return vide; }
+  /* La BALISE, pas la chaîne : `pages/etude-moteur-exos.html` PARLE de `data-exos` en
+     toutes lettres avant de le porter, et un `indexOf` y découpait du texte de leçon. */
+  var m = /<script[^>]*\sdata-exos[^>]*>([\s\S]*?)<\/script>/.exec(h);
+  if (!m) return { champs: 0, stricts: 0, python: 0, lisible: true };
+  var donnees;
+  try { donnees = JSON.parse(m[1]); } catch (e) { return vide; }
+  if (!Array.isArray(donnees)) return vide;
+  var nBlocs = (h.match(/class="exercise"/g) || []).length;
+  var out = { champs: 0, stricts: 0, python: 0, lisible: true };
+  donnees.forEach(function (e, idx) {
+    if (!e || idx >= nBlocs) return;
+    out.champs++;
+    /* En passe adversariale, seuls les `regex` et les `sql` sont tapés : le script
+       injecté saute les autres sans rien produire, l'attendu s'y restreint. */
+    if (e.type === 'regex' || e.type === 'sql') out.stricts++;
+    else if (e.type === 'code' && !CONTRE) out.stricts++;
+    if (e.type === 'python') out.python++;
+  });
+  return out;
+}
+
 /* --echantillon=N : les N leçons à exercice de code les plus récemment modifiées
    (2026-09-10, point B4). C'est ce qui fait entrer cette preuve dans `verif.js
    --complet` : sa passe `--tout` ouvre 265 Chrome, le lot en ouvre douze. Le tri et
@@ -174,7 +222,10 @@ var SCRIPT = [
   /* type:"python" : la solution publiée est le bloc `language-python` du <details>. */
   '    else if (entree && entree.type === "python") { const sol = ex.querySelector("details code.language-python"); reponse = sol ? sol.textContent : null; }',
   '    else { const sol = ex.querySelector("details code.language-javascript"); reponse = sol ? sol.textContent : null; }',
-  '    if (reponse == null) { sortie.push({ i: i + 1, etat: "sans-solution" }); continue; }',
+  /* Le TYPE remonte avec chaque ligne : sans lui, un total d'exercices jugés ne peut
+     pas être confronté à l'attendu relevé sur le disque, qui est par type. */
+  '    const genre = (entree && entree.type) || null;',
+  '    if (reponse == null) { sortie.push({ i: i + 1, etat: "sans-solution", type: genre }); continue; }',
   '    champ.value = reponse;',
   '    const statut = ex.querySelector(".exo-try__status");',
   '    ex.querySelector(".exo-try__btn").click();',
@@ -190,6 +241,7 @@ var SCRIPT = [
   '    sortie.push({',
   '      i: i + 1,',
   '      etat: (statut.textContent.startsWith("✓") !== CONTRE) ? "juste" : "echec",',
+  '      type: genre,',
   '      statut: statut.textContent,',
   '      produit: boite ? boite.textContent : "",',
   '    });',
@@ -211,16 +263,29 @@ var SCRIPT = [
     connus = (JSON.parse(fs.readFileSync(path.join(__dirname, 'exos-code-connus.json'), 'utf8')) || {}).echecs || {};
   } catch (e) { connus = {}; }
   var nConnus = 0, nNouveaux = 0;
-  /* ⚠️ SA COUVERTURE VARIE, ET IL NE LE DISAIT PAS (2026-09-10, point B4). Deux passes
-     `--tout` du même dépôt ont rendu 327 puis 323 solutions jugées : la différence tient
-     entière dans les pages où AUCUN champ de code n'a été trouvé (5 puis 9), et la liste
-     de ces pages change d'une fois sur l'autre — `js/lecon-03`, jugée seule, marche très
-     bien. C'est le défaut soldé au point A3 pour `verif-clic.js` : un outil qui juge la
-     moitié de sa cible et sort en 0 se lit comme un outil vert. Le compte est donc
-     AFFICHÉ ; le rendre rougissant demande de savoir combien d'exercices chaque page
-     porte VRAIMENT (les `type:"python"` n'ouvrent leur champ qu'après Pyodide), et
-     c'est la dette écrite au point B4b. */
-  var sansChamp = 0;
+  /* ⚠️ SA COUVERTURE VARIAIT, ET IL NE LE DISAIT PAS (2026-09-10, point B4 ; réparé au
+     point B4b). Trois passes `--tout` du même dépôt ont rendu 327, 323 et 323 solutions
+     jugées : la différence tenait entière dans les pages où AUCUN champ n'était trouvé
+     (5, 9, 9), et la liste changeait d'une fois sur l'autre — `js/lecon-03`, jugée seule,
+     marche très bien. C'était le défaut soldé au point A3 pour `verif-clic.js` : un outil
+     qui juge la moitié de sa cible et sort en 0 se lit comme un outil vert. Désormais le
+     compte attendu est LU DANS LE SOURCE, on attend l'ÉTAT « les champs sont là » au lieu
+     d'une durée fixe, et ce qui manque encore est NOMMÉ page par page puis sort en 2. */
+  var sansChamp = 0, pagesIncompletes = [], nonMesurees = [];
+  var attStricts = 0, vusStricts = 0, attPython = 0, vusPython = 0;
+  /* ⚠️ LES PAGES QU'ON N'A PAS SU MESURER, tenues à part du début à la fin. Une entrée
+     du relevé qui vient d'une de ces pages n'est PAS périmée : elle n'a pas été
+     regardée. Confondre les deux ferait retirer une dette bien réelle au seul motif
+     qu'un Chrome a été lent — l'inverse exact de ce que ce point répare. */
+  var malCouvertes = {};
+  var attenduPar = {};
+  PAGES.forEach(function (pg) {
+    var a = exosAttendusDe(pg);
+    attenduPar[pg] = a;
+    attStricts += a.stricts;
+    attPython += a.python;
+    if (!a.lisible) { nonMesurees.push(pg + ' : bloc data-exos illisible'); malCouvertes[pg] = true; }
+  });
   var debut = Date.now();
 
   for (var p = 0; p < PAGES.length; p++) {
@@ -241,9 +306,29 @@ var SCRIPT = [
         cible = liste.find(function (x) { return x.type === 'page' && x.webSocketDebuggerUrl; });
       } catch (e) { /* Chrome démarre encore */ }
     }
-    if (!cible) { console.log('  ' + page + ' : Chrome n\'a pas répondu'); proc.kill(); continue; }
+    if (!cible) {
+      console.log('  ' + page + ' : Chrome n\'a pas répondu');
+      nonMesurees.push(page + ' : Chrome n\'a pas répondu');
+      malCouvertes[page] = true;
+      proc.kill(); continue;
+    }
     var cx = connecter(cible.webSocketDebuggerUrl);
-    await attendre(1200);
+
+    /* ON ATTEND UN ÉTAT, PAS UNE DURÉE — la règle déjà écrite dans `repli-navigateur.js`
+       et payée trois fois dans ce chantier (B1e, B2a, B5). Les 1 200 ms fixes qui
+       tenaient lieu d'attente suffisent quand la machine est libre ; dans une passe qui
+       ouvre 265 Chrome à la file, elles ne suffisent plus, `initExos()` n'a pas encore
+       posé ses champs, et la page se lit « aucun champ de code trouvé ». On attend donc
+       que le nombre de champs atteigne celui que la page DÉCLARE, plafond 12 s. */
+    var attPage = attenduPar[page] || exosAttendusDe(page);
+    var champsVoulus = attPage.champs, nChamps = -1;
+    for (var w = 0; w < 48; w++) {
+      await attendre(250);
+      nChamps = await cx.evaluer('(()=>{try{if(document.readyState!=="complete")return -1;' +
+        'return document.querySelectorAll(".exo-try__input").length}catch(e){return -1}})()');
+      nChamps = typeof nChamps === 'number' ? nChamps : -1;
+      if (nChamps >= champsVoulus) break;
+    }
 
     /* `awaitPromise: true` est indispensable : le script est asynchrone (il attend le
        Worker), et sans lui Runtime.evaluate rend la promesse elle-même, jamais sa
@@ -252,6 +337,31 @@ var SCRIPT = [
     var lignes = [];
     try { lignes = JSON.parse(brut || '[]'); } catch (e) { lignes = []; }
     if (!lignes.length) { sansChamp++; console.log('  ' + page + ' : aucun champ de code trouvé'); }
+
+    /* LA COUVERTURE DE CETTE PAGE, confrontée à ce que son source déclare. Ce qui manque
+       est NOMMÉ ici, jamais fondu dans un total : un exercice qu'on renonce à juger doit
+       pouvoir être relu. */
+    var stricts = ['code', 'regex', 'sql'];
+    var vusIci = lignes.filter(function (x) {
+      return CONTRE ? (x.type === 'regex' || x.type === 'sql') : stricts.indexOf(x.type) !== -1;
+    }).length;
+    var pyIci = lignes.filter(function (x) { return x.type === 'python'; }).length;
+    vusStricts += vusIci;
+    vusPython += pyIci;
+    var pageIncomplete = vusIci !== attPage.stricts;
+    if (pageIncomplete) {
+      malCouvertes[page] = true;
+      pagesIncompletes.push(page + ' : ' + vusIci + ' / ' + attPage.stricts +
+        ' exercice(s) jugé(s) — ' + nChamps + ' champ(s) dans le DOM pour ' +
+        attPage.champs + ' déclaré(s)');
+    }
+    if (pyIci !== attPage.python) {
+      console.log('  · ' + page + ' : ' + pyIci + ' / ' + attPage.python +
+                  ' exercice(s) python jugé(s)  (Pyodide : signalé, non rougissant)');
+      /* Non rougissant ne veut pas dire « mesuré » : un exercice python non jugé
+         doit quand même protéger ses entrées du relevé contre la péremption. */
+      malCouvertes[page] = true;
+    }
     for (var k = 0; k < lignes.length; k++) {
       var r = lignes[k];
       if (r.etat === 'sans-solution') { sansSolution++; continue; }
@@ -286,6 +396,15 @@ var SCRIPT = [
   }
   console.log('  exercices sans solution repliée ... ' + sansSolution + '  (non jugés)');
   console.log('  pages SANS AUCUN champ trouvé .... ' + sansChamp + '  (rien n\'y a été mesuré)');
+  console.log('  exercices attendus (lus au source) ' + attStricts +
+              (CONTRE ? '  (regex + sql)' : '  (code + regex + sql)'));
+  console.log('  exercices JUGÉS ................... ' + vusStricts +
+    (vusStricts === attStricts ? '   (couverture complète)'
+                               : '   ÉCART DE ' + (attStricts - vusStricts) + ' EXERCICE(S)'));
+  if (attPython) {
+    console.log('  exercices python ................. ' + vusPython + ' / ' + attPython +
+                '  (Pyodide 8,27 Mo : compté à part, ne fait pas échouer)');
+  }
   if (!CONTRE) {
     console.log('  dont ÉCHECS CONNUS ................ ' + nConnus + '  (inscrits dans exos-code-connus.json)');
     console.log('  ÉCHECS NOUVEAUX ................... ' + nNouveaux + '  (seuls ceux-là font échouer)');
@@ -299,11 +418,32 @@ var SCRIPT = [
      vérificateur JavaScript. */
   var perimees = [];
   if (TOUT && !CONTRE && !explicites.length) {
-    Object.keys(connus).forEach(function (c) { if (!vusConnus[c]) perimees.push(c); });
+    Object.keys(connus).forEach(function (c) {
+      if (vusConnus[c]) return;
+      if (malCouvertes[c.split(' #')[0]]) return;
+      perimees.push(c);
+    });
     if (perimees.length) {
       console.log('\n  ⚠ ' + perimees.length + ' entrée(s) de exos-code-connus.json ne sont PLUS en échec :');
       perimees.forEach(function (c) { console.log('      ' + c + '  — à retirer du fichier'); });
     }
   }
-  process.exit((nNouveaux || perimees.length) ? 1 : 0);
+
+  /* TROIS VERDICTS DISTINCTS, et c'est tout l'objet du point B4b : une couverture
+     incomplète n'est PAS un « tout est accepté ». L'outil imprimait « 323 solutions
+     acceptées » après en avoir laissé dix-huit de côté sans le savoir. */
+  if (pagesIncompletes.length) {
+    console.log('\n  PAGES DONT LA COUVERTURE EST INCOMPLÈTE (' + pagesIncompletes.length + ') :');
+    pagesIncompletes.forEach(function (l) { console.log('    ' + l); });
+  }
+  if (nNouveaux || perimees.length) process.exit(1);
+  if (pagesIncompletes.length || nonMesurees.length) {
+    console.log('\n  MESURE INCOMPLÈTE — ' + vusStricts + ' exercice(s) jugé(s) sur ' + attStricts +
+      ' attendu(s)' + (nonMesurees.length ? ', ' + nonMesurees.length + ' page(s) non ouverte(s) : ' +
+      nonMesurees.join(', ') : '') + '.');
+    console.log('  Ce n\'est ni un « toutes les solutions passent » ni un échec de contenu :');
+    console.log('  ces exercices n\'ont pas été jugés.');
+    process.exit(2);
+  }
+  process.exit(0);
 })();

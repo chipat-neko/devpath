@@ -4227,15 +4227,75 @@ résultat avant le clic.
       et son en-tête le dit : toute entrée qui y réapparaît est une solution publiée que sa
       propre page refuse.
 
-- [ ] **B4b · La couverture d'`exos-code.js` varie sans qu'elle rougisse.** Mesurée au point B4 :
-      trois passes `--tout` du même dépôt ont jugé 327, 323 et 323 solutions, l'écart tenant
-      aux pages où aucun champ n'est trouvé (5, 9, 9) — et la liste change d'une passe à l'autre.
-      Le compte est affiché, il ne fait pas échouer. Pour qu'il le fasse il faut une COUVERTURE ATTENDUE,
-      lue dans le source comme `verif-clic.js` le fait pour ses boutons : compter les entrées
-      `type:code`/`regex`/`sql` de la page et exiger qu'autant d'exercices soient jugés.
-      ⚠️ Le cas `type:python` doit être traité à part : son champ n'apparaît qu'après le
-      chargement de Pyodide (8,27 Mo), et l'exiger sans attendre ferait rougir un site juste.
-      Sortir en 2 (« je n'ai pas pu mesurer ») et non en 1, doctrine du point A5.
+- [x] **B4b · La couverture d'`exos-code.js` ne varie plus, et une couverture incomplète
+      ROUGIT : 341 / 341 exercices jugés, deux passes `--tout` rigoureusement identiques.**
+
+      **LA MESURE.** Reproduite avant de toucher : le relevé du point B4 disait 327, 323 et
+      323 solutions jugées sur trois passes du même dépôt, avec 5, 9 puis 9 pages où aucun
+      champ n'était trouvé — et la liste de ces pages changeait d'une fois sur l'autre. La
+      couverture ATTENDUE, relevée sur le DISQUE avant d'ouvrir le moindre Chrome, est de
+      **341 exercices stricts** (302 `code` + 26 `regex` + 13 `sql`) et **25 `python`** sur
+      **265 pages**, pour **872 champs** tous types confondus. Après correction, **deux passes
+      `--tout` successives rendent exactement le même bilan** — 341 / 341 stricts, 25 / 25
+      python, **0 page sans aucun champ**, 363 solutions acceptées, 0 refusée, 3 exercices
+      sans solution repliée — en 721,6 s puis 712,3 s. Le `diff` des deux résumés, durée mise
+      à part, est **vide**.
+
+      **CE QUI CAUSAIT LA VARIANCE, ET QUI N'ÉTAIT PAS LE COMPTAGE.** L'outil attendait
+      **1 200 ms fixes** après la connexion, puis lisait le DOM. C'est assez sur une machine
+      libre ; dans une passe qui ouvre 265 Chrome à la file, `initExos()` n'a pas encore posé
+      ses champs et la page se lit « aucun champ de code trouvé » — un exercice non mesuré
+      qui se compte comme une page sans exercice. C'est le défaut soldé en B1e, B2a et B5, la
+      quatrième fois dans ce chantier : **on attend un ÉTAT, pas une durée**. La boucle
+      attend désormais que le nombre de `.exo-try__input` atteigne celui que la page DÉCLARE
+      (plafond 12 s, pas de 250 ms). Effet second, contre-intuitif : la passe est **plus
+      rapide qu'avant** (721,6 s contre 821,7 s au point B4) tout en jugeant 18 exercices de
+      plus — l'attente fixe était à la fois trop courte pour les pages lentes et trop longue
+      pour les autres.
+
+      **LA COUVERTURE ATTENDUE, LUE COMME `verif-clic.js` LIT SES BOUTONS.** `exosAttendusDe()`
+      relève le bloc `data-exos` **par sa balise** et non par la chaîne `data-exos` — sinon
+      `pages/etude-moteur-exos.html`, qui en PARLE en toutes lettres avant de le porter, fait
+      découper du texte de leçon. Trois comptes distincts, parce qu'ils ne se jugent pas
+      pareil : `champs` (tout ce qui reçoit un champ, l'état qu'on attend avant de mesurer),
+      `stricts` (`code`/`regex`/`sql`, dont l'absence fait échouer), `python` (compté à part).
+      L'attendu s'arrête au nombre de blocs `.exercise` de la page, parce que `js/lecon.js`
+      l. 1256 apparie PAR INDEX et abandonne les entrées en excès : exiger au-delà réclamerait
+      des champs que le moteur ne crée pas. Contrôle statique sur le lot entier : **0 bloc
+      `data-exos` illisible, 0 entrée en excès, 0 cas limite** (aucun `sql` sans `attendu`,
+      aucun `python` sans `run`, aucun `regex` sans `cases` ni sans `ref` — ces trois formes
+      dégradées ne reçoivent pas de textarea et auraient été réclamées en vain).
+
+      **`type:python` TRAITÉ À PART, comme le plan l'exigeait.** Son verdict dépend du
+      chargement de Pyodide (8,27 Mo) : l'écart est imprimé page par page, il **ne fait pas
+      échouer**. Il marque en revanche la page comme mal couverte, ce qui protège ses entrées
+      du relevé contre la péremption — non rougissant ne veut pas dire mesuré. Mesuré ce jour :
+      **25 / 25**, aucun écart.
+
+      **LES TROIS VERDICTS, doctrine du point A5.** Code 1 = un échec de contenu NOUVEAU ou
+      une entrée périmée du relevé. Code **2** = la mesure est incomplète — rien mesuré, page
+      non ouverte, ou moins d'exercices jugés que la page n'en déclare. Code 0 = tout a été
+      jugé et tout passe. Les pages incomplètes sont **NOMMÉES** une par une avec leur écart
+      chiffré, jamais fondues dans un total. Et une entrée du relevé qui vient d'une page mal
+      couverte n'est plus déclarée périmée : elle n'a pas été REGARDÉE, et confondre les deux
+      ferait retirer une dette réelle au seul motif qu'un Chrome a été lent.
+
+      **ÉPREUVE PAR INJECTION, deux fois.** (1) `pages/sql/lecon-02.html`, entrée `sql` privée
+      de son `attendu` : `lecon.js` pose alors un `<input>` au lieu d'un `<textarea>`, le
+      script n'a rien à remplir, l'exercice disparaît sans bruit. Avant, code 0. Après :
+      **code 2**, `0 / 1 exercice(s) jugé(s) — 4 champ(s) dans le DOM pour 4 déclaré(s)`, ce
+      qui pointe exactement le bon diagnostic (le champ existe, il n'est pas du bon type).
+      Restauration → code 0, `1 / 1, couverture complète`. (2) Même page, bloc `data-exos`
+      rendu illisible : **code 2**, `1 page(s) non ouverte(s) : bloc data-exos illisible`.
+      Restauration → `git diff` vide.
+
+      **NON-RÉGRESSION.** `--echantillon=12` (le mode par lequel cette preuve entre dans
+      `verif.js --complet`) : 24 / 24, code 0, 34,8 s. `--contre` : l'attendu se restreint de
+      lui-même aux `regex` + `sql`, seuls types que la passe adversariale tape — 4 / 4, code 0.
+      `verif-html.js` : 1 629 fichiers, 0 problème. `verif-donnees.js` : 0 erreur d'invariant.
+      `verif.js` classait déjà le code 2 en « NON MESURE » et son motif `MESURE INCOMPL`
+      reconnaît la ligne imprimée ici : rien à changer dans la chaîne. Aucune URL de CDN
+      introduite.
 
 
 - [x] **B5 · `verif-rendu.js` attendait une DURÉE, pas un ÉTAT — et il a rendu un
