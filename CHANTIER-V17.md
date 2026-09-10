@@ -5012,10 +5012,33 @@ des heures de travail perdues ou invisibles.
       drapeau périmé est *supprimé*, et `New-Item -ItemType File -Path $okFile` **a disparu**.
       `[Parser]::ParseFile` : 0 erreur.
 
-- [ ] **D8 · `autonomie.ps1` ne regarde jamais le marqueur d'arrêt volontaire au démarrage.** Un
+- [x] **D8 · `autonomie.ps1` ne regarde jamais le marqueur d'arrêt volontaire au démarrage.** Un
       lancement manuel repart donc même quand un arrêt a été demandé — c'est exactement ce qui s'est
       produit le 2026-09-08 à 19:09:08, neuf secondes après un `ARRET MANUEL`. Lire le marqueur au
       démarrage et refuser de partir, sauf drapeau explicite.
+
+      **FAIT le 2026-09-10.** *Mesure reproduite dans le journal* : `ARRET MANUEL` à
+      **19:08:59**, `reveil autonome` à **19:09:08** — **neuf secondes** — et le même jour un
+      second cas à 49 minutes d'écart (arrêt 18:12:39, réveil 19:01:59). Le wrapper ne
+      consultait `arret-volontaire.txt` **qu'à la toute fin**, pour un message d'avertissement.
+
+      **La garde est posée AVANT le verrou anti-chevauchement**, donc avant tout travail :
+      marqueur présent → une ligne au journal citant **le texte de l'arrêt** (donc sa date),
+      et `exit 0`. Drapeau explicite pour passer outre, comme le point le demandait :
+      `$env:SYNTAXE_MALGRE_ARRET = '1'`, jamais persistant.
+
+      **ÉPREUVE EN CONDITIONS RÉELLES — le wrapper de production a été lancé pour de vrai**,
+      ce qui était sans danger *parce que deux gardes se suivent* : la nouvelle, et le verrou
+      qui porte le PID de la passe en cours (vérifié vivant avant l'essai).
+      · marqueur posé → **code 0 en 0,2 s**, journal : *« SKIP : arret volontaire en place
+        (arret d essai … du 2026-09-10 08:08:47). Retirer .autonomie/arret-volontaire.txt
+        pour reprendre. »* — **aucun `claude.exe` supplémentaire lancé** ;
+      · marqueur posé **+ `SYNTAXE_MALGRE_ARRET=1`** → *« … mais SYNTAXE_MALGRE_ARRET=1 : la
+        passe demarre quand meme »*, immédiatement suivie de *« SKIP : un reveil precedent
+        tourne encore (verrou, 104 min) »* — les deux gardes en série, chacune à son tour ;
+      · marqueur retiré dans les deux cas, état rendu intact.
+      Plus **2 contrôles lus dans le wrapper** (`epreuve-reset.ps1`, **66 cas sur 66**) : le
+      marqueur est lu au démarrage, et cette lecture **précède** `if (Test-Path $lock)`.
 
 - [ ] **D9 · `journal.log` n'a aucune rotation** et reçoit l'intégralité de la sortie du modèle : 640 Ko,
       6 693 lignes, 726 réveils. Poser une rotation, et vérifier qu'elle ne casse pas la lecture de

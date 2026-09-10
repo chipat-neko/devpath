@@ -285,6 +285,8 @@ $controles = @(
   @{ quoi = "il n'appelle plus usage-anthropic.js en direct"; motif = "usage-anthropic\.js'\) reset"; present = $false },
   @{ quoi = "l'ancienne lecture d'heure n'y dort plus";   motif = 'Date\.AddHours\(\$h\)\.AddMinutes\(\$min\)'; present = $false },
   @{ quoi = "les 3 replanifications passent par Get-RepriseSure"; motif = '(?s)Get-RepriseSure.*Get-RepriseSure.*Get-RepriseSure'; present = $true },
+  @{ quoi = "l'arret volontaire est lu AU DEMARRAGE"; motif = '(?s)\$marqueurArret = Join-Path \$dir .arret-volontaire\.txt.*?exit 0'; present = $true },
+  @{ quoi = "la garde d'arret precede le verrou anti-chevauchement"; motif = '(?s)arret volontaire en place.*?if \(Test-Path \$lock\)'; present = $true },
   @{ quoi = "le drapeau de fin est juge, pas seulement teste"; motif = 'Test-DrapeauFin \$okFile'; present = $true },
   @{ quoi = "un drapeau perime est SUPPRIME"; motif = 'Remove-Item \$okFile'; present = $true },
   @{ quoi = "le drapeau n'est plus un fichier vide"; motif = 'New-Item -ItemType File -Path \$okFile'; present = $false }

@@ -81,6 +81,26 @@ function Log($texte) {
 # NOUVELLE VERSION : le verrou porte le PID du wrapper. On saute tant que CE
 # processus vit vraiment, quelle que soit sa duree. Plafond de 6 h malgre tout,
 # au cas ou un PID serait recycle par Windows sur un autre processus.
+# L'ARRET VOLONTAIRE EST LU AU DEMARRAGE (point D8 du chantier V17).
+# Le wrapper ne consultait .autonomie/arret-volontaire.txt qu'a la toute fin, pour un
+# message. Un lancement manuel (schtasks /Run) repartait donc malgre l'arret : mesure
+# dans le journal, << ARRET MANUEL >> le 2026-09-08 a 19:08:59 et << reveil autonome >>
+# a 19:09:08 -- NEUF SECONDES apres (et un autre cas 49 minutes apres, a 19:01:59).
+# arret.ps1 pose ce marqueur precisement pour que rien ne redemarre ; le supprimer est
+# ce qui autorise la reprise. Drapeau explicite pour passer outre :
+#   $env:SYNTAXE_MALGRE_ARRET = '1'  (une seule execution, jamais persistant)
+$marqueurArret = Join-Path $dir 'arret-volontaire.txt'
+if (Test-Path $marqueurArret) {
+  $quoi = ''
+  try { $quoi = ((Get-Content $marqueurArret -Raw -ErrorAction Stop) -replace '\s+', ' ').Trim() } catch {}
+  if ($env:SYNTAXE_MALGRE_ARRET -eq '1') {
+    Log "[$(Stamp)] arret volontaire en place ($quoi) mais SYNTAXE_MALGRE_ARRET=1 : la passe demarre quand meme."
+  } else {
+    Log "[$(Stamp)] SKIP : arret volontaire en place ($quoi). Retirer .autonomie/arret-volontaire.txt pour reprendre."
+    exit 0
+  }
+}
+
 if (Test-Path $lock) {
   $age = (Get-Date) - (Get-Item $lock).LastWriteTime
   $vivant = $false
