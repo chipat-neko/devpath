@@ -5172,7 +5172,7 @@ des heures de travail perdues ou invisibles.
       écrit dans la consigne : la couverture se surveille **à la main**, avec
       `node tools/mesure-point-interne.js --traites`.
 
-- [ ] **E2 · Le verdict sur B4, écrit noir sur blanc dans le V16.** L'audit a établi que **B4 ne peut
+- [x] **E2 · Le verdict sur B4, écrit noir sur blanc dans le V16.** L'audit a établi que **B4 ne peut
       pas être cochée** : la cible du plan est **par cours** (longueur ≤ 40 %, aucune stratégie
       exploitable > 60 %), pas globale, et le V16 déclare lui-même la cible globale « hors de portée de
       ce chantier ». État mesuré : **38 cours à ≤ 40 %** (3 243 questions, moyenne pondérée 22,7 %) et
@@ -5181,6 +5181,26 @@ des heures de travail perdues ou invisibles.
       que les cours traités compensent les autres — le piège « un indice de lot vaut 100 % sur le lot et
       25 % sur le site ». Inscrire ce constat dans `CHANTIER-V16.md` pour que la case ne soit pas cochée
       par erreur, avec la liste des 52 cours restants classés par nocivité (questions × taux).
+
+      **FAIT le 2026-09-10.** *Les quatre chiffres de l'audit ont été rejoués sur
+      `tools/qcm-biais-reference.json`, et ils tombent exactement* : **38 cours** à la cible
+      (≤ 40 %) totalisant **3 243 questions, 52,6 % du corpus, moyenne pondérée 22,7 %** ;
+      **52 cours au-dessus**, **2 924 questions, 47,4 % du corpus, moyenne pondérée 91,5 %** ;
+      et parmi ces 52, **ZÉRO** dont la pire stratégie exploitable descend sous 60 %.
+
+      **LE CONSTAT EST ÉCRIT DANS `CHANTIER-V16.md`**, à la fin de la case B4, sous un titre
+      qu'on ne peut pas manquer — *« B4 NE PEUT PAS ETRE COCHEE »* — avec le tableau
+      ci-dessus, la raison (**la cible de B1 est par cours, pas globale** ; le global de
+      55,3 % n'est bas *que* parce que les cours traités compensent les autres — le piège
+      `react`), le coût restant (**2 681 questions devinables** sur 2 924), et **les 52 cours
+      classés par nocivité réelle** (questions × taux de leur pire stratégie), du plus nocif
+      au moins nocif : `swift` 63, `typescript` 63, `scala` 62, `crypto` 61, `haskell` 61,
+      `pandas` 61 … `vscode` 37. Le renvoi vers la commande qui rejoue le classement est
+      donné, pour que le tableau ne devienne pas à son tour un chiffre écrit à la main.
+
+      **ET LE PARAGRAPHE RENVOIE À LA SIXIÈME CONSIGNE** (le POINT INTERNE, point E1) ainsi
+      qu'au fait que **le cliquet ne la voit pas** : les deux points de cette phase se lisent
+      ensemble, là où le travail reprendra.
 
 ---
 

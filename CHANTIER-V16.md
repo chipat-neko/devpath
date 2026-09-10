@@ -5975,6 +5975,96 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       devant `lua` (14 613). Indice lexical **26 exploitables sur 66**, et sa variante INVERSE rend
       déjà **75,7 %**. Consigne : `scratchpad/CONSIGNE-SWIFT.md`, qui porte la **règle de l'écho
       dans sa troisième formulation** et les trois pièges de mesure ci-dessus.
+
+      ---
+
+      ## B4 NE PEUT PAS ETRE COCHEE — verdict inscrit ici le 2026-09-10 par le point E2 du chantier V17
+
+      **Ce paragraphe existe pour qu'une passe future ne coche pas B4 par erreur.** Le plan a
+      lui-même écrit, plus haut, que « B4 ne doit pas promettre la cible : elle doit livrer des lots
+      mesurés » — et la cible de B1 est **par cours** (longueur ≤ 40 %, aucune stratégie exploitable
+      au-dessus de 60 %), **pas globale**. Le chiffre global est trompeur *par construction*.
+
+      **ÉTAT MESURÉ le 2026-09-10** (`tools/qcm-biais-reference.json`, relevé du 2026-09-08, rejoué) :
+
+      | | cours | questions | part du corpus | « la plus longue » pondérée |
+      |---|---:|---:|---:|---:|
+      | **à la cible** (≤ 40 %) | **38** | 3 243 | 52,6 % | **22,7 %** |
+      | **au-dessus** | **52** | 2 924 | **47,4 %** | **91,5 %** |
+
+      Et sur ces 52 cours, **ZÉRO** a sa pire stratégie exploitable sous 60 %. Le global de
+      **55,3 %** est bas **uniquement parce que les cours traités compensent les autres** : c'est
+      exactement le piège mesuré sur `react` — *un indice de lot vaut 100 % sur le lot et 25 % sur le
+      site*. **Une moyenne pondérée n'est pas un critère de fin.**
+
+      **Coût restant, calculé et non arrondi** : **2 681 questions devinables** sur les 2 924 que
+      portent ces 52 cours (chacun jugé sur sa pire stratégie). C'est **plus de deux fois** ce que
+      B3 et B4 ont détordu depuis le début.
+
+      **LES 52 COURS RESTANTS, CLASSÉS PAR NOCIVITÉ RÉELLE** (questions × taux de la pire stratégie,
+      donc le nombre de questions qu'un apprenant qui ne comprend rien devine) — c'est l'ordre dans
+      lequel les prendre :
+
+      | rang | cours | questions | longueur | pire indice | taux | devinables | cumul |
+      |---:|---|---:|---:|---|---:|---:|---:|
+      | 1 | `swift` | 66 | 95.2 % | la plus longue | 95.2 % | 63 | 63 |
+      | 2 | `typescript` | 68 | 92.7 % | la plus longue | 92.7 % | 63 | 126 |
+      | 3 | `scala` | 68 | 91.9 % | la plus longue | 91.9 % | 62 | 188 |
+      | 4 | `crypto` | 68 | 89.7 % | la plus longue | 89.7 % | 61 | 249 |
+      | 5 | `haskell` | 66 | 92.4 % | la plus longue | 92.4 % | 61 | 310 |
+      | 6 | `pandas` | 65 | 93.8 % | la plus longue | 93.8 % | 61 | 371 |
+      | 7 | `clojure` | 66 | 89.4 % | la plus longue | 89.4 % | 59 | 430 |
+      | 8 | `powershell` | 64 | 91.8 % | la plus longue | 91.8 % | 59 | 489 |
+      | 9 | `sass` | 61 | 96.7 % | la plus longue | 96.7 % | 59 | 548 |
+      | 10 | `securite` | 62 | 95.2 % | la plus longue | 95.2 % | 59 | 607 |
+      | 11 | `elixir` | 63 | 91.7 % | la plus longue | 91.7 % | 58 | 665 |
+      | 12 | `go` | 62 | 94.3 % | la plus longue | 94.3 % | 58 | 723 |
+      | 13 | `dart` | 60 | 92.5 % | la plus longue | 92.5 % | 56 | 779 |
+      | 14 | `julia` | 59 | 95.8 % | la plus longue | 95.8 % | 56 | 835 |
+      | 15 | `nosql` | 57 | 99.1 % | la plus longue | 99.1 % | 56 | 891 |
+      | 16 | `perl` | 60 | 92.9 % | la plus longue | 92.9 % | 56 | 947 |
+      | 17 | `vue` | 62 | 90.3 % | la plus longue | 90.3 % | 56 | 1003 |
+      | 18 | `bash` | 56 | 95.5 % | la plus longue | 95.5 % | 54 | 1057 |
+      | 19 | `docker` | 57 | 94.7 % | la plus longue | 94.7 % | 54 | 1111 |
+      | 20 | `lisp` | 55 | 98.2 % | la plus longue | 98.2 % | 54 | 1165 |
+      | 21 | `observabilite` | 56 | 96.4 % | la plus longue | 96.4 % | 54 | 1219 |
+      | 22 | `perf-web` | 57 | 95.6 % | la plus longue | 95.6 % | 54 | 1273 |
+      | 23 | `r` | 63 | 85.7 % | la plus longue | 85.7 % | 54 | 1327 |
+      | 24 | `tests` | 57 | 93.9 % | la plus longue | 93.9 % | 54 | 1381 |
+      | 25 | `pascal` | 59 | 90.4 % | la plus longue | 90.4 % | 53 | 1434 |
+      | 26 | `fsharp` | 54 | 96.8 % | la plus longue | 96.8 % | 52 | 1486 |
+      | 27 | `linux` | 55 | 94.5 % | la plus longue | 94.5 % | 52 | 1538 |
+      | 28 | `objc` | 54 | 95.8 % | la plus longue | 95.8 % | 52 | 1590 |
+      | 29 | `prolog` | 54 | 96.3 % | la plus longue | 96.3 % | 52 | 1642 |
+      | 30 | `vb` | 59 | 88.1 % | la plus longue | 88.1 % | 52 | 1694 |
+      | 31 | `api` | 57 | 89.9 % | la plus longue | 89.9 % | 51 | 1745 |
+      | 32 | `asm` | 57 | 87.7 % | la plus longue | 87.7 % | 50 | 1795 |
+      | 33 | `cloud` | 53 | 92.5 % | la plus longue | 92.5 % | 49 | 1844 |
+      | 34 | `cobol` | 50 | 98.7 % | la plus longue | 98.7 % | 49 | 1893 |
+      | 35 | `erlang` | 54 | 88.9 % | la plus longue | 88.9 % | 48 | 1941 |
+      | 36 | `ml` | 52 | 92.3 % | la plus longue | 92.3 % | 48 | 1989 |
+      | 37 | `reseaux` | 52 | 93.0 % | la plus longue | 93.0 % | 48 | 2037 |
+      | 38 | `wasm` | 50 | 96.0 % | la plus longue | 96.0 % | 48 | 2085 |
+      | 39 | `ada` | 49 | 96.6 % | la plus longue | 96.6 % | 47 | 2132 |
+      | 40 | `fortran` | 54 | 87.0 % | la plus longue | 87.0 % | 47 | 2179 |
+      | 41 | `groovy` | 54 | 87.0 % | la plus longue | 87.0 % | 47 | 2226 |
+      | 42 | `llm` | 48 | 97.9 % | la plus longue | 97.9 % | 47 | 2273 |
+      | 43 | `compilation` | 72 | 52.1 % | la plus detaillee | 61.3 % | 44 | 2317 |
+      | 44 | `patterns` | 45 | 97.8 % | la plus longue | 97.8 % | 44 | 2361 |
+      | 45 | `http` | 48 | 89.6 % | la plus longue | 89.6 % | 43 | 2404 |
+      | 46 | `graphql` | 45 | 93.3 % | la plus longue | 93.3 % | 42 | 2446 |
+      | 47 | `kubernetes` | 48 | 87.5 % | la plus longue | 87.5 % | 42 | 2488 |
+      | 48 | `cicd` | 43 | 93.0 % | la plus longue | 93.0 % | 40 | 2528 |
+      | 49 | `markdown` | 45 | 88.9 % | la plus longue | 88.9 % | 40 | 2568 |
+      | 50 | `formats` | 45 | 84.4 % | la plus longue | 84.4 % | 38 | 2606 |
+      | 51 | `regex` | 44 | 85.8 % | la plus longue | 85.8 % | 38 | 2644 |
+      | 52 | `vscode` | 46 | 81.2 % | la plus longue | 81.2 % | 37 | 2681 |
+
+      *Rejouer ce classement : `node tools/mesure-biais-qcm.js --cours`, ou lire
+      `tools/qcm-biais-reference.json` (champ `cours`, tri sur `questions` fois `pire`).*
+      **Et n'oublier ni la sixième consigne (le POINT INTERNE, ci-dessus), ni le fait que le cliquet
+      ne la voit pas.**
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
