@@ -165,14 +165,73 @@ if (page) {
     traines.join(', '));
 }
 
+/* ---- 6 bis. LA PAGE DE COURS, qu'aucun outil ne lisait (point C2 du V17) ---
+   `pages/doc/cours.html` annonçait « 74 leçons de ce site » quand la mesure en
+   comptait 82, et `lecon-01.html` disait 82. Les deux pages étaient cohérentes à
+   leur écriture (`785940f`) : c'est le corpus qui a bougé sous elles. Le défaut
+   n'était pas le chiffre, c'était le MÉCANISME — `gen.js` n'écrivait que
+   `lecon-<num>.html`, `tools/doc/corps/` n'avait que `l1..l4.html`, et la page
+   qu'on ouvre EN PREMIER n'avait ni gabarit ni contrôle. Elle a maintenant les
+   deux : son gabarit porte des `@@MESURE:…@@`, et ce qui suit vérifie que la
+   page publiée dit bien ce que la mesure dit aujourd'hui.
+   ⚠️ Ce contrôle NE REMPLACE PAS le gabarit : il attrape le cas où quelqu'un
+   modifie `pages/doc/cours.html` à la main sans repasser par `gen.js`, qui est
+   très exactement ce qui s'était produit. */
+console.log('6 bis. La page de cours ⇄ la mesure du corpus');
+{
+  const fCours = path.join(RACINE, 'pages', 'doc', 'cours.html');
+  verdict(fs.existsSync(path.join(__dirname, 'corps', 'cours.html')),
+    'la page de cours a un gabarit sous tools/doc/corps/');
+  const vis = fs.existsSync(fCours)
+    ? fs.readFileSync(fCours, 'utf8').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ')
+    : '';
+  /* Le compte est REFAIT ICI, et non emprunté à `gen.js` : deux implémentations
+     qui tombent sur le même nombre valent mieux qu'une seule vérifiée par
+     elle-même. ⚠️ Pas de drapeau `g` sur ces motifs — `test()` ferait avancer
+     `lastIndex` et une leçon sur deux serait sautée en silence. C'est le piège
+     que `gen.js` neutralise par un reset explicite ; ici on l'évite. */
+  const MOTIFS = [/documentation officielle/i, /\bdoc officielle/i, /\bMDN\b/,
+    /la sp[ée]cification/i, /\bRFC\s?\d{3,5}\b/];
+  const pages = new Set(), coursCites = new Set();
+  for (const f of lib.fichiersLecons()) {
+    const art = fs.readFileSync(f, 'utf8').match(/<article class="prose"[\s\S]*?<\/article>/);
+    if (!art) continue;
+    if (!MOTIFS.some((re) => re.test(art[0]))) continue;
+    const rel = path.relative(lib.RACINE, f).replace(/\\/g, '/');
+    pages.add(rel); coursCites.add(rel.split('/')[1]);
+  }
+  const mille = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  verdict(vis.indexOf(mille(pages.size) + ' leçons de ce site') !== -1,
+    'la page de cours cite le nombre de leçons qui renvoient à un document = ' + pages.size);
+  verdict(vis.indexOf(mille(coursCites.size) + ' cours') !== -1,
+    'la page de cours cite le nombre de cours concernés = ' + coursCites.size);
+  /* Le même relevé que la leçon 1, par le même chemin : deux pages du même cours
+     ne doivent pas pouvoir annoncer deux chiffres différents. */
+  const rel = lib.releve();
+  verdict(vis.indexOf(mille(rel.ligature) + ' titres du site') !== -1,
+    'la page de cours cite le nombre de titres à fragment amputé = ' + rel.ligature);
+}
+
 /* ---- 7. le nombre de contrôles annoncé est le nombre réel ----------------- */
-console.log('7. Le nombre de contrôles annoncé dans la leçon');
-if (page) {
-  const total = ok + ko + 1;                     // +1 : le contrôle en cours
-  const visible = page.replace(/<[^>]*>/g, ' ');
-  verdict(new RegExp('\\b' + total + '\\b(?=[^0-9]{0,40}contrôle)').test(visible) ||
-          visible.indexOf(total + ' contrôles') !== -1,
-    'la leçon annonce bien ' + total + ' contrôles');
+/* ⚠️ ET DANS LA PAGE DE COURS AUSSI (point C2 du V17). Ce contrôle ne lisait que
+   `lecon-01.html` ; `cours.html` annonce le MÊME nombre, dans les mêmes termes,
+   et pouvait le démentir sans que rien ne bouge. Trouvé en éprouvant les quatre
+   contrôles ajoutés juste au-dessus : l'injection « 40 → 39 contrôles » dans la
+   page de cours sortait en 0. Une injection qui ne rougit pas est une lacune,
+   pas une bonne nouvelle. */
+console.log('7. Le nombre de contrôles annoncé dans la leçon et dans la page de cours');
+{
+  const fCours = path.join(RACINE, 'pages', 'doc', 'cours.html');
+  const cibles = [['la leçon', page]];
+  if (fs.existsSync(fCours)) cibles.push(['la page de cours', fs.readFileSync(fCours, 'utf8')]);
+  const total = ok + ko + cibles.filter(function (c) { return c[1]; }).length;  // + ceux-ci
+  for (const [nom, html] of cibles) {
+    if (!html) continue;
+    const visible = html.replace(/<[^>]*>/g, ' ');
+    verdict(new RegExp('\\b' + total + '\\b(?=[^0-9]{0,40}contrôle)').test(visible) ||
+            visible.indexOf(total + ' contrôles') !== -1,
+      nom + ' annonce bien ' + total + ' contrôles');
+  }
 }
 
 console.log('\n' + ok + ' contrôle(s) OK, ' + ko + ' en échec.');

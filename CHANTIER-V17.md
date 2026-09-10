@@ -4438,14 +4438,54 @@ affiché à l'apprenant — et l'audit a montré que la cause est presque toujou
       (`--write --only=search,searchlite` ; `search-lite` inchangé, quiz / flashcards /
       antisèches identiques), aucun BOM, aucune URL de CDN.
 
-- [ ] **C2 · `pages/doc/cours.html` annonce 74 leçons, la mesure dit 82.** `grep -n "74 leçons"` → l.96,
-      dans un callout visible ; `tools/doc/mesures/mentions-doc.js` → **82 leçons, 36 cours, 1 536
-      leçons parcourues** ; et `pages/doc/lecon-01.html` porte la phrase identique avec **82**.
-      `git show 785940f` montre les deux pages cohérentes à l'écriture : c'est une dérive du corpus, pas
-      deux définitions. Cause structurelle : `gen.js` n'écrit que `lecon-<num>.html`, `tools/doc/corps/`
-      ne contient que `l1..l4.html` — **`cours.html` n'a aucun gabarit et n'est lu par aucun outil**.
-      Le mécanisme protège la leçon et laisse dériver la page lue en premier. Passer `cours.html` sous
-      `gen.js`, ou étendre le contrôle de péremption de `verif-doc.js` à ce fichier.
+- [x] **C2 · `pages/doc/cours.html` disait 74 leçons, la mesure en dit 82 — la page passe sous
+      `gen.js` et sous contrôle. `verif-doc.js` : 36 → 41 contrôles, les 5 nouveaux éprouvés
+      par injection, dont un qui a révélé une lacune du contrôle qui existait déjà.**
+
+      **LA MESURE, reproduite.** `grep -n "74 leçons"` → l. 96 de `cours.html`, dans un
+      encadré visible dès l'ouverture du cours. `tools/doc/mesures/mentions-doc.js` :
+      **82 leçons, 36 cours, 1 536 leçons parcourues**. `pages/doc/lecon-01.html` porte la
+      phrase équivalente avec **82** — les deux pages étaient cohérentes à leur écriture
+      (`785940f`), c'est le corpus qui a bougé sous elles.
+
+      **LE DÉFAUT N'ÉTAIT PAS LE CHIFFRE, C'ÉTAIT LE MÉCANISME.** `gen.js` n'écrivait que
+      `lecon-<num>.html` et `tools/doc/corps/` ne contenait que `l1..l4.html` : **la page
+      qu'on ouvre EN PREMIER n'avait ni gabarit ni contrôle**, pendant que les quatre leçons
+      étaient protégées par 36 d'entre eux. Elle a maintenant les deux.
+      **(a)** `tools/doc/corps/cours.html` est son gabarit — la page ENTIÈRE, pas un corps :
+      ce n'est pas une leçon, elle a sa propre structure, et `gen.js` ne la reconstruit pas
+      par `page()`. Trois chiffres y deviennent des marqueurs
+      (`@@MESURE:mentionsLecons@@`, `@@MESURE:mentionsCours@@`, `@@MESURE:ligature@@`), et le
+      même garde-fou que pour les leçons arrête l'assemblage sur un marqueur non résolu.
+      **(b)** `verif-doc.js` gagne une section « 6 bis » qui relit la page publiée et la
+      confronte à la mesure du jour — parce qu'un gabarit ne protège pas de ce qui s'était
+      justement produit : quelqu'un modifie la page à la main sans repasser par `gen.js`.
+      Le compte y est **REFAIT**, pas emprunté à `gen.js` : deux implémentations qui tombent
+      sur le même nombre valent mieux qu'une seule vérifiée par elle-même. ⚠️ Et sans le
+      drapeau `g` sur les motifs — `test()` fait avancer `lastIndex` et sauterait une leçon
+      sur deux en silence, piège que `gen.js` neutralise, lui, par un reset explicite.
+
+      ⚠️ **CE QUE L'ÉPREUVE PAR INJECTION A TROUVÉ, ET QU'AUCUNE RELECTURE N'AURAIT VU.**
+      Cinq injections, toutes faites **sur la page publiée**, c'est-à-dire dans le scénario
+      exact du défaut. Quatre ont rougi du premier coup (82 → 74 leçons ; 36 → 35 cours ;
+      56 → 55 titres ; gabarit retiré). **La cinquième est sortie en 0** : le contrôle du
+      nombre de contrôles annoncé ne lisait que `lecon-01.html`, alors que `cours.html`
+      annonce le MÊME nombre dans les mêmes termes — et pouvait donc le démentir sans que
+      rien ne bouge. Il lit désormais les deux pages, et l'injection `41 → 40` dans la page
+      de cours sort en 1. **Une injection qui ne rougit pas est une lacune, pas une bonne
+      nouvelle** — c'est la deuxième fois dans ce chantier qu'un contrôle est trouvé en
+      éprouvant un autre contrôle.
+
+      **APRÈS.** `verif-doc.js` : **41 contrôles OK, 0 en échec** (36 avant), et le nombre
+      annoncé mis à jour dans les deux gabarits. `cours.html` publie **82 leçons / 36 cours**.
+      Les cinq vérificateurs du cours `doc` en 0 (`doc`, `recherche`, `vocab`, `normatif`,
+      `lexique-clic`), `verif-html.js` 0 problème, `verif-donnees.js` 0 erreur d'invariant,
+      aucun BOM, aucune URL de CDN.
+      ⚠️ **Et une dette d'outillage soldée au passage** : `verif-donnees.js` a signalé
+      **I18 — 2 index divergents**, dont `search-index.js` pour **+1 octet**. Cause : au point
+      C1 l'index avait été régénéré avec `--write --only=…` mais **sans `--fresh`**, qui
+      seul reconstruit à neuf au lieu de reprendre l'ancien. Les cinq index régénérés
+      `--write --fresh` ; I18 revient à 0.
 
 - [ ] **C3 · Les deux études de cas dont le bloc de sortie a dérivé.** `pages/etude-inconnu.html` :
       **cinq** valeurs ont dérivé, pas trois (13174 → 13175 blocs, 6519.3 → 6543.4 Ko, 10610 → 10609,

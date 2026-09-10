@@ -877,6 +877,31 @@ function remplirDocRang(corps, D) {
       .replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;|&#\d+;/gi, ' ').replace(/\s+/g, ' ').trim();
     console.log('écrit ' + cible + '  ' + Math.round(html.length / 1024) + ' Ko, ' + visible.split(/\s+/).length + ' mots visibles');
   }
+  /* ------------------------------------------------ LA PAGE DE COURS AUSSI ---
+     Point C2 du chantier V17. `cours.html` n'avait AUCUN gabarit et n'était lu
+     par aucun outil : le mécanisme protégeait les quatre leçons et laissait
+     dériver la page qu'on ouvre EN PREMIER. Elle annonçait « 74 leçons » quand
+     la mesure en comptait 82, et `lecon-01.html`, elle, disait 82 — les deux
+     pages étaient cohérentes à leur écriture (`785940f`), c'est le corpus qui a
+     bougé sous elles. Elle passe donc par le même remplissage que les leçons.
+     Elle N'EST PAS reconstruite par `page()` : ce n'est pas une leçon, elle a sa
+     propre structure, et son gabarit est la page entière. */
+  {
+    const srcCours = path.join(__dirname, 'corps', 'cours.html');
+    if (fs.existsSync(srcCours)) {
+      const brut = remplirDocRang(remplirMesures(fs.readFileSync(srcCours, 'utf8')), DOCRANG);
+      const resteC = brut.match(/@@[A-Z]+:[^@]*@@/);
+      if (resteC) {
+        console.error('ARRÊT : marqueur non résolu « ' + resteC[0] + ' » dans cours.html.');
+        process.exit(1);
+      }
+      const cibleC = path.join(sortie, 'cours.html');
+      fs.writeFileSync(cibleC, brut, 'utf8');
+      console.log('écrit ' + cibleC + '  ' + Math.round(brut.length / 1024) + ' Ko');
+    } else {
+      console.log('corps absent, cours.html non générée');
+    }
+  }
   console.log('lignes de sortie insérées : ' + JSON.stringify(MESURES));
   const lent = Object.keys(DUREES).sort(function (a, b) { return DUREES[b] - DUREES[a]; }).slice(0, 3);
   console.log('le plus lent : ' + lent.map(function (n) { return n + ' ' + DUREES[n] + ' ms'; }).join(', ') +
