@@ -3906,7 +3906,33 @@ résultat avant le clic.
       ROUGISSANT demande de savoir combien d'exercices chaque page porte vraiment, et c'est la
       dette ouverte en B4b.
 
-- [ ] **B4a · Les 31 solutions publiées que leur propre page refuse — 7 fermées en B4a-1, 5 en B4a-2, 10 en B4a-3, **9 restent** (toutes dans `projets-js`).** Relevé et inscrit au
+- [x] **B4a · Les 31 solutions publiées que leur propre page refuse : TOUTES FERMÉES —
+      7 en B4a-1 (`js`), 5 en B4a-2 (`offensive`), 10 en B4a-3 (`algo`), 9 en B4a-4
+      (`projets-js`). `exos-code-connus.json` : 31 → 0 entrées, et le cliquet éprouvé par
+      injection sur un relevé vide (code 1 sur un `run.expect` faussé, code 0 après
+      restauration).**
+
+      ⚠️ **CE QUE LES QUATRE LOTS ONT APPRIS, ET QUI CONTREDIT LE DIAGNOSTIC ÉCRIT ICI.** Les
+      trois familles supposées ci-dessous étaient un tri à l'œil, fait sans lire le juge :
+      **aucune n'a résisté à la mesure**. Les 31 échecs se répartissent en réalité en quatre
+      causes, une par cours, et il a fallu reproduire chaque diagnostic avant de choisir le
+      SENS de la correction — c'est la seule chose de ce point qui mérite d'être retenue.
+      **(1)** `js` : le `placeholder` énonçait le contrat, l'attendu avait raison, la SOLUTION
+      avait tort. **(2)** `offensive` : l'inverse exact — la solution avait raison et c'est
+      l'entrée `data-exos` qui appartenait à un autre exercice. **(3)** `algo` : la solution ne
+      tenait pas le contrat, pour quatre raisons distinctes (dépendance non recopiée que le
+      repli de la page masquait, tout imprimé sur une seule ligne, un autre jeu de données,
+      aucun affichage). **(4)** `projets-js` : le contrat demandait une PROJECTION du résultat
+      (`.length`, `.montant`, `.max`) et la solution montrait l'objet entier — dont deux
+      exercices à sortie ALÉATOIRE, qu'aucun `run.expect` fixe n'aurait jamais pu accepter.
+      ⚠️ **Et le fait à lire AVANT tout diagnostic de ce genre** : `js/lecon.js` l. 1423, le
+      juge accepte qu'**UNE ligne** de la sortie égale `run.expect`. Une sortie riche n'est
+      donc pas un problème en soi — ce qui a permis, dans les lots 3 et 4, d'AJOUTER la ligne
+      du contrat sans amputer les démonstrations qui l'entouraient.
+
+      *Ci-dessous, le relevé et le tri d'origine, laissés tels quels : ils disent ce qu'on
+      croyait, et l'écart avec ce qui a été mesuré est l'enseignement du point.*
+      Relevé et inscrit au
       point B4 (`tools/preuves/exos-code-connus.json`, mesure du 2026-09-10). Ce ne sont pas
       des défauts de l'outil : la solution repliée est bien recopiée dans le champ, et le juge
       est celui de la page. Trois familles, à traiter séparément et à mesurer une par une :
@@ -4139,6 +4165,67 @@ résultat avant le clic.
 
       **Reste : 9 échecs**, tous dans `projets-js` (`lecon-03` #2, `lecon-05` #1/#2/#3,
       `lecon-07` #1, `lecon-09` #3, `lecon-13` #1/#2, `lecon-15` #1).
+
+- [x] **B4a-4 · Les 9 solutions refusées du cours `projets-js` : toutes fermées. Cause unique
+      cette fois, et c'est la QUATRIÈME famille rencontrée en quatre lots : le contrat demande
+      une PROJECTION du résultat, la solution montre l'objet entier. 9 échecs connus → 0 : le
+      relevé est VIDE.**
+
+      **La mesure reproduite avant de toucher à quoi que ce soit.** `exos-code.js` sur les six
+      pages : **9 solutions REFUSÉES, 4 acceptées, 0 sans solution repliée, 0 page sans champ**
+      (18,5 s). Sept des neuf sorties se reproduisent au caractère près ; **deux ne peuvent pas
+      se reproduire, et c'est le point le plus instructif du lot** (voir ci-dessous).
+
+      **Le diagnostic : une seule cause, neuf fois.** Les `placeholder` de ce cours demandent
+      systématiquement une valeur SIMPLE tirée du résultat — `melanger([1,2,3]).length`,
+      `plusGrosseDepense([…]).montant`, `codeVersLibelle(61).texte`, `minMax([…]).max`,
+      `prochaineTete(…).x`, « le total de "food" », la longueur du mot de passe — et souvent sur
+      un JEU DE DONNÉES précis, donné dans le contrat. Les solutions, elles, font ce qu'un
+      auteur fait naturellement : elles impriment l'objet entier, sur le jeu de démonstration de
+      la leçon. Aucune n'est fausse ; aucune ne répond à la question posée. Comme le juge
+      accepte qu'UNE ligne de la sortie égale `run.expect` (cf. B4a-3), la réparation **ajoute**
+      la ligne du contrat sans rien retirer : les objets entiers, qui montrent la structure,
+      restent affichés au-dessus, précédés de « Et la réponse que l'énoncé demande, isolée : ».
+
+      ⚠️ **DEUX EXERCICES DONT LA SORTIE EST ALÉATOIRE — un `run.expect` fixe ne pouvait PAS
+      les accepter, jamais, quelle qu'en soit la valeur.** `lecon-03` #2 imprimait un tableau
+      mélangé par Fisher-Yates et `lecon-07` #1 un mot de passe tiré au sort : leur sortie
+      change à chaque clic (mesuré — `[1,2,3,5,4]` au relevé du point B4, `[1,3,5,2,4]` à la
+      reproduction ; `rzRI9mQBAD` puis `Py2$A9-6!m`). Les deux `placeholder` avaient d'ailleurs
+      raison depuis le début en demandant `.length` : **la projection déterministe est la seule
+      façon de rendre jugeable un exercice à sortie aléatoire**, et c'est ce que la correction
+      applique. `verif-exemples.js` le confirme à sa manière, en rangeant ces deux blocs sous
+      « sortie non déterministe (Date/Math.random) » — il ne peut pas les juger, et c'est le
+      juge de la page (Chrome) qui tranche.
+
+      **PREUVE, dans un vrai Chrome.** `exos-code.js` sur les six pages : **13 solutions
+      acceptées, 0 REFUSÉE, 0 sans solution repliée, 0 nouveau** (18,0 s). `verif-clic.js
+      --sorties` : **55 blocs cliqués sur 55 attendus, couverture complète, 0 divergent**
+      (109 s), et les lignes ajoutées se lisent à l'écran exactement comme annoncé — `3` sous
+      les trois contrôles du mélange ; `50`, `-15`, `-50` ; `10` sous un mot de passe tiré au
+      sort ; `[1,3,4,6]` ; `Pluie` ; `23.4` ; `3`.
+
+      **LE CLIQUET ÉPROUVÉ PAR INJECTION, maintenant que la liste est vide.** Un relevé vide
+      n'a de valeur que s'il rougit encore. `run.expect` de `lecon-15` #1 passé de `3` à `999`
+      → `exos-code.js` rend **1 REFUSÉE, 1 ÉCHEC NOUVEAU, code de sortie 1** ; page restaurée,
+      **code 0**. Le garde-fou mord.
+
+      **Non-régression, chiffres à l'appui.** `verif-exemples.js` sur les six pages : valeurs
+      annoncées confrontées **29 → 32**, conformes **21 → 22**, **0 divergent** ; les
+      non vérifiés passent de 8 à 10, et les deux ajouts sont précisément les deux sorties
+      aléatoires ci-dessus — une limite déclarée de l'outil, pas une dette. `verif-js.js` :
+      **55 blocs à bouton, 55 aboutis (100 %), 0 en panne, 0 non compilable, 0 orphelin**.
+      `verif-html.js` sur tout le site : **1 629 fichiers, 0 grave / 0 attention**.
+      `verif-sorties.js` : **449 rejoués, 449 identiques au caractère près, 0 divergent**.
+      `verif-donnees.js` : I18 a de nouveau signalé `search-index.js` périmé ; après
+      régénération, **25 contrôles, 0 erreur** (2 avertissements préexistants), et les cinq
+      index comparés sont **identiques au fichier cible** (quiz 6 151, flashcards 11 586,
+      antisèches 1 577, search 1 614, search-lite 1 614). `verif-chaine-declaree.js` : **94
+      outils dans un mode, 14 hors chaîne, tous déclarés**. Zéro URL de CDN introduite.
+
+      **`exos-code-connus.json` : 9 → 0 entrées. Le fichier ne contient plus aucune dette**,
+      et son en-tête le dit : toute entrée qui y réapparaît est une solution publiée que sa
+      propre page refuse.
 
 - [ ] **B4b · La couverture d'`exos-code.js` varie sans qu'elle rougisse.** Mesurée au point B4 :
       trois passes `--tout` du même dépôt ont jugé 327, 323 et 323 solutions, l'écart tenant
