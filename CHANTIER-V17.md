@@ -4606,8 +4606,75 @@ affiché à l'apprenant — et l'audit a montré que la cause est presque toujou
       **0 erreur / 26 contrôles** · `verif.js --rapide` **52 étapes, tout vert (154,2 s)**.
       Aucun BOM, aucune URL de CDN.
 
-- [ ] **C5 · Le contrôle des compteurs affichés (I19) ne regarde que 4 fichiers alors que les compteurs
+- [x] **C5 · Le contrôle des compteurs affichés (I19) ne regarde que 4 fichiers alors que les compteurs
       vivent dans 8.** Étendre, et éprouver par injection.
+
+      **FAIT le 2026-09-10.** *Mesure refaite d'abord* : en balayant les **75 pages
+      transverses** et `js/` avec le motif d'I19, les compteurs du site vivent dans
+      **7 fichiers**, dont **3 hors surveillance** — `pages/antiseches.html` (« 90 cours »,
+      dans la description de la page), `pages/recherche.html` (« 1540 leçons », **deux fois**,
+      dont une en pleine prose du hero) et `pages/pieges.html`. Portée : **4 fichiers et
+      12 occurrences → 7 fichiers et 16 occurrences**, sur **69 fichiers balayés**.
+
+      **UNE LISTE ÉCRITE À LA MAIN NE POUVAIT PAS SUIVRE, c'est le défaut de fond.** Le
+      contrôle nommait ses quatre cibles ; toute page ajoutée depuis échappait au contrôle
+      sans que rien ne le dise. Il balaye maintenant **toutes** les pages transverses, et ce
+      qu'il écarte, il l'écarte par une **règle**, jamais par une liste de pardons.
+
+      **DEUXIÈME DÉFAUT, TROUVÉ EN COURS DE ROUTE : LE SÉPARATEUR DE MILLIERS.** Le motif
+      exigeait des chiffres collés (`\d{2,4}`). Sur « 1 070 leçons » de `pages/pieges.html`
+      il lisait **« 070 »**. Un compteur écrit à la française était donc lu de travers — et
+      le jour où l'accueil écrira « 1 540 leçons », il aurait comparé **540** à 1540.
+      Espace, insécable et fine sont admises, le nombre est recollé avant comparaison.
+
+      **TROISIÈME DÉFAUT : CE QUI PORTE LE MÊME MOT SANS COMPTER LA MÊME CHOSE.** Un balayage
+      nu rendait **4 rouges, tous à tort**. Trois familles, trois règles :
+      · **les blocs de code** (`<pre>`, `<code>`) — une sortie de mesure publiée
+        (« 1540 leçons lues (89 pages de redirection écartées) ») est un résultat, pas une
+        annonce ; remplacés par des blancs, jamais supprimés, pour ne pas souder deux textes
+        qui n'étaient pas voisins ;
+      · **ce qui porte déjà une marque `data-mesure`** — I27 (point C4) le confronte à SA
+        mesure, et deux contrôles sur le même nombre finiraient par se contredire ;
+      · **les pages assemblées depuis un gabarit** — `pages/etude*.html`, reconnues par
+        l'existence de `tools/etudes/<nom>/gabarit.html` (donc sans liste à maintenir) :
+        « 39 langages » y désigne le corpus de l'étude, pas les 82 du catalogue. **7 pages
+        écartées, et le rapport les NOMME** avec leur gabarit : dire où le contrôle ne va
+        pas vaut mieux que le laisser croire qu'il va partout.
+
+      **ET ON N'A PAS EXCUSÉ `pieges.html`, ON L'A REDIRIGÉ.** « 1 908 pièges repérés au fil
+      des 1 070 leçons » : ces 1 070 leçons ne sont pas le site, ce sont celles qui PORTENT
+      un piège. Plutôt que de mettre le nombre hors contrôle, I19 le confronte à sa propre
+      mesure — `js/pieges-data.js`, **1 070 leçons distinctes sur 1 908 entrées**, exact
+      aujourd'hui. Il redeviendra faux le jour où l'index des pièges bougera, et il le dira.
+
+      **ÉPREUVE PAR INJECTION — 8 cas sur 8 conformes** (`scratchpad/injection-i19.js`,
+      chaque cas altère un fichier, relance le vérificateur, restaure) :
+      `antiseches.html` 90 → 89 **rouge** · `recherche.html` 1540 → 1539 **rouge** ·
+      `pieges.html` 1 070 → 1 071 **rouge** *avec le message de la mesure redirigée* ·
+      `pieges.html` 1 070 → **1540** (le total du site !) **rouge aussi**, preuve que le
+      nombre n'est pas absous · `index.html` 1540 → « 1 540 » **reste vert** (séparateur) ·
+      `index.html` 1540 → « 1 539 » **rouge** en disant *1 539*, pas *539* · `js/main.js`
+      1540 → 1539 **rouge** (et ses **3** récits historiques en commentaire toujours
+      ignorés) · un `<strong data-mesure="qcm">99 cours` glissé dans `examen.html` :
+      **I19 passe son chemin et c'est I27 qui rougit**, exactement le partage voulu.
+      Code de sortie **1** sous chaque injection rouge, **0** après restauration.
+
+      **APRÈS.** `verif-donnees.js` **0 erreur / 26 contrôles** (3 avertissements, dont
+      celui qui nomme les 7 pages écartées) · `verif-html.js` **0 problème sur 1 629
+      fichiers** · `verif-rendu.js` **256 pages, 1 536 mesures (page × largeur × thème),
+      0 erreur, 0 avertissement** — mesure lancée après C4, elle couvre les deux points.
+
+- [ ] **C6 · Quatre études sur six publient des mesures que personne ne recontrôle.** Constat
+      de C5, mesuré : seules `tools/preuves/etude-recherche.js` et `etude-inconnu.js`
+      confrontent la page à son gabarit (contrôle des segments, posé au point C3). Les
+      preuves de `etude-euclide`, `etude-journal`, `etude-moteur-exos`, `etude-reecriture`
+      et le hub `etudes.html` **ne lisent jamais leur gabarit** (`grep -c gabarit` : 5, 5,
+      puis **0, 0, 0, 0, 0**). Or I19 écarte ces pages précisément parce que leurs nombres
+      sont des mesures — donc ces nombres ne sont contrôlés par personne, et l'un d'eux est
+      déjà suspect : `pages/etude-moteur-exos.html` publie « @@N_LECONS_EXOS@@ leçons » =
+      **1540**, soit exactement le total du site, ce qui demande à être vérifié plutôt que
+      cru. Porter le contrôle des segments du gabarit dans les quatre preuves restantes et
+      dans le hub, puis l'éprouver par injection sur chacune.
 
 ---
 

@@ -47,9 +47,14 @@
  *   I18 index non périmés   : build-index.js --strict (sous-processus) — ERREUR si
  *                             une entrée de l'ancien index doit être reprise (quiz/
  *                             flashcards/antisèches/pièges périmées). Purge : --write --fresh.
- *   I19 compteurs affichés  : « N cours/leçons/langages/parcours » de l'accueil, du
- *                             catalogue et d'« À propos » == décompte réel de data.js
- *                             (commentaires retirés d'abord). Trois pannes historiques.
+ *   I19 compteurs affichés  : « N cours/leçons/langages/parcours » de TOUTES les pages
+ *                             transverses + js/main.js == décompte réel de data.js.
+ *                             Commentaires, blocs de code et annonces marquées
+ *                             data-mesure (I27) retirés ; séparateur de milliers admis ;
+ *                             pages assemblées depuis un gabarit écartées et NOMMÉES ;
+ *                             un mot qui compte autre chose est REDIRIGÉ vers sa mesure
+ *                             (pages/pieges.html). Trois pannes historiques, et le
+ *                             contrôle ne voyait que 4 fichiers sur 7 (V17-C5).
  *   I20 titre ⇄ <h1>        : le title de data.js (catalogue, recherche, nav) ==
  *                             le <h1 class="lesson-header__title"> écrit en dur.
  *   I21 étiquette ⇄ contenu : AVERTISSEMENT — un bloc language-X sans marqueur de X
@@ -716,7 +721,31 @@ Object.keys(LESSONS).forEach((id) => {
    ont été FAUX trois fois (79/938, puis 1341, puis 13 pages de cours). On confronte
    chaque « N cours/leçons/langages/parcours » AFFICHÉ au décompte réel de data.js.
    On retire d'abord les COMMENTAIRES (le récit historique « 1336 leçons » d'un
-   commentaire de main.js n'est pas un compteur affiché) pour ne pas crier à tort. */
+   commentaire de main.js n'est pas un compteur affiché) pour ne pas crier à tort.
+
+   V17-C5 — TROIS DÉFAUTS DE PORTÉE, MESURÉS PUIS FERMÉS.
+   (a) LA LISTE DE CIBLES. Le contrôle nommait QUATRE fichiers ; les compteurs vivent
+       ailleurs aussi : « 90 cours » dans pages/antiseches.html, « 1540 leçons » deux
+       fois dans pages/recherche.html. Une liste écrite à la main ne peut pas suivre les
+       pages qu'on ajoutera : on balaye donc TOUTES les pages transverses.
+   (b) LE SÉPARATEUR DE MILLIERS. Le motif exigeait des chiffres collés : sur « 1 070
+       leçons » (pages/pieges.html) il lisait « 070 ». Un compteur écrit à la française
+       était donc lu de travers, et le jour où l'accueil écrira « 1 540 leçons » il
+       comparerait 540 à 1540. Le motif accepte maintenant l'espace, l'insécable et la
+       fine — et le nombre est recollé avant comparaison.
+   (c) CE QUI N'EST PAS UN COMPTEUR DU SITE. Trois familles, écartées par une RÈGLE et
+       jamais par une liste de pardons :
+         · les blocs de code — une sortie de mesure publiée (« 1540 leçons lues… ») est
+           un résultat, pas une annonce ; ils sont retirés comme les commentaires ;
+         · ce qui porte déjà une marque `data-mesure` : I27 le confronte à SA mesure,
+           et les deux contrôles ne doivent pas se contredire ;
+         · les pages ASSEMBLÉES depuis un gabarit (pages/etude*.html, détectées par
+           l'existence de tools/etudes/<nom>/gabarit.html) : leurs nombres sont des
+           mesures d'étude réécrites par leur assembleur — « 39 langages » y désigne le
+           corpus de l'étude, pas les 82 langages du catalogue. Le rapport les NOMME,
+           pour qu'on sache où le contrôle ne va pas.
+   Quand un fichier compte VRAIMENT autre chose sous le même mot, on ne l'excuse pas :
+   on REDIRIGE vers la bonne mesure (voir AUTRE_MESURE ci-dessous). */
 (function () {
   const c = check('I19', 'compteurs affichés ⇄ décompte réel');
   const REEL = {
@@ -726,6 +755,25 @@ Object.keys(LESSONS).forEach((id) => {
     parcours: TRACKS.length,
   };
   const LABEL = { cours: 'cours', lecons: 'leçons', langages: 'langages', parcours: 'parcours' };
+
+  /* Le même mot pour une autre chose comptée : pages/pieges.html annonce « 1 908 pièges
+     repérés au fil des 1 070 leçons ». Ces 1 070 leçons ne sont pas le site : ce sont
+     celles qui PORTENT un piège. On ne met pas ce nombre hors contrôle, on le confronte
+     à sa propre mesure — il redeviendra faux le jour où l'index des pièges bougera. */
+  const AUTRE_MESURE = {
+    'pages/pieges.html': {
+      lecons: {
+        quoi: 'leçons portant au moins un piège (js/pieges-data.js)',
+        mesure: () => {
+          const P = loadGlobal(path.join(JS, 'pieges-data.js'), 'PIEGES');
+          if (!P) return null;
+          const vues = new Set();
+          P.forEach((p) => { if (p && p.c && p.f) vues.add(p.c + '/' + p.f); });
+          return vues.size;
+        },
+      },
+    },
+  };
   function sansComJs(code) {
     let out = '', str = null;
     for (let i = 0; i < code.length; i++) {
@@ -746,30 +794,71 @@ Object.keys(LESSONS).forEach((id) => {
     if (/^(parcours|path)/.test(mot)) return 'parcours';
     return null;
   }
-  const re = /(\d{2,4})\s*(cours|leçons?|lessons?|langages?|languages?|parcours|paths?)\b/gi;
-  const cibles = [
-    { p: path.join(ROOT, 'index.html'), js: false, nom: 'index.html' },
-    { p: path.join(PAGES, 'catalogue.html'), js: false, nom: 'pages/catalogue.html' },
-    { p: path.join(PAGES, 'a-propos.html'), js: false, nom: 'pages/a-propos.html' },
-    { p: path.join(JS, 'main.js'), js: true, nom: 'js/main.js' },
-  ];
+  /* Le nombre peut porter un séparateur de milliers (espace, insécable, fine). */
+  const re = /(\d{1,3}(?:[   ]\d{3})+|\d{2,4})\s*(cours|leçons?|lessons?|langages?|languages?|parcours|paths?)\b/gi;
+
+  /* Une page assemblée depuis un gabarit publie des MESURES, pas des compteurs. */
+  function gabaritDe(nom) {
+    const m = /^pages\/(etude(?:s|-[a-z0-9-]+))\.html$/.exec(nom);
+    if (!m) return null;
+    if (m[1] === 'etudes') {
+      const g = path.join(ROOT, 'tools', 'etudes', 'hub-gabarit.html');
+      return fs.existsSync(g) ? 'tools/etudes/hub-gabarit.html' : null;
+    }
+    const g = path.join(ROOT, 'tools', 'etudes', m[1].replace(/^etude-/, ''), 'gabarit.html');
+    return fs.existsSync(g) ? path.relative(ROOT, g).replace(/\\/g, '/') : null;
+  }
+  /* Ce qui n'est pas de la prose affichée : commentaires, blocs de code, et les
+     annonces déjà marquées (I27). Remplacé par des blancs, jamais supprimé, pour ne
+     pas souder deux textes qui n'étaient pas voisins. */
+  function blanchir(s) { return s.replace(/[^\n]/g, ' '); }
+  function sansCodeNiMarque(html) {
+    return html
+      .replace(/<!--[\s\S]*?-->/g, blanchir)
+      .replace(/<pre\b[\s\S]*?<\/pre>/gi, blanchir)
+      .replace(/<code\b[\s\S]*?<\/code>/gi, blanchir)
+      .replace(/<([a-z][a-z0-9]*)\b[^>]*\bdata-mesure="[^"]*"[^>]*>[\s\S]*?<\/\1>/gi, blanchir);
+  }
+
+  const cibles = [{ p: path.join(ROOT, 'index.html'), js: false, nom: 'index.html' }];
+  if (fs.existsSync(PAGES)) {
+    fs.readdirSync(PAGES).filter((f) => /\.html$/.test(f)).sort()
+      .forEach((f) => cibles.push({ p: path.join(PAGES, f), js: false, nom: 'pages/' + f }));
+  }
+  cibles.push({ p: path.join(JS, 'main.js'), js: true, nom: 'js/main.js' });
+
   const vus = {};
+  const ecartees = [];
+  const cacheAutre = {};
   cibles.forEach((cible) => {
+    const gab = gabaritDe(cible.nom);
+    if (gab) { ecartees.push(cible.nom + ' (assemblée depuis ' + gab + ')'); return; }
     let src;
     try { src = fs.readFileSync(cible.p, 'utf8'); } catch (e) { return; }
-    const clean = cible.js ? sansComJs(src) : src.replace(/<!--[\s\S]*?-->/g, ' ');
+    const clean = cible.js ? sansComJs(src) : sansCodeNiMarque(src);
     let m; re.lastIndex = 0;
     while ((m = re.exec(clean))) {
       const type = typeDe(m[2]);
       if (!type) continue;
-      const n = parseInt(m[1], 10);
-      if (n !== REEL[type]) c.err(cible.nom + ' : « ' + n + ' ' + m[2] + ' » affiché mais ' + REEL[type] + ' ' + LABEL[type] + ' réel(le)s');
+      const n = parseInt(m[1].replace(/[   ]/g, ''), 10);
+      const redirige = (AUTRE_MESURE[cible.nom] || {})[type];
+      if (redirige) {
+        const cle = cible.nom + '|' + type;
+        if (!(cle in cacheAutre)) cacheAutre[cle] = redirige.mesure();
+        const attendu = cacheAutre[cle];
+        if (attendu == null) c.err(cible.nom + ' : la mesure « ' + redirige.quoi + ' » est illisible');
+        else if (n !== attendu) c.err(cible.nom + ' : « ' + m[0].trim() + ' » affiché mais ' + attendu + ' — ' + redirige.quoi);
+        continue; /* ce nombre ne compte pas comme la preuve qu'on surveille le site */
+      }
+      if (n !== REEL[type]) c.err(cible.nom + ' : « ' + m[0].trim() + ' » affiché mais ' + REEL[type] + ' ' + LABEL[type] + ' réel(le)s');
       else vus[type] = true;
     }
   });
   Object.keys(REEL).forEach((type) => {
     if (!vus[type]) c.warn('aucun compteur « ' + LABEL[type] + ' » (= ' + REEL[type] + ') trouvé dans les pages de stats — surveillance impossible');
   });
+  /* Dire où le contrôle ne va pas vaut mieux que le laisser croire partout. */
+  if (ecartees.length) c.warn(ecartees.length + ' page(s) écartée(s), leurs nombres sont des mesures d\'étude : ' + ecartees.join(', '));
 })();
 
 /* ==================================== I20 titre data.js ⇄ <h1> affiché */
