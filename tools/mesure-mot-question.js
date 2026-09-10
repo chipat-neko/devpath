@@ -1,0 +1,206 @@
+/* mesure-mot-question.js — L'INTRUS LEXICAL, mesure a la granularite de LA QUESTION.
+ *
+ * TROUVE LE 2026-09-10, par la relecture adversariale du cours `typescript` (B4 du
+ * CHANTIER-V16), et il est ne d'un ANGLE MORT DE NOTRE PROPRE OUTIL.
+ *
+ * `tools/mesure-mot-fetiche.js` — ecrit la veille, apres le cours `swift` — agrege par
+ * MOT sur le cours entier, et n'alerte qu'au-dela de DEUX seuils : le mot doit trancher
+ * sur >= 8 questions ET rendre >= 28 %. Ces seuils sont justes pour ce qu'il mesure : ils
+ * evitent de crier sur un mot rare. Mais ils rendent l'outil AVEUGLE au cas ou un mot
+ * tranche une SEULE question -- et l'y tranche a 100 %.
+ *
+ * LA MESURE QUI L'A PROUVE : sur `typescript`, `mesure-mot-fetiche` rendait « 0 alerte »
+ * pendant que cinq relecteurs adversariaux trouvaient, chacun de son cote, SEPT questions
+ * ou un mot etait porte par les TROIS distracteurs et absent de la bonne reponse :
+ * « tuple », « produit », « deux », « patron », « (voir X) », « toute erreur », « typage ».
+ * Sur chacune, l'apprenant qui ECARTE les trois options qui partagent le mot trouve la
+ * bonne reponse SANS RIEN CONNAITRE. Zero alerte, sept questions ouvertes.
+ *
+ * C'est la meme famille de faute que « la colonne reussite NOIE les indices rares »
+ * (cours `doc`, colonne RENDEMENT ajoutee) : un seuil concu pour reduire le bruit finit
+ * par cacher le signal. La parade est la meme -- ne pas relever le seuil, CHANGER DE
+ * GRANULARITE.
+ *
+ * LA STRATEGIE MESUREE, dite de L'INTRUS LEXICAL, en deux lectures :
+ *   PAR DEFAUT : trois options partagent un mot, la quatrieme ne l'a pas -> cocher la
+ *                quatrieme. C'est la lecture que les relecteurs ont trouvee.
+ *   PAR EXCES  : une option porte un mot qu'aucune des trois autres n'a -> la cocher.
+ *                C'est le sens inverse, et il s'ouvre des qu'on ferme le premier a fond
+ *                (lecon du cours `mobile` : fermer un indice A FOND le RETOURNE).
+ * Quand plusieurs options sont designees, le credit vaut 1/n comme partout dans ce
+ * protocole ; la colonne rendue est GLOBALE (hasard a 25 % sur les questions non
+ * tranchees), donc directement comparable a l'etalon de 25,0 %.
+ *
+ * ⚠ CE QUE CET OUTIL NE DIT PAS. Un mot-outil commun a trois options par pur hasard
+ * declenche la meme lecture qu'un mot fabrique par la vague d'ecriture : la mesure ne
+ * distingue pas l'intention. C'est pourquoi le seuil de longueur des mots est reglable
+ * (--min=N) et vaut 5 par defaut : en dessous, les articles et les auxiliaires noient
+ * tout. La liste `--liste` sert a JUGER question par question, la mesure a decider.
+ *
+ * LA REGLE D'ECRITURE QUI FERME L'INDICE est celle des marques, du `k` et du mot
+ * fetiche : par mot, les quatre options le portent, ou aucune. ⚠ Quand c'est la BONNE
+ * reponse qui porte le mot (elle est intouchable), on l'AJOUTE aux distracteurs.
+ *
+ * Usage :
+ *   node tools/mesure-mot-question.js <cours> [--min=5] [--liste]
+ *   node tools/mesure-mot-question.js --tous [--min=5]      # tous les cours, tri decroissant
+ */
+"use strict";
+var fs = require("fs"), path = require("path");
+var RACINE = path.join(__dirname, "..");
+
+var argv = process.argv.slice(2);
+var TOUS = argv.indexOf("--tous") !== -1;
+var LISTE = argv.indexOf("--liste") !== -1;
+var MIN = 5;
+argv.forEach(function (a) { var m = /^--min=(\d+)$/.exec(a); if (m) MIN = Number(m[1]); });
+var COURS = argv.filter(function (a) { return a.charAt(0) !== "-"; })[0] || null;
+
+var SEUIL = 0.28;   /* au-dela, la lecture est exploitable — meme seuil que mot-fetiche */
+
+function questionsDe(cours) {
+  var dossier = path.join(RACINE, "pages", cours), out = [];
+  if (!fs.existsSync(dossier)) return out;
+  fs.readdirSync(dossier).sort().forEach(function (f) {
+    if (!/\.html$/.test(f)) return;
+    var src = fs.readFileSync(path.join(dossier, f), "utf8");
+    var rx = /<script type="application\/json" data-quiz(?:-bilan)?>([\s\S]*?)<\/script>/g, x;
+    while ((x = rx.exec(src))) {
+      try {
+        JSON.parse(x[1]).forEach(function (q) {
+          if (q && Array.isArray(q.a) && q.a.length === 4 && typeof q.correct === "number") {
+            out.push({ q: q, f: f });
+          }
+        });
+      } catch (e) { /* un bloc JSON invalide est signale par verif-donnees, pas ici */ }
+    }
+  });
+  return out;
+}
+
+/* Les mots d'une option, en minuscules, sans accent perdu : le seuil MIN porte sur le
+   nombre de lettres, un accent compte pour une lettre. */
+function mots(t, min) {
+  var l = String(t).toLowerCase().match(/[a-zà-ÿ][a-zà-ÿ-]*/g) || [];
+  var s = new Set();
+  l.forEach(function (m) { if (m.length >= min) s.add(m); });
+  return s;
+}
+
+/* Pour une question, les options designees par chaque lecture.
+   DEFAUT : il existe un mot porte par exactement 3 options -> la 4e est designee.
+   EXCES  : il existe un mot porte par exactement 1 option  -> celle-la est designee. */
+function intrus(opts, min) {
+  var jeux = opts.map(function (o) { return mots(o, min); });
+  var compte = new Map();
+  jeux.forEach(function (s, i) {
+    s.forEach(function (m) {
+      if (!compte.has(m)) compte.set(m, []);
+      compte.get(m).push(i);
+    });
+  });
+  var parDefaut = new Set(), parExces = new Set(), motsD = [], motsE = [];
+  compte.forEach(function (ou, m) {
+    if (ou.length === 3) {
+      for (var i = 0; i < 4; i++) if (ou.indexOf(i) === -1) { parDefaut.add(i); motsD.push(m); }
+    } else if (ou.length === 1) {
+      parExces.add(ou[0]); motsE.push(m);
+    }
+  });
+  return { defaut: [...parDefaut], exces: [...parExces], motsD: motsD, motsE: motsE };
+}
+
+function mesurer(cours) {
+  var qs = questionsDe(cours);
+  var res = {
+    cours: cours, questions: qs.length,
+    defaut: { credit: 0, tranchees: 0, sures: 0 },
+    exces: { credit: 0, tranchees: 0, sures: 0 },
+    detail: []
+  };
+  qs.forEach(function (e) {
+    var q = e.q, r = intrus(q.a, MIN);
+    ["defaut", "exces"].forEach(function (sens) {
+      var d = r[sens];
+      if (!d.length || d.length === 4) { res[sens].credit += 0.25; return; }
+      res[sens].tranchees++;
+      if (d.indexOf(q.correct) !== -1) {
+        res[sens].credit += 1 / d.length;
+        if (d.length === 1) res[sens].sures++;
+      }
+    });
+    if (LISTE) {
+      var sur = [];
+      if (r.defaut.length === 1 && r.defaut[0] === q.correct) sur.push("DEFAUT");
+      if (r.exces.length === 1 && r.exces[0] === q.correct) sur.push("EXCES");
+      if (sur.length) {
+        res.detail.push({
+          f: e.f, q: String(q.q).slice(0, 52), sens: sur.join("+"),
+          mots: (sur.indexOf("DEFAUT") !== -1 ? r.motsD : r.motsE).slice(0, 6)
+        });
+      }
+    }
+  });
+  ["defaut", "exces"].forEach(function (s) {
+    res[s].taux = qs.length ? res[s].credit / qs.length : 0;
+    res[s].couverture = qs.length ? res[s].tranchees / qs.length : 0;
+  });
+  return res;
+}
+
+function pct(x) { return (x * 100).toFixed(1).replace(".", ",") + " %"; }
+
+function tousLesCours() {
+  var d = path.join(RACINE, "pages");
+  return fs.readdirSync(d).filter(function (n) {
+    return fs.statSync(path.join(d, n)).isDirectory() &&
+           fs.readdirSync(path.join(d, n)).some(function (f) { return /^lecon-\d+\.html$/.test(f); });
+  }).sort();
+}
+
+console.log("");
+console.log("mesure-mot-question — L'INTRUS LEXICAL, question par question");
+console.log("  mots de " + MIN + " lettres et plus · etalon du hasard : 25,0 % · alerte a " + pct(SEUIL));
+console.log("  DEFAUT = trois options partagent un mot, cocher la quatrieme");
+console.log("  EXCES  = une option porte un mot que nul autre n'a, la cocher");
+console.log("");
+
+var liste = TOUS ? tousLesCours() : [COURS || "typescript"];
+var lignes = liste.map(mesurer).filter(function (r) { return r.questions > 0; });
+lignes.sort(function (a, b) { return Math.max(b.defaut.taux, b.exces.taux) - Math.max(a.defaut.taux, a.exces.taux); });
+
+console.log("    cours              quest.   DEFAUT : taux/couv./sures    EXCES : taux/couv./sures");
+var alertes = 0;
+lignes.forEach(function (r) {
+  var pire = Math.max(r.defaut.taux, r.exces.taux);
+  if (pire >= SEUIL) alertes++;
+  console.log("    " + (r.cours + "                  ").slice(0, 18) +
+    ("      " + r.questions).slice(-6) + "   " +
+    ("       " + pct(r.defaut.taux)).slice(-8) + " / " +
+    ("      " + pct(r.defaut.couverture)).slice(-7) + " / " + ("   " + r.defaut.sures).slice(-3) + "   " +
+    ("       " + pct(r.exces.taux)).slice(-8) + " / " +
+    ("      " + pct(r.exces.couverture)).slice(-7) + " / " + ("   " + r.exces.sures).slice(-3) +
+    (pire >= SEUIL ? "   <-- exploitable" : ""));
+});
+
+if (LISTE) {
+  console.log("");
+  console.log("  LES QUESTIONS OU LA LECTURE DESIGNE LA BONNE REPONSE ET ELLE SEULE :");
+  lignes.forEach(function (r) {
+    r.detail.forEach(function (d) {
+      console.log("    " + d.f + "  [" + d.sens + "]  " + d.q);
+      console.log("        mot(s) en cause : " + d.mots.join(", "));
+    });
+    if (!r.detail.length) console.log("    " + r.cours + " : aucune.");
+  });
+}
+
+console.log("");
+console.log("  " + alertes + " cours au-dessus de " + pct(SEUIL) + " sur au moins une des deux lectures.");
+console.log("  Cible d'ecriture : par mot, les quatre options le portent ou aucune.");
+console.log("  ⚠ Cet outil voit ce que mesure-mot-fetiche ne peut pas voir : un mot qui");
+console.log("  tranche UNE seule question y rend 100 %, mais reste sous ses deux seuils");
+console.log("  (>= 8 questions tranchees ET >= 28 %). Les deux outils sont complementaires.");
+console.log("");
+
+process.exit(0);
