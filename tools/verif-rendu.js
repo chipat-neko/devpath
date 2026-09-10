@@ -757,6 +757,12 @@ function avertir(page, categorie, texte) {
   var code = RAPPORT.erreurs.length ? 1 : (STRICT && RAPPORT.avertissements.length ? 1 : 0);
   process.exit(code);
 })().catch(function (e) {
+  /* LA PILE, PAS SEULEMENT LE MESSAGE (2026-09-10, point F1). Cet outil a rendu
+     « ERREUR : Not supported » -- deux mots, aucune indication de l'endroit -- et il
+     est sorti en 2, donc « NON MESURE », dans une passe `--strict`. Un outil qui
+     renonce doit dire OU il a renonce, sinon le trou de couverture n'est pas
+     reparable : c'est la meme regle qu'aux points A5 et A7. */
   console.error("ERREUR : " + (e && e.message ? e.message : e));
+  if (e && e.stack) console.error(String(e.stack).split("\n").slice(1, 6).join("\n"));
   process.exit(2);
 });
