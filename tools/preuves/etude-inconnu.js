@@ -165,7 +165,8 @@ function normaliser(t) {
   /* --- 4. Le tableau des marqueurs = la mesure, recalculée ici -------------- */
   /* On ne relit pas un chiffre : on refait la mesure et on la confronte à ce que la
      page affiche, marqueur par marqueur. Un tableau périmé se verrait ici. */
-  var mesure = require(path.join(RACINE, 'tools', 'etudes', 'inconnu', 'mesure-langages.js')).mesurer();
+  var outilMesure = require(path.join(RACINE, 'tools', 'etudes', 'inconnu', 'mesure-langages.js'));
+  var mesure = outilMesure.mesurer();
   var lignesTableau = await ev(
     '(function(){var out=[];document.querySelectorAll("table.etude-choix").forEach(function(t){' +
     't.querySelectorAll("tbody tr").forEach(function(tr){var c=tr.querySelectorAll("th,td");' +
@@ -190,6 +191,97 @@ function normaliser(t) {
     fautes.push('le tableau publié montre ' + vus + ' marqueurs, la mesure en produit ' + mesure.marqueurs.length);
   }
   if (discordants.length) fautes.push(discordants.length + ' ligne(s) du tableau ne correspondent plus à la mesure');
+
+  /* --- 4 bis. LE BLOC DE MESURES, et tous les chiffres semés dans la prose ---
+     ⚠️ AJOUTÉ AU POINT C3 DU CHANTIER V17, parce que ce fichier annonçait « fautes : 0 »
+     pendant que CINQ valeurs de la page avaient dérivé : il ne comparait que le tableau
+     des marqueurs — le seul bloc qui, justement, n'avait pas bougé. Tout le reste (la
+     sortie brute de l'outil, et les chiffres répétés en toutes lettres dans le texte,
+     dont « 10610 » qui apparaissait QUATRE fois) n'était comparé à rien.
+
+     Deux contrôles, l'un dans le navigateur, l'autre sur le source :
+       a) la sortie brute affichée doit être, ligne à ligne, le rendu de la mesure du jour ;
+       b) le GABARIT sert de patron : on y remplace les jetons par les valeurs de la mesure
+          du jour, on découpe ce qui reste sur les jetons de bloc, et CHAQUE segment de
+          texte littéral doit se retrouver dans la page publiée, dans l'ordre. Un seul
+          chiffre périmé, où qu'il soit dans la prose, coupe la chaîne. Ce contrôle-là
+          n'a rien à maintenir : il suit le gabarit. */
+  var blocMesure = await ev(
+    '(function(){var b=Array.from(document.querySelectorAll(".code-block")).find(function(x){' +
+    'return x.getAttribute("data-file")==="node tools/etudes/inconnu/mesure-langages.js"});' +
+    'return b?b.querySelector("code").textContent:"";})()');
+  var attenduMesure = normaliser(outilMesure.rendre(mesure));
+  var obtenuMesure = normaliser(blocMesure || '');
+  var lignesAM = attenduMesure.split('\n'), lignesBM = obtenuMesure.split('\n');
+  var ecartsMesure = [];
+  for (var em = 0; em < Math.max(lignesAM.length, lignesBM.length); em++) {
+    if (lignesAM[em] !== lignesBM[em]) {
+      ecartsMesure.push('  ligne ' + (em + 1) + ' — publié : ' + JSON.stringify(lignesBM[em]) +
+                        '  ·  mesure du jour : ' + JSON.stringify(lignesAM[em]));
+    }
+  }
+  console.log('\nbloc de mesures — publié : ' + lignesBM.length + ' ligne(s)  ·  mesure du jour : ' +
+              lignesAM.length + ' ligne(s)  ·  écarts : ' + ecartsMesure.length);
+  ecartsMesure.slice(0, 6).forEach(function (l) { console.log(l); });
+  if (!obtenuMesure) fautes.push('le bloc de la sortie brute de mesure-langages.js est introuvable dans la page');
+  else if (ecartsMesure.length) {
+    fautes.push(ecartsMesure.length + ' ligne(s) de la sortie brute PUBLIÉE ne sont plus celles de la mesure du jour');
+  }
+
+  var universels = mesure.marqueurs.filter(function (m) { return m.possede === mesure.programmes.length; });
+  var manquesPar = {};
+  mesure.programmes.forEach(function (L) { manquesPar[L.langue] = 0; });
+  mesure.marqueurs.forEach(function (m) {
+    m.absentDe.forEach(function (l) { manquesPar[l] = (manquesPar[l] || 0) + 1; });
+  });
+  var mSi = mesure.marqueurs.filter(function (m) { return m.id === 'if'; })[0];
+  var clike = mesure.floues.filter(function (L) { return L.langue === 'clike'; })[0];
+  function enumerer(liste) {
+    if (liste.length === 1) return liste[0];
+    return liste.slice(0, -1).join(', ') + ' et ' + liste[liste.length - 1];
+  }
+  var JETONS = {
+    '@@N_LANGAGES@@': String(mesure.programmes.length),
+    '@@N_MARQUEURS@@': String(mesure.marqueurs.length),
+    '@@N_FORMATS@@': String(mesure.formats.length),
+    '@@N_BLOCS@@': String(mesure.blocsSubstantiels),
+    '@@N_TOTALBLOCS@@': String(mesure.blocs),
+    '@@N_LECONS@@': String(mesure.fichiers),
+    '@@SEUIL_LIGNES@@': String(mesure.seuilLignes),
+    '@@SEUIL_BLOCS@@': String(mesure.seuilBlocs),
+    '@@N_UNIV@@': String(universels.length),
+    '@@N_PRESQUE@@': String(mesure.programmes.length - 1),
+    '@@NASM_MANQUE@@': String(manquesPar.nasm),
+    '@@IF_POSSEDE@@': String(mSi ? mSi.possede : '?'),
+    '@@LISTE_UNIV@@': enumerer(universels.map(function (m) { return m.nom; })),
+    '@@LISTE_FORMATS@@': enumerer(mesure.formats.map(function (L) { return L.langue; })),
+    '@@CLIKE_BLOCS@@': String(clike ? clike.blocs : 0)
+  };
+  var gabarit = fs.readFileSync(path.join(RACINE, 'tools', 'etudes', 'inconnu', 'gabarit.html'), 'utf8')
+    .replace(/\r\n/g, '\n');
+  var sourcePage = fs.readFileSync(path.join(RACINE, PAGE), 'utf8').replace(/\r\n/g, '\n');
+  var patron = gabarit;
+  Object.keys(JETONS).forEach(function (j) { patron = patron.split(j).join(JETONS[j]); });
+  var segments = patron.split(/@@[A-Z0-9_]+@@/).filter(function (s) { return s.length > 0; });
+  var curseur = 0, perimes = [];
+  segments.forEach(function (seg) {
+    var k = sourcePage.indexOf(seg, curseur);
+    if (k !== -1) { curseur = k + seg.length; return; }
+    /* Localiser la divergence : le plus long préfixe du segment encore présent. */
+    var lo = 0, hi = seg.length;
+    while (lo < hi) {
+      var mid = Math.ceil((lo + hi) / 2);
+      if (sourcePage.indexOf(seg.slice(0, mid), curseur) !== -1) lo = mid; else hi = mid - 1;
+    }
+    perimes.push('attendu « …' + seg.slice(Math.max(0, lo - 45), lo + 35).replace(/\n/g, '⏎') + '… »');
+  });
+  console.log('\nchiffres de la prose — ' + segments.length + ' segment(s) du gabarit rempli avec la mesure du jour' +
+              '  ·  introuvables dans la page : ' + perimes.length);
+  perimes.slice(0, 4).forEach(function (p) { console.log('  ✗ ' + p); });
+  if (perimes.length) {
+    fautes.push(perimes.length + ' passage(s) de la page ne correspondent plus au gabarit rempli avec la mesure du jour ' +
+                '(un chiffre publié y a dérivé)');
+  }
 
   /* --- 5. Le banc s'exécute-t-il, et rend-il la sortie publiée ? ------------ */
   var attendu = await ev(

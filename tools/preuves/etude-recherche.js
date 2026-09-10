@@ -227,13 +227,97 @@ function normaliser(t) {
     'var apres=jouer(lignes.join("\\n"));' +
     'if(avant.indexOf("ERREUR")===0) return "AVANT "+avant; if(apres.indexOf("ERREUR")===0) return "APRES "+apres;' +
     'function rapport(t){var m=/rapport \\.+ (\\d+) fois moins/.exec(t); return m?Number(m[1]):-1;}' +
-    'return {avant:rapport(avant), apres:rapport(apres)};})()');
+    'function clefs(t){var m=/clefs examinées \\.+ (\\d+)/.exec(t); return m?Number(m[1]):-1;}' +
+    'return {avant:rapport(avant), apres:rapport(apres), clefsAvant:clefs(avant), clefsApres:clefs(apres)};})()');
   console.log('\nrapport annoncé par la page : ' + JSON.stringify(annonce) + '  ·  mesuré dans le navigateur : ' + JSON.stringify(mesure));
   if (!annonce) fautes.push("la page n'annonce pas de rapport avant/après");
   else if (!mesure || typeof mesure !== 'object') fautes.push('la mesure du rapport a échoué : ' + mesure);
   else {
     if (mesure.avant !== annonce.avant) fautes.push('rapport AVANT : la page annonce ' + annonce.avant + ', la mesure donne ' + mesure.avant);
     if (mesure.apres !== annonce.apres) fautes.push('rapport APRÈS : la page annonce ' + annonce.apres + ', la mesure donne ' + mesure.apres);
+  }
+
+  /* --- 5. LE BLOC DE MESURES, et tous les chiffres semés dans la prose -------
+     ⚠️ AJOUTÉ AU POINT C3 DU CHANTIER V17. Cette preuve vérifiait les extraits de code,
+     le banc et le rapport — mais pas UN SEUL des chiffres de l'index : la page a publié
+     45958 mots / 928606 couples / 4.08 Mo pendant que l'index en comptait 46033 / 930245
+     / 4.09, et rien n'a bronché. Deux contrôles :
+       a) la sortie de `tools/etudes/recherche/mesures.js` affichée dans la page doit être,
+          ligne à ligne, le rendu de la mesure du jour ;
+       b) le GABARIT sert de patron : jetons remplacés par les valeurs du jour (celles de
+          l'index pour les unes, celles mesurées ci-dessus DANS LE NAVIGATEUR pour les
+          quatre du banc), découpage sur les jetons de bloc, et chaque segment littéral
+          doit se retrouver dans la page, dans l'ordre. Rien à maintenir : il suit le
+          gabarit, donc il couvrira aussi les chiffres qu'on y ajoutera demain. */
+  var outilMesures = require(path.join(RACINE, 'tools', 'etudes', 'recherche', 'mesures.js'));
+  var mes = outilMesures.mesurer();
+  var blocMesures = await ev(
+    '(function(){var b=Array.from(document.querySelectorAll(".code-block")).find(function(x){' +
+    'return x.getAttribute("data-file")==="node tools/etudes/recherche/mesures.js"});' +
+    'return b?b.querySelector("code").textContent:"";})()');
+  var attenduMes = normaliser(outilMesures.rendre(mes));
+  var obtenuMes = normaliser(blocMesures || '');
+  var lignesAM = attenduMes.split('\n'), lignesBM = obtenuMes.split('\n');
+  var ecartsMes = [];
+  for (var em = 0; em < Math.max(lignesAM.length, lignesBM.length); em++) {
+    if (lignesAM[em] !== lignesBM[em]) {
+      ecartsMes.push('  ligne ' + (em + 1) + ' — publié : ' + JSON.stringify(lignesBM[em]) +
+                     '  ·  mesure du jour : ' + JSON.stringify(lignesAM[em]));
+    }
+  }
+  console.log('\nbloc de mesures — publié : ' + lignesBM.length + ' ligne(s)  ·  mesure du jour : ' +
+              lignesAM.length + ' ligne(s)  ·  écarts : ' + ecartsMes.length);
+  ecartsMes.slice(0, 6).forEach(function (l) { console.log(l); });
+  if (!obtenuMes) fautes.push('le bloc de la sortie de mesures.js est introuvable dans la page');
+  else if (ecartsMes.length) {
+    fautes.push(ecartsMes.length + ' ligne(s) du bloc de mesures PUBLIÉ ne sont plus celles de la mesure du jour');
+  }
+
+  var JETONS = {
+    '@@TEMOIN@@': mes.temoin,
+    '@@N_DOCS@@': String(mes.docs),
+    '@@N_MOTS@@': String(mes.mots),
+    '@@N_POSTINGS@@': String(mes.postings),
+    '@@TAILLE_INDEX@@': (mes.tIndex / (1024 * 1024)).toFixed(2),
+    '@@TAILLE_LITE@@': String(Math.round(mes.tLite / 1024)),
+    '@@GAIN_ENCODAGE@@': String(mes.gain),
+    '@@BRUT@@': mes.brut,
+    '@@NAIF@@': mes.naif,
+    '@@N_TEMOIN@@': String(mes.ids.length)
+  };
+  /* Les quatre chiffres du banc ne viennent PAS du disque : ce sont ceux que le
+     navigateur vient de produire en rejouant le banc publié, puis sa solution. */
+  if (mesure && typeof mesure === 'object' && mesure.clefsAvant > 0) {
+    JETONS['@@RAPPORT_AVANT@@'] = String(mesure.avant);
+    JETONS['@@RAPPORT_APRES@@'] = String(mesure.apres);
+    JETONS['@@EXAMENS_AVANT@@'] = String(mesure.clefsAvant);
+    JETONS['@@EXAMENS_APRES@@'] = String(mesure.clefsApres);
+  } else {
+    fautes.push('les examens du banc n’ont pas pu être relevés dans le navigateur : ' + JSON.stringify(mesure));
+  }
+  var gabarit = fs.readFileSync(path.join(RACINE, 'tools', 'etudes', 'recherche', 'gabarit.html'), 'utf8')
+    .replace(/\r\n/g, '\n');
+  var sourcePage = fs.readFileSync(path.join(RACINE, PAGE), 'utf8').replace(/\r\n/g, '\n');
+  var patron = gabarit;
+  Object.keys(JETONS).forEach(function (j) { patron = patron.split(j).join(JETONS[j]); });
+  var segments = patron.split(/@@[A-Z0-9_]+@@/).filter(function (s) { return s.length > 0; });
+  var curseur = 0, perimes = [];
+  segments.forEach(function (seg) {
+    var k = sourcePage.indexOf(seg, curseur);
+    if (k !== -1) { curseur = k + seg.length; return; }
+    var lo = 0, hi = seg.length;
+    while (lo < hi) {
+      var mid = Math.ceil((lo + hi) / 2);
+      if (sourcePage.indexOf(seg.slice(0, mid), curseur) !== -1) lo = mid; else hi = mid - 1;
+    }
+    perimes.push('attendu « …' + seg.slice(Math.max(0, lo - 45), lo + 35).replace(/\n/g, '⏎') + '… »');
+  });
+  console.log('chiffres de la prose — ' + segments.length + ' segment(s) du gabarit rempli avec la mesure du jour' +
+              '  ·  introuvables dans la page : ' + perimes.length);
+  perimes.slice(0, 4).forEach(function (p) { console.log('  ✗ ' + p); });
+  if (perimes.length) {
+    fautes.push(perimes.length + ' passage(s) de la page ne correspondent plus au gabarit rempli avec la mesure du jour ' +
+                '(un chiffre publié y a dérivé)');
   }
 
   /* --- Bilan ---------------------------------------------------------------- */

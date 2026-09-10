@@ -439,28 +439,42 @@ function mesurer() {
   };
 }
 
-function main() {
-  const d = mesurer();
-  if (process.argv.includes('--json')) { console.log(JSON.stringify(d, null, 2)); return; }
-
-  console.log(`${d.fichiers} leçons lues (${d.redirections} pages de redirection écartées) · ${d.blocs} blocs de code · ${(d.octets / 1024).toFixed(1)} Ko`);
-  console.log(`${d.blocsSubstantiels} blocs d'au moins ${d.seuilLignes} lignes non vides (les seuls comptés ci-dessous)`);
-  console.log(`${d.langagesVus} valeurs de class="language-…" rencontrées, dont ${d.programmes.length} langages de programmation`);
-  console.log(`et ${d.formats.length} formats de données ou de mise en forme, avec au moins ${d.seuilBlocs} blocs substantiels chacun`);
-  console.log(`neutralisation (chaînes + commentaires) : ${(d.partNeutralisee * 100).toFixed(1)} % des caractères effectivement changés avant recherche des mots-clés`);
-  console.log('étiquettes floues écartées : ' + (d.floues.map((L) => `${L.langue}(${L.substantiels})`).join(' ') || 'aucune') + '\n');
-  console.log(`SUR LES ${d.programmes.length} LANGAGES DE PROGRAMMATION            possèdent    courant dans`);
+/* Le RENDU de la mesure, séparé de son affichage.
+   ⚠️ POINT C3 du chantier V17 : la page publiait cette sortie figée au jour de son
+   assemblage, et RIEN ne la comparait jamais à la mesure du jour — cinq valeurs y
+   avaient dérivé sans qu'aucun contrôle bronche (13174 → 13176 blocs, 6519,3 → 6558,1 Ko,
+   10610 → 10614 blocs substantiels, 27,8 → 27,9 %, ruby(225) → ruby(224)).
+   La sortie est donc désormais une FONCTION d'un résultat de mesure : l'assembleur la
+   demande sur la mesure qu'il vient de faire (au lieu d'en relancer une seconde, qui
+   pouvait différer de la première), et `tools/preuves/etude-inconnu.js` la redemande
+   pour la confronter, ligne à ligne, à ce que la page affiche. */
+function rendre(d) {
+  const out = [];
+  out.push(`${d.fichiers} leçons lues (${d.redirections} pages de redirection écartées) · ${d.blocs} blocs de code · ${(d.octets / 1024).toFixed(1)} Ko`);
+  out.push(`${d.blocsSubstantiels} blocs d'au moins ${d.seuilLignes} lignes non vides (les seuls comptés ci-dessous)`);
+  out.push(`${d.langagesVus} valeurs de class="language-…" rencontrées, dont ${d.programmes.length} langages de programmation`);
+  out.push(`et ${d.formats.length} formats de données ou de mise en forme, avec au moins ${d.seuilBlocs} blocs substantiels chacun`);
+  out.push(`neutralisation (chaînes + commentaires) : ${(d.partNeutralisee * 100).toFixed(1)} % des caractères effectivement changés avant recherche des mots-clés`);
+  out.push('étiquettes floues écartées : ' + (d.floues.map((L) => `${L.langue}(${L.substantiels})`).join(' ') || 'aucune') + '\n');
+  out.push(`SUR LES ${d.programmes.length} LANGAGES DE PROGRAMMATION            possèdent    courant dans`);
   for (const m of d.marqueurs) {
-    console.log(
+    out.push(
       '  ' + m.nom.padEnd(48) +
       String(m.possede).padStart(4) + '/' + m.sur +
       String(m.courant).padStart(11) + '/' + m.sur
     );
   }
-  console.log('\nLANGAGES : ' + d.programmes.map((L) => `${L.langue}(${L.substantiels})`).join(' '));
-  console.log('\nFORMATS (pas des programmes) : ' + d.formats.map((L) => `${L.langue}(${L.substantiels})`).join(' '));
-  console.log('\nÉCARTÉS (< ' + d.seuilBlocs + ' blocs substantiels) : ' + d.ecartes.map((L) => `${L.langue}(${L.substantiels})`).join(' '));
+  out.push('\nLANGAGES : ' + d.programmes.map((L) => `${L.langue}(${L.substantiels})`).join(' '));
+  out.push('\nFORMATS (pas des programmes) : ' + d.formats.map((L) => `${L.langue}(${L.substantiels})`).join(' '));
+  out.push('\nÉCARTÉS (< ' + d.seuilBlocs + ' blocs substantiels) : ' + d.ecartes.map((L) => `${L.langue}(${L.substantiels})`).join(' '));
+  return out.join('\n');
+}
+
+function main() {
+  const d = mesurer();
+  if (process.argv.includes('--json')) { console.log(JSON.stringify(d, null, 2)); return; }
+  console.log(rendre(d));
 }
 
 if (require.main === module) main();
-module.exports = { listerLecons, blocsDe, neutraliser, mesurer, MARQUEURS };
+module.exports = { listerLecons, blocsDe, neutraliser, mesurer, rendre, MARQUEURS };

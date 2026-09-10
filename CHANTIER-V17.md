@@ -4487,7 +4487,7 @@ affiché à l'apprenant — et l'audit a montré que la cause est presque toujou
       seul reconstruit à neuf au lieu de reprendre l'ancien. Les cinq index régénérés
       `--write --fresh` ; I18 revient à 0.
 
-- [ ] **C3 · Les deux études de cas dont le bloc de sortie a dérivé.** `pages/etude-inconnu.html` :
+- [x] **C3 · Les deux études de cas dont le bloc de sortie a dérivé.** `pages/etude-inconnu.html` :
       **cinq** valeurs ont dérivé, pas trois (13174 → 13175 blocs, 6519.3 → 6543.4 Ko, 10610 → 10609,
       « neutralisation 27.8 % » → 27.9 %, `ruby(225)` → `ruby(224)`), et `10610` apparaît **4 fois**
       (l.79, 112, 150, 227). `tools/preuves/etude-inconnu.js` annonce « fautes : 0 » : il ne compare que
@@ -4503,6 +4503,55 @@ affiché à l'apprenant — et l'audit a montré que la cause est presque toujou
       13 174 / 6 519,3 / 10 610 / 27,8 %. Ne pas recopier les chiffres du plan : **relancer**
       `node tools/etudes/inconnu/mesure-langages.js` au moment de réassembler, sans quoi la page
       sera périmée le jour même de sa correction.
+
+      **FAIT le 2026-09-10.** *Mesure refaite d'abord, et l'avertissement ci-dessus avait
+      raison* : au moment du réassemblage, `mesure-langages.js` rendait **13 176 blocs,
+      6 558,1 Ko, 10 614 substantiels, 27,9 %, `ruby(224)`** contre **13 174 / 6 519,3 /
+      10 610 / 27,8 % / `ruby(225)`** publiés — soit **sept** valeurs dérivées et non cinq
+      (`lua(183)`→`182`, `javascript(2177)`→`2179`, plus trois formats : `plaintext(696)`→`707`,
+      `markup(531)`→`525`, `sql(265)`→`264`). Les deux pages réassemblées : **9 lignes changées**
+      sur `etude-inconnu.html`, **19** sur `etude-recherche.html`.
+
+      **LE POINT FIXE, qui n'était prévu nulle part.** Les pages d'étude sont **indexées**
+      (`search-index.js` contient les 74 pages transverses) : réécrire les chiffres de
+      l'étude nº 3 change l'index, donc change les chiffres à publier. Mesuré : premier
+      assemblage **46 035 mots**, index régénéré → **46 033**, deuxième assemblage → **46 033**,
+      troisième → index *identique au fichier cible*. **Convergence en 2 itérations**, pas
+      d'oscillation. Publié au point fixe : **46 033 mots, 930 245 couples, 4.09 Mo,
+      1 614 documents** (la page publiait 45 958 / 928 606 / 4.08). `verif-donnees` I18,
+      qui rougissait à `search-index.js (écart −19 o)` après le premier assemblage, revient à
+      **0 erreur sur 25 contrôles**.
+
+      **CE QUI EMPÊCHE LA DÉRIVE DE REVENIR.** Le rendu de chaque mesure est devenu une
+      **fonction** (`rendre(d)`, exportée par `mesure-langages.js` et par `mesures.js`) :
+      sortie **identique à l'octet près** avant/après refactor (`diff` vide sur les deux).
+      Trois conséquences : (a) les assembleurs ne relancent plus **une seconde mesure en
+      sous-processus** pour remplir le bloc publié — deux mesures du même site, donc deux
+      occasions de diverger sans que rien le dise ; ils rendent celle dont les chiffres
+      partent déjà en jetons ; (b) les deux preuves comparent ce bloc **ligne à ligne** au
+      rendu de la mesure du jour (**34 lignes** pour l'étude 6, **11** pour l'étude 3) ;
+      (c) surtout, elles prennent le **GABARIT comme patron** : jetons remplacés par les
+      valeurs du jour, découpage sur les jetons de bloc, et **chaque segment de texte
+      littéral doit se retrouver dans la page, dans l'ordre** (**11 segments** pour l'étude 6,
+      **8** pour l'étude 3). Ce contrôle-là n'a rien à maintenir — il suit le gabarit, donc
+      il couvrira aussi les chiffres qu'on y ajoutera demain, et il ne pouvait pas rater
+      « 10610 » écrit quatre fois puisqu'il ne cherche pas des chiffres mais du texte.
+      Pour l'étude 3, les quatre jetons du banc (`RAPPORT_*`, `EXAMENS_*`) sont pris **dans
+      le navigateur**, en rejouant le banc publié puis sa solution : rien n'est repris du disque.
+
+      **ÉPREUVE PAR INJECTION, les deux fois.** Étude 6 : `13176 → 13174` + `6558.1 → 6519.3`
+      dans le bloc brut, et `10614 → 10610` dans la prose du hero → **2 fautes vues, code 1**,
+      chacune par le contrôle prévu (le bloc brut est un jeton de bloc, donc invisible au
+      contrôle des segments, et réciproquement) ; page restaurée → **code 0**. Étude 3 :
+      `46035 → 45958` dans le bloc de mesures et `4.09 → 4.08` Mo dans la prose →
+      **2 fautes vues, code 1** ; restaurée → **code 0**. Les quatre messages **nomment la
+      ligne et la valeur attendue**.
+
+      **APRÈS.** `verif-html.js` **0 problème sur 1 629 fichiers** · `verif-donnees.js`
+      **0 erreur / 25 contrôles** · `verif.js --rapide` **52 étapes, tout vert (147,9 s)** ·
+      `verif.js --complet` **80 étapes, tout vert**. Aucun BOM, aucune URL de CDN. Les
+      descriptions des étapes `etude-3` et `etude-6` dans `tools/verif.js` disent
+      maintenant ce qu'elles contrôlent vraiment.
 
 - [ ] **C4 · `pages/examen.html` annonce « plus de 3000 questions » ; la banque en contient 6 151.**
       Corriger, et rattacher l'annonce à une mesure plutôt qu'à un nombre écrit à la main.

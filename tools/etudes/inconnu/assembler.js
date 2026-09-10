@@ -31,9 +31,12 @@ function lireIci(f) { return fs.readFileSync(path.join(ICI, f), 'utf8').replace(
 function stop(quoi) { console.log('✗ ' + quoi); process.exit(1); }
 
 /* ------------------------------------------------------------------ 1. la mesure */
-var mesure = require('./mesure-langages.js').mesurer();
-var sortieMesure = cp.execSync('node "' + path.join(ICI, 'mesure-langages.js') + '"', { encoding: 'utf8' })
-  .replace(/\r\n/g, '\n').replace(/\n+$/, '');
+var mesureLangages = require('./mesure-langages.js');
+var mesure = mesureLangages.mesurer();
+/* ⚠️ POINT C3 : la sortie brute publiée provenait d'une SECONDE mesure lancée en
+   sous-processus — deux mesures du même site au même instant, donc deux occasions de
+   diverger, et rien pour le dire. Elle est maintenant le rendu de LA mesure ci-dessus. */
+var sortieMesure = mesureLangages.rendre(mesure);
 
 var N_LANGAGES = mesure.programmes.length;
 var N_MARQUEURS = mesure.marqueurs.length;

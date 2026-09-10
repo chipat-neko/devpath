@@ -61,19 +61,31 @@ function mesurer() {
   };
 }
 
-if (require.main === module) {
-  var m = mesurer();
-  console.log("js/search-index.js .......... " + mo(m.tIndex) + " Mo   (index complet, chargé à la 1re recherche)");
-  console.log("js/search-lite.js ........... " + ko(m.tLite) + " Ko   (index réduit, chargé d'emblée par la palette)");
-  console.log("");
-  console.log("documents indexés ........... " + m.docs);
-  console.log("mots distincts .............. " + m.mots);
-  console.log("couples mot × document ...... " + m.postings);
-  console.log("");
-  console.log("le mot « " + m.temoin + " » apparaît dans " + m.ids.length + " leçons :");
-  console.log("  tel qu'il est écrit ....... " + m.brut + "   (" + m.brut.length + " caractères)");
-  console.log("  écrit naïvement ........... " + m.naif + "   (" + m.naif.length + " caractères)");
-  console.log("  économie .................. " + m.gain + " %");
+/* Le RENDU, séparé de son affichage — même raison qu'au point C3 du chantier V17 pour
+   l'étude nº 6 : la page publiait ce bloc figé au jour de son assemblage et personne ne
+   le confrontait jamais à la mesure du jour : elle affichait 45958 mots / 928606 couples /
+   4.08 Mo là où l'index en comptait 46033 / 930245 / 4.09.
+   L'assembleur demande maintenant le rendu de LA mesure qu'il vient de
+   faire, et `tools/preuves/etude-recherche.js` le redemande pour le comparer, ligne à
+   ligne, à ce que la page affiche. */
+function rendre(m) {
+  return [
+    "js/search-index.js .......... " + mo(m.tIndex) + " Mo   (index complet, chargé à la 1re recherche)",
+    "js/search-lite.js ........... " + ko(m.tLite) + " Ko   (index réduit, chargé d'emblée par la palette)",
+    "",
+    "documents indexés ........... " + m.docs,
+    "mots distincts .............. " + m.mots,
+    "couples mot × document ...... " + m.postings,
+    "",
+    "le mot « " + m.temoin + " » apparaît dans " + m.ids.length + " leçons :",
+    "  tel qu'il est écrit ....... " + m.brut + "   (" + m.brut.length + " caractères)",
+    "  écrit naïvement ........... " + m.naif + "   (" + m.naif.length + " caractères)",
+    "  économie .................. " + m.gain + " %",
+  ].join("\n");
 }
 
-module.exports = { mesurer: mesurer, MOT_TEMOIN: MOT_TEMOIN };
+if (require.main === module) {
+  console.log(rendre(mesurer()));
+}
+
+module.exports = { mesurer: mesurer, rendre: rendre, MOT_TEMOIN: MOT_TEMOIN };

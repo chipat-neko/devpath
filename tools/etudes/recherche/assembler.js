@@ -54,9 +54,11 @@ function desindenter(txt) {
 }
 
 /* ------------------------------------------------------------- les mesures du site */
-var mes = require("./mesures.js").mesurer();
-var sortieMesures = cp.execSync('node "' + path.join(ICI, "mesures.js") + '"', { encoding: "utf8" })
-  .replace(/\r\n/g, "\n").replace(/\n+$/, "");
+var mesuresRech = require("./mesures.js");
+var mes = mesuresRech.mesurer();
+/* ⚠️ POINT C3 : le bloc publié venait d'une SECONDE mesure lancée en sous-processus.
+   C'est le rendu de LA mesure ci-dessus, celle dont les chiffres partent en jetons. */
+var sortieMesures = mesuresRech.rendre(mes);
 
 /* --------------------------------------------------------------- le banc d'essai */
 var banc = lireIci("banc.js")

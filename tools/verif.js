@@ -495,7 +495,14 @@ if (!RAPIDE) {
      rapports, verifie que la fonction `postings` embarquee dans le banc est bien celle
      de js/recherche.js, et recompare la sortie ligne a ligne. Epreuve d'injection
      faite : trois fautes posees (un chiffre de la sortie, le rapport annonce, une
-     valeur du decodage), trois fautes vues. */
+     valeur du decodage), trois fautes vues.
+     ⚠️ POINT C3 DU V17 : elle ne regardait AUCUN chiffre de l'index, et la page a
+     publie 45958 mots / 928606 couples / 4.08 Mo pendant que l'index en comptait
+     46033 / 930245 / 4.09 -- vert du debut a la fin. Deux controles ajoutes : le bloc
+     de mesures compare ligne a ligne au rendu de la mesure du jour, et le GABARIT
+     rempli avec cette mesure, dont chaque segment de texte doit se retrouver dans la
+     page. Injection refaite sur ces deux-la : deux fautes posees, deux vues, code 1
+     puis retour a 0. */
   ETAPES.push({
     nom: "etude-3",
     fichier: "preuves/etude-recherche.js",
@@ -533,7 +540,15 @@ if (!RAPIDE) {
      ne sait pas executer (ni go ni rustc installes). Elle ne peut donc pas prouver ce
      que le Go affiche -- et cette etape verifie d'abord qu'elle le DIT. Elle recalcule
      ensuite le tableau de mesure des 39 langages et le confronte a celui de la page,
-     compare le Go publie au fichier .go, et fait executer le banc dans le navigateur. */
+     compare le Go publie au fichier .go, et fait executer le banc dans le navigateur.
+     ⚠️ POINT C3 DU V17 : elle ne comparait que ce TABLEAU -- le seul bloc qui n'avait
+     pas bouge -- et annoncait « fautes : 0 » avec CINQ valeurs perimees ailleurs dans
+     la page (13174 blocs contre 13176, 6519,3 Ko contre 6558,1, 10610 contre 10614 --
+     et celui-la quatre fois --, 27,8 % contre 27,9 %, ruby(225) contre ruby(224)).
+     Deux controles ajoutes, les memes qu'a l'etude 3 : la sortie brute de l'outil de
+     mesure comparee ligne a ligne, et le gabarit rempli avec la mesure du jour dont
+     chaque segment doit se retrouver dans la page. Injection : deux fautes posees,
+     deux vues, code 1 puis retour a 0. */
   ETAPES.push({
     nom: "etude-6",
     fichier: "preuves/etude-inconnu.js",
