@@ -6134,6 +6134,153 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
 
       ---
 
+      **`typescript` — FAIT le 2026-09-10 : 92,6 % → 25,0 %.** 20 leçons, **68 questions**,
+      **199 distracteurs sur 204 réécrits**, en **trois vagues** (6 lots d'écriture, 5 relecteurs
+      adversariaux, 5 correcteurs, puis un rattrapage).
+
+      | mesure | avant | après écriture | après contradiction |
+      |---|---:|---:|---:|
+      | « la plus longue » | **92,6 %** | 25,0 % | **25,0 %** |
+      | « la plus COURTE » | 0,0 % | 25,0 % | **25,0 %** |
+      | rangs de longueur | **63/3/1/1** | 17/17/17/17 | **17/17/17/17 EXACT** |
+      | indice lexical (exploitables / à mettre en forme) | **61 / 63** | 0 / 0 | **0 / 0** |
+      | mot fétiche (7 mots au départ) | 7 alertes | 0 | **0 alerte** |
+      | pire stratégie directe des 43 | 92,6 % | 27,6 % | **28,3 %** (« écarter les deux extrêmes ») |
+      | sens INVERSE, colonne GLOBAL | — | 26,7 % | **27,2 %** |
+
+      **Contrôles** : `mesure-qcm-intouchable` **0 atteinte** sur 68 questions et 204 distracteurs ;
+      `verif-html` **0** sur 1 629 pages ; `verif-donnees` **0 erreur** sur 26 invariants ;
+      épreuve par injection `verif-qcm-biais-mutations` **10/10** ; cliquet refigé, **`typescript`
+      marqué `traite` — 37 cours verrouillés** ; `quiz-index` régénéré **une seule fois**, en
+      clôture (6 151 questions, écart +0).
+
+      ⚠️⚠️⚠️ **CE COURS A OUVERT UN 45ᵉ INDICE, ET C'EST LE VRAI RÉSULTAT DE LA PASSE.**
+      `tools/mesure-mot-question.js` (nouveau) — **L'INTRUS LEXICAL**, mesuré à la granularité de
+      **la question** et non du cours. Pour une question donnée, un mot porté par **toutes les
+      options sauf une** désigne cette option : l'apprenant qui écarte les trois options partageant
+      un mot que la quatrième n'a pas trouve la bonne réponse **sans rien connaître**.
+
+      **`mesure-mot-fetiche` — écrit la veille — rendait « 0 alerte »** pendant que **cinq
+      relecteurs adversariaux** trouvaient, chacun de son côté, **sept** questions de ce type
+      (« tuple », « produit », « deux », « patron », « (voir X) », « toute erreur », « typage »).
+      La raison est structurelle : il exige qu'un mot tranche **>= 8 questions** pour alerter, donc
+      un mot qui n'en tranche **qu'une** — où il rend **100 %** — lui est invisible. C'est la même
+      famille de faute que « la colonne réussite NOIE les indices rares » (cours `doc`) : **la
+      parade n'est pas de relever le seuil, c'est de changer de granularité.**
+
+      **Ampleur sur le site, mesurée** : **374 questions** tranchées à coup sûr (304 par DÉFAUT,
+      70 par EXCÈS), sur **34 cours des 90**.
+
+      ⚠️ **L'hypothèse évidente — « c'est notre chantier qui le fabrique » — est FAUSSE, et le
+      calcul le dit** : traités 200/3 011 (6,64 %) contre non traités 174/2 972 (5,85 %) ;
+      **z = 1,258, p = 0,208, non significatif**. Le vrai constat est moins flatteur : le
+      traitement ferme l'indice **au niveau du cours** (4 cours en alerte sur 36 traités contre 30
+      sur 54) **sans rien changer au nombre de questions individuellement ouvertes**. Nos 44 outils
+      rabotent la MOYENNE et laissent la QUESTION intacte.
+
+      ⚠️⚠️ **ET MON PROPRE OUTIL S'EST FAIT PRENDRE PAR LA FAUTE QU'IL DÉBUSQUAIT.** Première
+      version : deux colonnes, sens direct seulement. La vague de correction qu'il a guidée a fermé
+      les 5 questions « sûres » et fait tomber la colonne de 24,1 % à **8,1 %** — tout vert. Sauf
+      que **8,1 % est très en dessous de l'étalon**, et qu'une stratégie qui se trompe presque
+      toujours suffit à **inverser** : la lecture inverse rendait **34,6 %**. Les correcteurs
+      n'avaient pas fermé l'indice, ils l'avaient **RETOURNÉ**, et le cliquet disait vert. C'est mot
+      pour mot la leçon de `mobile` et celle de `lua` — répétées par quelqu'un qui les connaissait.
+      **Quatre colonnes désormais.** Et la cible n'est pas « taux à 25 % » mais **couverture à
+      zéro** : le taux se règle en DÉPLAÇANT quelle option est l'intrus, ce qui ne ferme rien.
+
+      🔴 **CE QUI RESTE OUVERT, CHIFFRÉ ET NON MASQUÉ.** Après le rattrapage (43 mots sur 30
+      questions), l'intrus lexical est passé de 34,6 % à **30,9 %** en lecture DÉFAUT-inverse et
+      **28,3 %** en EXCÈS-inverse — **au-dessus du seuil de 28 %**. La structure du résidu est
+      comprise : **18 questions sur 68** tranchent, avec **deux options désignées** à chaque fois,
+      et la bonne réponse **dehors dans 17 cas sur 18** → 17 x 0,5 + 1 x 0 + 50 x 0,25 = 21/68 =
+      **30,9 %**, le chiffre tombe juste. Fermer demanderait **~70 retouches** supplémentaires, et
+      **trois vagues ont déjà montré que chaque fermeture déplace l'indice**. Décision assumée :
+      **on s'arrête là pour ce cours**, et la règle entre en **consigne d'écriture dès le 39ᵉ**
+      (`scratchpad/REGLE-INTRUS-LEXICAL.md`) pour que les cours suivants **naissent conformes**
+      plutôt qu'être rattrapés à l'infini. **Le 45ᵉ indice n'est fermé sur AUCUN des 90 cours.**
+
+      ✅ **UNE FAUSSE ALERTE À 5 923 QUESTIONS, LEVÉE DANS LE CODE ET NON SUPPOSÉE.** Le mode
+      `--plan` affichait « bonne réponse = option 0 » partout. Vérification : **5 923 des 5 983
+      questions du site** ont `correct: 0` (68/68 sur `typescript`). Si le moteur affichait les
+      options dans l'ordre du tableau, ce serait un indice à **100 %**, plus grave que les 45
+      autres réunis. **Il ne le fait pas** : `buildQuiz` appelle `shuffle` à chaque affichage
+      (`js/lecon.js:516`) et suit la bonne réponse par un **drapeau**, jamais par un index. Rien à
+      corriger — mais le chiffre est écrit ici pour qu'une passe future n'ait pas à refaire
+      l'enquête.
+
+      **DÉFAUTS DE FOND CORRIGÉS — la contradiction a rendu bien plus que les 20 à 30 habituels.**
+      Une vingtaine de distracteurs **devenus vrais ou défendables**, dont `React.FC<Props>` décrit
+      comme « une interface générique posée sur le composant » — **littéralement une seconde bonne
+      réponse**, et la leçon nomme elle-même `React.FC` deux fois. Le type utilitaire **`Tuple<>`
+      qui n'existe pas**. **Trois options de code qui ne compilaient pas pour la MÊME raison**
+      (`readonly (infer U)`, TS1354), dont deux jumelles à un caractère près. `const _: never = 0`
+      (TS2322) et `const c: never` sans initialiseur (TS1155). Une question du **QCM bilan dont les
+      QUATRE options disaient « JavaScript »** alors qu'elle demande vers quoi TypeScript compile,
+      avec un quasi-doublon de la bonne réponse. Une autre où **seule la bonne réponse enchaînait
+      grammaticalement sur « il faut... »** : on répondait en lisant à voix haute. Et « Vite via
+      swc » (c'est esbuild et Rollup), `noImplicitAny` qui donnerait `undefined` (c'est `any`),
+      `String` pour `string`, `sourceMap` présenté comme le générateur des `.d.ts`.
+
+      ⚠️⚠️ **LA LEÇON D'ÉCRITURE LA PLUS IMPORTANTE, ET AUCUN OUTIL NE LA MESURE : ÉCRIS UNE
+      THÈSE FAUSSE, PAS UNE SALADE DE MOTS.** Pour atteindre la fenêtre de longueur, les écrivains
+      ont remélangé le vocabulaire de la bonne réponse jusqu'au bon compte de caractères — et la
+      bonne réponse est devenue **la seule option qui veuille dire quelque chose** (« tsc *range*
+      les erreurs », « les listes de *sommes au moment du rendu* »). Un apprenant qui ne connaît pas
+      une ligne de TypeScript coche juste, par élimination du charabia. **Seule la relecture
+      adversariale l'a vu.** Règle versée en consigne du 39ᵉ cours.
+
+      ⚠️ **UNE PRISE DE RELECTEURS RÉFUTÉE PAR LA MESURE GLOBALE** : **quatre relecteurs sur
+      cinq** ont signalé « la bonne réponse est la plus courte ici, l'indice de longueur est
+      rouvert ». Les quatre avaient tort — la cible est **17/17/17/17 sur le cours**, donc la bonne
+      réponse est volontairement la plus courte sur 17 questions. Un lot de 12 questions ne peut pas
+      afficher 25 %. C'est la leçon de `react`, encore, et elle est maintenant **écrite dans la
+      consigne** pour que les relecteurs suivants ne la repayent pas.
+
+      **TROIS RÈGLES D'ÉCRITURE NEUVES**, toutes apprises en rattrapant :
+      1. **La seule manœuvre sûre est l'AJOUT, pas le retrait.** Retirer un mot pour fermer un 3/4
+         le fait passer à 2/4 (bon) **ou à 1/4** (mauvais : la lecture par excès s'ouvre). Trois
+         retouches sur sept ont dû *conserver* un mot qu'on aurait spontanément supprimé.
+      2. **Ne jamais créer un 3/4 dont l'intrus serait la BONNE réponse** : elle est intouchable,
+         donc l'indice devient irrattrapable sans réécrire les trois distracteurs.
+      3. **Un distracteur ne doit jamais faire EXACTEMENT la longueur de la bonne réponse.** Ce
+         n'est écrit dans aucun en-tête et se déduit du code : `plan-rangs-qcm` teste
+         `plusLong = len > bon`, donc à `len === bon` l'option est classée « plus courte » et sa
+         fenêtre s'arrête à `bon - 1` — hors bande d'un seul caractère.
+
+      🟢 **DETTE D'INFRASTRUCTURE SOLDÉE AU PASSAGE : 22 consignes de chantier étaient HORS DU
+      DÉPÔT.** `scratchpad/` est ignoré en entier depuis toujours, et les consignes d'écriture y
+      vivent depuis le 1ᵉʳ cours de B4 — **210 633 octets** qui portent les 45 indices, les règles
+      du `k` et du `w`, et les pièges appris cours par cours. Chacune a coûté une passe entière.
+      Un dossier entièrement ignoré ne survit pas à un `git clean` : c'est la même famille de perte
+      que « un lot d'écriture non commité ne survit à rien » (`ocaml`), sauf qu'ici ce sont **38
+      cours de travail**. ⚠️ **Piège de forme, vérifié dans les deux sens** : `scratchpad/` ignore
+      le RÉPERTOIRE et git n'y descend pas — une exception `!scratchpad/X.md` n'est alors **jamais
+      évaluée**. Il faut `scratchpad/*`. Les 6,2 Go de scripts jetables restent dehors.
+
+      **ÉTAT DU SITE** : **6 151 questions**, **37 cours verrouillés**, **51 cours** restent
+      au-dessus de 60 %. **Le 39ᵉ cours est `scala`** (68 q, 91,9 %).
+
+      **LE 39ᵉ COURS EST MESURÉ ET SA CONSIGNE EST ÉCRITE — la prochaine passe démarre sur
+      l'écriture, pas sur le diagnostic.** `scala`, 68 questions sur 17 leçons (dont 12 en bilan) :
+
+      | indice | réussite | rendement |
+      |---|---:|---:|
+      | la plus longue (couverture 98,5 %) | **91,9 %** | 92,5 % |
+      | la plus détaillée | 81,7 % | 94,4 % |
+      | **la ponctuation forte en UNION** (44 questions) | 73,5 % | **100 %** |
+      | le mot technique exclusif | 72,4 % | 84,6 % |
+      | l'incise entre parenthèses | 63,6 % | 92,1 % |
+      | l'écho de l'énoncé | 57,1 % | 84,8 % |
+
+      Rangs **63/3/1/1**, **65 questions à retoucher, 14 567 caractères** ; lexique **59
+      exploitables sur 68** ; **DIX mots fétiches** au-dessus du seuil, tous du côté des bonnes
+      réponses (`renvoie` 32,0 %, `résultat` 31,3 %, `valeur` 30,9 %, `flatMap` 30,5 %...) ; intrus
+      lexical **4 questions sûres**, lecture EXCÈS à 26,3 %.
+      Consigne réutilisable : `scratchpad/CONSIGNE-SCALA.md`, qui porte les **trois règles neuves**
+      ci-dessus, le **45ᵉ indice** et l'avertissement contre la prise réfutée des rangs.
+
+      ---
+
       ## B4 NE PEUT PAS ETRE COCHEE — verdict inscrit ici le 2026-09-10 par le point E2 du chantier V17
 
       **Ce paragraphe existe pour qu'une passe future ne coche pas B4 par erreur.** Le plan a
