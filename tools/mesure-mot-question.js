@@ -251,14 +251,18 @@ if (PLAN) {
        -- c'est-a-dire une consigne d'ecriture impossible a suivre, donc inutile. On ne
        garde donc que les questions ou une lecture designe UNE SEULE option. */
     var r = intrus(q.a, MIN);
-    var vise = (r.defaut.length === 1 ? r.defaut : []).concat(r.exces.length === 1 ? r.exces : []);
-    if (!vise.length) return;
-    trois = trois.filter(function (t) {
-      var manque = -1;
-      for (var i = 0; i < n; i++) if (t.ou.indexOf(i) === -1) manque = i;
-      return r.defaut.length === 1 && manque === r.defaut[0];
-    });
-    un = un.filter(function (u) { return r.exces.length === 1 && u.ou[0] === r.exces[0]; });
+    /* ⚠ SECOND AFFINAGE, apprts sur `typescript` : ne garder que les questions ou UNE
+       SEULE option est designee etait encore trop etroit. Apres la vague de rattrapage,
+       le plan tombait a ZERO alors que la lecture INVERSE rendait encore 30,9 % : il
+       restait 18 questions ou DEUX options sont designees, et ou la bonne est DEHORS
+       dans 17 cas sur 18 -- l'apprenant ecarte les deux et joue a pile ou face. On
+       garde donc toute question ou la lecture TRANCHE, c'est-a-dire ou l'ensemble
+       designe n'est ni vide ni complet. C'est la couverture qu'il faut annuler. */
+    var trancheD = r.defaut.length > 0 && r.defaut.length < n;
+    var trancheE = r.exces.length > 0 && r.exces.length < n;
+    if (!trancheD && !trancheE) return;
+    trois = trancheD ? trois : [];
+    un = trancheE ? un : [];
     if (!trois.length && !un.length) return;
     totQ++;
     console.log("  " + e.f + "  q" + (idx + 1) + "  (bonne reponse = option " + q.correct + ")");
