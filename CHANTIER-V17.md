@@ -3824,9 +3824,111 @@ résultat avant le clic.
       programmes rejoués par cours ne baisse jamais, et signaler tout bloc neuf qui annonce
       une sortie sans transposition.
 
-- [ ] **B4 · Les deux preuves du seul fonctionnement qui compte sont hors chaîne.** L'audit a retenu que
-      les preuves « page ouverte en `file://` » ne sont lancées par aucun mode. Les identifier, les
-      verser, et mesurer ce qu'elles trouvent.
+- [x] **B4 · Les deux preuves du seul fonctionnement qui compte sont entrées dans la chaîne —
+      et la première mesure complète a trouvé 31 solutions publiées que leur propre page
+      REFUSE.**
+
+      **Ce que l'audit avait relevé, reproduit avant de toucher à quoi que ce soit**
+      (`node tools/recense-chaine.js`) : `preuves/exos-code.js` et `preuves/exos-texte.js`
+      — les deux seuls outils qui font ce que fait un apprenant, **écrire une réponse dans le
+      champ et cliquer « Vérifier »** — étaient `hors chaine assume`. La raison inscrite dans
+      `tools/hors-chaine.json` était honnête : **lancés nus, ils n'ouvrent RIEN** (message et
+      code 2), et leur passe complète ouvre **265** puis **1 509** Chrome, une page à la fois.
+      Les brancher tels quels aurait ajouté une heure et demie à une chaîne qui dure déjà
+      quatre heures en `--complet`.
+
+      **CE QU'ILS TROUVENT — la mesure d'abord, le versement ensuite.**
+      `exos-code.js --tout`, Chrome `file://`, la solution repliée recopiée dans le champ puis
+      « Vérifier » cliqué : **265 pages, 821,7 s, 327 solutions acceptées, 31 REFUSÉES**,
+      8 exercices sans solution repliée (non jugés). **Trente et une fois, la solution que la
+      leçon publie ne passe pas la vérification que la leçon impose** — l'apprenant qui la
+      recopie, ce que l'énoncé l'invite à faire, lit « ✗ Pas encore. Réessaie. »
+      Cause dominante, lisible dans les sorties relevées : **la solution repliée contient DEUX
+      programmes** (la solution, puis une « variante » ou une « amélioration »), si bien que la
+      sortie est doublée. Cas d'école, `js/lecon-05` #1 : `run.expect` vaut `0 2 4 6 8 10`, la
+      page affiche `0 2 4 6 8 10 0 2 4 6 8 10`. Six autres ne produisent **rien du tout**, et
+      deux tombent sur un `X is not defined`. Les 31 sont réparties sur 23 pages :
+      `algo` 10, `projets-js` 9, `js` 7, `offensive` 5.
+      Ces 31 sont inscrites une par une, avec la sortie mesurée, dans
+      **`tools/preuves/exos-code-connus.json`** — une dette ÉCRITE, pas un permis d'oubli.
+
+      **COMMENT ILS ENTRENT : UN ÉCHANTILLON DÉTERMINISTE.** `tools/lib/lot-lecons.js` rend les
+      **N leçons éligibles les plus récemment modifiées** — c'est-à-dire ce qu'on vient de
+      toucher, là où une régression a une chance d'être. ⚠️ **Le tirage au sort a été écarté
+      pour une raison mesurée ailleurs dans ce chantier** : un échantillon aléatoire rend un
+      verdict rouge un jour et vert le lendemain sans qu'une ligne ait changé — c'est le défaut
+      de couverture variable soldé au point A3 et remesuré au point A9. La limite de la date de
+      modification est écrite dans le fichier : après un `git clone`, tous les fichiers portent
+      la même date et le lot se réduit à l'ordre alphabétique ; il reste déterministe, il ne
+      cible plus rien. La couverture réelle reste `--tout`.
+      Deux étapes neuves dans `verif.js`, hors du mode rapide : **`exos-cod`**
+      (`--echantillon=12`) et **`exos-txt`** (`--echantillon=20`). `exos-texte.js` a reçu au
+      passage le `--tout` qui lui manquait.
+
+      **LE CLIQUET, ET SES TROIS BRANCHES ÉPROUVÉES.** Un échec déjà inscrit ne fait pas
+      échouer ; un échec NOUVEAU, si ; et en passe complète, une entrée qui n'est PLUS en échec
+      fait rougir elle aussi — parce qu'une référence périmée absout autant qu'une absence de
+      contrôle (défaut mesuré au point A5).
+      · échec connu (`js/lecon-05`) → **code 0**, « 1 échec CONNU, 0 nouveau » ;
+      · ⚠️ **la première tentative d'épreuve n'a rien prouvé, et c'est instructif** : une ligne
+      `console.log` ajoutée à une solution juste laisse la page l'ACCEPTER. Le juge du site
+      (`js/lecon.js`) exige que **l'une** des lignes de sortie vaille exactement `run.expect` —
+      une ligne de plus ne le dérange pas. Pour éprouver ces outils il faut rendre la solution
+      FAUSSE : `const prix = 3` → `4` dans `js/lecon-03` #2 rend « 3 stylos coûtent 12 euros »
+      → **code 1**, « ÉCHECS NOUVEAUX : 1 », page nommée ; page restaurée → **code 0** ;
+      · une entrée bidon ajoutée à la référence, passe `--tout` → **code 1**, « ⚠ 1 entrée(s)
+      de exos-code-connus.json ne sont PLUS en échec : `pages/zzz/lecon-99.html #1` — à retirer
+      du fichier », avec **31 connus et 0 nouveau** ; référence remise en état, passe `--tout`
+      → **code 0**, mêmes 31 connus, 880,1 s.
+
+      **GARDE-FOU.** `verif-chaine-declaree.js` a fait exactement son travail entre les deux
+      moitiés de ce point : les outils versés dans la chaîne mais encore déclarés hors chaîne
+      lui ont valu **code 1, « declaration perimee … la dette est payee »**. Entrées retirées →
+      **code 0, 94 outils dans un mode, 14 hors chaîne, tous déclarés**.
+
+      **Ce que ce point NE fait pas, et c'est écrit exprès** : il ne corrige aucune des
+      31 solutions. C'est un chantier de contenu à part, ouvert ci-dessous en B4a. Et la passe
+      complète d'`exos-texte.js` n'a pas été faite dans cette passe : 1 509 leçons à ~1,4 s
+      chacune, soit une trentaine de minutes. Ce qui a été fait, en revanche, est un
+      échantillon large : **300 leçons, 889 réponses publiées tapées, 889 ACCEPTÉES,
+      0 refusée**, 967,8 s. De ce côté-là, la dette est nulle sur ce qu'on a mesuré — et ce
+      n'est pas rien, puisque c'est le contrôle qui avait trouvé, en phase B, les 13 exercices
+      dont le champ `accept` appartenait à un AUTRE énoncé.
+
+      ⚠️ **UN DÉFAUT TROUVÉ EN ÉPROUVANT L'OUTIL, ET QU'IL FAUT ÉCRIRE : SA COUVERTURE VARIE
+      SANS QU'IL LE DISE.** Les trois passes `--tout` du même dépôt ont jugé **327, 323 et
+      323** solutions ; la différence tient entière dans les pages où **aucun champ de code
+      n'a été trouvé — 5, puis 9, puis 9** — et la liste de ces pages change d'une fois sur
+      l'autre (`js/lecon-03` en fait partie une fois, alors que jugée seule elle répond en
+      2,0 s). C'est très exactement le défaut soldé au point A3 pour `verif-clic.js` : un
+      outil qui juge la moitié de sa cible et sort en 0 se lit comme un outil vert. Le compte
+      est désormais **AFFICHÉ** au résumé (« pages SANS AUCUN champ trouvé ») ; le rendre
+      ROUGISSANT demande de savoir combien d'exercices chaque page porte vraiment, et c'est la
+      dette ouverte en B4b.
+
+- [ ] **B4a · Les 31 solutions publiées que leur propre page refuse.** Relevé et inscrit au
+      point B4 (`tools/preuves/exos-code-connus.json`, mesure du 2026-09-10). Ce ne sont pas
+      des défauts de l'outil : la solution repliée est bien recopiée dans le champ, et le juge
+      est celui de la page. Trois familles, à traiter séparément et à mesurer une par une :
+      **(a)** la solution contient DEUX programmes (« … puis la variante avec `continue` ») et
+      double sa sortie — soit la variante sort du bloc jugé, soit `run.expect` la prend en
+      compte ; **(b)** la solution n'affiche RIEN (6 cas) — elle définit sans appeler, ou son
+      résultat n'est pas imprimé ; **(c)** la sortie a une autre forme que `run.expect` (objet
+      sérialisé, plusieurs lignes, valeur différente) — il faut alors décider laquelle des deux
+      a raison, en exécutant. ⚠️ Ne pas corriger en alignant `run.expect` sur ce que la solution
+      produit sans l'avoir jugée : c'est parfois la SOLUTION qui est fausse. Une case par cours
+      (`algo` 10, `projets-js` 9, `js` 7, `offensive` 5).
+
+- [ ] **B4b · La couverture d'`exos-code.js` varie sans qu'elle rougisse.** Mesurée au point B4 :
+      trois passes `--tout` du même dépôt ont jugé 327, 323 et 323 solutions, l'écart tenant
+      aux pages où aucun champ n'est trouvé (5, 9, 9) — et la liste change d'une passe à l'autre.
+      Le compte est affiché, il ne fait pas échouer. Pour qu'il le fasse il faut une COUVERTURE ATTENDUE,
+      lue dans le source comme `verif-clic.js` le fait pour ses boutons : compter les entrées
+      `type:code`/`regex`/`sql` de la page et exiger qu'autant d'exercices soient jugés.
+      ⚠️ Le cas `type:python` doit être traité à part : son champ n'apparaît qu'après le
+      chargement de Pyodide (8,27 Mo), et l'exiger sans attendre ferait rougir un site juste.
+      Sortir en 2 (« je n'ai pas pu mesurer ») et non en 1, doctrine du point A5.
+
 
 - [x] **B5 · `verif-rendu.js` attendait une DURÉE, pas un ÉTAT — et il a rendu un
       débordement FANTÔME de +444 px que la même page ne reproduit sur aucune de ses six

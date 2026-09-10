@@ -581,6 +581,37 @@ if (!RAPIDE) {
     lent: true,
   });
   /* ===================================================================== *
+   * LES DEUX PREUVES DU SEUL FONCTIONNEMENT QUI COMPTE (2026-09-10, point B4).
+   * L'apprenant qui ECRIT sa reponse et clique « Verifier » n'etait juge par
+   * AUCUN mode : les deux outils qui le simulent — la solution publiee recopiee
+   * dans le champ de code, la reponse publiee tapee dans le champ de texte —
+   * etaient hors chaine, et pour une raison honnete : lances nus ils n'ouvrent
+   * RIEN, et leur passe complete ouvre 265 puis 1 509 Chrome, un par page
+   * (821,7 s mesurees pour la premiere ; la seconde tourne a ~1,4 s/page).
+   * Ils entrent par un ECHANTILLON — les N lecons eligibles les plus recemment
+   * modifiees, c'est-a-dire ce qu'on vient de toucher (tools/lib/lot-lecons.js).
+   * Le choix est DETERMINISTE : un tirage au sort ferait un verdict rouge un
+   * jour et vert le lendemain sans qu'une ligne ait change, defaut mesure au
+   * point A9. La couverture reelle reste la passe `--tout`, et c'est elle qui
+   * tient la reference des echecs connus.
+   * ===================================================================== */
+  ETAPES.push({
+    nom: "exos-cod",
+    fichier: "preuves/exos-code.js",
+    args: ["--echantillon=12"],
+    quoi: "la solution PUBLIEE passe-t-elle son propre exercice de code, dans Chrome",
+    lent: true,
+    pourquoiLent: "il ouvre 12 Chrome et clique « Verifier » dans chacun",
+  });
+  ETAPES.push({
+    nom: "exos-txt",
+    fichier: "preuves/exos-texte.js",
+    args: ["--echantillon=20"],
+    quoi: "la reponse PUBLIEE est-elle acceptee par le champ de son propre exercice",
+    lent: true,
+    pourquoiLent: "il ouvre 20 Chrome et tape la reponse dans chacun",
+  });
+  /* ===================================================================== *
    * CINQ VERIFICATEURS DE PLUS, entres par le point A3 du V16 — hors du mode
    * rapide parce qu'ils coutent 39,2 s a eux cinq, dont trois pilotent Chrome.
    * ⚠ LES TROIS QUI OUVRENT CHROME PARTENT D'UN PROFIL NEUF (tools/lib/

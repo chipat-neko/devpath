@@ -26,6 +26,8 @@
  * USAGE
  *   node tools/preuves/exos-texte.js pages/ruby/lecon-04.html …   pages précises
  *   node tools/preuves/exos-texte.js --contre pages/ruby/…        passe adversariale
+ *   node tools/preuves/exos-texte.js --tout                       toutes les leçons à exercice de texte
+ *   node tools/preuves/exos-texte.js --echantillon=8              les 8 plus récemment modifiées
  * CODE DE SORTIE : 1 s'il existe au moins un échec, 2 si rien n'a pu être mesuré.
  */
 
@@ -36,6 +38,7 @@ var net = require('net');
 var crypto = require('crypto');
 var fs = require('fs');
 var portChrome = require('../lib/port-chrome.js');
+var lot = require('../lib/lot-lecons.js');
 
 var RACINE = path.resolve(__dirname, '..', '..');
 /* Le port n'est plus ecrit en dur : Chrome le choisit et l'annonce dans son
@@ -51,8 +54,26 @@ var CONTRE = args.indexOf('--contre') !== -1;
    autour du « = »). Les ajouter sans jamais les taper reviendrait à les affirmer sans
    preuve — exactement ce que ce chantier combat. `--graphie=1` tape la deuxième. */
 var GRAPHIE = Number((args.filter(function (a) { return a.indexOf('--graphie=') === 0; })[0] || '').split('=')[1] || 0);
-var PAGES = args.filter(function (a) { return a.indexOf('--') !== 0; });
+var explicites = args.filter(function (a) { return a.indexOf('--') !== 0; });
+/* Les lecons ELIGIBLES : celles qui portent au moins un exercice `type:"text"`. Le
+   critere est lu dans le source de la page, jamais deduit d'une liste tenue a la main
+   (2026-09-10, point B4). */
+function lecons() {
+  return lot.eligibles(function (h) {
+    return h.indexOf('"type":"text"') >= 0 || h.indexOf('"type": "text"') >= 0;
+  });
+}
+var TOUT = args.indexOf('--tout') !== -1;
+/* --echantillon=N : les N eligibles les plus recemment modifiees. C'est ce qui fait
+   entrer cette preuve dans `verif.js --complet` : sa passe `--tout` ouvre 447 Chrome. */
+var ECHANTILLON = lot.tailleDemandee(args);
+var PAGES = explicites.length ? explicites
+          : (TOUT ? lecons() : (ECHANTILLON ? lot.lot(lecons(), ECHANTILLON) : []));
 if (!PAGES.length) { console.log('exos-texte.js — NON MESURÉ : aucune page passée, rien n’a été ouvert.'); process.exit(2); }
+if (!explicites.length && !TOUT) {
+  console.log('exos-texte.js — ECHANTILLON : les ' + PAGES.length + ' lecon(s) a exercice de texte ' +
+              'les plus recemment modifiees, sur ' + lecons().length + '. Couverture complete : --tout.');
+}
 
 var CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
               'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',

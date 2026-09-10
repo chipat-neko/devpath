@@ -26,6 +26,7 @@
  * USAGE
  *   node tools/preuves/exos-code.js pages/vue/lecon-03.html …   pages précises
  *   node tools/preuves/exos-code.js --tout                      toutes les leçons à exercice de code
+ *   node tools/preuves/exos-code.js --echantillon=12            les 12 plus récemment modifiées
  * CODE DE SORTIE : 1 s'il existe au moins un échec, 2 si rien n'a pu être mesuré.
  */
 
@@ -36,6 +37,7 @@ var net = require('net');
 var crypto = require('crypto');
 var fs = require('fs');
 var portChrome = require('../lib/port-chrome.js');
+var lot = require('../lib/lot-lecons.js');
 
 var RACINE = path.resolve(__dirname, '..', '..');
 /* Le port n'est plus ecrit en dur : Chrome le choisit et l'annonce dans son
@@ -81,8 +83,18 @@ function lecons() {
   });
   return out;
 }
-var PAGES = explicites.length ? explicites : (TOUT ? lecons() : []);
+/* --echantillon=N : les N leçons à exercice de code les plus récemment modifiées
+   (2026-09-10, point B4). C'est ce qui fait entrer cette preuve dans `verif.js
+   --complet` : sa passe `--tout` ouvre 265 Chrome, le lot en ouvre douze. Le tri et
+   sa limite connue sont écrits dans tools/lib/lot-lecons.js. */
+var ECHANTILLON = lot.tailleDemandee(args);
+var PAGES = explicites.length ? explicites
+          : (TOUT ? lecons() : (ECHANTILLON ? lot.lot(lecons(), ECHANTILLON) : []));
 if (!PAGES.length) { console.log('exos-code.js — NON MESURÉ : aucune page passée, rien n’a été ouvert.'); process.exit(2); }
+if (ECHANTILLON && !explicites.length && !TOUT) {
+  console.log('exos-code.js — ECHANTILLON : les ' + PAGES.length + ' lecon(s) a exercice de code ' +
+              'les plus recemment modifiees, sur ' + lecons().length + '. Couverture complete : --tout.');
+}
 
 /* ------------------------------------------------------------------- CDP nu ----- */
 var attendre = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
@@ -189,6 +201,26 @@ var SCRIPT = [
 (async function () {
   console.log('exos-code.js — ' + PAGES.length + ' page(s) · Chrome headless · le champ est rempli et « Vérifier » cliqué\n');
   var justes = 0, echecs = 0, sansSolution = 0, pagesKO = [];
+  /* LES ÉCHECS CONNUS (2026-09-10, point B4). Le relevé complet en a trouvé 31 : ce sont
+     des dettes de CONTENU — la solution que la page publie est refusée par le correcteur de
+     cette même page — et les corriger est un chantier à part. Sans cette liste, verser la
+     preuve dans la chaîne l'aurait peinte en rouge sans rien apprendre de neuf ; avec elle,
+     un échec NOUVEAU rougit dès la passe suivante. */
+  var connus = {}, vusConnus = {};
+  try {
+    connus = (JSON.parse(fs.readFileSync(path.join(__dirname, 'exos-code-connus.json'), 'utf8')) || {}).echecs || {};
+  } catch (e) { connus = {}; }
+  var nConnus = 0, nNouveaux = 0;
+  /* ⚠️ SA COUVERTURE VARIE, ET IL NE LE DISAIT PAS (2026-09-10, point B4). Deux passes
+     `--tout` du même dépôt ont rendu 327 puis 323 solutions jugées : la différence tient
+     entière dans les pages où AUCUN champ de code n'a été trouvé (5 puis 9), et la liste
+     de ces pages change d'une fois sur l'autre — `js/lecon-03`, jugée seule, marche très
+     bien. C'est le défaut soldé au point A3 pour `verif-clic.js` : un outil qui juge la
+     moitié de sa cible et sort en 0 se lit comme un outil vert. Le compte est donc
+     AFFICHÉ ; le rendre rougissant demande de savoir combien d'exercices chaque page
+     porte VRAIMENT (les `type:"python"` n'ouvrent leur champ qu'après Pyodide), et
+     c'est la dette écrite au point B4b. */
+  var sansChamp = 0;
   var debut = Date.now();
 
   for (var p = 0; p < PAGES.length; p++) {
@@ -219,15 +251,19 @@ var SCRIPT = [
     var brut = await cx.evaluer(SCRIPT);
     var lignes = [];
     try { lignes = JSON.parse(brut || '[]'); } catch (e) { lignes = []; }
-    if (!lignes.length) console.log('  ' + page + ' : aucun champ de code trouvé');
+    if (!lignes.length) { sansChamp++; console.log('  ' + page + ' : aucun champ de code trouvé'); }
     for (var k = 0; k < lignes.length; k++) {
       var r = lignes[k];
       if (r.etat === 'sans-solution') { sansSolution++; continue; }
       if (r.etat === 'juste') { justes++; }
       else {
         echecs++;
-        if (pagesKO.indexOf(page) === -1) pagesKO.push(page);
-        console.log('  ✗ ' + page + ' · exercice ' + r.i);
+        var cle = page + ' #' + r.i;
+        var dejaSu = !CONTRE && Object.prototype.hasOwnProperty.call(connus, cle);
+        if (dejaSu) { nConnus++; vusConnus[cle] = true; }
+        else { nNouveaux++; if (pagesKO.indexOf(page) === -1) pagesKO.push(page); }
+        console.log('  ' + (dejaSu ? '·' : '✗') + ' ' + page + ' · exercice ' + r.i +
+                    (dejaSu ? '  (échec CONNU, déjà inscrit au relevé)' : ''));
         console.log('      verdict de la page : ' + JSON.stringify(r.statut));
         console.log('      sortie affichée    : ' + JSON.stringify(String(r.produit).slice(0, 300)));
       }
@@ -249,7 +285,25 @@ var SCRIPT = [
     console.log('  solutions REFUSÉES ............... ' + echecs);
   }
   console.log('  exercices sans solution repliée ... ' + sansSolution + '  (non jugés)');
+  console.log('  pages SANS AUCUN champ trouvé .... ' + sansChamp + '  (rien n\'y a été mesuré)');
+  if (!CONTRE) {
+    console.log('  dont ÉCHECS CONNUS ................ ' + nConnus + '  (inscrits dans exos-code-connus.json)');
+    console.log('  ÉCHECS NOUVEAUX ................... ' + nNouveaux + '  (seuls ceux-là font échouer)');
+  }
   console.log('  durée ............................. ' + ((Date.now() - debut) / 1000).toFixed(1) + ' s');
-  if (echecs) console.log('\n  pages en échec : ' + pagesKO.join(', '));
-  process.exit(echecs ? 1 : 0);
+  if (nNouveaux) console.log('\n  pages en échec : ' + pagesKO.join(', '));
+  /* ⚠️ UNE RÉFÉRENCE PÉRIMÉE ABSOUT AUTANT QU'UNE ABSENCE DE CONTRÔLE, et c'est le défaut
+     mesuré au point A5 : un contrôle qui ne peut plus rien trouver se lit comme un contrôle
+     vert. La liste n'est donc jugée QU'EN passe complète — seule celle-là voit tout — et une
+     entrée qui ne correspond plus à un échec fait rougir, comme les cliquets d'ÉGALITÉ du
+     vérificateur JavaScript. */
+  var perimees = [];
+  if (TOUT && !CONTRE && !explicites.length) {
+    Object.keys(connus).forEach(function (c) { if (!vusConnus[c]) perimees.push(c); });
+    if (perimees.length) {
+      console.log('\n  ⚠ ' + perimees.length + ' entrée(s) de exos-code-connus.json ne sont PLUS en échec :');
+      perimees.forEach(function (c) { console.log('      ' + c + '  — à retirer du fichier'); });
+    }
+  }
+  process.exit((nNouveaux || perimees.length) ? 1 : 0);
 })();
