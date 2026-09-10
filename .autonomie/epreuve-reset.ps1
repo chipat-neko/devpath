@@ -184,7 +184,8 @@ if (-not $mModele.Success -or $chaine.Count -eq 0) {
   }
   if (-not $planCourant) { $planCourant = $chaine[$chaine.Count - 1] }
 
-  $r = Build-PromptTravail $modele $proj2 $chaine $planCourant $null
+  $mesuresSite = Get-MesuresSite $proj2
+  $r = Build-PromptTravail $modele $proj2 $chaine $planCourant $mesuresSite
   Write-Host ("  plan courant : " + $planCourant + "  -  prompt : " + $r.Texte.Length + " caracteres  -  alertes : " + @($r.Alertes).Count)
   foreach ($a in $r.Alertes) { Write-Host ("     ! " + $a) }
 
@@ -195,7 +196,11 @@ if (-not $mModele.Success -or $chaine.Count -eq 0) {
     @{ quoi = "aucune alerte de relecture"; ok = (@($r.Alertes).Count -eq 0) },
     @{ quoi = "les $($chaine.Count) chantiers sont decrits, chacun une fois"; ok = (($chaine | ForEach-Object { ([regex]::Matches($r.Texte, [regex]::Escape($_))).Count }) -contains 1) },
     @{ quoi = "le plan courant est MARQUE dans la liste"; ok = ($r.Texte -match ([regex]::Escape($planCourant) + '[^\r\n]*TON PLAN CE REVEIL')) },
-    @{ quoi = "plus aucune description figee (<< QUATRE CHANTIERS >>)"; ok = ($r.Texte -notmatch 'CHAINE DE QUATRE CHANTIERS') }
+    @{ quoi = "plus aucune description figee (<< QUATRE CHANTIERS >>)"; ok = ($r.Texte -notmatch 'CHAINE DE QUATRE CHANTIERS') },
+    @{ quoi = "les chiffres du site sont MESURES (point D6)"; ok = ($mesuresSite -ne $null -and $mesuresSite.N_COURS -gt 0) },
+    @{ quoi = "le prompt annonce le nombre de cours mesure"; ok = ($mesuresSite -and $r.Texte -match ("LE SITE : $($mesuresSite.N_COURS) cours")) },
+    @{ quoi = "le prompt annonce le nombre de lecons mesure"; ok = ($mesuresSite -and $r.Texte -match ("$($mesuresSite.N_LECONS) lecons")) },
+    @{ quoi = "plus aucun des anciens chiffres ecrits a la main"; ok = ($r.Texte -notmatch '83 cours|1463 lecons|1425 lecons|17 invariants de DONNEES|echantillon de 20 pages') }
   )
   foreach ($v in $verifs) {
     $script:total++
@@ -205,7 +210,7 @@ if (-not $mModele.Success -or $chaine.Count -eq 0) {
   # L'EPREUVE PAR INJECTION : on retire un jeton du modele, la relecture doit crier.
   $script:total++
   $casse = $modele.Replace('@@PLAN@@', 'CHANTIER-V12.md')
-  $r2 = Build-PromptTravail $casse $proj2 $chaine $planCourant $null
+  $r2 = Build-PromptTravail $casse $proj2 $chaine $planCourant $mesuresSite
   $vu = @($r2.Alertes | Where-Object { $_ -match 'point 1 annonce' }).Count -gt 0
   if ($vu) { Write-Host ("  OK       injection : un point 1 qui nomme un AUTRE plan est vu  ->  " + $r2.Alertes[0]); $script:ok++ }
   else { Write-Host "  ECHEC    injection : un point 1 qui nomme un autre plan passe inapercu"; $script:ko++ }
@@ -220,14 +225,14 @@ if (-not $mModele.Success -or $chaine.Count -eq 0) {
 
   $script:total++
   $casseM = $modele + "`nsignature : " + [char]0xE2 + [char]0x82 + [char]0xAC
-  $rM = Build-PromptTravail $casseM $proj2 $chaine $planCourant $null
+  $rM = Build-PromptTravail $casseM $proj2 $chaine $planCourant $mesuresSite
   if (@($rM.Alertes | Where-Object { $_ -match 'MOJIBAKE' }).Count -gt 0) {
     Write-Host ("  OK       injection : du mojibake est vu  ->  " + ($rM.Alertes -join ' / ')); $script:ok++
   } else { Write-Host "  ECHEC    injection : du mojibake passe inapercu"; $script:ko++ }
 
   $script:total++
   $casse2 = $modele + "`nreste : @@INCONNU@@"
-  $r3 = Build-PromptTravail $casse2 $proj2 $chaine $planCourant $null
+  $r3 = Build-PromptTravail $casse2 $proj2 $chaine $planCourant $mesuresSite
   if (@($r3.Alertes | Where-Object { $_ -match 'non substitue' }).Count -gt 0) {
     Write-Host ("  OK       injection : un jeton oublie est vu  ->  " + ($r3.Alertes -join ' / ')); $script:ok++
   } else { Write-Host "  ECHEC    injection : un jeton oublie passe inapercu"; $script:ko++ }

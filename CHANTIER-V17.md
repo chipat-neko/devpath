@@ -4935,9 +4935,47 @@ des heures de travail perdues ou invisibles.
       *« @@INCONNU@@ »* · une signature de mojibake → *« 1 signature(s) de MOJIBAKE »*.
       `[Parser]::ParseFile` sur les quatre scripts : **0 erreur**.
 
-- [ ] **D6 · Les deux prompts annoncent des chiffres périmés que le modèle est censé reprendre**
+- [x] **D6 · Les deux prompts annoncent des chiffres périmés que le modèle est censé reprendre**
       (« 83 cours, 1463 lecons » alors que la mesure du jour donne 90 cours et 1 540 leçons). Soit les
       calculer au lancement, soit ne plus en citer aucun.
+
+      **FAIT le 2026-09-10 — les deux branches, chacune là où elle convient.** La mesure a
+      trouvé **quatre** annonces fausses, pas une :
+
+      | ce que le prompt annonçait | la mesure du 2026-09-10 |
+      |---|---|
+      | 83 cours, 1463 leçons | **90 cours, 1540 leçons** |
+      | `verif-html` analyse « les 1425 lecons » | **1629** pages de leçon lues |
+      | `verif-donnees` vérifie « 17 invariants » | **26** contrôles |
+      | `verif-rendu` : « 20 pages, 139 avec --tout --lecons » | **256** pages par défaut |
+
+      **CE QUI SE MESURE EST MESURÉ.** `tools/mesures-prompt.js` rend les chiffres en
+      **61 ms** (JSON ou `--texte`) et le wrapper les injecte dans **les deux** prompts par
+      jetons : `@@N_COURS@@`, `@@N_LECONS@@`, `@@N_PARCOURS@@`, `@@N_LANGAGES@@`,
+      `@@N_LECONS_FICHIERS@@`, `@@N_INVARIANTS@@`. Chaque mesure est prise **là où l'outil la
+      prendrait** : le nombre de contrôles est lu dans le code de `verif-donnees.js`, pas
+      deviné ; le nombre de pages est celui du périmètre **par défaut** de `verif-html.js`
+      (les `lecon-NN.html` de `pages/`). ⚠️ Deux compteurs plus larges ont été essayés
+      d'abord — **2 014** puis **1 802** — avant de tomber sur **1 629**, exactement ce que
+      l'outil annonce : *un chiffre approché dans une consigne est le défaut que ce point
+      corrige, pas celui qu'il a le droit d'introduire.* (L'écart entre 1 629 fichiers et
+      1 540 leçons déclarées, ce sont les **89 pages de redirection**.)
+
+      **CE QUI NE SE MESURE PAS VITE N'EST PLUS CITÉ.** Le nombre de pages de `verif-rendu`
+      dépend de ses drapeaux et ne se connaît qu'en le lançant : la phrase décrit désormais
+      ce qu'il **couvre** (« toutes les FORMES du site : accueil, pages transverses, chaque
+      `cours.html`, une leçon par cours ») et cite les options utiles, dont `--pages=` qui
+      n'était pas documentée. Même choix pour le nombre d'étapes de la chaîne.
+
+      **SI LA MESURE ÉCHOUE, LE PROMPT NE PART PAS AVEC SES JETONS.** `Complete-Prompt`
+      neutralise tout jeton restant en « (chiffre non mesuré) » **et** journalise l'alerte :
+      le modèle lirait sinon « @@N_COURS@@ cours ».
+
+      **ÉPREUVE — 56 cas sur 56** dans `epreuve-reset.ps1`, dont **4 nouveaux** : les chiffres
+      sont mesurés · le prompt annonce le nombre de cours mesuré · idem pour les leçons ·
+      **plus aucun des anciens chiffres écrits à la main** (`83 cours`, `1463 lecons`,
+      `1425 lecons`, `17 invariants`, `echantillon de 20 pages`). Le prompt réel assemblé :
+      **7 798 caractères, 0 alerte, 0 mojibake**. `[Parser]::ParseFile` : 0 erreur.
 
 - [ ] **D7 · Le drapeau `.autonomie/verif-finale.ok` n'est jamais supprimé.** Trois occurrences dans le
       wrapper, aucune suppression, et les 21 versions du fichier depuis le 2026-08-02 sont identiques

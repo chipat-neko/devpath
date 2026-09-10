@@ -42,8 +42,14 @@ else {
   function Get-PauseEnCours($d) { return [pscustomobject]@{ Actif = $false; Quand = $null; Source = 'lib-absente' } }
   # Sans la lib, le prompt part avec ses jetons NON substitues : on le dit tres fort
   # plutot que d'envoyer une consigne qui nomme un plan inexistant.
+  function Complete-Prompt($texte, $mes) {
+    return [pscustomobject]@{ Texte = [regex]::Replace($texte, '@@[A-Z_0-9]+@@', '(chiffre non mesure)')
+                              Alertes = @('lib-reset.ps1 ABSENTE : jetons neutralises') }
+  }
+  function Get-MesuresSite($p) { return $null }
   function Build-PromptTravail($modele, $proj, $chaine, $plan, $mes) {
-    return [pscustomobject]@{ Texte = $modele.Replace('@@PLAN@@', $plan).Replace('@@CHAINE@@', 'chaine : ' + ($chaine -join ', '))
+    $t = $modele.Replace('@@PLAN@@', $plan).Replace('@@CHAINE@@', 'chaine : ' + ($chaine -join ', '))
+    return [pscustomobject]@{ Texte = [regex]::Replace($t, '@@[A-Z_0-9]+@@', '(chiffre non mesure)')
                               Alertes = @('lib-reset.ps1 ABSENTE : prompt assemble en mode degrade') }
   }
 }
@@ -228,7 +234,7 @@ if ($modeVerif) {
 $promptTravail = @'
 Tu es lance AUTOMATIQUEMENT (tache planifiee Windows) pour faire avancer le projet Syntaxe EN AUTONOMIE, dossier d:\test-claude. Tu es NON-INTERACTIF : ne pose AUCUNE question, ne propose AUCUN questionnaire, decide et agis seul. Tout le contenu visible et les commentaires en francais, avec accents CORRECTS (jamais d'ASCII a la place d'un accent dans le contenu).
 
-LE SITE : 83 cours, 1463 lecons, 25 parcours, 100 % file:// -- aucun serveur, aucun module ES, aucun build, aucune dependance installee, que des scripts classiques. Le site est TOTALEMENT AUTONOME depuis le 2026-07-31 : Prism est servi depuis assets/vendor/prism/ et les polices depuis assets/fonts/ via css/fonts.css. Les chantiers V4 (31 points d'audit) et V5 (acces rapide au contenu : recherche compactee, palette clavier, antiseches) ont ete boucles avec un verdict de securite VERT. @@CHAINE@@
+LE SITE : @@N_COURS@@ cours, @@N_LECONS@@ lecons, @@N_PARCOURS@@ parcours, @@N_LANGAGES@@ langages, 100 % file:// -- aucun serveur, aucun module ES, aucun build, aucune dependance installee, que des scripts classiques. Le site est TOTALEMENT AUTONOME depuis le 2026-07-31 : Prism est servi depuis assets/vendor/prism/ et les polices depuis assets/fonts/ via css/fonts.css. Les chantiers V4 (31 points d'audit) et V5 (acces rapide au contenu : recherche compactee, palette clavier, antiseches) ont ete boucles avec un verdict de securite VERT. @@CHAINE@@
 
 CHAQUE PLAN PORTE SON PROPRE CADRAGE en tete -- lis-le, il explique pourquoi ce chantier existe et quelles erreurs eviter.
 
@@ -240,7 +246,7 @@ REGLE DE SECURITE DU FAN-OUT, elle prime sur tout le reste : les sous-agents peu
 
 1) TON PLAN DE TRAVAIL EST d:\test-claude\@@PLAN@@. LIS-LE A CHAQUE REVEIL. Prends la PREMIERE case non cochee, dans l'ordre du fichier (phases A a H, dans l'ordre). Traite-la ENTIEREMENT, verifie, coche-la avec un compte rendu chiffre ecrit directement dans le plan, puis passe a la suivante si le temps le permet. Un point clos et prouve vaut mieux que trois a moitie faits.
 2) AVANT DE CORRIGER, REVERIFIE. Les mesures inscrites dans le plan datent du jour ou il a ete ecrit et le site bouge a chaque passe. Reproduis la mesure toi-meme : si le point est deja regle, coche-le en le signalant, n'invente pas de travail. Si la mesure ne se reproduit pas du tout, dis-le et passe au point suivant.
-3) LES QUATRE OUTILS DU PROJET, a utiliser systematiquement -- ils font en quelques secondes ce qui prendrait des heures a la main, et ils ne se trompent pas : (a) node tools/verif-html.js analyse le SOURCE des 1425 lecons et detecte toute balise creee par erreur dans un bloc de code ; il DOIT rester a zero apres ton passage. (b) node tools/verif-donnees.js verifie 17 invariants de DONNEES (courses/content/durations, fichiers cites contre fichiers disque, index, doublons de QCM). (c) node tools/verif-rendu.js mesure CE QUE LE NAVIGATEUR AFFICHE : debordement horizontal, contraste du texte sur son fond effectif, repere de focus au clavier, aria, erreurs de console, requetes reseau ; sans argument il prend un echantillon de 20 pages, avec --tout --lecons il en couvre 139, et il pilote Chrome donc il prend plusieurs minutes. Lance-le des que tu touches a du CSS ou a un gabarit. (d) node tools/build-index.js regenere les index derives ; il est en mode comparaison par defaut, il faut --write pour ecrire, avec --only=quiz,flashcards,search,searchlite,antiseches.
+3) LES QUATRE OUTILS DU PROJET, a utiliser systematiquement -- ils font en quelques secondes ce qui prendrait des heures a la main, et ils ne se trompent pas : (a) node tools/verif-html.js analyse le SOURCE des @@N_LECONS_FICHIERS@@ pages de lecon (redirections comprises) et detecte toute balise creee par erreur dans un bloc de code ; il DOIT rester a zero apres ton passage. (b) node tools/verif-donnees.js verifie @@N_INVARIANTS@@ invariants de DONNEES (courses/content/durations, fichiers cites contre fichiers disque, index, doublons de QCM). (c) node tools/verif-rendu.js mesure CE QUE LE NAVIGATEUR AFFICHE : debordement horizontal, contraste du texte sur son fond effectif, repere de focus au clavier, aria, erreurs de console, requetes reseau ; sans argument il couvre TOUTES LES FORMES du site (accueil, pages transverses, chaque cours.html, une lecon par cours : plusieurs centaines de pages, plusieurs minutes) ; --echantillon en prend 20, --pages=a.html,b.html cible ce que tu veux. Lance-le des que tu touches a du CSS ou a un gabarit. (d) node tools/build-index.js regenere les index derives ; il est en mode comparaison par defaut, il faut --write pour ecrire, avec --only=quiz,flashcards,search,searchlite,antiseches.
 4) INTERDIT ABSOLU : reintroduire une URL vers cdnjs.cloudflare.com, fonts.googleapis.com ou fonts.gstatic.com. Le site en compte zero. Apres toute modification de tools/, de starter/ ou d'un gabarit de page, REVERIFIE ce point : le piege s'est deja represente trois fois. Ne touche jamais au mojibake VOLONTAIRE des lecons qui enseignent l'encodage (pages/formats/lecon-06.html, pages/html/lecon-15.html, pages/r/lecon-06.html, pages/perl/lecon-13.html).
 5) VERIFIE AVANT DE CONCLURE : node --check sur chaque fichier js touche ; accolades equilibrees et aucune variable var(--x) inexistante pour un css ; balises equilibrees et zero BOM pour un html ; chaque bloc data-quiz, data-exos et data-quiz-bilan reste du JSON valide. Teste le rendu avec une progression semee dans localStorage (syntaxe-progress) : plusieurs comportements, dont la pastille XP, n'apparaissent qu'a cette condition, et un test avec un localStorage vide ment. Ne laisse JAMAIS un fichier casse : corrige ou reviens en arriere.
 6) EN CAS DE DOUTE REEL sur un point, ne force pas : laisse la case decochee et ecris precisement dans le plan ce qui bloque et ce qu'il faudrait decider. C'est une information utile, pas un echec.
@@ -254,9 +260,9 @@ $promptVerif = @'
 Tu es lance AUTOMATIQUEMENT (tache planifiee Windows) sur le projet Syntaxe, dossier d:\test-claude. Le chantier est DETECTE COMME TERMINE : plus aucun cours -avance, toutes les lecons enrichies, plan entierement coche. Ta mission UNIQUE ce reveil est une PASSE DE SECURITE de fin de chantier : verifier tout le site de bout en bout, corriger ce qui est sans risque, puis rendre un verdict. Tu es NON-INTERACTIF : aucune question, aucun questionnaire. N'ajoute AUCUN contenu nouveau (pas de lecon, pas de cours) : ce reveil est un controle, pas une production.
 
 0) LANCE D'ABORD LES TROIS OUTILS DU PROJET, qui font l'essentiel du travail en quelques secondes et ne se trompent pas :
-   node tools/verif-html.js      (source des 1425 lecons : toute balise creee par erreur dans un bloc de code)
-   node tools/verif-donnees.js   (17 invariants de donnees : courses/content/durations, liens, index, doublons de QCM)
-   node tools/verif-rendu.js --tout --lecons   (CE QUE LE NAVIGATEUR AFFICHE sur 139 pages : debordement horizontal, contraste, focus clavier, aria, erreurs de console, requetes reseau)
+   node tools/verif-html.js      (source des @@N_LECONS_FICHIERS@@ pages de lecon : toute balise creee par erreur dans un bloc de code)
+   node tools/verif-donnees.js   (@@N_INVARIANTS@@ invariants de donnees : courses/content/durations, liens, index, doublons de QCM)
+   node tools/verif-rendu.js --tout --lecons   (CE QUE LE NAVIGATEUR AFFICHE, toutes les formes du site : debordement horizontal, contraste, focus clavier, aria, erreurs de console, requetes reseau)
    Les trois DOIVENT sortir en code 0. verif-rendu prend plusieurs minutes : c'est normal, il pilote Chrome. S'il signale quelque chose, reproduis la mesure avant de corriger, et corrige la CAUSE, pas le symptome.
 
 1) VERIFIE ENSUITE ce que les outils ne couvrent pas, en t'appuyant sur des scripts node jetables ranges dans scratchpad :
@@ -287,10 +293,17 @@ ULTRACODE : le mot-cle ultracode present dans ce prompt t'ouvre l'outil Workflow
 # prompt, extrait de ce fichier-ci.
 $planCourant = Get-PlanCourant
 if (-not $planCourant) { $planCourant = $CHAINE[$CHAINE.Count - 1] }
-$assemble = Build-PromptTravail $promptTravail $proj $CHAINE $planCourant $null
+# LES CHIFFRES DU SITE SONT MESURES, PLUS ECRITS A LA MAIN (point D6) : le prompt
+# annoncait << 83 cours, 1463 lecons >> pour 90 et 1540, et decrivait les outils avec
+# des chiffres tout aussi vieux. 60 ms de mesure valent mieux qu'une image fausse.
+$mesuresSite = Get-MesuresSite $proj
+$assemble = Build-PromptTravail $promptTravail $proj $CHAINE $planCourant $mesuresSite
 $promptTravail = $assemble.Texte
-foreach ($alerte in $assemble.Alertes) { Log "[$(Stamp)] ATTENTION PROMPT : $alerte" }
-Log "[$(Stamp)] prompt : $($promptTravail.Length) caracteres, plan courant $planCourant, $($CHAINE.Count) chantiers decrits, $($assemble.Alertes.Count) alerte(s)."
+# Le prompt de la passe de securite cite les memes outils, donc les memes chiffres.
+$assembleV = Complete-Prompt $promptVerif $mesuresSite
+$promptVerif = $assembleV.Texte
+foreach ($alerte in @($assemble.Alertes) + @($assembleV.Alertes)) { Log "[$(Stamp)] ATTENTION PROMPT : $alerte" }
+Log "[$(Stamp)] prompt : $($promptTravail.Length) caracteres, plan courant $planCourant, $($CHAINE.Count) chantiers decrits, $(if ($mesuresSite) { "$($mesuresSite.N_COURS) cours / $($mesuresSite.N_LECONS) lecons mesures" } else { 'chiffres NON mesures' }), $(@($assemble.Alertes).Count + @($assembleV.Alertes).Count) alerte(s)."
 $prompt = if ($modeVerif) { $promptVerif } else { $promptTravail }
 
 try {

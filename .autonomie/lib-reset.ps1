@@ -216,19 +216,53 @@ function Get-DescriptionChaine($proj, $chaine, $planCourant) {
   return $txt
 }
 
+# LES CHIFFRES DU SITE, MESURES AU LANCEMENT (point D6).
+# Le prompt annoncait << 83 cours, 1463 lecons >> quand le site en comptait 90 et
+# 1540, et decrivait les outils avec des chiffres tout aussi vieux (1425 lecons pour
+# 1629 fichiers, 17 invariants pour 26, 20 pages de rendu pour 256). Un chiffre faux
+# dans une consigne ne casse rien : il fait seulement travailler le modele sur une
+# image fausse du site. tools/mesures-prompt.js les rend en 60 ms.
+# Rend un hashtable, ou $null si la mesure n'a pas abouti -- auquel cas les jetons
+# seront neutralises et l'alerte le dira.
+# Substitue les mesures, NEUTRALISE ce qui reste, et rend les alertes. Un jeton non
+# substitue ne doit jamais partir tel quel : le modele lirait << @@N_COURS@@ cours >>.
+function Complete-Prompt($texte, $mesures) {
+  $t = $texte
+  $alertes = @()
+  if ($mesures) {
+    foreach ($k in @($mesures.Keys)) { $t = $t.Replace('@@' + $k + '@@', [string]$mesures[$k]) }
+  } else {
+    $alertes += 'aucune mesure du site disponible (tools/mesures-prompt.js) : chiffres neutralises'
+  }
+  $restants = [regex]::Matches($t, '@@[A-Z_0-9]+@@')
+  if ($restants.Count -gt 0) {
+    $noms = ($restants | ForEach-Object { $_.Value } | Select-Object -Unique) -join ', '
+    $alertes += "jeton(s) non substitue(s) : $noms"
+    $t = [regex]::Replace($t, '@@[A-Z_0-9]+@@', '(chiffre non mesure)')
+  }
+  return [pscustomobject]@{ Texte = $t; Alertes = $alertes }
+}
+
+function Get-MesuresSite($proj) {
+  try {
+    $json = (& node (Join-Path $proj 'tools\mesures-prompt.js') 2>$null | Select-Object -Last 1)
+    if (-not $json) { return $null }
+    $o = $json | ConvertFrom-Json
+    $h = @{}
+    foreach ($p in $o.PSObject.Properties) { $h[$p.Name] = $p.Value }
+    if ($h.Count -eq 0) { return $null }
+    return $h
+  } catch { return $null }
+}
+
 # Assemble le prompt et le RELIT. Rend .Texte et .Alertes (liste, vide si tout va bien).
 function Build-PromptTravail($modele, $proj, $chaine, $planCourant, $mesures) {
   $t = $modele
   $t = $t.Replace('@@CHAINE@@', (Get-DescriptionChaine $proj $chaine $planCourant))
   $t = $t.Replace('@@PLAN@@', $planCourant)
-  if ($mesures) {
-    foreach ($k in $mesures.Keys) { $t = $t.Replace('@@' + $k + '@@', [string]$mesures[$k]) }
-  }
-  $alertes = @()
-  $restants = [regex]::Matches($t, '@@[A-Z_0-9]+@@')
-  if ($restants.Count -gt 0) {
-    $alertes += 'jeton(s) non substitue(s) : ' + (($restants | ForEach-Object { $_.Value }) -join ', ')
-  }
+  $r = Complete-Prompt $t $mesures
+  $t = $r.Texte
+  $alertes = @($r.Alertes)
   if ($t -notmatch [regex]::Escape($planCourant)) {
     $alertes += "le plan courant ($planCourant) n'apparait pas dans le prompt"
   }
