@@ -57,31 +57,58 @@ var fin = runner.indexOf('].join("\\n");', debut);
 if (fin < 0) { console.log('sonde-console-worker — NON MESURE : fin de WORKER_SRC introuvable.'); process.exit(2); }
 var sourceWorker = runner.slice(debut, fin + '].join("\\n");'.length);
 
-/* ⚠️ WORKER_SRC s'ouvre sur `envelopperPourRepli.toString()` : la coller seule dans une
-   page leve une ReferenceError avant meme la creation du Worker, et le premier jet de
-   cette sonde est reste bloque sur « (en attente) » pour cette raison exacte. La
-   fonction est donc extraite elle aussi de `js/runner.js` -- lue, jamais recopiee. */
-var iFn = runner.indexOf('function envelopperPourRepli(');
-if (iFn < 0) { console.log('sonde-console-worker — NON MESURE : envelopperPourRepli introuvable.'); process.exit(2); }
-var jFn = runner.indexOf('\n  }', iFn);
-if (jFn < 0) { console.log('sonde-console-worker — NON MESURE : fin de envelopperPourRepli introuvable.'); process.exit(2); }
-var sourceEnveloppe = runner.slice(iFn, jFn + 4);
+/* ⚠️ WORKER_SRC s'ouvre sur des `<nom>.toString()` : coller le tableau dans une page sans
+   ces fonctions leve une ReferenceError avant meme la creation du Worker, et la sonde
+   reste bloquee sur « (en attente) ». Le premier jet ne fournissait que
+   `envelopperPourRepli` -- la seule fonction du tableau LE JOUR DE SON ECRITURE. Depuis,
+   `apisHorsLigne` (B2b-16) et `formaterPourLaSortie` (B2b-16) s'y sont ajoutees, et la
+   sonde est redevenue muette. C'est le meme defaut que `worker-src-compile.js` a soldE :
+   UNE LISTE ECRITE A LA MAIN MEURT A LA PREMIERE NOUVEAUTE. On lit donc dans le tableau
+   LUI-MEME les noms dont il demande le `toString()`, et on les extrait tous de
+   js/runner.js -- lus, jamais recopies. */
+var nomsFn = [];
+sourceWorker.replace(/([A-Za-z_$][\w$]*)\.toString\(\)/g, function (_, nom) { nomsFn.push(nom); return _; });
+if (!nomsFn.length) { console.log('sonde-console-worker — NON MESURE : aucun <nom>.toString() dans WORKER_SRC.'); process.exit(2); }
+var sourceEnveloppe = '';
+for (var iN = 0; iN < nomsFn.length; iN++) {
+  var iFn = runner.indexOf('function ' + nomsFn[iN] + '(');
+  if (iFn < 0) { console.log('sonde-console-worker — NON MESURE : ' + nomsFn[iN] + ' introuvable dans js/runner.js.'); process.exit(2); }
+  var jFn = runner.indexOf('\n  }', iFn);
+  if (jFn < 0) { console.log('sonde-console-worker — NON MESURE : fin de ' + nomsFn[iN] + ' introuvable.'); process.exit(2); }
+  sourceEnveloppe += runner.slice(iFn, jFn + 4) + '\n';
+}
 
-/* La liste du contexte de verif-js.js, LUE elle aussi : la sonde ne repete pas une
-   liste qui pourrait deriver du fichier qu'elle est censee controler. */
-var vjs = fs.readFileSync(path.join(RACINE, 'tools', 'verif-js.js'), 'utf8');
-var blocConsole = /console:\s*\{([\s\S]*?)\n\s*\},/.exec(vjs);
-if (!blocConsole) { console.log('sonde-console-worker — NON MESURE : contexte console de verif-js.js introuvable.'); process.exit(2); }
+/* La liste du contexte du verificateur, PRISE DANS LE CONTEXTE LUI-MEME.
+ *
+ * ⚠️ CETTE SONDE A ETE MUETTE, ET PERSONNE NE L'A VU (corrige le 2026-09-10, point F1).
+ * Elle lisait le bloc `console:` de `tools/verif-js.js` par expression reguliere. Au
+ * point B2b-15, ce contexte a demenage dans `tools/lib/contexte-worker.js` pour cesser
+ * d'exister en double — et la sonde, ne trouvant plus son motif, sortait en 2 avec
+ * « NON MESURE : contexte console de verif-js.js introuvable ». Elle etait donc dans la
+ * chaine, elle ne rougissait pas, et elle ne mesurait RIEN : exactement le defaut que
+ * les points A5 et A7 ont combattu, ici commis sur une sonde qui les avait inspires.
+ *
+ * On ne lit donc plus un FICHIER par motif, on interroge L'OBJET : le contexte est
+ * construit par la fonction de production et ses methodes sont enumerees. Aucun
+ * commentaire ne peut plus fausser la liste, et un futur demenagement ne peut plus la
+ * rendre introuvable -- au pire, `require` echouera bruyamment.
+ *
+ * ⚠️ LE PIEGE D'AVANT, garde en memoire : le premier jet lisait les noms sur le texte
+ * brut du bloc, commentaires compris, et en tirait une trentaine de faux noms
+ * (« fidele », « septembre », « PANNE »…) que la sonde tentait ensuite d'APPELER. Un
+ * instrument dont le resultat depend d'un commentaire ne mesure rien. */
 var METHODES_VERIF = [];
-/* ⚠️ LES COMMENTAIRES D'ABORD, LES NOMS ENSUITE. Le bloc `console:` de verif-js.js
-   porte un commentaire de quinze lignes, et le francais y ecrit des « mot : » a la
-   pelle. Un premier jet lisait les noms sur le texte brut : il en a tire une trentaine
-   de faux noms (« fidele », « septembre », « PANNE »…), que la sonde a ensuite tente
-   d'APPELER sur le console du Worker. La sonde s'est bloquee sur « (en attente) », et
-   la mesure precedente — celle qui avait rendu 24 membres — est devenue irreproductible
-   d'un coup. Un instrument dont le resultat depend d'un commentaire ne mesure rien. */
-var corps = blocConsole[1].replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
-corps.replace(/(^|[\s,{])([a-zA-Z]+)\s*:/g, function (_, __, nom) { METHODES_VERIF.push(nom); return _; });
+try {
+  var ctxWorker = require(path.join(RACINE, 'tools', 'lib', 'contexte-worker.js')).contexteWorker([]);
+  METHODES_VERIF = Object.keys(ctxWorker.console || {});
+} catch (e) {
+  console.log('sonde-console-worker — NON MESURE : contexte introuvable (' + e.message + ').');
+  process.exit(2);
+}
+if (!METHODES_VERIF.length) {
+  console.log('sonde-console-worker — NON MESURE : le contexte ne porte aucune methode de console.');
+  process.exit(2);
+}
 
 /* --------------------------------------------------------- la page jetable --- */
 /* Le code envoye au Worker : pour chaque methode de console, presence puis APPEL.
@@ -216,7 +243,7 @@ console.log('sonde-console-worker — Chrome headless, page file://, Worker cree
 console.log('');
 console.log('  WORKER_SRC lu dans js/runner.js .......... ' + sourceWorker.split('\n').length + ' ligne(s)');
 console.log('  budget de temps virtuel qui a suffi ...... ' + budgetUtilise + ' ms');
-console.log('  console du contexte de verif-js.js ....... ' + METHODES_VERIF.length + ' methode(s) : ' + METHODES_VERIF.join(', '));
+console.log('  console du contexte du verificateur ..... ' + METHODES_VERIF.length + ' methode(s) : ' + METHODES_VERIF.join(', '));
 console.log('  console du VRAI Worker ................... ' + mesurees.length + ' membre(s)');
 console.log('');
 
@@ -224,7 +251,7 @@ var fonctions = mesurees.filter(function (x) { return x.etat === 'function'; });
 var manquantes = fonctions.filter(function (x) { return METHODES_VERIF.indexOf(x.nom) === -1; });
 var risque = 0;
 
-console.log('  --- methodes du Worker ABSENTES du contexte de verif-js.js : ' + manquantes.length + ' ---');
+console.log('  --- methodes du Worker ABSENTES du contexte du verificateur : ' + manquantes.length + ' ---');
 manquantes.forEach(function (x) {
   var n = EMPLOYEES[x.nom] || 0;
   if (n) risque += n;
@@ -236,7 +263,7 @@ console.log('');
 var absentesDuWorker = METHODES_VERIF.filter(function (n) {
   return !mesurees.some(function (x) { return x.nom === n; });
 });
-console.log('  --- methodes que verif-js.js fournit et que le Worker N A PAS : ' + absentesDuWorker.length + ' ---');
+console.log('  --- methodes que le contexte fournit et que le Worker N A PAS : ' + absentesDuWorker.length + ' ---');
 absentesDuWorker.forEach(function (n) { console.log('     ' + n); });
 console.log('');
 console.log('  appels de leçon exposes a un faux positif ... ' + risque);
@@ -259,4 +286,4 @@ if (risque > 0) {
   console.log('  Ajouter les methodes ci-dessus au `console` de contexteWorker(), dans tools/verif-js.js.');
   process.exit(1);
 }
-console.log('  OK — le contexte de verif-js.js couvre tout ce que les leçons appellent.');
+console.log('  OK — le contexte du verificateur couvre tout ce que les leçons appellent.');
