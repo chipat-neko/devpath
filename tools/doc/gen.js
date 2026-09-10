@@ -388,6 +388,16 @@ const NORM_NB = (function () {
     s4Conformes: String(CONF.s4.conformes),
     s4Echecs: String(CONF.s4.echecs),
     s4Pct: ((CONF.s4.conformes / CONF.s4.cours) * 100).toFixed(1).replace('.', ','),
+    /* L'ANCIENNE clause S3, celle du 2026-09-06, mesuree AUJOURD'HUI. La lecon
+       raconte pourquoi elle a ete retiree, avec un chiffre : sur les questions
+       qui la respectaient deja, la bonne reponse tombe quand meme au rang 1
+       bien plus d'une fois sur quatre. Le chiffre d'origine (1 835 questions,
+       38,4 %) etait ecrit A LA MAIN et il est reste juste -- verifie en le
+       recalculant sur `ff848e4^` -- mais rien ne le tenait, et le corpus bouge
+       a chaque passe du chantier B4. La page le DATE desormais, et publie a
+       cote l'etat du jour, celui-ci. */
+    ancRespectent: milliers(CONF.ancienneS3.respectent),
+    ancRang1Pct: ((CONF.ancienneS3.rang1 / CONF.ancienneS3.respectent) * 100).toFixed(1).replace('.', ','),
     s1Conformes: milliers(cl.S1.conformes),
     a1Employe: milliers(cl.A1.total - cl.A1.echecs),
     lignesSpec: String(NB_LIGNES_SPEC),
@@ -788,11 +798,73 @@ const META = require('./meta.json');
 const sortie = path.join(RACINE, 'pages', 'doc');
 if (!fs.existsSync(sortie)) fs.mkdirSync(sortie, { recursive: true });
 
+/* ------------------------------------------ LE COURS MESURE SUR LUI-MEME ---
+   La lecon 03 raconte que ce cours-ci portait le biais de longueur qu'il
+   enseigne a debusquer, et elle le dit avec un chiffre. Ce chiffre parle du
+   cours ENTIER : il ne peut donc pas etre calcule leçon par leçon, ni lu dans
+   les pages deja ecrites -- au premier assemblage suivant une retouche de QCM,
+   ce serait l'etat PRECEDENT qui serait publie.
+   D'ou les DEUX TEMPS ci-dessous : les quatre corps sont d'abord remplis SANS
+   etre ecrits, les rangs sont mesures sur ces corps-la, puis @@DOCRANG:...@@ est
+   resolu et les pages sont ecrites. Aucun etat transitoire n'est publie.
+   ⚠️ CES MARQUEURS N'ONT RIEN A FAIRE DANS UNE OPTION DE QCM : le chiffre depend
+   des longueurs des options, une option qui le porte se mesurerait elle-meme et
+   l'assemblage n'aurait plus de point fixe. Ils vont dans la PROSE. */
+function rangsDuCours(corpsRemplis) {
+  const R = [0, 0, 0, 0];
+  let total = 0;
+  for (const corps of corpsRemplis) {
+    const re = /<script([^>]*)>([\s\S]*?)<\/script>/gi;
+    let m;
+    while ((m = re.exec(corps))) {
+      if (!/\bdata-quiz(-bilan)?\b/.test(m[1])) continue;
+      let d;
+      try { d = JSON.parse(m[2]); } catch (e) { continue; }
+      if (!Array.isArray(d)) continue;
+      for (const q of d) {
+        if (!q || !Array.isArray(q.a) || q.a.length < 2) continue;
+        const ci = q.correct || 0;
+        const L = q.a.map(function (x) { return String(x || '').length; });
+        const r = L.filter(function (n, i) { return i !== ci && n > L[ci]; }).length;
+        R[Math.min(r, 3)]++; total++;
+      }
+    }
+  }
+  const pct = function (n) { return ((n / total) * 100).toFixed(1).replace('.', ','); };
+  return {
+    questions: String(total),
+    repartition: R.join('&nbsp;/&nbsp;'),
+    rang0: String(R[0]), rang1: String(R[1]),
+    rang0Pct: pct(R[0]), rang1Pct: pct(R[1]),
+    pirePct: pct(Math.max.apply(null, R)),
+  };
+}
+function remplirDocRang(corps, D) {
+  return corps.replace(/@@DOCRANG:([a-zA-Z0-9]+)@@/g, function (_, cle) {
+    if (!D.hasOwnProperty(cle)) {
+      console.error('ARRÊT : décompte de rang inconnu « ' + cle + ' ».');
+      process.exit(1);
+    }
+    return D[cle];
+  });
+}
+
 (async function () {
+  /* PREMIER TEMPS : remplir les quatre corps, sans rien écrire. */
+  const prets = [];
   for (const m of META) {
     const src = path.join(__dirname, 'corps', 'l' + Number(m.num) + '.html');
     if (!fs.existsSync(src)) { console.log('corps absent, leçon ' + m.num + ' non générée'); continue; }
-    const corps = await remplirMarqueurs(fs.readFileSync(src, 'utf8'));
+    prets.push({ m: m, corps: await remplirMarqueurs(fs.readFileSync(src, 'utf8')) });
+  }
+  const DOCRANG = rangsDuCours(prets.map(function (p) { return p.corps; }));
+  console.log('rangs du cours doc, mesurés sur les corps assemblés : ' +
+    DOCRANG.repartition.replace(/&nbsp;/g, ' ') + ' sur ' + DOCRANG.questions);
+
+  /* SECOND TEMPS : le marqueur qui dépendait du cours entier, puis l'écriture. */
+  for (const pret of prets) {
+    const m = pret.m;
+    const corps = remplirDocRang(pret.corps, DOCRANG);
     const reste = corps.match(/@@[A-Z]+:[^@]*@@/);
     if (reste) { console.error('ARRÊT : marqueur non résolu « ' + reste[0] + ' » dans la leçon ' + m.num + '.'); process.exit(1); }
     if (/\{\{\w+\}\}/.test(corps)) {

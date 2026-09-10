@@ -175,6 +175,26 @@ function mesurer() {
     const t = rangs[c].reduce((a, b) => a + b, 0);
     return Math.max.apply(null, rangs[c]) / t <= 0.40;
   });
+  /* L'ANCIENNE CLAUSE S3, celle qui a été RETIRÉE le 2026-09-06 : « la bonne
+     réponse ne doit pas être strictement la plus longue des quatre ». Elle est
+     mesurée ici alors qu'elle n'est plus en vigueur, et pour une raison précise :
+     la leçon 03 raconte pourquoi elle a été révisée, et elle le fait avec un
+     chiffre — sur les questions qui la respectaient DÉJÀ, la bonne réponse tombe
+     quand même au rang 1 bien plus d'une fois sur quatre. Ce chiffre était écrit
+     À LA MAIN dans la page ; il y est resté juste, mais rien ne le tenait, et le
+     corpus bouge à chaque passe du chantier B4. Il est désormais mesuré.
+     « Respectaient déjà » = au moins une option STRICTEMENT plus longue que la
+     bonne réponse. La nuance compte : admettre les ex æquo au sommet donnerait
+     2 747 questions au lieu de 1 835 au relevé d'origine, et un autre taux. */
+  let ancRespect = 0, ancRang1 = 0;
+  for (const e of valides) {
+    const ci = e.q.correct || 0;
+    const L = e.q.a.map((o) => String(o).length);
+    const plusLongues = L.filter((n, i) => i !== ci && n > L[ci]).length;
+    if (plusLongues === 0) continue;
+    ancRespect++;
+    if (plusLongues === 1) ancRang1++;
+  }
   return {
     questions: valides.length,
     blocsInvalides: toutes.filter((e) => e.invalide),
@@ -182,6 +202,7 @@ function mesurer() {
     cours: cours.size, clauses: resultats,
     s4: { cours: noms.length, conformes: s4Conformes.length,
           echecs: noms.length - s4Conformes.length, rangs: rangs },
+    ancienneS3: { respectent: ancRespect, rang1: ancRang1 },
   };
 }
 

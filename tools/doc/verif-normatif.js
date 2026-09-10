@@ -111,6 +111,50 @@ verdict((r.rejets || []).length === 0, 'aucun bloc portant data-quiz n est rejet
 const pct = ((s3.echecs / s3.total) * 100).toFixed(1).replace('.', ',');
 verdict(visible.indexOf(pct) !== -1, 'la page cite le taux de manquement à S3 = ' + pct + ' %');
 verdict(visible.indexOf(fmt(s3.echecs)) !== -1, 'la page cite le nombre de manquements à S3 = ' + fmt(s3.echecs));
+/* ⚠️ TROIS CONTRÔLES AJOUTÉS AU POINT C1 DU CHANTIER V17, et ce qui les motive.
+   Les deux verdicts ci-dessus surveillent le côté ÉCHEC de S3 ; le côté CONFORME
+   n'était surveillé par aucun des 66 contrôles, non plus que S4 en valeur. La
+   page a donc pu publier « 2 423 / 6 103 — 39,7 % » et « 18 / 89 cours — 20,2 % »
+   pendant que la mesure disait 3 507 / 6 103 (57,5 %) et 34 / 89 (38,2 %), sans
+   qu'une ligne rougisse. Pire : le tableau était arithmétiquement IMPOSSIBLE —
+   2 423 + 2 596 = 5 019, et non 6 103 — alors que conformite-quiz.js définit
+   `conformes = valides - echecs`, somme toujours égale au corpus. Le troisième
+   contrôle est celui-là : une addition qui ne tombe pas juste dénonce un chiffre
+   périmé sans avoir à savoir lequel des deux a bougé. */
+const pctConf = ((s3.conformes / s3.total) * 100).toFixed(1).replace('.', ',');
+verdict(visible.indexOf(fmt(s3.conformes)) !== -1,
+  'la page cite le nombre de questions CONFORMES à S3 = ' + fmt(s3.conformes));
+verdict(visible.indexOf(pctConf) !== -1, 'la page cite le taux de conformité à S3 = ' + pctConf + ' %');
+verdict(s3.conformes + s3.echecs === r.questions,
+  'S3 : conformes + manquements = le corpus entier (l addition de la mesure)',
+  s3.conformes + ' + ' + s3.echecs + ' = ' + (s3.conformes + s3.echecs) + ' pour ' + r.questions);
+/* L'ADDITION TELLE QUE LA PAGE L'AFFICHE, et non telle que la mesure la calcule :
+   c'est le seul contrôle qui aurait vu le tableau impossible. On relit les deux
+   nombres DANS le texte publié, autour du séparateur « / », et on additionne. */
+{
+  const m = visible.match(/([\d  ]+)\s*\/\s*([\d  ]+)\s*—\s*(\d+,\d)\s*%/);
+  const nb = (s) => Number(String(s).replace(/[^\d]/g, ''));
+  verdict(!!m && nb(m[1]) + s3.echecs === nb(m[2]),
+    'l addition du tableau publié tombe juste (conformes affichés + manquements = total affiché)',
+    m ? nb(m[1]) + ' + ' + s3.echecs + ' = ' + (nb(m[1]) + s3.echecs) + ' pour ' + nb(m[2])
+      : 'aucune ligne « n / total — x,y % » trouvée dans la page');
+}
+const s4Pct = ((r.s4.conformes / r.s4.cours) * 100).toFixed(1).replace('.', ',');
+verdict(visible.indexOf(r.s4.conformes + ' / ' + r.s4.cours) !== -1,
+  'la page cite la mesure S4 en valeur = ' + r.s4.conformes + ' / ' + r.s4.cours + ' cours');
+verdict(visible.indexOf(s4Pct) !== -1, 'la page cite le taux S4 = ' + s4Pct + ' %');
+/* Les deux chiffres DATÉS de la note de révision : ils content l'état du
+   2026-09-06 (recalculé sur `ff848e4^` au point C1 : 0 / 39 / 14 / 11 sur 64,
+   et 1 835 questions d'autres cours à 38,4 % de rang 1). Ils ne doivent PAS
+   suivre le corpus — mais leur voisin, lui, doit le suivre : la page publie à
+   côté l'état du dernier assemblage, et c'est CELUI-LÀ qu'on vérifie. */
+verdict(visible.indexOf(fmt(r.ancienneS3.respectent)) !== -1,
+  'la page cite, à jour, le corpus de l ancienne clause = ' + fmt(r.ancienneS3.respectent) + ' questions');
+const ancPct = ((r.ancienneS3.rang1 / r.ancienneS3.respectent) * 100).toFixed(1).replace('.', ',');
+verdict(visible.indexOf(ancPct) !== -1,
+  'la page cite, à jour, le rang 1 de l ancienne clause = ' + ancPct + ' %');
+verdict(/6 septembre 2026/.test(visible) && /datés/.test(visible),
+  'la page DATE les deux chiffres historiques au lieu de les laisser passer pour actuels');
 /* la clause M6 doit VOIR une vraie violation : sans ce témoin, « 0 manquement »
    ne prouverait rien — c'est le vérificateur qui avalait ses pannes en D1. */
 const M6 = conformite.CLAUSES.find((c) => c.id === 'M6');

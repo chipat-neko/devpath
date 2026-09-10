@@ -4354,23 +4354,89 @@ résultat avant le clic.
 Le site publie ses propres mesures. Il change. Un chiffre publié qui ne correspond plus est un mensonge
 affiché à l'apprenant — et l'audit a montré que la cause est presque toujours **la retouche à la main**.
 
-- [ ] **C1 · `pages/doc/lecon-03.html` : quatre statistiques fausses, dont deux hors de tout contrôle.**
-      `verif-normatif.js` sort en 1 avec « 64 contrôles OK, 2 en échec ». Mesure du jour
-      (`tools/doc/mesures/conformite-quiz.js`) : S3 = 3 507 / 6 103 conformes (57,5 %), **2 596
-      manquements (42,5 %)**. La page publie `2 657 fois — 43,5 %` (l.878), `2 423 / 6 103 — 39,7 %`
-      (l.871), et pour S4 `18 / 89 cours — 20,2 %` (l.872) contre **34/89 = 38,2 %** mesuré. Les deux
-      derniers ne sont surveillés par **aucun** des 66 contrôles. Aggravation : le tableau est
-      arithmétiquement impossible — **2 423 + 2 657 = 5 080 ≠ 6 103**, alors que
-      `conformite-quiz.js:153` définit `conformes = valides - echecs`, somme toujours égale au total.
-      `git log -S` date le 2 423 de `ff848e4` (page alors cohérente : 2 423 + 3 680 = 6 103) et le
-      2 657 de `2637f82`, dont le diff ne touche que **7 lignes, exactement celles que les deux
-      contrôles surveillent**. **Correctif : régénérer, pas rustiner.** `tools/doc/corps/l3.html:110,117`
-      ne contient aucun chiffre, seulement des marqueurs `@@NORMNB:…@@` remplis par
-      `tools/doc/gen.js:365-367`. Lancer `gen.js`, puis **ajouter à `verif-normatif.js` un verdict sur
-      `s3.conformes`, sur `s4` en valeur, et un contrôle d'addition** (conformes + échecs = corpus).
-      Deux autres phrases de la même page sont écrites à la main et fausses (« le rang 1 s'établit à
-      38,4 % » sur 1 835 questions ; « la plus longue 0 fois, la deuxième 39 fois, soit 60,9 % » sur
-      64 questions) : les régénérer aussi.
+- [x] **C1 · `pages/doc/lecon-03.html` : les deux statistiques fausses corrigées par
+      régénération, les deux autres n'étaient pas fausses mais DATÉES — et c'est le vrai
+      enseignement du point. `verif-normatif.js` : 66 → 75 contrôles, les 9 nouveaux éprouvés
+      par injection.**
+
+      ⚠️ **CE QUE LA REVÉRIFICATION A CONTREDIT.** Le plan annonçait « quatre statistiques
+      fausses » et un `verif-normatif.js` « en 1, 64 contrôles OK, 2 en échec ». Reproduit
+      ce jour : l'outil sort en **0, 66 contrôles OK, 0 en échec**, et sur les quatre chiffres,
+      **un était déjà corrigé, deux étaient bien faux, et les deux derniers sont JUSTES — ils
+      sont simplement datés**. Les corriger comme le plan le demandait aurait détruit un
+      raisonnement exact.
+
+      **(1) LES DEUX QUI ÉTAIENT FAUX, corrigés en régénérant.** `gen.js` relancé, aucun
+      chiffre écrit à la main : `S3` passe de `2 423 / 6 103 — 39,7 %` à
+      **`3 507 / 6 103 — 57,5 %`**, `S4` de `18 / 89 cours — 20,2 %` à
+      **`34 / 89 cours — 38,2 %`**. L'addition redevient possible :
+      **3 507 + 2 596 = 6 103**, alors que le tableau publié affirmait 2 423 + 2 596 = 5 019
+      pour un corpus de 6 103. La régénération a aussi rattrapé **trois comptages dérivés de
+      `lecon-02`** (17 → 16, 46 → 47, 1 → 2 cours), que le plan n'avait pas vus. Le
+      `2 657 fois — 43,5 %` signalé au plan, lui, **était déjà revenu à 2 596 — 42,5 %**.
+
+      **(2) LES DEUX AUTRES SONT JUSTES, ET LE PROUVER A DEMANDÉ DE REMONTER LE DÉPÔT.** La
+      note de révision dit « la bonne réponse était la plus longue 0 fois, et la deuxième
+      39 fois, soit 60,9 % » sur les 64 questions du cours, et « sur les 1 835 questions des
+      autres cours qui la respectaient déjà, le rang 1 s'établit à 38,4 % ». Aujourd'hui le
+      cours mesure **16 / 16 / 16 / 16 sur 64** — le chantier B4 l'a rééquilibré exactement.
+      Ces phrases décrivent donc l'état qui a **motivé** la révision du 6 septembre 2026, pas
+      l'état courant. Vérification par exécution sur l'arbre `ff848e4^` (`git archive`, les
+      quatre leçons de l'époque) : **0 / 39 / 14 / 11 sur 64**, soit **0,0 %** au rang 0 et
+      **60,9 %** au rang 1 — au chiffre près. Et pour la seconde, six définitions de « qui la
+      respectaient déjà » ont été essayées : celle qui rend **1 835 questions et 38,4 %
+      exactement** est « au moins une option STRICTEMENT plus longue » — admettre les ex æquo
+      au sommet donnerait 1 944 et 36,3 %. Les deux phrases étaient justes ; **rien ne les
+      tenait, et rien ne disait qu'elles étaient datées.**
+
+      **CE QUI A ÉTÉ FAIT À LA PLACE DE LES « CORRIGER ».** Elles sont **datées** dans le
+      corps (`tools/doc/corps/l3.html`), et la page publie à côté **l'état du dernier
+      assemblage**, mesuré : le cours en `@@DOCRANG:repartition@@` (16 / 16 / 16 / 16 sur 64,
+      soit 25,0 % au pire rang) et l'ancienne clause en `@@NORMNB:ancRespectent@@` /
+      `@@NORMNB:ancRang1Pct@@` (**2 645 questions, rang 1 à 36,4 %**, contre 1 835 et 38,4 %
+      au relevé d'origine). Deux mesures neuves servent ces marqueurs :
+      `conformite-quiz.js` expose désormais `ancienneS3` (la clause RETIRÉE, mesurée quand
+      même, parce que la leçon raconte pourquoi elle l'a été), et `gen.js` mesure les rangs
+      **du cours sur lui-même**.
+
+      ⚠️ **LE PIÈGE DE CETTE DERNIÈRE MESURE, ET COMMENT IL EST FERMÉ.** Un chiffre qui parle
+      du cours ENTIER ne peut être ni calculé leçon par leçon, ni lu dans les pages déjà
+      écrites : au premier assemblage suivant une retouche de QCM, c'est l'état PRÉCÉDENT qui
+      serait publié. `gen.js` procède donc en **deux temps** — les quatre corps sont remplis
+      sans être écrits, les rangs sont mesurés sur ces corps-là, puis `@@DOCRANG:…@@` est
+      résolu et les pages sont écrites. Aucun état transitoire n'est publié. Et la règle
+      écrite en toutes lettres dans le code : **ces marqueurs n'ont rien à faire dans une
+      option de QCM** — le chiffre dépend des longueurs des options, une option qui le porte
+      se mesurerait elle-même et l'assemblage n'aurait plus de point fixe. Ils vont dans la
+      prose. Contrôle croisé : `verif-recherche.js`, qui calcule les mêmes rangs par un autre
+      chemin, annonce lui aussi **16 / 16 / 16 / 16**.
+
+      **LES NEUF CONTRÔLES AJOUTÉS À `verif-normatif.js` (66 → 75), et ce qu'ils gardent.**
+      Les deux verdicts existants ne surveillaient que le côté ÉCHEC de S3 ; le côté CONFORME
+      et S4 en valeur n'étaient surveillés par **aucun** des 66. D'où : le nombre de conformes
+      à S3, son taux, **l'addition de la mesure** (conformes + manquements = corpus),
+      **l'addition TELLE QUE LA PAGE L'AFFICHE** (les deux nombres relus dans le texte publié,
+      autour du « / »), S4 en valeur, le taux S4, le corpus à jour de l'ancienne clause, son
+      rang 1, et la présence de la datation. Le quatrième est celui qui aurait vu le défaut
+      d'origine sans rien savoir de sa cause : une addition qui ne tombe pas juste dénonce un
+      chiffre périmé **sans qu'on ait à deviner lequel des deux a bougé**.
+
+      **ÉPREUVE PAR INJECTION, neuf fois, chacune restaurée par `gen.js`.** `3 507 → 3 508`
+      fait échouer **deux** contrôles à la fois, dont l'addition affichée
+      (`3508 + 2596 = 6104 pour 6103`) ; `57,5 → 57,6 %`, `34/89 → 33/89`, `38,2 → 38,3 %`,
+      `2 645 → 2 640`, `36,4 → 36,5 %` et le retrait du mot « datés » sortent chacun en 1 avec
+      leur seul contrôle en échec. L'invariant de la mesure a été éprouvé à part, en amputant
+      `conformes` d'une unité dans `conformite-quiz.js` : **3 échecs**, dont
+      `3506 + 2596 = 6102 pour 6103`. Après restauration : **75 contrôles OK, 0 en échec**.
+      ⚠️ Deux injections ont d'abord annoncé « motif absent » : la page écrit ses milliers avec
+      une **vraie espace insécable U+00A0**, pas une espace ordinaire — chercher `3 507` dans
+      le fichier ne trouve rien.
+
+      **NON-RÉGRESSION.** Les quatre vérificateurs du cours `doc` en 0 (`verif-doc`,
+      `verif-recherche`, `verif-vocab`, `verif-normatif`), `verif-html.js` 1 629 fichiers
+      0 problème, `verif-donnees.js` 0 erreur d'invariant, `search-index.js` régénéré
+      (`--write --only=search,searchlite` ; `search-lite` inchangé, quiz / flashcards /
+      antisèches identiques), aucun BOM, aucune URL de CDN.
 
 - [ ] **C2 · `pages/doc/cours.html` annonce 74 leçons, la mesure dit 82.** `grep -n "74 leçons"` → l.96,
       dans un callout visible ; `tools/doc/mesures/mentions-doc.js` → **82 leçons, 36 cours, 1 536
