@@ -37,6 +37,22 @@
  * (--min=N) et vaut 5 par defaut : en dessous, les articles et les auxiliaires noient
  * tout. La liste `--liste` sert a JUGER question par question, la mesure a decider.
  *
+ * ⚠⚠ CE QUE LA MESURE A REPONDU A LA QUESTION « EST-CE NOUS QUI LE FABRIQUONS ? »
+ * L'hypothese naturelle etait que la vague d'ecriture cree l'indice, comme elle cree le
+ * mot fetiche. LE CALCUL DIT NON, ET IL DIT MIEUX QUE CA :
+ *
+ *              cours          questions   en alerte   questions sures
+ *   TRAITES par B4    36         3 011           4       200  (6,64 %)
+ *   NON traites       54         2 972          30       174  (5,85 %)
+ *   ecart 0,79 point · z = 1,258 · p = 0,208 -> NON SIGNIFICATIF au seuil de 5 %
+ *
+ * Le traitement ferme donc l'indice AU NIVEAU DU COURS -- 4 cours en alerte sur 36
+ * traites contre 30 sur 54 -- et ne change RIEN au nombre de questions individuellement
+ * ouvertes a 100 %. Nos 44 outils rabotent la MOYENNE du cours et laissent la QUESTION
+ * intacte. Ce n'est pas que le chantier fabrique l'indice : c'est qu'il ne l'atteint pas.
+ * C'est la raison d'etre de cet outil-ci, et la raison pour laquelle sa colonne « sures »
+ * compte plus que sa colonne « taux ».
+ *
  * LA REGLE D'ECRITURE QUI FERME L'INDICE est celle des marques, du `k` et du mot
  * fetiche : par mot, les quatre options le portent, ou aucune. ⚠ Quand c'est la BONNE
  * reponse qui porte le mot (elle est intouchable), on l'AJOUTE aux distracteurs.
