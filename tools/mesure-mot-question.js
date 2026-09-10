@@ -25,8 +25,9 @@
  *   PAR DEFAUT : trois options partagent un mot, la quatrieme ne l'a pas -> cocher la
  *                quatrieme. C'est la lecture que les relecteurs ont trouvee.
  *   PAR EXCES  : une option porte un mot qu'aucune des trois autres n'a -> la cocher.
- *                C'est le sens inverse, et il s'ouvre des qu'on ferme le premier a fond
- *                (lecon du cours `mobile` : fermer un indice A FOND le RETOURNE).
+ * Et CHACUNE se lit dans les deux sens (cocher l'option designee, ou l'ECARTER et tirer
+ * parmi les autres), d'ou les quatre colonnes. Voir l'avertissement sur la cible, plus
+ * bas : c'est la COUVERTURE qui doit tomber a zero, pas le taux qui doit valoir 25 %.
  * Quand plusieurs options sont designees, le credit vaut 1/n comme partout dans ce
  * protocole ; la colonne rendue est GLOBALE (hasard a 25 % sur les questions non
  * tranchees), donc directement comparable a l'etalon de 25,0 %.
@@ -52,6 +53,29 @@
  * intacte. Ce n'est pas que le chantier fabrique l'indice : c'est qu'il ne l'atteint pas.
  * C'est la raison d'etre de cet outil-ci, et la raison pour laquelle sa colonne « sures »
  * compte plus que sa colonne « taux ».
+ *
+ * ⚠⚠⚠ LA CIBLE N'EST PAS « TAUX A 25 % », C'EST « COUVERTURE A ZERO ». Et cet outil
+ * l'a appris a ses depens, une heure apres avoir ete ecrit.
+ *
+ * Premiere version : deux colonnes, DEFAUT et EXCES, sens direct seulement. Sur
+ * `typescript` elle voyait 5 questions « sures » ; une vague de correction les a
+ * fermees, et la colonne est passee de 24,1 % a 8,1 % avec 0 question sure. Tout vert.
+ * SAUF QUE 8,1 % EST TRES EN DESSOUS DE L'ETALON, et une strategie qui se trompe
+ * presque toujours est une strategie qu'il suffit d'INVERSER : l'apprenant qui ECARTE
+ * l'option designee et tire parmi les trois autres montait a 34,6 %, au-dessus du
+ * seuil d'alerte. Les correcteurs n'avaient pas ferme l'indice, ils l'avaient RETOURNE.
+ *
+ * C'est mot pour mot la lecon du cours `mobile` (« fermer un indice A FOND le
+ * RETOURNE ») et celle du cours `lua` (« une inegalite laisse toujours une lecture
+ * exploitable ; seule l'egalite ferme »). Un cliquet qui ne surveille qu'un SENS est
+ * vert pendant que la faille est entiere -- et celui-ci, ecrit par quelqu'un qui
+ * connaissait ces deux lecons, les a quand meme repetees. D'ou les QUATRE colonnes.
+ *
+ * LA CONSEQUENCE POUR L'ECRITURE : viser 25 % sur le taux ne suffit pas, parce que le
+ * taux se regle en DEPLACANT quelle option est l'intrus. Il faut qu'il n'y ait PLUS
+ * D'INTRUS DU TOUT : chaque mot porte par 0, 2 ou 4 options des quatre -- jamais par
+ * 1, jamais par 3. C'est la COUVERTURE qui doit tomber a zero, et c'est la seule
+ * cible qui ferme les quatre lectures a la fois.
  *
  * LA REGLE D'ECRITURE QUI FERME L'INDICE est celle des marques, du `k` et du mot
  * fetiche : par mot, les quatre options le portent, ou aucune. ⚠ Quand c'est la BONNE
@@ -135,8 +159,8 @@ function mesurer(cours) {
   var qs = questionsDe(cours);
   var res = {
     cours: cours, questions: qs.length,
-    defaut: { credit: 0, tranchees: 0, sures: 0 },
-    exces: { credit: 0, tranchees: 0, sures: 0 },
+    defaut: { credit: 0, creditInv: 0, tranchees: 0, sures: 0, suresInv: 0 },
+    exces: { credit: 0, creditInv: 0, tranchees: 0, sures: 0, suresInv: 0 },
     detail: []
   };
   qs.forEach(function (e) {
@@ -144,12 +168,21 @@ function mesurer(cours) {
     ["defaut", "exces"].forEach(function (sens) {
       var d = r[sens];
       var h = 1 / q.a.length;
-      if (!d.length || d.length === q.a.length) { res[sens].credit += h; return; }
+      if (!d.length || d.length === q.a.length) {
+        res[sens].credit += h; res[sens].creditInv += h; return;
+      }
       res[sens].tranchees++;
       if (d.indexOf(q.correct) !== -1) {
         res[sens].credit += 1 / d.length;
         if (d.length === 1) res[sens].sures++;
       }
+      /* LECTURE INVERSE : ECARTER les options designees et tirer parmi le reste.
+         Elle s'ouvre EXACTEMENT quand on ferme la directe a fond -- lecon du cours
+         `mobile`. Un cliquet qui ne surveille qu'un SENS est vert pendant que la
+         faille est entiere. */
+      var reste = q.a.length - d.length;
+      if (reste > 0 && d.indexOf(q.correct) === -1) res[sens].creditInv += 1 / reste;
+      if (reste === 1 && d.indexOf(q.correct) === -1) res[sens].suresInv++;
     });
     if (LISTE) {
       var sur = [];
@@ -165,6 +198,7 @@ function mesurer(cours) {
   });
   ["defaut", "exces"].forEach(function (s) {
     res[s].taux = qs.length ? res[s].credit / qs.length : 0;
+    res[s].tauxInv = qs.length ? res[s].creditInv / qs.length : 0;
     res[s].couverture = qs.length ? res[s].tranchees / qs.length : 0;
   });
   return res;
@@ -191,18 +225,18 @@ var liste = TOUS ? tousLesCours() : [COURS || "typescript"];
 var lignes = liste.map(mesurer).filter(function (r) { return r.questions > 0; });
 lignes.sort(function (a, b) { return Math.max(b.defaut.taux, b.exces.taux) - Math.max(a.defaut.taux, a.exces.taux); });
 
-console.log("    cours              quest.   DEFAUT : taux/couv./sures    EXCES : taux/couv./sures");
+console.log("    cours            quest.   DEFAUT direct/INVERSE/sures    EXCES direct/INVERSE/sures");
 var alertes = 0;
 lignes.forEach(function (r) {
-  var pire = Math.max(r.defaut.taux, r.exces.taux);
+  var pire = Math.max(r.defaut.taux, r.exces.taux, r.defaut.tauxInv, r.exces.tauxInv);
   if (pire >= SEUIL) alertes++;
-  console.log("    " + (r.cours + "                  ").slice(0, 18) +
+  console.log("    " + (r.cours + "                ").slice(0, 16) +
     ("      " + r.questions).slice(-6) + "   " +
-    ("       " + pct(r.defaut.taux)).slice(-8) + " / " +
-    ("      " + pct(r.defaut.couverture)).slice(-7) + " / " + ("   " + r.defaut.sures).slice(-3) + "   " +
-    ("       " + pct(r.exces.taux)).slice(-8) + " / " +
-    ("      " + pct(r.exces.couverture)).slice(-7) + " / " + ("   " + r.exces.sures).slice(-3) +
-    (pire >= SEUIL ? "   <-- exploitable" : ""));
+    ("       " + pct(r.defaut.taux)).slice(-8) + " /" +
+    ("       " + pct(r.defaut.tauxInv)).slice(-8) + " /" + ("    " + r.defaut.sures).slice(-4) + "   " +
+    ("       " + pct(r.exces.taux)).slice(-8) + " /" +
+    ("       " + pct(r.exces.tauxInv)).slice(-8) + " /" + ("    " + r.exces.sures).slice(-4) +
+    (pire >= SEUIL ? "  <-- exploitable" : ""));
 });
 
 if (LISTE) {
