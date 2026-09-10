@@ -4888,9 +4888,52 @@ des heures de travail perdues ou invisibles.
       décision est donc éprouvée **isolée**, et son branchement **lu dans le fichier**.
       Exécution réelle : **SAIN, 27 cases restantes, code 0**, `[Parser]::ParseFile` 0 erreur.
 
-- [ ] **D5 · Le `Replace` du plan courant corrompt le prompt envoyé à chaque réveil** : le plan y est
+- [x] **D5 · Le `Replace` du plan courant corrompt le prompt envoyé à chaque réveil** : le plan y est
       décrit deux fois, avec des noms différents. Le modèle reçoit donc une consigne contradictoire à
       chaque passe. Réécrire la substitution proprement, et **relire le prompt final** avant envoi.
+
+      **FAIT le 2026-09-10, et la preuve la plus directe est le prompt de CETTE passe.** Le
+      wrapper faisait `$promptTravail.Replace('CHANTIER-V12.md', $planCourant)` : **toutes**
+      les occurrences, y compris celle qui **décrivait le sujet du V12**. Le modèle a donc
+      reçu, ce matin même, *« CHANTIER-V17.md (les 42 points d'un inventaire indépendant :
+      outillage, données de l'apprenant, cahier d'erreurs, pièges indexés, navigation) »* —
+      la description du **V12** collée au nom du **V17** — puis, dix lignes plus bas, *« TON
+      PLAN DE TRAVAIL EST CHANTIER-V17.md »*. La même phrase annonçait *« UNE CHAINE DE
+      QUATRE CHANTIERS »* alors que `$CHAINE` en compte **six**, dans un ordre qui n'était
+      pas le sien (elle plaçait le V16 avant le V15, et ne citait pas le V17).
+
+      **LA CHAÎNE SE DÉCRIT MAINTENANT ELLE-MÊME.** Plus de phrase figée : deux jetons
+      (`@@CHAINE@@`, `@@PLAN@@`), qui ne peuvent pas se confondre avec du texte utile, et une
+      description **construite à chaque réveil** — chaque plan porte son titre en première
+      ligne et son avancement dans ses cases, donc **rien n'est recopié et rien ne se
+      périme**. Ce que le modèle lit désormais : *« 5. CHANTIER-V17.md - Chantier V17 — les
+      garde-fous qui mentent (68/80 points, 12 a faire) <<< TON PLAN CE REVEIL »*.
+
+      **ET UNE SECONDE CORRUPTION, TROUVÉE EN VÉRIFIANT LA PREMIÈRE : LE MOJIBAKE.**
+      `autonomie.ps1` était en **UTF-8 sans BOM** ; PowerShell 5.1 le lit alors en **ANSI
+      (1252)**, si bien que les **six tirets cadratins** du prompt arrivaient au modèle sous
+      la forme `â€”` — visible dans le prompt reçu ce matin : *« 100 % file:// â€” aucun
+      serveur »*. Les **12 caractères non-ASCII** des quatre scripts PowerShell ont été
+      remplacés par leurs équivalents ASCII : **0 aujourd'hui**, dans les quatre fichiers.
+      Le titre des plans, lui, garde ses accents — il est lu avec `-Encoding UTF8`, faute de
+      quoi la description de la chaîne partait en *« Chantier V13 â€” le contenu qui
+      manque »*. **Mojibake dans le prompt assemblé : 6 → 0.**
+
+      **ON RELIT CE QU'ON ENVOIE.** `Build-PromptTravail` (dans `.autonomie/lib-reset.ps1`)
+      assemble **et** contrôle : aucun jeton `@@…@@` restant, le plan courant présent, **le
+      point 1 nomme bien LE plan courant** (la phrase même que l'ancienne substitution
+      rendait contradictoire), et aucune signature de mojibake. Chaque alerte part au
+      journal, avec la longueur du prompt et le nombre de chantiers décrits.
+
+      **ÉPREUVE — 52 cas sur 52** dans `epreuve-reset.ps1`, dont **11 pour ce point**, et le
+      modèle de prompt comme la chaîne sont **extraits du wrapper de production** : rien
+      n'est recopié dans l'épreuve. Contrôles : aucun jeton restant · le point 1 nomme le
+      plan courant · 0 alerte · les 6 chantiers décrits une fois chacun · le plan courant
+      marqué · plus aucune trace de la description figée · 0 mojibake. **Trois injections**,
+      toutes vues : un point 1 qui nomme un autre plan → *« le point 1 annonce
+      CHANTIER-V12.md alors que le plan courant est CHANTIER-V17.md »* · un jeton oublié →
+      *« @@INCONNU@@ »* · une signature de mojibake → *« 1 signature(s) de MOJIBAKE »*.
+      `[Parser]::ParseFile` sur les quatre scripts : **0 erreur**.
 
 - [ ] **D6 · Les deux prompts annoncent des chiffres périmés que le modèle est censé reprendre**
       (« 83 cours, 1463 lecons » alors que la mesure du jour donne 90 cours et 1 540 leçons). Soit les

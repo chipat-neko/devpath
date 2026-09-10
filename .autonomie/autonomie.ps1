@@ -38,6 +38,14 @@ else {
   function Get-HeureReset($texte) { return $null }
   function Get-ResetHebdoApi($p) { return $null }
   function Resolve-ResetHebdo($p, $t) { return [pscustomobject]@{ Quand = $null; Source = 'lib-absente' } }
+  function Get-RepriseSure($q, $m) { if (-not $m) { $m = 5 }; $pl = (Get-Date).AddMinutes($m); if ($q -and $q -gt $pl) { return [pscustomobject]@{ Quand = $q; Corrige = $false; Demande = $q } }; return [pscustomobject]@{ Quand = $pl; Corrige = $true; Demande = $q } }
+  function Get-PauseEnCours($d) { return [pscustomobject]@{ Actif = $false; Quand = $null; Source = 'lib-absente' } }
+  # Sans la lib, le prompt part avec ses jetons NON substitues : on le dit tres fort
+  # plutot que d'envoyer une consigne qui nomme un plan inexistant.
+  function Build-PromptTravail($modele, $proj, $chaine, $plan, $mes) {
+    return [pscustomobject]@{ Texte = $modele.Replace('@@PLAN@@', $plan).Replace('@@CHAINE@@', 'chaine : ' + ($chaine -join ', '))
+                              Alertes = @('lib-reset.ps1 ABSENTE : prompt assemble en mode degrade') }
+  }
 }
 
 # Ecriture du journal a l'epreuve d'un verrou. Constate le 2026-08-21 : un simple
@@ -220,17 +228,19 @@ if ($modeVerif) {
 $promptTravail = @'
 Tu es lance AUTOMATIQUEMENT (tache planifiee Windows) pour faire avancer le projet Syntaxe EN AUTONOMIE, dossier d:\test-claude. Tu es NON-INTERACTIF : ne pose AUCUNE question, ne propose AUCUN questionnaire, decide et agis seul. Tout le contenu visible et les commentaires en francais, avec accents CORRECTS (jamais d'ASCII a la place d'un accent dans le contenu).
 
-LE SITE : 83 cours, 1463 lecons, 25 parcours, 100 % file:// — aucun serveur, aucun module ES, aucun build, aucune dependance installee, que des scripts classiques. Le site est TOTALEMENT AUTONOME depuis le 2026-07-31 : Prism est servi depuis assets/vendor/prism/ et les polices depuis assets/fonts/ via css/fonts.css. Les chantiers V4 (31 points d'audit) et V5 (acces rapide au contenu : recherche compactee, palette clavier, antiseches) ont ete boucles avec un verdict de securite VERT. TU TRAVAILLES SUR UNE CHAINE DE QUATRE CHANTIERS, traites dans l'ordre : CHANTIER-V12.md (les 42 points d'un inventaire independant : outillage, donnees de l'apprenant, cahier d'erreurs, pieges indexes, navigation), puis CHANTIER-V13.md (le contenu qui manque : compilation, reseaux de neurones, systemes distribues, securite offensive, cryptographie — un MODULE par case, jamais un cours entier), puis CHANTIER-V14.md (faire ecrire du code et le corriger : moteurs d'execution locaux, exercices vraiment auto-corriges, decodeur d'erreurs, bac a sable Git), puis CHANTIER-V16.md (consolider : faire entrer dans la chaine les 24 verificateurs que personne ne lance, corriger le biais qui fait reussir 89,6 % des QCM en choisissant la reponse la plus longue, etendre la fraicheur), le tout apres CHANTIER-V15.md (comprendre ce qu'on ne voit pas : lire le code des autres, voir un programme s'executer pas a pas, les mathematiques du metier, lire la documentation en anglais, et dater ce qui perime). Le wrapper te donne automatiquement le premier plan qui a encore une case a cocher : tu n'as pas a choisir. CHAQUE PLAN PORTE SON PROPRE CADRAGE en tete — lis-le, il explique pourquoi ce chantier existe et quelles erreurs eviter.
+LE SITE : 83 cours, 1463 lecons, 25 parcours, 100 % file:// -- aucun serveur, aucun module ES, aucun build, aucune dependance installee, que des scripts classiques. Le site est TOTALEMENT AUTONOME depuis le 2026-07-31 : Prism est servi depuis assets/vendor/prism/ et les polices depuis assets/fonts/ via css/fonts.css. Les chantiers V4 (31 points d'audit) et V5 (acces rapide au contenu : recherche compactee, palette clavier, antiseches) ont ete boucles avec un verdict de securite VERT. @@CHAINE@@
 
-CE QUI A FONDE CETTE CHAINE, et qui vaut pour les trois : les quatre verificateurs du site etaient VERTS quand un inventaire a trouve CINQ exemples dont la sortie annoncee etait fausse — dont une lecon sur les expressions regulieres qui affichait un commentaire true sous un test renvoyant false, visible par l'apprenant puisque runner.js pose un bouton Tester sur ces blocs. Ces cinq erreurs sont corrigees, mais LA CAUSE RESTE : aucun outil n'execute jamais un exemple. REGLE ABSOLUE : NE JAMAIS CORRIGER NI ECRIRE UN CALCUL DE TETE, LE FAIRE TOURNER. Le compte rendu de chaque case cite le chiffre obtenu par l'execution. Deuxieme regle : UN MOTIF DE REMPLACEMENT TROP LARGE CASSE CE QUI ETAIT JUSTE — un meme chiffre apparait souvent plusieurs fois dans une page pour des raisons differentes, donc rejoue le scenario complet apres correction. Troisieme regle : CERTAINS POINTS SONT DE VRAIS CHANTIERS — evalue avant de commencer, et si l'un depasse manifestement ce qu'une passe peut faire, laisse la case decochee en ecrivant ce qui bloque. Mieux vaut un point clos que trois ebauches. LE PROJET EST SOUS GIT et sauvegarde sur un depot prive : un commit par point, avec la mesure dans le message.
+CHAQUE PLAN PORTE SON PROPRE CADRAGE en tete -- lis-le, il explique pourquoi ce chantier existe et quelles erreurs eviter.
+
+CE QUI A FONDE CETTE CHAINE, et qui vaut pour les trois : les quatre verificateurs du site etaient VERTS quand un inventaire a trouve CINQ exemples dont la sortie annoncee etait fausse -- dont une lecon sur les expressions regulieres qui affichait un commentaire true sous un test renvoyant false, visible par l'apprenant puisque runner.js pose un bouton Tester sur ces blocs. Ces cinq erreurs sont corrigees, mais LA CAUSE RESTE : aucun outil n'execute jamais un exemple. REGLE ABSOLUE : NE JAMAIS CORRIGER NI ECRIRE UN CALCUL DE TETE, LE FAIRE TOURNER. Le compte rendu de chaque case cite le chiffre obtenu par l'execution. Deuxieme regle : UN MOTIF DE REMPLACEMENT TROP LARGE CASSE CE QUI ETAIT JUSTE -- un meme chiffre apparait souvent plusieurs fois dans une page pour des raisons differentes, donc rejoue le scenario complet apres correction. Troisieme regle : CERTAINS POINTS SONT DE VRAIS CHANTIERS -- evalue avant de commencer, et si l'un depasse manifestement ce qu'une passe peut faire, laisse la case decochee en ecrivant ce qui bloque. Mieux vaut un point clos que trois ebauches. LE PROJET EST SOUS GIT et sauvegarde sur un depot prive : un commit par point, avec la mesure dans le message.
 
 ULTRACODE : ce reveil tourne en mode ultracode. Le mot-cle ultracode present dans ce prompt t'ouvre l'outil Workflow (orchestration multi-agents). SERS-T'EN quand la case le merite : un audit, une revue, une recherche large, une verification adversariale, ou un fan-out sur une liste d'elements independants (des lecons, des cours, des exemples a executer). N'en lance PAS pour une correction d'une ligne, ni pour EXPLORER ou CHERCHER quelque chose : un grep coute mille fois moins cher qu'un agent. DIMENSIONNE PETIT : au plus 6 agents par workflow, et au plus 2 workflows par reveil. Le seul usage qui a prouve sa valeur est la CONTRADICTION D'UN CONTENU DEJA ECRIT -- faire relire un module par des agents charges de le demolir, ce qui a rendu 30 fautes sur un seul module. Garde le fan-out pour ca.
 
 REGLE DE SECURITE DU FAN-OUT, elle prime sur tout le reste : les sous-agents peuvent LIRE, MESURER, EXECUTER et VERIFIER en parallele sans aucun risque. L'ECRITURE, elle, reste coordonnee : deux agents qui modifient la meme lecon en meme temps se detruisent mutuellement, et un git commit lance par deux agents a la fois casse le depot. Donc un seul agent ecrit a la fois dans un fichier donne, et TOI SEUL fais les commits. Le fan-out sert d'abord a PROUVER : faire executer les exemples, rejouer les calculs, et CONTREDIRE tes propres conclusions avant de les ecrire. C'est exactement ce qui manquait quand cinq exemples faux ont traverse quatre verificateurs verts.
 
-1) TON PLAN DE TRAVAIL EST d:\test-claude\CHANTIER-V12.md. LIS-LE A CHAQUE REVEIL. Prends la PREMIERE case non cochee, dans l'ordre du fichier (phases A a H, dans l'ordre). Traite-la ENTIEREMENT, verifie, coche-la avec un compte rendu chiffre ecrit directement dans le plan, puis passe a la suivante si le temps le permet. Un point clos et prouve vaut mieux que trois a moitie faits.
+1) TON PLAN DE TRAVAIL EST d:\test-claude\@@PLAN@@. LIS-LE A CHAQUE REVEIL. Prends la PREMIERE case non cochee, dans l'ordre du fichier (phases A a H, dans l'ordre). Traite-la ENTIEREMENT, verifie, coche-la avec un compte rendu chiffre ecrit directement dans le plan, puis passe a la suivante si le temps le permet. Un point clos et prouve vaut mieux que trois a moitie faits.
 2) AVANT DE CORRIGER, REVERIFIE. Les mesures inscrites dans le plan datent du jour ou il a ete ecrit et le site bouge a chaque passe. Reproduis la mesure toi-meme : si le point est deja regle, coche-le en le signalant, n'invente pas de travail. Si la mesure ne se reproduit pas du tout, dis-le et passe au point suivant.
-3) LES QUATRE OUTILS DU PROJET, a utiliser systematiquement — ils font en quelques secondes ce qui prendrait des heures a la main, et ils ne se trompent pas : (a) node tools/verif-html.js analyse le SOURCE des 1425 lecons et detecte toute balise creee par erreur dans un bloc de code ; il DOIT rester a zero apres ton passage. (b) node tools/verif-donnees.js verifie 17 invariants de DONNEES (courses/content/durations, fichiers cites contre fichiers disque, index, doublons de QCM). (c) node tools/verif-rendu.js mesure CE QUE LE NAVIGATEUR AFFICHE : debordement horizontal, contraste du texte sur son fond effectif, repere de focus au clavier, aria, erreurs de console, requetes reseau ; sans argument il prend un echantillon de 20 pages, avec --tout --lecons il en couvre 139, et il pilote Chrome donc il prend plusieurs minutes. Lance-le des que tu touches a du CSS ou a un gabarit. (d) node tools/build-index.js regenere les index derives ; il est en mode comparaison par defaut, il faut --write pour ecrire, avec --only=quiz,flashcards,search,searchlite,antiseches.
+3) LES QUATRE OUTILS DU PROJET, a utiliser systematiquement -- ils font en quelques secondes ce qui prendrait des heures a la main, et ils ne se trompent pas : (a) node tools/verif-html.js analyse le SOURCE des 1425 lecons et detecte toute balise creee par erreur dans un bloc de code ; il DOIT rester a zero apres ton passage. (b) node tools/verif-donnees.js verifie 17 invariants de DONNEES (courses/content/durations, fichiers cites contre fichiers disque, index, doublons de QCM). (c) node tools/verif-rendu.js mesure CE QUE LE NAVIGATEUR AFFICHE : debordement horizontal, contraste du texte sur son fond effectif, repere de focus au clavier, aria, erreurs de console, requetes reseau ; sans argument il prend un echantillon de 20 pages, avec --tout --lecons il en couvre 139, et il pilote Chrome donc il prend plusieurs minutes. Lance-le des que tu touches a du CSS ou a un gabarit. (d) node tools/build-index.js regenere les index derives ; il est en mode comparaison par defaut, il faut --write pour ecrire, avec --only=quiz,flashcards,search,searchlite,antiseches.
 4) INTERDIT ABSOLU : reintroduire une URL vers cdnjs.cloudflare.com, fonts.googleapis.com ou fonts.gstatic.com. Le site en compte zero. Apres toute modification de tools/, de starter/ ou d'un gabarit de page, REVERIFIE ce point : le piege s'est deja represente trois fois. Ne touche jamais au mojibake VOLONTAIRE des lecons qui enseignent l'encodage (pages/formats/lecon-06.html, pages/html/lecon-15.html, pages/r/lecon-06.html, pages/perl/lecon-13.html).
 5) VERIFIE AVANT DE CONCLURE : node --check sur chaque fichier js touche ; accolades equilibrees et aucune variable var(--x) inexistante pour un css ; balises equilibrees et zero BOM pour un html ; chaque bloc data-quiz, data-exos et data-quiz-bilan reste du JSON valide. Teste le rendu avec une progression semee dans localStorage (syntaxe-progress) : plusieurs comportements, dont la pastille XP, n'apparaissent qu'a cette condition, et un test avec un localStorage vide ment. Ne laisse JAMAIS un fichier casse : corrige ou reviens en arriere.
 6) EN CAS DE DOUTE REEL sur un point, ne force pas : laisse la case decochee et ecris precisement dans le plan ce qui bloque et ce qu'il faudrait decider. C'est une information utile, pas un echec.
@@ -266,11 +276,21 @@ ULTRACODE : le mot-cle ultracode present dans ce prompt t'ouvre l'outil Workflow
 4) Mets a jour la memoire du chantier (fichier enrichissement-cron-3.md) avec le resultat. Messages BREFS.
 '@
 
-# Le prompt de travail nomme CHANTIER-V12.md ; on y substitue le plan courant de
-# la chaine, pour que le meme wrapper serve a tous les chantiers.
+# SUBSTITUTION PAR JETONS, ET RELECTURE AVANT ENVOI (point D5).
+# L'ancienne ligne etait : $promptTravail.Replace('CHANTIER-V12.md', $planCourant).
+# Elle remplacait TOUTES les occurrences, y compris celle qui DECRIVAIT le sujet du
+# V12 : le modele recevait le plan courant affuble de la description d'un autre
+# chantier, puis une seconde annonce du meme plan quelques lignes plus bas. Les
+# jetons @@PLAN@@ et @@CHAINE@@ ne peuvent pas se confondre avec du texte utile.
+# L'assemblage ET sa relecture vivent dans lib-reset.ps1, donc l'epreuve
+# (.autonomie/epreuve-reset.ps1) travaille sur le MEME code et sur le MEME modele de
+# prompt, extrait de ce fichier-ci.
 $planCourant = Get-PlanCourant
-if (-not $planCourant) { $planCourant = 'CHANTIER-V12.md' }
-$promptTravail = $promptTravail.Replace('CHANTIER-V12.md', $planCourant)
+if (-not $planCourant) { $planCourant = $CHAINE[$CHAINE.Count - 1] }
+$assemble = Build-PromptTravail $promptTravail $proj $CHAINE $planCourant $null
+$promptTravail = $assemble.Texte
+foreach ($alerte in $assemble.Alertes) { Log "[$(Stamp)] ATTENTION PROMPT : $alerte" }
+Log "[$(Stamp)] prompt : $($promptTravail.Length) caracteres, plan courant $planCourant, $($CHAINE.Count) chantiers decrits, $($assemble.Alertes.Count) alerte(s)."
 $prompt = if ($modeVerif) { $promptVerif } else { $promptTravail }
 
 try {
@@ -347,10 +367,10 @@ try {
     try { Set-Content -Path (Join-Path $dir 'limite-hebdo.txt') -Value $txt -Encoding utf8 } catch {}
     # $replanifFaite, PAS $arretDemande. Corrige le 2026-09-08 apres un audit : la
     # correction du 2026-09-02 avait cree la variable, reecrit le bloc final et annonce
-    # « trois cas TESTES » -- mais laisse CETTE ligne intacte. J avais teste une
+    # << trois cas TESTES >> -- mais laisse CETTE ligne intacte. J avais teste une
     # simulation des trois branches, jamais le code reel : $replanifFaite n etait
     # affectee NULLE PART. La panne est donc retombee a l identique le 2026-09-07 a
-    # 03:59:57, ou le journal a ecrit « CHANTIER TERMINE : verification finale VERTE »
+    # 03:59:57, ou le journal a ecrit << CHANTIER TERMINE : verification finale VERTE >>
     # sur un chantier a 8/22, sans qu aucune verification n ait tourne. Une reparation
     # declaree verte sans avoir ete executee est exactement le defaut que ce projet
     # combat -- ici commis sur le garde-fou lui-meme.
@@ -458,8 +478,8 @@ try {
       $tOnce = New-ScheduledTaskTrigger -Once -At $next -RepetitionInterval (New-TimeSpan -Hours 2)
       Set-ScheduledTask -TaskName 'Syntaxe-Autonomie' -Trigger $tOnce -ErrorAction Stop | Out-Null
       # POSER UN DECLENCHEUR NE SUFFIT PAS : si la tache est DESACTIVEE, rien ne se
-      # produira. Constate le 2026-09-06 : le journal annoncait « prochain reveil
-      # planifie ~09:31 » et aucun reveil n a eu lieu, la tache ayant ete arretee la
+      # produira. Constate le 2026-09-06 : le journal annoncait << prochain reveil
+      # planifie ~09:31 >> et aucun reveil n a eu lieu, la tache ayant ete arretee la
       # veille. Un journal qui affirme ce qu il n a pas verifie est pire qu un journal
       # muet. On verifie donc, et on dit la verite.
       $tacheActive = $true

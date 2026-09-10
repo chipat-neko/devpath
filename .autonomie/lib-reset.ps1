@@ -25,7 +25,7 @@
 #     hit your session limit . resets 5am (Europe/Paris)           <-  6 fois
 #
 # Sur la premiere - la plus frequente - l'ancienne fonction ne trouvait RIEN et le
-# journal notait « heure inconnue ». La date etait pourtant ecrite noir sur blanc.
+# journal notait << heure inconnue >>. La date etait pourtant ecrite noir sur blanc.
 #
 # CE QUE FAIT CE FICHIER : il porte la lecture, en UN seul endroit, pour que
 # l'epreuve (.autonomie/epreuve-reset.ps1) mesure la MEME fonction que celle qui
@@ -33,15 +33,15 @@
 # =============================================================================
 
 # Lecture de l'heure de reprise annoncee par claude.exe.
-#   - forme datee    : « resets Aug 11, 1am » -> le 11 aout a 1 h (annee deduite)
-#   - forme sans date: « resets 2:30pm »      -> aujourd'hui, ou demain si l'heure
+#   - forme datee    : << resets Aug 11, 1am >> -> le 11 aout a 1 h (annee deduite)
+#   - forme sans date: << resets 2:30pm >>      -> aujourd'hui, ou demain si l'heure
 #                                                est deja passee
 # Rend un DateTime local, ou $null si le texte ne dit rien de lisible.
 function Get-HeureReset($texte) {
   if (-not $texte) { return $null }
 
   # 1. La forme DATEE, d'abord : elle est plus precise, et elle contient une heure
-  #    qui ferait aussi matcher la forme courte (« Aug 11, 1am » contient « 1am »).
+  #    qui ferait aussi matcher la forme courte (<< Aug 11, 1am >> contient << 1am >>).
   $m = [regex]::Match($texte,
     'resets\s+([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)',
     'IgnoreCase')
@@ -56,7 +56,7 @@ function Get-HeureReset($texte) {
       try { $d = Get-Date -Year $an -Month $mois -Day $jour -Hour $h -Minute $min -Second 0 -Millisecond 0 }
       catch { return $null }   # 31 fevrier et autres impossibilites
       # Pas d'annee dans le message : une date deja passee de plus d'un mois designe
-      # l'annee suivante (un « Jan 2 » lu un 28 decembre). Quelques jours de retard,
+      # l'annee suivante (un << Jan 2 >> lu un 28 decembre). Quelques jours de retard,
       # eux, restent du passe : c'est a l'appelant de refuser une reprise passee.
       if ($d -lt (Get-Date).AddMonths(-1)) { $d = $d.AddYears(1) }
       return $d
@@ -104,8 +104,8 @@ function Get-ResetHebdoApi($proj) {
 }
 
 # UNE HEURE DE REPRISE QUI EST DEJA PASSEE NE DIFFERE PLUS RIEN (point D2).
-# Les trois endroits qui replanifient la tache posent un declencheur « -Once -At
-# $quand ». Si $quand est dans le passe -- cache d'usage perime, message lu apres
+# Les trois endroits qui replanifient la tache posent un declencheur << -Once -At
+# $quand >>. Si $quand est dans le passe -- cache d'usage perime, message lu apres
 # coup, horloge decalee, ou simplement une passe qui a dure plus longtemps que le
 # delai calcule -- le declencheur ne reporte plus rien : la tache repart aussitot,
 # c'est-a-dire exactement ce que la pause voulait empecher. On garantit donc une
@@ -140,10 +140,10 @@ function Get-PauseEnCours($dir) {
     try {
       # Ces fichiers sont ecrits avec Set-Content -Encoding utf8, donc AVEC un BOM
       # sous PowerShell 5.1 : sans ce nettoyage, la date ne se relit pas.
-      $txt = (Get-Content $p -Raw -ErrorAction Stop) -replace "^﻿", ''
+      $txt = (Get-Content $p -Raw -ErrorAction Stop) -replace ('^' + [char]0xFEFF), ''
     } catch { continue }
-    # limite-hebdo.txt : « 2026-09-14 22:59 ».
-    # pause-hebdo.txt  : « 99 % le <horodatage> -- reprise 2026-09-14 22:59 ».
+    # limite-hebdo.txt : << 2026-09-14 22:59 >>.
+    # pause-hebdo.txt  : << 99 % le <horodatage> -- reprise 2026-09-14 22:59 >>.
     # On prend la DERNIERE date du fichier : dans les deux formes, c'est la reprise.
     $dates = [regex]::Matches($txt, '\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}')
     if ($dates.Count -eq 0) { continue }
@@ -159,10 +159,10 @@ function Get-PauseEnCours($dir) {
 
 # UN RAPPORT NE DOIT PAS SE CONTREDIRE DANS SA PROPRE PHRASE (point D4).
 # `sante-autonomie.ps1` empilait tout dans une seule liste `$repare` : quand la
-# reactivation echouait, il ecrivait « **repare** : reactivation IMPOSSIBLE » -- et,
-# pire, son code de sortie devenait 0, parce qu'il testait « $repare.Count -eq 0 ».
+# reactivation echouait, il ecrivait << **repare** : reactivation IMPOSSIBLE >> -- et,
+# pire, son code de sortie devenait 0, parce qu'il testait << $repare.Count -eq 0 >>.
 # Une reparation qui a echoue etait donc comptee comme une reparation. C'est le meme
-# defaut qu'au point A5 : confondre « je n'ai pas pu » avec « c'est bon ».
+# defaut qu'au point A5 : confondre << je n'ai pas pu >> avec << c'est bon >>.
 #
 # Rend : .Code (0 = rien a signaler ou anomalie REPAREE, 2 = anomalie NON reparee),
 #        .Etat (libelle), .Reussites, .Echecs.
@@ -174,6 +174,85 @@ function Get-VerdictSante($sain, $reussites, $echecs) {
   if ($nR -gt 0 -and $nE -eq 0) { return [pscustomobject]@{ Code = 0; Etat = 'ANOMALIE REPAREE'; Reussites = $nR; Echecs = $nE } }
   if ($nR -gt 0) { return [pscustomobject]@{ Code = 2; Etat = 'ANOMALIE PARTIELLEMENT REPAREE'; Reussites = $nR; Echecs = $nE } }
   return [pscustomobject]@{ Code = 2; Etat = 'ANOMALIE NON REPAREE'; Reussites = $nR; Echecs = $nE }
+}
+
+# LE PROMPT ENVOYE AU MODELE, ASSEMBLE ET RELU (point D5).
+# Le wrapper substituait le plan courant par un simple .Replace('CHANTIER-V12.md', ...)
+# sur tout le prompt : la phrase qui DECRIVAIT le sujet du V12 etait reecrite elle
+# aussi, si bien que le modele recevait << CHANTIER-V17.md (les 42 points d'un
+# inventaire independant...) >> -- la description d'un autre chantier -- puis, plus
+# bas, une seconde annonce du meme plan. Deux descriptions, dont une fausse.
+#
+# Ici : des JETONS, qui ne peuvent pas se confondre avec du texte utile, et une
+# RELECTURE. Un prompt est le seul intrant du modele : une substitution ratee ne casse
+# rien de visible, elle rend seulement la consigne fausse, et personne ne le voit.
+
+# La chaine se decrit ELLE-MEME : chaque plan porte son titre en premiere ligne et son
+# avancement dans ses cases. Rien n'est recopie, donc rien ne se perime.
+function Get-DescriptionChaine($proj, $chaine, $planCourant) {
+  $items = @(); $n = 0
+  foreach ($nom in $chaine) {
+    $n++
+    $chemin = Join-Path $proj $nom
+    if (-not (Test-Path $chemin)) { $items += "$n. $nom (ABSENT du disque)"; continue }
+    $titre = ''
+    # -Encoding UTF8 OBLIGATOIRE : les plans sont en UTF-8 SANS BOM, et PowerShell 5.1
+    # les lirait sinon en ANSI (1252). Mesure du 2026-09-10 : le titre partait alors
+# dans le prompt sous la forme << Chantier V13 a-EUR-" le contenu qui manque >>.
+    try { $titre = ((Get-Content $chemin -TotalCount 1 -Encoding UTF8 -ErrorAction Stop) -replace '^#\s*', '').Trim() } catch {}
+    $faites = 0; $reste = 0
+    try {
+      $faites = (Select-String -Path $chemin -Pattern '^- \[x\]').Count
+      $reste = (Select-String -Path $chemin -Pattern '^- \[ \]').Count
+    } catch {}
+    $etat = if ($reste -eq 0) { 'termine' } else { "$faites/$($faites + $reste) points, $reste a faire" }
+    $marque = if ($nom -eq $planCourant) { '  <<< TON PLAN CE REVEIL' } else { '' }
+    $items += "$n. $nom - $titre ($etat)$marque"
+  }
+  $txt = "TU TRAVAILLES SUR UNE CHAINE DE $(@($chaine).Count) CHANTIERS, traites dans l'ordre. "
+  $txt += "Le wrapper te donne automatiquement le premier plan qui a encore une case a cocher : tu n'as pas a choisir. "
+  $txt += "Etat mesure au lancement de ce reveil :" + [Environment]::NewLine
+  $txt += ($items -join [Environment]::NewLine)
+  return $txt
+}
+
+# Assemble le prompt et le RELIT. Rend .Texte et .Alertes (liste, vide si tout va bien).
+function Build-PromptTravail($modele, $proj, $chaine, $planCourant, $mesures) {
+  $t = $modele
+  $t = $t.Replace('@@CHAINE@@', (Get-DescriptionChaine $proj $chaine $planCourant))
+  $t = $t.Replace('@@PLAN@@', $planCourant)
+  if ($mesures) {
+    foreach ($k in $mesures.Keys) { $t = $t.Replace('@@' + $k + '@@', [string]$mesures[$k]) }
+  }
+  $alertes = @()
+  $restants = [regex]::Matches($t, '@@[A-Z_0-9]+@@')
+  if ($restants.Count -gt 0) {
+    $alertes += 'jeton(s) non substitue(s) : ' + (($restants | ForEach-Object { $_.Value }) -join ', ')
+  }
+  if ($t -notmatch [regex]::Escape($planCourant)) {
+    $alertes += "le plan courant ($planCourant) n'apparait pas dans le prompt"
+  }
+  # Le point 1 doit nommer LE plan courant, et pas un autre de la chaine : c'est
+  # exactement la phrase que l'ancienne substitution rendait contradictoire.
+  $m1 = [regex]::Match($t, 'TON PLAN DE TRAVAIL EST [^\s]*?(CHANTIER-V\d+\.md)')
+  if (-not $m1.Success) { $alertes += 'la phrase << TON PLAN DE TRAVAIL EST >> est introuvable' }
+  elseif ($m1.Groups[1].Value -ne $planCourant) {
+    $alertes += "le point 1 annonce $($m1.Groups[1].Value) alors que le plan courant est $planCourant"
+  }
+  # LE MOJIBAKE, mesure le 2026-09-10 sur le prompt REELLEMENT recu par le modele :
+  # le wrapper etait en UTF-8 SANS BOM, PowerShell 5.1 le lisait donc en ANSI (1252),
+  # et les six tirets cadratins du prompt arrivaient sous la forme << a-EUR-" >>.
+  # Un francais correct n'ecrit jamais un 0xC3 ou un 0xE2 suivi d'un autre caractere
+  # non-ASCII : c'est la signature exacte d'un UTF-8 relu en 1252.
+  # Motif ecrit PAR CODES DE CARACTERE, jamais en litteral : ce fichier-ci est lui
+  # aussi lu par PowerShell, et un litteral accentue y subirait le meme sort.
+  $suite = '[' + [char]0x80 + '-' + [char]0xBF + ']'
+  $sigMoji = [string][char]0xC3 + $suite + '|' + [string][char]0xE2 + $suite
+  $moji = [regex]::Matches($t, $sigMoji)
+  if ($moji.Count -gt 0) {
+    $alertes += "$($moji.Count) signature(s) de MOJIBAKE dans le prompt (UTF-8 relu en 1252)"
+  }
+  return [pscustomobject]@{ Texte = $t; Alertes = $alertes }
 }
 
 # LA DECISION, pour la limite hebdomadaire : l'API D'ABORD, le texte en repli.

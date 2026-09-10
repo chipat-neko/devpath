@@ -131,8 +131,8 @@ $sain = ($anomalies.Count -eq 0)
 
 # --- reparation --------------------------------------------------------------
 # DEUX LISTES, PAS UNE (point D4) : ce qui a REELLEMENT ete repare, et ce qui a
-# ECHOUE. L'ancienne version empilait les deux, ecrivait « **repare** : reactivation
-# IMPOSSIBLE » et sortait en 0 -- une reparation ratee comptait comme une reparation.
+# ECHOUE. L'ancienne version empilait les deux, ecrivait << **repare** : reactivation
+# IMPOSSIBLE >> et sortait en 0 -- une reparation ratee comptait comme une reparation.
 $repare = @()
 $echecsRep = @()
 if ($Reparer -and -not $sain -and -not $volontaire) {
