@@ -3906,7 +3906,7 @@ résultat avant le clic.
       ROUGISSANT demande de savoir combien d'exercices chaque page porte vraiment, et c'est la
       dette ouverte en B4b.
 
-- [ ] **B4a · Les 31 solutions publiées que leur propre page refuse.** Relevé et inscrit au
+- [ ] **B4a · Les 31 solutions publiées que leur propre page refuse — 7 fermées en B4a-1, **24 restent**.** Relevé et inscrit au
       point B4 (`tools/preuves/exos-code-connus.json`, mesure du 2026-09-10). Ce ne sont pas
       des défauts de l'outil : la solution repliée est bien recopiée dans le champ, et le juge
       est celui de la page. Trois familles, à traiter séparément et à mesurer une par une :
@@ -3917,7 +3917,57 @@ résultat avant le clic.
       sérialisé, plusieurs lignes, valeur différente) — il faut alors décider laquelle des deux
       a raison, en exécutant. ⚠️ Ne pas corriger en alignant `run.expect` sur ce que la solution
       produit sans l'avoir jugée : c'est parfois la SOLUTION qui est fausse. Une case par cours
-      (`algo` 10, `projets-js` 9, `js` 7, `offensive` 5).
+      (`algo` 10, `projets-js` 9, `offensive` 5 ; le cours `js` est fait).
+
+- [x] **B4a-1 · Les 7 solutions refusées du cours `js` : toutes fermées, et la cause n'était
+      pas celle qu'on croyait — c'est la SOLUTION qui ne tenait pas le contrat, pas le contrat
+      qui était faux. 31 échecs connus → 24.**
+
+      **Ce que la mesure a appris avant toute correction.** Le point B4 rangeait ces échecs en
+      trois familles supposées (double sortie, rien affiché, forme différente). En regardant les
+      entrées `data-exos` une par une, une quatrième explication apparaît, et elle vaut pour
+      **cinq des sept** : le champ **`placeholder` ÉNONCE LE CONTRAT** — « écris `prendre(iterable,
+      n)`, puis affiche `prendre([10, 20, 30, 40], 2)` » — et `run.expect` en est la réponse
+      exacte. **Le contrat et l'attendu concordaient ; c'est la solution repliée qui montrait
+      autre chose.** Corriger l'`expect` aurait donc été l'erreur : c'est la solution qui devait
+      s'aligner. La règle est écrite ici pour les cases suivantes.
+
+      **Les sept, et ce qu'il a fallu faire.**
+      · `lecon-05` #1 (`0 2 4 6 8 10`) : la solution enchaînait la boucle PUIS sa « variante avec
+      `continue` », donc imprimait la suite **deux fois** — `normExo` réduit les retours à la
+      ligne, et `0 2 4 6 8 10 0 2 4 6 8 10` ne vaut pas l'attendu. La variante est passée dans un
+      **second bloc du même `<details>`** : l'apprenant la voit toujours, l'outil ne recopie que
+      le premier `code.language-javascript`, et elle gagne au passage son propre bouton
+      « Tester ».
+      · `lecon-27` #2 : la solution appelait `extraireMentions(...)` **sans jamais l'afficher**
+      (deux commentaires `//=>` en guise de résultat). Deux `console.log`.
+      · `lecon-43` #2 : le contrat demande `Object.keys(obj).length` sur un objet **dont la
+      SEULE clé est un symbole** ; la solution montrait un objet qui a aussi `titre`, donc ne
+      pouvait pas rendre `0`. Trois lignes ajoutées, qui démontrent exactement la phrase.
+      · `lecon-44` #2 : la solution testait `prendre(fibonacci(), 5)` alors que **`fibonacci`
+      n'est déclaré nulle part dans le bloc** — au clic, `ReferenceError`. Elle affiche
+      maintenant d'abord ce que le contrat demande, puis le générateur infini, déclaré sur place.
+      · `lecon-50` #1 et #2 : `f(2);` et `map([1, 2, 3], …)` sans `console.log`, et sur des
+      valeurs qui ne sont pas celles du contrat (`n * 10` au lieu de `n * 2`).
+      · `lecon-55` #1 : le contrat dit « fais `vueB[0] = 99`, puis affiche `vueA[0]` » ; la
+      solution écrivait **200** et n'affichait jamais `vueA[0]`.
+
+      **PREUVE, deux fois, dans un vrai Chrome.** `exos-code.js` sur les six pages : **10
+      solutions acceptées, 0 refusée, 0 nouveau** (18,6 s) — avant la passe, ces mêmes pages
+      rendaient 7 refus. Puis `verif-clic.js --sorties` : **34 blocs cliqués sur 34 attendus,
+      couverture complète, 0 divergent**, et les sorties relevées sont mot pour mot les
+      commentaires réécrits — `[10,20]` puis `[0,1,1,2,3]` ; `36` ; `[2,4,6]` puis `[2,4]` ;
+      `99`, `99,20,30,40`, `true`.
+
+      **Mesures.** `exos-code-connus.json` : **31 → 24 entrées** (les sept du cours `js`
+      retirées, sinon elles deviendraient des entrées périmées — que la passe `--tout` fait
+      rougir depuis B4). `verif-js.js` : **1 598 blocs à bouton (+1, la variante de `lecon-05`),
+      1 572 aboutis (+1), 4 en panne INCHANGÉ**, 79 non compilables et 32 orphelins inchangés.
+      `verif-html.js` 0/0 ; `verif-sorties.js` **449 rejoués, 0 divergent** ; `verif-donnees.js`
+      25 contrôles 0 erreur après régénération de `search-index.js` (I18 l'a signalé périmé de
+      27 octets, et c'est son travail).
+
+      **Reste : 24 échecs** — `algo` 10, `projets-js` 9, `offensive` 5.
 
 - [ ] **B4b · La couverture d'`exos-code.js` varie sans qu'elle rougisse.** Mesurée au point B4 :
       trois passes `--tout` du même dépôt ont jugé 327, 323 et 323 solutions, l'écart tenant
