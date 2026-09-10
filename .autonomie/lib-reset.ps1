@@ -157,6 +157,25 @@ function Get-PauseEnCours($dir) {
   return [pscustomobject]@{ Actif = $false; Quand = $meilleure; Source = $source }
 }
 
+# UN RAPPORT NE DOIT PAS SE CONTREDIRE DANS SA PROPRE PHRASE (point D4).
+# `sante-autonomie.ps1` empilait tout dans une seule liste `$repare` : quand la
+# reactivation echouait, il ecrivait « **repare** : reactivation IMPOSSIBLE » -- et,
+# pire, son code de sortie devenait 0, parce qu'il testait « $repare.Count -eq 0 ».
+# Une reparation qui a echoue etait donc comptee comme une reparation. C'est le meme
+# defaut qu'au point A5 : confondre « je n'ai pas pu » avec « c'est bon ».
+#
+# Rend : .Code (0 = rien a signaler ou anomalie REPAREE, 2 = anomalie NON reparee),
+#        .Etat (libelle), .Reussites, .Echecs.
+function Get-VerdictSante($sain, $reussites, $echecs) {
+  $nR = 0; $nE = 0
+  if ($reussites) { $nR = @($reussites).Count }
+  if ($echecs) { $nE = @($echecs).Count }
+  if ($sain) { return [pscustomobject]@{ Code = 0; Etat = 'SAIN'; Reussites = $nR; Echecs = $nE } }
+  if ($nR -gt 0 -and $nE -eq 0) { return [pscustomobject]@{ Code = 0; Etat = 'ANOMALIE REPAREE'; Reussites = $nR; Echecs = $nE } }
+  if ($nR -gt 0) { return [pscustomobject]@{ Code = 2; Etat = 'ANOMALIE PARTIELLEMENT REPAREE'; Reussites = $nR; Echecs = $nE } }
+  return [pscustomobject]@{ Code = 2; Etat = 'ANOMALIE NON REPAREE'; Reussites = $nR; Echecs = $nE }
+}
+
 # LA DECISION, pour la limite hebdomadaire : l'API D'ABORD, le texte en repli.
 # C'est l'inversion demandee par le point D1 -- le texte ne porte au mieux qu'une
 # date sans annee, au pire qu'une heure sans jour.

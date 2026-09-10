@@ -4857,9 +4857,36 @@ des heures de travail perdues ou invisibles.
       « pause décidée : aucune » — le rapport dit vrai. `[Parser]::ParseFile` : **0 erreur**,
       diagnostic réel : **SAIN, 28 cases restantes**.
 
-- [ ] **D4 · `sante-autonomie.ps1` écrit « réparé : réactivation IMPOSSIBLE » et sort en code 0** quand
+- [x] **D4 · `sante-autonomie.ps1` écrit « réparé : réactivation IMPOSSIBLE » et sort en code 0** quand
       la réparation a échoué. Un rapport qui se contredit dans sa propre phrase. Corriger le texte **et**
       le code de sortie.
+
+      **FAIT le 2026-09-10.** La cause tient en une ligne : **tout allait dans la même liste**
+      (`$repare += "reactivation IMPOSSIBLE : $_"`), et le code de sortie se calculait sur
+      `-not $sain -and $repare.Count -eq 0`. **Un échec de réparation comptait donc comme une
+      réparation** — il remplissait la liste, donc il faisait sortir en **0**, c'est-à-dire
+      « rien à signaler » pour tout ce qui lit ce code. C'est exactement le défaut du point
+      A5, ici commis sur le garde-fou du garde-fou : *confondre « je n'ai pas pu » avec
+      « c'est bon »*.
+
+      **DEUX LISTES, ET UN VERDICT UNIQUE.** `$repare` (réussites) et `$echecsRep` (échecs)
+      sont désormais distinctes ; le rapport écrit « **réparé** : … » pour les unes et
+      « **NON RÉPARÉ** : … » pour les autres ; l'échec part aussi **au journal**, où il
+      n'apparaissait pas du tout. `Get-VerdictSante` (dans `.autonomie/lib-reset.ps1`, avec
+      les fonctions de D1–D3) rend **le titre du rapport et le code de sortie ensemble** :
+      ils ne peuvent plus diverger. Quatre états, dont un que l'ancien code ne savait pas
+      nommer : **ANOMALIE PARTIELLEMENT RÉPARÉE** (une réussite *et* un échec) → code **2**.
+
+      **ÉPREUVE — 42 cas sur 42** dans `epreuve-reset.ps1` (D1 à D4), dont **6 pour ce
+      verdict** : sain → 0/SAIN · anomalie réparée → 0 · **réparation impossible → 2**, là où
+      l'ancien code rendait 0 · rien de tenté → 2 · une réussie et une échouée → **2** ·
+      sain malgré un échec résiduel → 0. Plus **4 contrôles lus dans le fichier réel** : les
+      échecs ont leur liste, la phrase « réparé : réactivation IMPOSSIBLE » a disparu, la
+      sortie suit `$verdict.Code`, et **l'ancien test `$repare.Count -eq 0` n'existe plus**.
+      *Limite assumée* : la branche d'échec n'a pas été déclenchée pour de vrai — il aurait
+      fallu désactiver la tâche planifiée de production ou en fabriquer une autre ; la
+      décision est donc éprouvée **isolée**, et son branchement **lu dans le fichier**.
+      Exécution réelle : **SAIN, 27 cases restantes, code 0**, `[Parser]::ParseFile` 0 erreur.
 
 - [ ] **D5 · Le `Replace` du plan courant corrompt le prompt envoyé à chaque réveil** : le plan y est
       décrit deux fois, avec des noms différents. Le modèle reçoit donc une consigne contradictoire à

@@ -33,6 +33,11 @@ if (Test-Path $libReset) { . $libReset }
 else {
   function Get-PauseEnCours($d) { return [pscustomobject]@{ Actif = $false; Quand = $null; Source = 'lib-absente' } }
   function Get-RepriseSure($q, $m) { if (-not $m) { $m = 5 }; return [pscustomobject]@{ Quand = (Get-Date).AddMinutes($m); Corrige = $true; Demande = $q } }
+  function Get-VerdictSante($s, $r, $e) {
+    if ($s) { return [pscustomobject]@{ Code = 0; Etat = 'SAIN'; Reussites = 0; Echecs = 0 } }
+    if (@($r).Count -gt 0 -and @($e).Count -eq 0) { return [pscustomobject]@{ Code = 0; Etat = 'ANOMALIE REPAREE'; Reussites = @($r).Count; Echecs = 0 } }
+    return [pscustomobject]@{ Code = 2; Etat = 'ANOMALIE NON REPAREE'; Reussites = @($r).Count; Echecs = @($e).Count }
+  }
 }
 $pause = Get-PauseEnCours $dir
 
@@ -125,7 +130,11 @@ if (-not $volontaire) {
 $sain = ($anomalies.Count -eq 0)
 
 # --- reparation --------------------------------------------------------------
+# DEUX LISTES, PAS UNE (point D4) : ce qui a REELLEMENT ete repare, et ce qui a
+# ECHOUE. L'ancienne version empilait les deux, ecrivait « **repare** : reactivation
+# IMPOSSIBLE » et sortait en 0 -- une reparation ratee comptait comme une reparation.
 $repare = @()
+$echecsRep = @()
 if ($Reparer -and -not $sain -and -not $volontaire) {
   if ($activee -eq $false -and $restant -gt 0) {
     try {
@@ -149,7 +158,10 @@ if ($Reparer -and -not $sain -and -not $volontaire) {
       $activee = $true
       try { Add-Content $log "[$(Stamp):00] ===== REPARATION : tache reactivee ($restant cases restantes, arret non demande) -- $motifRep. =====" -Encoding utf8 } catch {}
       $etatTache = 'Ready'
-    } catch { $repare += "reactivation IMPOSSIBLE : $_" }
+    } catch {
+      $echecsRep += "reactivation IMPOSSIBLE : $_"
+      try { Add-Content $log "[$(Stamp):00] ===== REPARATION IMPOSSIBLE : $_ =====" -Encoding utf8 } catch {}
+    }
   }
 }
 
@@ -159,10 +171,12 @@ $lignes += '# Etat de l''autonomie'
 $lignes += ''
 $lignes += "Releve du **$(Stamp)**. Ce fichier est reecrit a chaque controle : s'il est vieux, c'est que le controle ne tourne plus."
 $lignes += ''
-$lignes += if ($sain) { '## SAIN' } else { '## ANOMALIE' }
+$verdict = Get-VerdictSante $sain $repare $echecsRep
+$lignes += '## ' + $verdict.Etat
 $lignes += ''
 foreach ($a in $anomalies) { $lignes += "- $a" }
 foreach ($r in $repare)    { $lignes += "- **repare** : $r" }
+foreach ($e in $echecsRep) { $lignes += "- **NON REPARE** : $e" }
 if ($volontaire) { $lignes += '- arret VOLONTAIRE en place (.autonomie/arret-volontaire.txt) : aucune reparation.' }
 if ($sain -and -not $volontaire) { $lignes += 'Rien a signaler.' }
 $lignes += ''
@@ -189,9 +203,11 @@ Set-Content -Path $etat -Value ($lignes -join "`r`n") -Encoding utf8
 if ($volontaire) { Write-Host "  ARRET VOLONTAIRE -- $restant cases restantes, aucune reparation (retirer .autonomie/arret-volontaire.txt pour reprendre)" -ForegroundColor Yellow }
 elseif ($sain) { Write-Host "  SAIN -- $restant cases restantes, tache $(if ($activee) { 'active' } else { $etatTache })" }
 else {
-  Write-Host "  ANOMALIE :" -ForegroundColor Red
+  Write-Host ("  " + $verdict.Etat + " :") -ForegroundColor Red
   foreach ($a in $anomalies) { Write-Host "    - $a" -ForegroundColor Red }
   foreach ($r in $repare)    { Write-Host "    - repare : $r" -ForegroundColor Green }
+  foreach ($e in $echecsRep) { Write-Host "    - NON REPARE : $e" -ForegroundColor Red }
 }
-if (-not $sain -and $repare.Count -eq 0) { exit 2 }
-exit 0
+# Le code de sortie suit le MEME verdict que le rapport (point D4) : une reparation
+# qui a echoue ne peut plus rendre 0.
+exit $verdict.Code

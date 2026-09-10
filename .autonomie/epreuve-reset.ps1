@@ -143,6 +143,26 @@ CasPause "les deux fichiers : la reprise la plus lointaine gagne" `
 CasPause "aucun fichier" $null $null $false $null
 Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
 
+# --- 3 quater. LE VERDICT DE SANTE (point D4) ---------------------------------
+# Le defaut : une reparation qui a ECHOUE etait comptee comme une reparation, dans
+# le texte du rapport (« **repare** : reactivation IMPOSSIBLE ») comme dans le code
+# de sortie (0). Les six combinaisons sont jouees.
+Write-Host "`n--- le verdict de sante : reparer, ou avoir essaye (point D4) ---"
+function CasVerdict($titre, $sain, $reussites, $echecs, $codeAttendu, $etatAttendu) {
+  $v = Get-VerdictSante $sain $reussites $echecs
+  if ($v.Code -eq $codeAttendu -and $v.Etat -eq $etatAttendu) {
+    Write-Host ("  OK       " + $titre + "  ->  code " + $v.Code + " / " + $v.Etat); $script:ok++
+  } else {
+    Write-Host ("  ECHEC    " + $titre + "  ->  code " + $v.Code + " / " + $v.Etat + "   (attendu " + $codeAttendu + " / " + $etatAttendu + ")"); $script:ko++
+  }
+}
+CasVerdict "tout va bien"                        $true  @()            @()                       0 'SAIN'
+CasVerdict "anomalie, reparation reussie"        $false @('reactivee') @()                       0 'ANOMALIE REPAREE'
+CasVerdict "anomalie, REPARATION IMPOSSIBLE"     $false @()            @('IMPOSSIBLE : refus')   2 'ANOMALIE NON REPAREE'
+CasVerdict "anomalie, rien de tente"             $false @()            @()                       2 'ANOMALIE NON REPAREE'
+CasVerdict "une reussie ET une echouee"          $false @('reactivee') @('trigger KO')           2 'ANOMALIE PARTIELLEMENT REPAREE'
+CasVerdict "sain malgre un echec residuel"       $true  @()            @('vieux message')        0 'SAIN'
+
 # --- 4. LE BRANCHEMENT, lu dans le wrapper REEL -------------------------------
 # Une lib juste dont personne ne se sert ne corrige rien : on verifie sur le
 # fichier de production qu'il la charge, qu'il passe par la decision, et que
@@ -163,7 +183,11 @@ $controlesSante = @(
   @{ quoi = "sante-autonomie charge lib-reset.ps1";              motif = "Join-Path \`$dir 'lib-reset\.ps1'"; present = $true },
   @{ quoi = "une pause en cours n'est plus un silence anormal";  motif = '-not \$pause\.Actif'; present = $true },
   @{ quoi = "la reparation ne pose plus 2 min quand une pause court"; motif = 'if \(\$pause\.Actif\)'; present = $true },
-  @{ quoi = "le rapport dit si une pause est en cours";          motif = 'pause decidee'; present = $true }
+  @{ quoi = "le rapport dit si une pause est en cours";          motif = 'pause decidee'; present = $true },
+  @{ quoi = "les echecs de reparation ont leur propre liste";    motif = '\$echecsRep'; present = $true },
+  @{ quoi = "un echec n'est plus annonce comme << repare >>";    motif = 'repare \+= "reactivation IMPOSSIBLE'; present = $false },
+  @{ quoi = "le code de sortie suit le verdict";                 motif = 'exit \$verdict\.Code'; present = $true },
+  @{ quoi = "l'ancien test sur \$repare.Count a disparu";         motif = '\$repare\.Count -eq 0'; present = $false }
 )
 foreach ($c in $controlesSante) {
   $script:total++
