@@ -123,6 +123,40 @@ function Get-RepriseSure($quand, $margeMinutes) {
   return [pscustomobject]@{ Quand = $plancher; Corrige = $true; Demande = $quand }
 }
 
+# LA PAUSE DECIDEE PAR LE WRAPPER, RELUE PAR LA SURVEILLANCE (point D3).
+# Le wrapper laisse deux traces quand il decide d'attendre : limite-hebdo.txt (limite
+# atteinte) et pause-hebdo.txt (verrou de budget). tools/sante-autonomie.ps1 ne les
+# lisait pas : toutes les heures, il voyait une tache desactivee ou un long silence,
+# concluait a une panne, et reactivait avec un reveil DANS DEUX MINUTES -- defaisant
+# la pause que le wrapper venait de decider, pour aller se faire refuser aussitot.
+# Les deux mecanismes doivent se parler ; cette fonction est ce qu'ils se disent.
+#
+# Rend : .Actif ($true si une reprise annoncee est encore devant nous), .Quand, .Source.
+function Get-PauseEnCours($dir) {
+  $meilleure = $null; $source = ''
+  foreach ($f in @('limite-hebdo.txt', 'pause-hebdo.txt')) {
+    $p = Join-Path $dir $f
+    if (-not (Test-Path $p)) { continue }
+    try {
+      # Ces fichiers sont ecrits avec Set-Content -Encoding utf8, donc AVEC un BOM
+      # sous PowerShell 5.1 : sans ce nettoyage, la date ne se relit pas.
+      $txt = (Get-Content $p -Raw -ErrorAction Stop) -replace "^﻿", ''
+    } catch { continue }
+    # limite-hebdo.txt : « 2026-09-14 22:59 ».
+    # pause-hebdo.txt  : « 99 % le <horodatage> -- reprise 2026-09-14 22:59 ».
+    # On prend la DERNIERE date du fichier : dans les deux formes, c'est la reprise.
+    $dates = [regex]::Matches($txt, '\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}')
+    if ($dates.Count -eq 0) { continue }
+    $d = $null
+    try { $d = [datetime]::Parse(($dates[$dates.Count - 1].Value -replace 'T', ' ')) } catch { continue }
+    if (-not $meilleure -or $d -gt $meilleure) { $meilleure = $d; $source = $f }
+  }
+  if ($meilleure -and $meilleure -gt (Get-Date)) {
+    return [pscustomobject]@{ Actif = $true; Quand = $meilleure; Source = $source }
+  }
+  return [pscustomobject]@{ Actif = $false; Quand = $meilleure; Source = $source }
+}
+
 # LA DECISION, pour la limite hebdomadaire : l'API D'ABORD, le texte en repli.
 # C'est l'inversion demandee par le point D1 -- le texte ne porte au mieux qu'une
 # date sans annee, au pire qu'une heure sans jour.

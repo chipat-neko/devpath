@@ -114,6 +114,35 @@ CasReprise "reprise nulle"             $null                       10 $true  $tr
 CasReprise "reprise dans 4 jours"      (Get-Date).AddDays(4)       10 $false $false
 CasReprise "reprise dans 20 min"       (Get-Date).AddMinutes(20)   10 $false $false
 
+# --- 3 ter. LA PAUSE RELUE PAR LA SURVEILLANCE (point D3) ---------------------
+# Les fichiers sont fabriques dans un dossier temporaire : la vraie tache planifiee
+# n'est JAMAIS touchee par cette epreuve.
+Write-Host "`n--- ce que la surveillance lit de la pause du wrapper (point D3) ---"
+$tmpDir = Join-Path $env:TEMP ('epreuve-pause-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
+function CasPause($titre, $limite, $pauseTxt, $attenduActif, $attenduQuand) {
+  Get-ChildItem $tmpDir -File | Remove-Item -Force -ErrorAction SilentlyContinue
+  if ($limite) { Set-Content -Path (Join-Path $tmpDir 'limite-hebdo.txt') -Value $limite -Encoding utf8 }
+  if ($pauseTxt) { Set-Content -Path (Join-Path $tmpDir 'pause-hebdo.txt') -Value $pauseTxt -Encoding utf8 }
+  $p = Get-PauseEnCours $tmpDir
+  $vuQuand = 'null'
+  if ($p.Quand) { $vuQuand = $p.Quand.ToString('yyyy-MM-dd HH:mm') }
+  $bon = ($p.Actif -eq $attenduActif)
+  if ($bon -and $attenduQuand) { $bon = ($vuQuand -eq $attenduQuand) }
+  if ($bon) { Write-Host ("  OK       " + $titre + "  ->  actif=" + $p.Actif + " quand=" + $vuQuand + " (" + $p.Source + ")"); $script:ok++ }
+  else { Write-Host ("  ECHEC    " + $titre + "  ->  actif=" + $p.Actif + " quand=" + $vuQuand + "   (attendu actif=" + $attenduActif + " quand=" + $attenduQuand + ")"); $script:ko++ }
+}
+$futur = (Get-Date).AddDays(4).ToString('yyyy-MM-dd HH:mm')
+$loin  = (Get-Date).AddDays(6).ToString('yyyy-MM-dd HH:mm')
+CasPause "limite-hebdo a une date FUTURE"  $futur $null $true  $futur
+CasPause "limite-hebdo a une date PASSEE"  '2026-01-02 01:00' $null $false '2026-01-02 01:00'
+CasPause "pause-hebdo : on prend la REPRISE, pas l'horodatage" `
+         $null ("99 % le 2026-01-02 03:04:05 -- reprise " + $futur) $true $futur
+CasPause "les deux fichiers : la reprise la plus lointaine gagne" `
+         $futur ("100 % le 2026-01-02 03:04:05 -- reprise " + $loin) $true $loin
+CasPause "aucun fichier" $null $null $false $null
+Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+
 # --- 4. LE BRANCHEMENT, lu dans le wrapper REEL -------------------------------
 # Une lib juste dont personne ne se sert ne corrige rien : on verifie sur le
 # fichier de production qu'il la charge, qu'il passe par la decision, et que
@@ -129,6 +158,20 @@ $controles = @(
 )
 # Aucun New-ScheduledTaskTrigger ne doit poser une heure qui n'a pas ete filtree :
 # on compte les deux, ils doivent etre en nombre egal.
+$sante = Get-Content (Join-Path (Split-Path -Parent $PSScriptRoot) 'tools\sante-autonomie.ps1') -Raw
+$controlesSante = @(
+  @{ quoi = "sante-autonomie charge lib-reset.ps1";              motif = "Join-Path \`$dir 'lib-reset\.ps1'"; present = $true },
+  @{ quoi = "une pause en cours n'est plus un silence anormal";  motif = '-not \$pause\.Actif'; present = $true },
+  @{ quoi = "la reparation ne pose plus 2 min quand une pause court"; motif = 'if \(\$pause\.Actif\)'; present = $true },
+  @{ quoi = "le rapport dit si une pause est en cours";          motif = 'pause decidee'; present = $true }
+)
+foreach ($c in $controlesSante) {
+  $script:total++
+  $vu = [regex]::IsMatch($sante, $c.motif)
+  if ($vu -eq $c.present) { Write-Host ("  OK       " + $c.quoi); $script:ok++ }
+  else { Write-Host ("  ECHEC    " + $c.quoi); $script:ko++ }
+}
+
 $nbTrigger = ([regex]::Matches($wrapper, 'New-ScheduledTaskTrigger -Once -At')).Count
 $nbGarde   = ([regex]::Matches($wrapper, 'Get-RepriseSure')).Count
 $script:total++

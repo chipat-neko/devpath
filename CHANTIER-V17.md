@@ -4817,9 +4817,45 @@ des heures de travail perdues ou invisibles.
       gardes (3 = 3)** — un quatrième déclencheur ajouté un jour sans garde ferait rougir
       l'épreuve. `[Parser]::ParseFile` : **0 erreur**.
 
-- [ ] **D3 · La réparation horaire de `sante-autonomie.ps1` écrase le report d'usage par un réveil dans
+- [x] **D3 · La réparation horaire de `sante-autonomie.ps1` écrase le report d'usage par un réveil dans
       2 minutes**, et ignore la pause décidée par le wrapper. Les deux mécanismes doivent se parler : la
       surveillance ne doit pas défaire ce que le verrou vient de décider.
+
+      **FAIT le 2026-09-10.** Le wrapper laisse **deux traces** quand il décide d'attendre —
+      `.autonomie/limite-hebdo.txt` (limite atteinte) et `pause-hebdo.txt` (verrou de
+      budget) — et la surveillance **n'en lisait aucune**. Deux conséquences, toutes deux
+      corrigées :
+      · **elle défaisait la pause** : voyant la tâche désactivée, elle réactivait avec un
+        réveil **dans 2 minutes**, qui repartait se faire refuser, et le cycle
+        recommençait **toutes les heures** — pendant les **quatre jours** que peut durer une
+        limite hebdomadaire (durée mesurée en D1) ;
+      · **elle criait à la panne** : « aucune trace depuis N h » est une anomalie *quand rien
+        n'est prévu*, pas quand une reprise est annoncée. Une alerte qui se déclenche sur un
+        fonctionnement normal finit par être ignorée — c'est le même raisonnement que le
+        faux positif corrigé le 2026-09-05.
+
+      **`Get-PauseEnCours $dir`** vit dans `.autonomie/lib-reset.ps1`, **avec** les fonctions
+      de D1 et D2 : la surveillance et le wrapper lisent désormais **la même règle**, écrite
+      une seule fois. Elle prend la **dernière date** de chaque fichier (dans
+      `pause-hebdo.txt`, l'horodatage d'écriture précède la reprise — prendre la première
+      aurait donné une pause toujours périmée) et ne la déclare active que si elle est
+      **devant nous**. ⚠️ **Piège traité** : ces fichiers sont écrits par
+      `Set-Content -Encoding utf8`, donc **avec un BOM** sous PowerShell 5.1 ; sans nettoyage,
+      la date ne se relit pas. Quand une pause court, la réparation **réactive quand même**
+      la tâche — une tâche désactivée ne repart jamais seule — mais pose le réveil **à
+      l'heure de reprise**, et le journal comme `ETAT-AUTONOMIE.md` (nouvelle ligne « pause
+      décidée ») le disent.
+
+      **ÉPREUVE — 32 cas sur 32** dans `epreuve-reset.ps1` (D1 + D2 + D3), dont **5 pour
+      cette lecture**, joués sur un dossier temporaire : **la vraie tâche planifiée n'est
+      jamais touchée**. Date future → pause active ; date passée → inactive ; `pause-hebdo`
+      → c'est bien la **reprise** qui est lue, pas l'horodatage ; deux fichiers → la reprise
+      **la plus lointaine** gagne ; aucun fichier → inactive. Plus **4 contrôles lus dans
+      `tools/sante-autonomie.ps1`** : il charge la lib, la pause neutralise l'anomalie de
+      silence, la réparation ne pose plus 2 min sous pause, le rapport l'affiche.
+      Vérification sur les fichiers **réels** du dépôt : ils datent du 2026-09-08, donc
+      « pause décidée : aucune » — le rapport dit vrai. `[Parser]::ParseFile` : **0 erreur**,
+      diagnostic réel : **SAIN, 28 cases restantes**.
 
 - [ ] **D4 · `sante-autonomie.ps1` écrit « réparé : réactivation IMPOSSIBLE » et sort en code 0** quand
       la réparation a échoué. Un rapport qui se contredit dans sa propre phrase. Corriger le texte **et**

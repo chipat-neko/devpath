@@ -23,6 +23,19 @@ $tache = 'Syntaxe-Autonomie'
 
 function Stamp { (Get-Date).ToString('yyyy-MM-dd HH:mm') }
 
+# LA SURVEILLANCE DOIT SAVOIR CE QUE LE WRAPPER A DECIDE (point D3 du chantier V17).
+# Sans cette lecture, la reparation horaire defaisait la pause : elle voyait une tache
+# arretee ou un long silence, concluait a une panne, et reactivait avec un reveil DANS
+# DEUX MINUTES. Les fonctions sont celles du wrapper (.autonomie/lib-reset.ps1) : une
+# seule ecriture de la regle, une seule epreuve.
+$libReset = Join-Path $dir 'lib-reset.ps1'
+if (Test-Path $libReset) { . $libReset }
+else {
+  function Get-PauseEnCours($d) { return [pscustomobject]@{ Actif = $false; Quand = $null; Source = 'lib-absente' } }
+  function Get-RepriseSure($q, $m) { if (-not $m) { $m = 5 }; return [pscustomobject]@{ Quand = (Get-Date).AddMinutes($m); Corrige = $true; Demande = $q } }
+}
+$pause = Get-PauseEnCours $dir
+
 # --- ce que les plans contiennent reellement --------------------------------
 # LA LISTE DES PLANS EST LUE DANS LE WRAPPER, jamais recopiee ici. Deux erreurs
 # successives le 2026-09-03 l'ont impose : d'abord une liste en dur qui s'arretait au
@@ -100,7 +113,10 @@ if (-not $volontaire) {
   # reveil est dans trois minutes, et la derniere trace date d'avant l'arret -- constate
   # le 2026-09-05. Un controle qui crie apres une action normale finit par etre ignore.
   $reveilProche = ($prochain -ne $null -and $prochain -le (Get-Date).AddHours(1))
-  if ($activee -eq $true -and $enCours -eq 0 -and $silenceH -ge 4 -and -not $reveilProche) {
+  # UNE PAUSE DECIDEE PAR LE WRAPPER N'EST PAS UN SILENCE ANORMAL (point D3). Une limite
+  # hebdomadaire peut faire attendre quatre jours (mesure du point D1) : sans cette
+  # condition, la surveillance criait a la panne toutes les heures pendant ce temps.
+  if ($activee -eq $true -and $enCours -eq 0 -and $silenceH -ge 4 -and -not $reveilProche -and -not $pause.Actif) {
     $anomalies += "aucune trace depuis $silenceH h alors que la tache est active et qu aucun reveil n est proche"
   }
   if ($etatTache -eq 'INTROUVABLE') { $anomalies += 'la tache planifiee a disparu' }
@@ -113,12 +129,25 @@ $repare = @()
 if ($Reparer -and -not $sain -and -not $volontaire) {
   if ($activee -eq $false -and $restant -gt 0) {
     try {
-      $trig = New-ScheduledTaskTrigger -Once -At ((Get-Date).AddMinutes(2)) -RepetitionInterval (New-TimeSpan -Hours 2)
+      # LA REPARATION NE DEFAIT PLUS LA PAUSE (point D3). Elle reactivait toujours avec
+      # un reveil dans 2 minutes, y compris quand le wrapper venait de decider d'attendre
+      # la remise a zero du quota : le reveil repartait pour se faire refuser aussitot, et
+      # le cycle recommencait toutes les heures. Quand une pause est en cours, on
+      # reactive quand meme -- une tache desactivee ne repart jamais seule -- mais on pose
+      # le reveil A L'HEURE DE REPRISE.
+      if ($pause.Actif) {
+        $quandRep = (Get-RepriseSure $pause.Quand.AddMinutes(10) 10).Quand
+        $motifRep = "reveil pose a la reprise annoncee ($($quandRep.ToString('yyyy-MM-dd HH:mm')), $($pause.Source))"
+      } else {
+        $quandRep = (Get-Date).AddMinutes(2)
+        $motifRep = 'reveil dans 2 min'
+      }
+      $trig = New-ScheduledTaskTrigger -Once -At $quandRep -RepetitionInterval (New-TimeSpan -Hours 2)
       Set-ScheduledTask -TaskName $tache -Trigger $trig -ErrorAction Stop | Out-Null
       Enable-ScheduledTask -TaskName $tache -ErrorAction Stop | Out-Null
-      $repare += 'tache reactivee, reveil dans 2 min'
+      $repare += "tache reactivee, $motifRep"
       $activee = $true
-      try { Add-Content $log "[$(Stamp):00] ===== REPARATION : tache reactivee ($restant cases restantes, arret non demande). =====" -Encoding utf8 } catch {}
+      try { Add-Content $log "[$(Stamp):00] ===== REPARATION : tache reactivee ($restant cases restantes, arret non demande) -- $motifRep. =====" -Encoding utf8 } catch {}
       $etatTache = 'Ready'
     } catch { $repare += "reactivation IMPOSSIBLE : $_" }
   }
@@ -144,6 +173,8 @@ $lignes += "| passe en cours | $(if ($enCours -gt 0) { 'oui' } else { 'non' }) |
 $lignes += "| prochain reveil | $(if ($prochain) { $prochain } else { 'aucun' }) |"
 $lignes += "| derniere trace | $(if ($dernier) { $dernier.ToString('yyyy-MM-dd HH:mm') + "  (il y a $silenceH h)" } else { 'aucune' }) |"
 $lignes += "| usage hebdomadaire | $(if ($pct -ge 0) { "$pct %" } else { 'illisible' }) |"
+# Dire qu'une pause est en cours evite de lire un silence comme une panne (point D3).
+$lignes += "| pause decidee | $(if ($pause.Actif) { 'OUI, reprise ' + $pause.Quand.ToString('yyyy-MM-dd HH:mm') + ' (' + $pause.Source + ')' } else { 'aucune' }) |"
 $lignes += "| cases restantes | **$restant** |"
 $lignes += "| plan courant | $(if ($courant) { $courant } else { 'aucun -- tous les plans sont coches' }) |"
 $lignes += ''
