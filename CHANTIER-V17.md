@@ -5209,9 +5209,45 @@ des heures de travail perdues ou invisibles.
 - [ ] **F1 · Non-régression.** Les vérificateurs verts en `--rapide`, `--complet` et `--strict`.
 - [ ] **F2 · Chaque garde-fou corrigé, éprouvé par injection.** Reprendre un par un les contrôles
       touchés par ce chantier, leur donner une faute, vérifier qu'ils rougissent. Publier le tableau.
-- [ ] **F3 · Mesure globale.** Blocs SQL et JS en erreur : **124 et 451 au départ**, combien à
+- [x] **F3 · Mesure globale.** Blocs SQL et JS en erreur : **124 et 451 au départ**, combien à
       l'arrivée ? Outils hors chaîne : combien au départ, combien à l'arrivée ? Chiffres publiés faux :
       combien restent ?
+
+      **MESURÉ le 2026-09-10, chaque chiffre rejoué le jour même.**
+
+      **1. LES BLOCS QUE L'APPRENANT FAIT TOURNER.**
+
+      | | au départ | aujourd'hui | reste |
+      |---|---:|---:|---|
+      | blocs **SQL** en erreur | **124** sur 303 | **4** sur 260 | les 4 sont des **démonstrations d'erreur voulues**, conformes à leur déclaration |
+      | blocs **JavaScript** en panne | **451** sur 2 011 | **4** sur 1 598 | `rendre`, `analyser`, `z`, `defineStore` non définis — tous motivés, cliquet conforme |
+
+      **98,5 %** des blocs SQL et **98,4 %** des blocs JS aboutissent. Les deux cliquets
+      disent « comme à la référence » : plus aucune panne n'a le droit d'apparaître sans
+      qu'un contrôle rougisse. *Soit **567 blocs** qui affichaient une erreur à l'apprenant,
+      ramenés à **8**, dont aucun n'est une panne subie.*
+
+      **2. LES OUTILS QUE PERSONNE NE LANÇAIT.** Au départ (point A4) : le garde-fou ne
+      policait que le préfixe `verif-`, **13 étapes de la chaîne n'étaient pas policées**, et
+      **4 outils capables de rougir n'avaient aucun appelant** ni aucune déclaration
+      (`preuves/exos-texte.js`, `exos-code.js`, `decodeur.js`, `capture-erreurs.js`) —
+      `exos-texte.js` étant précisément celui qui avait trouvé 13 exercices dont le champ
+      `accept` appartenait à un autre énoncé. Aujourd'hui : **109 outils soumis au garde-fou**
+      (52 vérificateurs, 16 épreuves par injection, 31 preuves, 10 d'une autre famille),
+      **95 dans un mode**, **14 hors chaîne — et les 14 déclarés avec leur raison**. Le
+      garde-fou rend *« tout vérificateur est soit dans un mode, soit déclaré hors chaîne »*.
+      Modes : **53 étapes en `--rapide`, 71 sans option, 81 en `--complet`**.
+
+      **3. LES CHIFFRES PUBLIÉS FAUX.** Corrigés pendant la phase C : **2** statistiques de
+      `doc/lecon-03`, **1** compteur de `doc/cours.html` (74 → 82 leçons), **7** valeurs de
+      l'étude nº 6 + **4** lignes de l'étude nº 3, **1** annonce de `pages/examen.html`
+      (3 000 → 6 151) et **2** commentaires qui la répétaient, **3** endroits de
+      `etude-moteur-exos` (4288/307 → 4293/302). **Il en reste ZÉRO que les contrôles sachent
+      voir**, et ce n'est pas la même chose que « zéro » : ce qui a changé, c'est qu'il y a
+      désormais **quatre** contrôles pour les chercher — I19 (compteurs du site, 7 fichiers),
+      I27 (annonces marquées `data-mesure`), `verif-etudes.js` (les 7 pages d'étude
+      réassemblées et comparées) et les deux preuves d'étude qui suivent leur gabarit.
+      `verif-donnees` : **0 erreur sur 26 contrôles**. `verif-etudes` : **7 études, 0 périmée**.
 - [ ] **F4 · Ce qui n'a pas été fait.** Lister et expliquer, sans arrondir. Reprendre aussi les cinq
       angles morts que l'audit s'est reconnus : aucune exécution réelle sur neuf langages (les
       compilateurs sont absents de la machine), le rendu visuel jamais regardé, 344 blocs `.txt` sur 793
