@@ -3906,7 +3906,7 @@ résultat avant le clic.
       ROUGISSANT demande de savoir combien d'exercices chaque page porte vraiment, et c'est la
       dette ouverte en B4b.
 
-- [ ] **B4a · Les 31 solutions publiées que leur propre page refuse — 7 fermées en B4a-1, 5 en B4a-2, **19 restent**.** Relevé et inscrit au
+- [ ] **B4a · Les 31 solutions publiées que leur propre page refuse — 7 fermées en B4a-1, 5 en B4a-2, 10 en B4a-3, **9 restent** (toutes dans `projets-js`).** Relevé et inscrit au
       point B4 (`tools/preuves/exos-code-connus.json`, mesure du 2026-09-10). Ce ne sont pas
       des défauts de l'outil : la solution repliée est bien recopiée dans le champ, et le juge
       est celui de la page. Trois familles, à traiter séparément et à mesurer une par une :
@@ -3923,6 +3923,11 @@ résultat avant le clic.
       (B4a-1) ; dans `offensive`, la solution avait raison et c'est l'entrée `data-exos` qui
       appartenait à un autre exercice (B4a-2). Reproduire le diagnostic AVANT de choisir le sens
       de la correction est donc la seule méthode fiable — ne présumez pas de la famille.
+      ⚠️ **Et une TROISIÈME cause en B4a-3 (`algo`)** : la solution ne tenait pas le contrat du
+      `placeholder`, pour quatre raisons distinctes (une dépendance non recopiée, tout sur une seule
+      ligne, un autre jeu de données, aucun affichage). Lire d'abord `js/lecon.js` l. 1423 : le juge
+      accepte qu'**UNE ligne** de la sortie égale `run.expect`, donc une sortie riche n'est PAS un
+      problème en soi.
 
 - [x] **B4a-1 · Les 7 solutions refusées du cours `js` : toutes fermées, et la cause n'était
       pas celle qu'on croyait — c'est la SOLUTION qui ne tenait pas le contrat, pas le contrat
@@ -4059,6 +4064,81 @@ résultat avant le clic.
       régénérer. Zéro URL de CDN introduite. `exos-code-connus.json` : **24 → 19 entrées**.
 
       **Reste : 19 échecs** — `algo` 10, `projets-js` 9.
+
+- [x] **B4a-3 · Les 10 solutions refusées du cours `algo` : toutes fermées. La cause n'est
+      encore aucune des trois familles supposées — c'est le CONTRAT DU `placeholder` que la
+      solution ne tient pas, comme dans le cours `js` mais pour quatre raisons différentes.
+      19 échecs connus → 9.**
+
+      **La mesure reproduite avant de toucher à quoi que ce soit.** `exos-code.js` sur les six
+      pages (`lecon-05`, `-06`, `-13`, `-14`, `-18`, `-19`) : **10 solutions REFUSÉES, 5
+      acceptées, 0 sans solution repliée, 0 page sans champ** (17,8 s). Les dix sorties
+      affichées se reproduisent au caractère près, exactement comme au relevé du point B4.
+
+      ⚠️ **CE QU'IL FALLAIT LIRE DANS `js/lecon.js` AVANT DE DIAGNOSTIQUER, et qui change le
+      diagnostic de quatre cas sur dix.** Le juge n'exige pas que la sortie ENTIÈRE égale
+      `run.expect` : `pass = normExo(output) === normExo(expect) || uneLigneEgale(output,
+      expect)` (l. 1423), et `uneLigneEgale` accepte qu'**UNE ligne** de la sortie soit
+      exactement l'attendu. Un programme qui affiche l'attendu **parmi** d'autres lignes passe
+      donc. La famille (a) du point B4 — « la solution contient deux programmes et double sa
+      sortie » — n'existe pas telle quelle : ce qui échoue, c'est de tout mettre sur **une
+      seule ligne** (`console.log(p, a)`), ou de répondre sur **un autre jeu de données** que
+      celui du contrat. Cela permet de garder les seconds exemples, qui sont instructifs, au
+      lieu de les amputer.
+
+      **Les dix, et ce qu'il a fallu faire — quatre causes distinctes.**
+      · **Une dépendance que le contrat demandait d'écrire** — `lecon-05` #2 : le `placeholder`
+      dit « écris **fusion + triFusion**, puis affiche `triFusion([5, 2, 4, 1, 3, 6])` », et la
+      solution ne définissait que `triFusion` : dans le champ isolé, `ReferenceError: fusion is
+      not defined`. Elle passait pourtant au clic **par repli** (runner.js exécute les blocs
+      précédents de la page, qui, eux, définissent `fusion`) — c'est très exactement le genre
+      d'illusion que le repli fabrique. `fusion` est désormais recopiée en tête du bloc, et
+      `verif-js.js` le confirme : les blocs « aboutissant PAR REPLI » de ces pages passent de
+      **4 à 3**.
+      · **Tout sur une seule ligne** — `lecon-06` #1 : `console.log(p, a)` rendait
+      `2 [2,1,5,7,9]` quand l'attendu est `2`. Deux `console.log` : l'indice d'abord (la ligne
+      du contrat), le tableau réarrangé ensuite via `JSON.stringify` (déterministe dans les
+      trois moteurs). `lecon-18` #3 : `console.log(compterNReines(4), compterNReines(6),
+      compterNReines(8))` rendait `2 4 92` ; `92` d'abord, `2 4` ensuite.
+      · **La solution répond sur un AUTRE jeu que le contrat** — `lecon-13` #2 (le contrat dit
+      `[[1,3],[2,4],[3,5]]` → `2`, la solution montrait un jeu de cinq intervalles → `3`) et
+      `lecon-19` #1 (contrat `paireValeurs([1,2,4,7], 6)` → `[2,4]`, la solution testait
+      `[2,4,6,8,11]` → `[6,8]`). L'appel du contrat passe en tête, l'autre reste.
+      · **La solution n'affiche RIEN** — `lecon-14` #1, #2, #3 : les trois rangeaient leur
+      résultat dans un commentaire (`// nbFacons(5) === 8`) sans jamais l'imprimer, alors que
+      les trois `placeholder` disent « puis affiche … ». Trois `console.log`, la glose passée à
+      la ligne suivante. Et `lecon-18` #1 et #2, dont le contrat demande un **nombre** (« le
+      nombre de sous-ensembles … avec `.length` ») quand la solution imprimait la liste
+      entière : le compte d'abord, la liste ensuite.
+
+      **PREUVE, dans un vrai Chrome, par le juge de la page lui-même.** `exos-code.js` sur les
+      six pages : **15 solutions acceptées, 0 REFUSÉE, 0 sans solution repliée, 0 nouveau**
+      (18,0 s) — les cinq déjà justes n'ont pas bougé, les dix refusées passent. Puis
+      `verif-clic.js --sorties` : **48 blocs cliqués sur 48 attendus, couverture complète,
+      0 divergent** (86 s), et les sorties relevées à l'écran sont mot pour mot les commentaires
+      réécrits — `[1,2,3,4,5,6]` (plus de `ReferenceError`) ; `2` puis `[2,1,5,7,9]` ; `2` puis
+      `3` ; `8`, `7`, `4` ; `4` puis `[[],["a"],["a","b"],["b"]]`, `6` puis les six
+      permutations, `92` puis `2 4` ; `[2,4]` puis `null`.
+
+      **Non-régression, chiffres à l'appui.** `verif-exemples.js` sur les six pages : les
+      valeurs annoncées en commentaire désormais **confrontées passent de 28 à 32** et les
+      conformes **de 24 à 29**, **0 divergent**, non vérifiés 4 → 3 ; côté `data-exos`, les
+      `run.expect` **confirmés par exécution passent de 3 à 7** (non vérifiables 12 → 8) — la
+      correction a donc AUGMENTÉ ce qui est sous contrôle, pas seulement éteint des rouges.
+      `verif-js.js` : **48 blocs à bouton, 48 aboutis (100 %), 0 en panne, 0 non compilable,
+      0 orphelin**. `verif-html.js` sur tout le site : **1 629 fichiers, 0 grave / 0 attention**.
+      `verif-sorties.js` : **449 rejoués, 449 identiques au caractère près, 0 divergent**.
+      `verif-donnees.js` : I18 a fait son travail en signalant `search-index.js` périmé de
+      **6 octets** ; après `build-index.js --write --only=search`, **25 contrôles, 0 erreur**
+      (2 avertissements préexistants), et les **cinq** index comparés — quiz 6 151, flashcards
+      11 586, antisèches 1 577, search 1 614, search-lite 1 614 — sont **identiques au fichier
+      cible**. `verif-chaine-declaree.js` : **94 outils dans un mode, 14 hors chaîne, tous
+      déclarés** (le script de correction ponctuel, qui refuse d'écrire si un motif n'apparaît
+      pas exactement une fois, a été retiré après usage). Zéro URL de CDN introduite.
+      `exos-code-connus.json` : **19 → 9 entrées**.
+
+      **Reste : 9 échecs**, tous dans `projets-js` (`lecon-03` #2, `lecon-05` #1/#2/#3,
+      `lecon-07` #1, `lecon-09` #3, `lecon-13` #1/#2, `lecon-15` #1).
 
 - [ ] **B4b · La couverture d'`exos-code.js` varie sans qu'elle rougisse.** Mesurée au point B4 :
       trois passes `--tout` du même dépôt ont jugé 327, 323 et 323 solutions, l'écart tenant
