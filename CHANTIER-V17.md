@@ -5120,12 +5120,57 @@ des heures de travail perdues ou invisibles.
 
 ## PHASE E — Reprendre le V16 en connaissance de cause
 
-- [ ] **E1 · La nouvelle faille des QCM : le POINT INTERNE.** L'audit l'a mesurée à **98,9 % de
+- [x] **E1 · La nouvelle faille des QCM : le POINT INTERNE.** L'audit l'a mesurée à **98,9 % de
       rendement** (282 justes sur 285) sur une couverture de 4,6 % — « la seule option en deux
       phrases ». C'est la plus forte jamais mesurée sur ce site, et elle est **fabriquée par la
       correction elle-même** : en étoffant les distracteurs, on écrit parfois une bonne réponse en deux
       phrases là où les autres n'en ont qu'une. Écrire la consigne qui la ferme, la verser dans le
       cadrage de B4 du V16, et vérifier sur les 38 cours déjà traités qu'elle n'y est pas déjà installée.
+
+      **FAIT le 2026-09-10. Mesure reproduite d'abord** : `mesure-biais-qcm.js` rend
+      **98,9 % de rendement sur 4,6 % de couverture** (285 questions), identique au relevé
+      de l'audit. C'est le plus fort rendement du site.
+
+      **ET LA VÉRIFICATION DEMANDÉE RÉPOND OUI : L'INDICE EST DÉJÀ INSTALLÉ, ET C'EST BIEN
+      NOUS QUI L'AVONS MIS.** `tools/mesure-point-interne.js` (écrit pour ce point ; il
+      réutilise le corpus et les stratégies de `mesure-biais-qcm.js`, sans en recopier une
+      ligne, et lit le marquage `traite` dans `qcm-biais-reference.json` plutôt qu'une liste
+      à la main) :
+
+      | | questions | tranche | couverture | rendement |
+      |---|---:|---:|---:|---:|
+      | les **35 cours déjà traités** | 3 040 | 184 | **6,1 %** | **98,9 %** |
+      | les **55 cours pas encore traités** | 3 127 | 101 | **3,2 %** | **99,0 %** |
+
+      **La couverture est presque DOUBLE là où la correction est passée** — le rendement, lui,
+      est le même des deux côtés (l'indice est intrinsèquement sûr). Et le classement par
+      cours est sans appel : les **neuf premiers sont tous des cours traités** — `js` 14,7 %,
+      `react` **19,8 %**, `projets-js` 17,9 %, `rust` 19,7 %, `sql` 15,9 %, `python` 10,4 %,
+      `algo` 12,0 %, `nodejs` 11,2 %, `html` 6,9 % — avec **100 % de rendement** sur chacun
+      sauf `html` (90,9 %). *Sur `react`, une question sur cinq se devine à coup sûr, dans un
+      cours déclaré corrigé.*
+
+      **CE QUE L'INDICE EST, sur pièces** (`--exemples`) : la bonne réponse **explique puis
+      conclut** — « … s'arrête au premier cas vrai ; une note de 16+ est aussi >= 12, donc la
+      branche 12 la capte avant. **Il faut tester du plus restrictif au moins restrictif.** » —
+      pendant que les trois distracteurs tiennent en une phrase. C'est le réflexe de qui étoffe
+      une bonne réponse : on ajoute la règle à retenir. **On ne l'ajoute jamais à un
+      distracteur, puisqu'il est faux.**
+
+      **LA CONSIGNE EST ÉCRITE ET VERSÉE DANS `CHANTIER-V16.md`**, dans le cadrage de B4, en
+      **sixième** consigne — avec le tableau ci-dessus, les exemples, et la règle de contrôle
+      par lot. Elle vise **l'égalité** (les quatre options portent le même nombre de phrases),
+      parce que les deux leçons du chantier l'imposent : `lua` — une inégalité laisse toujours
+      une lecture exploitable ; `mobile` — fermer à fond dans un seul sens **retourne** l'indice.
+      Elle prévoit aussi le cas où l'on ne sait pas écrire trois fausses conclusions crédibles :
+      **on retire alors la conclusion de la bonne réponse**.
+
+      ⚠️ **ET LE CLIQUET NE RATTRAPERA PAS L'AFFAIRE.** « la seule en deux phrases » est dans
+      les `EXPLOITABLES` de `verif-qcm-biais.js` depuis le 2026-09-07 — mais il juge par la
+      **réussite par cours**, où aucun des 90 cours ne dépasse **39,8 %** parce que la
+      couverture est faible. Il restera donc **vert** pendant que l'indice s'installe. C'est
+      écrit dans la consigne : la couverture se surveille **à la main**, avec
+      `node tools/mesure-point-interne.js --traites`.
 
 - [ ] **E2 · Le verdict sur B4, écrit noir sur blanc dans le V16.** L'audit a établi que **B4 ne peut
       pas être cochée** : la cible du plan est **par cours** (longueur ≤ 40 %, aucune stratégie

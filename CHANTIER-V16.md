@@ -1018,6 +1018,47 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       forme (longueur dans les deux sens, ponctuation, énumération, absolus), et le fait que
       **corriger un indice en crée un autre**.
 
+      ⚠️⚠️⚠️ **SIXIÈME CONSIGNE, AJOUTÉE LE 2026-09-10 PAR LE POINT E1 DU CHANTIER V17 : LE POINT
+      INTERNE — et celle-ci n'est pas une précaution, c'est un correctif.** La mesure a établi que
+      **la correction de B3/B4 FABRIQUE cet indice**, et le chiffre ne laisse pas de place au doute :
+
+      | | couverture | rendement |
+      |---|---:|---:|
+      | les **35 cours déjà traités** (3 040 questions) | **6,1 %** (184 q.) | **98,9 %** |
+      | les **55 cours pas encore traités** (3 127 questions) | **3,2 %** (101 q.) | **99,0 %** |
+
+      **La couverture est presque DEUX FOIS plus grande là où l'on est passé.** Et sur les cours les
+      plus retravaillés, elle est massive : `react` **19,8 %**, `rust` **19,7 %**, `projets-js`
+      **17,9 %**, `sql` **15,9 %**, `js` **14,7 %** — *une question sur cinq* devinée à coup sûr sur
+      `react`. Rendement **100 %** sur chacun de ces cours. Mesure rejouable :
+      `node tools/mesure-point-interne.js` (et `--exemples`).
+
+      **CE QUE L'INDICE EST, exactement.** La bonne réponse est écrite **en deux phrases** — elle
+      explique, puis conclut : *« Un `if / else if` s'arrête au premier cas vrai ; une note de 16+ est
+      aussi >= 12, donc la branche 12 la capte avant. **Il faut tester du plus restrictif au moins
+      restrictif.** »* — pendant que les trois distracteurs tiennent en une phrase. Le point suivi
+      d'une majuscule est la signature. C'est le réflexe naturel de qui étoffe une bonne réponse : on
+      ajoute la règle à retenir. **On ne l'ajoute jamais à un distracteur, puisqu'il est faux.**
+
+      **LA CONSIGNE, et elle vise l'ÉGALITÉ, pas la modération** (leçon du cours `lua` : une inégalité
+      laisse toujours une lecture exploitable, seule l'égalité ferme ; leçon du cours `mobile` :
+      fermer à fond dans un seul sens RETOURNE l'indice) :
+
+      > **Dans une question donnée, les quatre options portent le MÊME nombre de phrases.** Si la
+      > bonne réponse explique puis conclut en deux phrases, **les trois distracteurs concluent
+      > aussi** — et leur seconde phrase est une **règle FAUSSE mais plausible**, jamais un
+      > remplissage, jamais une reformulation de la première. Si l'on ne sait pas écrire trois
+      > fausses conclusions crédibles, **on retire la conclusion de la bonne réponse** et les quatre
+      > options tiennent en une phrase. Le point d'abréviation (`etc.`, `cf.`), la virgule décimale et
+      > le point d'un `objet.methode()` ne comptent pas : la signature est **un point suivi d'une
+      > espace puis d'une majuscule**.
+
+      **À VÉRIFIER À CHAQUE LOT** : `node tools/mesure-point-interne.js --traites` doit voir la
+      couverture des cours traités **descendre vers celle des cours non traités**, et non l'inverse.
+      Le cliquet `verif-qcm-biais.js` surveille déjà la stratégie « la seule en deux phrases » depuis
+      le 2026-09-07, mais **par la réussite par cours** — où aucun cours ne dépasse 39,8 %. Il ne
+      rougira donc pas : c'est la couverture qu'il faut regarder, à la main, avec l'outil ci-dessus.
+
       ---
 
       **LE DÉCOUPAGE DE `js`, DÉCIDÉ AVANT DE COMMENCER comme le cadrage l'exigeait : DEUX PASSES.**
