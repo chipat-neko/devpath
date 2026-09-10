@@ -4553,8 +4553,58 @@ affiché à l'apprenant — et l'audit a montré que la cause est presque toujou
       descriptions des étapes `etude-3` et `etude-6` dans `tools/verif.js` disent
       maintenant ce qu'elles contrôlent vraiment.
 
-- [ ] **C4 · `pages/examen.html` annonce « plus de 3000 questions » ; la banque en contient 6 151.**
+- [x] **C4 · `pages/examen.html` annonce « plus de 3000 questions » ; la banque en contient 6 151.**
       Corriger, et rattacher l'annonce à une mesure plutôt qu'à un nombre écrit à la main.
+
+      **FAIT le 2026-09-10.** *Mesure reproduite d'abord* : `window.QUIZ_BANK` chargé hors
+      navigateur rend **6 151** questions — l'annonce était fausse d'un facteur **2,05**.
+      Deux autres endroits disaient la même chose de travers : l'en-tête de `js/examen.js`
+      (« ~3000 questions ») et celui de `js/revision.js`, qui décrit les trois matériaux du
+      moteur de Leitner au présent avec des tailles périmées de **908, 524 et 81 entrées**
+      (10 678 → **11 586** cartes, 5 627 → **6 151** questions, 1 827 → **1 908** pièges).
+
+      **POURQUOI I19 NE POUVAIT PAS L'ATTRAPER, et pourquoi on ne l'a pas élargi.** Le
+      compteur d'I19 marche par MOTIF (« N cours/leçons/langages/parcours »). Ajouter le mot
+      « questions » à ce motif ferait rougir « 20 questions » — le réglage d'un examen,
+      construit par `examen.js` — et « 20 QCM réussis » (un badge de `progression.js`), qui
+      sont justes. Un motif qui crie à tort est un motif qu'on désactive.
+
+      **ON INVERSE DONC LA CHARGE, comme la convention de fraîcheur l'a fait pour le
+      périssable** : celui qui écrit MARQUE son annonce, et le vérificateur ne cherche plus
+      les nombres — il contrôle les marques. `pages/examen.html` porte
+      `<strong data-mesure="qcm">6&nbsp;151 questions</strong>`, et le nouvel invariant
+      **I27** (`tools/verif-donnees.js`, 25 → **26 contrôles**) confronte chaque marque des
+      **75 pages transverses** à la mesure du jour. Une marque dont la source n'est pas au
+      registre est une **erreur** — sinon on croirait surveillé un nombre que personne ne
+      mesure. Chaque source n'est chargée que si une marque l'appelle (`quiz-index.js` pèse
+      4 Mo).
+
+      **ET LA PAGE NE DÉPEND PLUS DU FICHIER.** `examen.js` écrit désormais `BANK.length`
+      dans la marque au démarrage : le jour où `build-index.js` régénère la banque,
+      l'affichage suit sans que personne y touche, et le texte du fichier n'est plus qu'un
+      repli — tenu juste par I27. **Preuve dans Chrome** (`file://`, DNS coupé, profil neuf) :
+      la page rend « **6 151 questions** », `window.QUIZ_BANK.length` y vaut **6 151**, la
+      chaîne « 3000 » a **disparu** du texte affiché, **0 requête distante, 0 exception**.
+      **Contre-épreuve** : repli du fichier forcé à « 42 questions » → Chrome affiche quand
+      même « 6 151 questions ». C'est donc bien le JS qui écrit, pas le fichier qui se lit.
+
+      **ÉPREUVE PAR INJECTION D'I27 — trois façons de mentir, trois rouges** : chiffre faux
+      (`6 151` → `6 150`) → *« 6 150 questions » annoncé, 6151 mesuré(s)* ; source inconnue
+      (`data-mesure="flashcards"`) → *aucune mesure de ce nom dans le registre* ; annonce sans
+      nombre (« beaucoup de questions ») → *ne contient aucun nombre*. **Code de sortie 1**
+      sous injection, **0** après restauration.
+
+      **LE POINT FIXE, DE NOUVEAU (leçon de C3).** Réécrire le hero change le texte indexé :
+      `search-index.js` et `search-lite.js` sont devenus périmés (**−9 o** et **−7 o**), et
+      leur régénération a fait dériver l'étude nº 3, qui publie la taille de cet index — la
+      preuve de C3 l'a vue immédiatement et **nommée** : *couples mot × document : publié
+      930 245, mesure du jour 930 244*. Réassemblage, deuxième régénération, **point fixe en
+      2 itérations** ; `build-index --only=search,searchlite` rend « identique au fichier
+      cible » sur les deux, et la preuve de l'étude 3 revient à **0 écart, 0 faute**.
+
+      **APRÈS.** `verif-html.js` **0 problème sur 1 629 fichiers** · `verif-donnees.js`
+      **0 erreur / 26 contrôles** · `verif.js --rapide` **52 étapes, tout vert (154,2 s)**.
+      Aucun BOM, aucune URL de CDN.
 
 - [ ] **C5 · Le contrôle des compteurs affichés (I19) ne regarde que 4 fichiers alors que les compteurs
       vivent dans 8.** Étendre, et éprouver par injection.

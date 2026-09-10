@@ -77,6 +77,12 @@
  *                             et ce fichier existe. Le générateur la connaissait
  *                             et la jetait : les deux pages ne renvoyaient que
  *                             vers le cours entier (V12-D3).
+ *   I27 annonce ⇄ mesure    : tout élément marqué data-mesure="X" d'une page
+ *                             transverse annonce le nombre que la mesure X rend
+ *                             aujourd'hui (registre dans le contrôle ; « qcm » =
+ *                             taille de window.QUIZ_BANK). Une marque de source
+ *                             inconnue est une erreur. Le hero de l'examen
+ *                             annonçait 3000 questions pour 6151 (V17-C4).
  *
  * USAGE
  * -----
@@ -1078,6 +1084,71 @@ Object.keys(LESSONS).forEach((id) => {
     if (part > 0.05) c.err(sansSource + ' carte(s) sur ' + arr.length + ' sans leçon d\'origine (> 5 %)');
     else c.warn(sansSource + ' carte(s) sans leçon d\'origine (reprises d\'un ancien index)');
   }
+})();
+
+/* =========================== I27 annonces liées à leur mesure (V17-C4) === */
+/* Le hero de pages/examen.html annonçait « plus de 3000 questions » quand la
+   banque en comptait 6 151 : un nombre écrit à la main dans une prose se périme
+   à la première régénération de l'index, sans que rien ne casse. I19 ne pouvait
+   pas l'attraper — il ne connaît que cours/leçons/langages/parcours, et étendre
+   son motif au mot « questions » ferait rougir « 20 questions » (le réglage d'un
+   examen) ou « 20 QCM réussis » (un badge), qui sont justes.
+
+   ON INVERSE DONC LA CHARGE, comme pour la convention de fraîcheur : celui qui
+   écrit MARQUE son annonce, `<strong data-mesure="qcm">6 151 questions</strong>`,
+   et ce contrôle confronte le nombre marqué à la mesure du jour. Une marque dont
+   la source est inconnue est une ERREUR : sinon on croirait surveillé un nombre
+   que personne ne mesure. Chaque source n'est chargée que si une marque l'appelle
+   (js/quiz-index.js pèse 4 Mo). */
+(function () {
+  const c = check('I27', 'annonces chiffrées ⇄ mesure du jour');
+  /* le registre : nom de marque → comment se mesure ce qu'elle annonce */
+  const SOURCES = {
+    qcm: {
+      quoi: 'questions de la banque d\'examen (js/quiz-index.js)',
+      mesure: () => {
+        const b = loadGlobal(path.join(JS, 'quiz-index.js'), 'QUIZ_BANK');
+        return b ? b.length : null;
+      },
+    },
+  };
+  const cache = {};
+  function mesureDe(nom) {
+    if (!(nom in cache)) cache[nom] = SOURCES[nom].mesure();
+    return cache[nom];
+  }
+
+  const pagesTransverses = [path.join(ROOT, 'index.html')].concat(
+    fs.existsSync(PAGES)
+      ? fs.readdirSync(PAGES).filter((f) => /\.html$/.test(f)).sort().map((f) => path.join(PAGES, f))
+      : []
+  );
+  const re = /<([a-z][a-z0-9]*)\b[^>]*\bdata-mesure="([^"]+)"[^>]*>([\s\S]*?)<\/\1>/gi;
+  let marques = 0;
+  pagesTransverses.forEach((p) => {
+    let src;
+    try { src = fs.readFileSync(p, 'utf8'); } catch (e) { return; }
+    const nom = path.relative(ROOT, p).replace(/\\/g, '/');
+    let m; re.lastIndex = 0;
+    while ((m = re.exec(src))) {
+      marques++;
+      const cle = m[2];
+      const texte = m[3].replace(/<[^>]+>/g, '').replace(/&nbsp;| | /g, ' ').trim();
+      if (!SOURCES[cle]) {
+        c.err(nom + ' : data-mesure="' + cle + '" — aucune mesure de ce nom dans le registre d\'I27');
+        continue;
+      }
+      const reel = mesureDe(cle);
+      if (reel == null) { c.err(nom + ' : la mesure « ' + cle + ' » (' + SOURCES[cle].quoi + ') est illisible'); continue; }
+      const chiffres = texte.match(/\d[\d ]*/);
+      if (!chiffres) { c.err(nom + ' : l\'annonce marquée « ' + cle +' » ne contient aucun nombre (« ' + texte + ' »)'); continue; }
+      const ecrit = parseInt(chiffres[0].replace(/ /g, ''), 10);
+      if (ecrit !== reel) {
+        c.err(nom + ' : « ' + texte + ' » annoncé, ' + reel + ' mesuré(s) — ' + SOURCES[cle].quoi);
+      }
+    }
+  });
+  if (!marques) c.warn('aucune annonce marquée data-mesure dans les pages transverses — surveillance impossible');
 })();
 
 /* ================================================================ sortie */

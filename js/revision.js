@@ -6,9 +6,13 @@
    glossaires. Or une DÉFINITION se reconnaît sans se rappeler ; une QUESTION de
    QCM et un PIÈGE sont des prédictions vérifiables, un bien meilleur matériau de
    rappel. Le même moteur sert donc désormais :
-     · le vocabulaire  → window.FLASHCARDS (10 678 cartes)
-     · les QCM         → window.QUIZ_BANK  (5 627 questions)
-     · les pièges      → window.PIEGES     (1 827 encadrés)
+     · le vocabulaire  → window.FLASHCARDS (cartes de glossaire)
+     · les QCM         → window.QUIZ_BANK  (questions des blocs data-quiz)
+     · les pièges      → window.PIEGES     (encadrés d'erreur fréquente)
+   Ces trois index sont RÉGÉNÉRÉS (tools/build-index.js) : leurs tailles étaient
+   écrites ici et s'étaient périmées de 908, 524 et 81 entrées — même défaut que
+   le hero de l'examen au point V17-C4. Pour les compter : `node -e` sur le
+   fichier, ou build-index.js, qui les annonce. Aucun nombre à jour ici.
    Les deux derniers index pèsent 3,9 Mo : ils ne sont chargés QUE si on les
    demande, par injection d'un <script> (aucun fetch, donc toujours file://).
    Les identifiants Leitner sont PRÉFIXÉS par le matériau, sauf le vocabulaire

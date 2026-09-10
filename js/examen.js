@@ -1,8 +1,15 @@
 /* =============================================================================
    examen.js — Examen blanc chronométré (P6). Tire N questions au hasard de la
-   banque window.QUIZ_BANK (js/quiz-index.js, ~3000 questions extraites des
-   blocs data-quiz des leçons), minuteur, score et correction détaillée.
+   banque window.QUIZ_BANK (js/quiz-index.js, les questions extraites des blocs
+   data-quiz des leçons), minuteur, score et correction détaillée.
    100 % statique. Page : pages/examen.html.
+
+   ⚠️ NE PAS RÉÉCRIRE ICI LA TAILLE DE LA BANQUE. Ce commentaire annonçait
+   « ~3000 questions » et la page « plus de 3000 questions » alors que la banque
+   en comptait 6 151 (V17-C4) : un nombre écrit à la main se périme dès la
+   régénération suivante de l'index. La page porte désormais une ANNONCE LIÉE
+   (`data-mesure="qcm"`), remplie ci-dessous par BANK.length et contrôlée hors
+   navigateur par l'invariant I27 de tools/verif-donnees.js.
    ============================================================================= */
 (function () {
   "use strict";
@@ -12,6 +19,19 @@
   var setupEl = document.getElementById("exam-setup");
   var quizEl = document.getElementById("exam-quiz");
   var resultEl = document.getElementById("exam-result");
+  /* ---------------------------------------- l'annonce liée à sa mesure (V17-C4)
+     Le hero annonçait un nombre écrit à la main, périmé de moitié. Il porte
+     maintenant `data-mesure="qcm"` : la taille RÉELLE de la banque chargée y est
+     écrite au démarrage. Le repli du fichier (utile sans JS, et seul contrôlable
+     hors navigateur) est tenu par l'invariant I27 de tools/verif-donnees.js. */
+  function annonceLiee() {
+    if (!BANK.length) return;
+    var texte = String(BANK.length).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " questions";
+    var cibles = document.querySelectorAll('[data-mesure="qcm"]');
+    for (var i = 0; i < cibles.length; i++) cibles[i].textContent = texte;
+  }
+  annonceLiee();
+
   if (!setupEl || !quizEl || !resultEl || !BANK.length) return;
 
   function esc(s) {
