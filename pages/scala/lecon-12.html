@@ -159,12 +159,14 @@ val sommeDistribuee = rdd.filter(_ &gt; 2).map(_ * 10).reduce(_ + _)
 </figure>
 
 <figure class="code-block" data-file="Main.scala"><pre><code class="language-scala">import org.apache.spark.sql.functions.sum
+import spark.implicits.*                      // l'Encoder nécessaire à .as[Commande]
 
 case class Commande(pays: String, montant: Double)
 
 // 1. LIRE — Spark charge le fichier en parallèle sur le cluster
 val commandes = spark.read
   .option("header", "true")
+  .option("inferSchema", "true")               // sans cela, tout serait lu en String
   .csv("s3://entreprise/commandes-2026/")
   .as[Commande]   // typage en Dataset[Commande]
 
@@ -185,6 +187,8 @@ parPays.show()
 // | ES   |  98745.25  |
 // +------+------------+
 </code></pre></figure>
+
+<p>Attention à l'option <code>inferSchema</code>&nbsp;: sans elle, le lecteur CSV type <em>toutes</em> les colonnes en <code>String</code>, et <code>.as[Commande]</code> échoue à l'analyse («&nbsp;<code>Cannot up cast montant from string to double</code>&nbsp;»), parce que Spark refuse les conversions qui pourraient tronquer.</p>
 
 <p>Lis, transforme, agrège&nbsp;: ce sont les trois mouvements. Le code tient en quelques lignes et pourtant il peut traiter des milliards de lignes réparties sur un cluster. <code>filter</code>, <code>groupBy</code>, <code>agg(sum(...))</code> — chaque verbe que tu connais s'applique, simplement à une autre échelle.</p>
 
@@ -330,9 +334,9 @@ dom.document.getElementById("bouton").addEventListener("click", { (_: dom.Event)
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Pourquoi un développeur qui maîtrise les collections Scala apprend-il Spark plus vite ?","a":["Parce que l'API de Spark (RDD/Dataset) reprend les mêmes opérations fonctionnelles (map, filter, reduce, flatMap…) que les collections Scala : les concepts se transposent à l'échelle distribuée","Parce que Spark est écrit en Python","Parce que Spark n'a pas d'API","Aucun rapport entre les deux"],"correct":0,"explain":"Spark expose des transformations inspirées des collections (map, filter, reduce, groupBy). Qui les connaît en Scala retrouve les mêmes idées, appliquées cette fois à des données réparties sur un cluster, d'où une montée en compétence rapide."},
-  {"q":"Quels sont les trois temps d'un pipeline big data ?","a":["Extraction (lire les données), Transformation (nettoyer, agréger, calculer) puis Chargement (écrire le résultat) — le schéma ETL","Compiler, exécuter, déployer","Lire, trier, supprimer","Mapper, réduire, afficher"],"correct":0,"explain":"Un pipeline suit le motif ETL : Extract (ingestion depuis les sources), Transform (nettoyage et calculs), Load (écriture vers la destination). C'est l'ossature classique du traitement de données à grande échelle."},
-  {"q":"Que représente le type ZIO[Any, Throwable, Unit] et en quoi prolonge-t-il l'idée de « rendre les choses explicites par les types » ?","a":["Ses trois paramètres décrivent l'environnement requis (Any, aucun), le type d'erreur possible (Throwable) et le type de succès (Unit) : l'effet rend explicites dans le type ses dépendances, ses erreurs et son résultat","C'est un simple alias de Future","Il cache les erreurs","Il ne représente qu'un résultat"],"correct":0,"explain":"ZIO[R, E, A] encode dans sa signature ce dont l'effet a besoin (R), comment il peut échouer (E) et ce qu'il produit (A). ZIO[Any, Throwable, Unit] ne requiert rien, peut lever un Throwable et renvoie Unit : tout est lisible dans le type, sans exception cachée."}
+  {"q":"Pourquoi un développeur qui maîtrise les collections Scala apprend-il Spark plus vite ?","a":["Parce que l'API de Spark (RDD/Dataset) reprend les mêmes opérations fonctionnelles (map, filter, reduce, flatMap…) que les collections Scala : les concepts se transposent à l'échelle distribuée","Parce que l'API de Spark (RDD/Dataset) traduit chaque appel Scala en Python : les collections locales et le moteur distribué partagent les mêmes noms (map, filter, reduce, flatMap) à ceci près que Spark ignore leur ordre","Parce que Spark expose une API simple (RDD/Dataset restent internes) : on écrit des collections Scala ordinaires (map, filter, reduce, flatMap) que le moteur distribué traduit à l'échelle du cluster","Parce que Spark (RDD/Dataset) emprunte les noms des opérations fonctionnelles (map, filter, reduce, flatMap) aux collections Scala : chaque verbe y désigne pourtant un traitement différent"],"correct":0,"explain":"Spark expose des transformations inspirées des collections (map, filter, reduce, groupBy). Qui les connaît en Scala retrouve les mêmes idées, appliquées cette fois à des données réparties sur un cluster, d'où une montée en compétence rapide."},
+  {"q":"Quels sont les trois temps d'un pipeline big data ?","a":["Lire (charger la source), Transformer (filtrer, nettoyer) puis Agréger (grouper, sommer le résultat) — les trois mouvements","Compilation (monter le code, lier les classes), Exécution (lancer, tracer le travail) puis Envoi (partager le résultat produit) — le cycle complet","Lecture (ouvrir la source), Tri (trier les lignes en mémoire) puis Suppression (effacer le résultat) — le cycle court","Mapper (traiter, regrouper), Réduire (agréger, calculer) puis Afficher (produire le résultat) — le trio de base"],"correct":0,"explain":"Tout pipeline Spark tient en trois mouvements : lire la donnée brute (read.csv), la transformer (filter) puis l'agréger (groupBy, agg(sum)) pour en tirer un chiffre. Le code reste celui des collections ; seule change l'échelle des données traitées."},
+  {"q":"Que représente le type ZIO[Any, Throwable, Unit] et en quoi prolonge-t-il l'idée de « rendre les choses explicites par les types » ?","a":["Ses trois paramètres décrivent l'environnement requis (Any, aucun), le type d'erreur possible (Throwable) et le type de succès (Unit) : l'effet rend explicites dans le type ses dépendances, ses erreurs et son résultat","C'est un alias de Future : ses trois paramètres sont l'environnement d'exécution choisi (Any, aucun réglage), le journal des erreurs (Throwable) et le résultat produit (Unit), de sorte que le type rend explicites le pool de threads et la concurrence","Les trois paramètres se lisent de droite à gauche : Unit donne le résultat, Throwable la trace des exceptions déjà rattrapées et Any le module courant (aucun autre rôle), si bien que le type rend explicites l'ordre des effets et leur coût","Ses trois paramètres décrivent la planification : Any nomme le moteur d'exécution, Throwable la reprise après incident et Unit la file des tâches (aucun résultat n'y transite), et ce type rend explicites le plan de calcul et sa durée"],"correct":0,"explain":"ZIO[R, E, A] encode dans sa signature ce dont l'effet a besoin (R), comment il peut échouer (E) et ce qu'il produit (A). ZIO[Any, Throwable, Unit] ne requiert rien, peut lever un Throwable et renvoie Unit : tout est lisible dans le type, sans exception cachée."}
 ]
 </script>
 
