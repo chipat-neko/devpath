@@ -1016,13 +1016,14 @@ résultat avant le clic.
       **9 `HTMLElement is not defined`** (du DOM que `BROWSER_ONLY` ne nomme pas encore).
       Une case par lot de cours ; commencer par `test is not defined`, le plus homogène.
 
-      **CLOS LE 2026-09-10, en 28 cases.** 339 blocs en panne → **3**, et les trois sont des
+      **CLOS LE 2026-09-10, en 29 cases.** 339 blocs en panne → **4** (3 à la fin de B2b-28, puis 4 après la rétractation mesurée en B2b-29), et ce sont des
       REFUS ÉCRITS, pas des oublis : `vue/lecon-06` #2 et `nodejs/lecon-22` #5 (simuler Pinia
       ou zod ferait enseigner un comportement qui n'est pas celui de la bibliothèque —
       critère posé en B2b-22), `projets-js/lecon-02` #5 (le chef d'orchestre d'un projet
       multi-leçons, dont la piste de règle — la clôture transitive de l'héritage — est
-      décrite et chiffrable en B2b-28, mais pas encore mesurée). État final de l'instrument :
-      **1 596 blocs à bouton, 1 572 aboutis (98,5 %), 3 en panne**, avec sept cliquets
+      décrite et chiffrable en B2b-28, mais pas encore mesurée) et `projets-js/lecon-18` #6,
+      rendu à sa panne en B2b-29 parce que le rappel qui le fermait cassait le fichier recollé.
+      État final de l'instrument : **1 597 blocs à bouton, 1 571 aboutis (98,4 %), 4 en panne**, avec sept cliquets
       distincts (pannes, non compilables, orphelins, hors de portée, annoncées, refus hors
       ligne) dont quatre exigent l'ÉGALITÉ, pour qu'aucune catégorie ne devienne un endroit
       où cacher une panne.
@@ -3642,7 +3643,7 @@ résultat avant le clic.
       signalé périmé de 114 octets : six leçons réécrites déplacent l'index.
       `verif.js --rapide` : **52 étapes, tout vert, 133,7 s**.
 
-      **CE QUI RESTE : 3 BLOCS, ET AUCUN N'EST UN OUBLI.** Deux sont les **refus motivés de
+      **CE QUI RESTE : 3 BLOCS, ET AUCUN N'EST UN OUBLI** — 4 après la rétractation mesurée au point B2b-29, qui rend à sa panne le bloc de `projets-js/lecon-18`. Deux sont les **refus motivés de
       B2b-22** — `vue/lecon-06` #2 (`defineStore`, Pinia) et `nodejs/lecon-22` #5 (`z`, zod) :
       simuler une bibliothèque dont la leçon vend le COMPORTEMENT enseignerait faux. Le
       troisième, `projets-js/lecon-02` #5, est refusé ICI **pour une raison différente, et
@@ -3659,6 +3660,110 @@ résultat avant le clic.
       #6 sans toucher au contenu. **Aucune des deux n'est écrite ici : elles exigent d'abord
       la mesure « combien de blocs visés, combien de VIVANTS », qui est la règle de ce
       chantier depuis B2b-8.**
+
+- [x] **B2b-29 · LA CONTRADICTION ADVERSARIALE DU POINT PRÉCÉDENT : 1 correction de contenu
+      RÉTRACTÉE parce qu'elle cassait le fichier recollé, 3 contresens FONDATEURS trouvés dans
+      des leçons que je n'avais pas écrites, et un vérificateur qui mentait sur la ligne la
+      plus lue du panneau.**
+
+      **Le point B2b-28 fermé, trois agents ont reçu pour mission de le DÉMOLIR** — six
+      leçons, avec ordre d'exécuter et interdiction d'écrire (3 agents, 275 985 jetons,
+      110 appels d'outil, 582 s). Chaque faute rapportée a été **remesurée ici** avant d'être
+      corrigée : c'est la règle, et elle a servi (le lot `projets-js` proposait quatre
+      « fautes » dont deux n'étaient que la conséquence de la première).
+
+      ⚠️ **CE QUE J'AVAIS CASSÉ, ET QUE SEULE LA CONTRADICTION A VU.** Le rappel ajouté en tête
+      du bloc `getByteFrequencyData` de `projets-js/lecon-18` **redéclarait `const analyser` et
+      `const data`**, déjà déclarés au premier niveau du même `app.js` trente lignes plus haut —
+      et mon propre commentaire écrivait « dans le même fichier », donc se réfutait tout seul.
+      Épreuve refaite ici (une épreuve ponctuelle écrite sous `tools/scratchpad/`, dossier non versionné : les blocs d'un même `data-file`
+      concaténés dans l'ordre du document, jugés par `new Function`) : **`app.js` compilait
+      AVANT (9 blocs), il ne compilait plus APRÈS** (`Identifier 'analyser' has already been
+      declared`). Pire, `createAnalyser()` fabrique un nœud NEUF : le « rappel » construisait un
+      second analyseur **jamais branché sur la source**, pour lequel `getByteFrequencyData` ne
+      rend que des zéros — le bloc rendait donc impossible la sortie qu'il annonce deux lignes
+      plus bas. **Correction rétractée** : le rappel est passé dans le paragraphe HTML qui
+      précède, où il nomme les TROIS noms réellement en vigueur (`analyser`, `bins`, `data`).
+      **Conséquence assumée et chiffrée : le bloc redevient EN PANNE, 3 → 4.** C'est le prix
+      exact d'une correction qui n'aurait pas dû être écrite, et il est préférable à une leçon
+      qui ne compile pas.
+      ⚠️ **L'épreuve du recollage est BRUYANTE, et il faut le dire** : sur les mêmes pages elle
+      signale aussi `js/lecon-17 · exemple.js` et `js/lecon-59 · app.js`, **déjà rouges avant
+      toute modification** — un `data-file` du site désigne souvent des VARIANTES successives
+      (le MAUVAIS puis le BON), pas un fichier cumulatif. Le critère ne vaut donc qu'en
+      comparaison AVANT/APRÈS, jamais en valeur absolue.
+
+      **TROIS CONTRESENS DE FOND, dans des leçons antérieures à ce chantier, chacun remesuré
+      dans un vrai Chrome ou avec l'outil du langage.**
+      · **`js/lecon-17`, la leçon sur `this`, enseignait `this` de travers deux fois.**
+      (1) `setTimeout(compteur.incr, 1000)` : la page annonçait « this vaut undefined →
+      TypeError sur this.n++ ». Mesuré dans Chrome (`--headless`, `file://`) : **`this === window`
+      vaut `true`, `this.n++` écrit `NaN`, et AUCUNE erreur n'est levée** — le bug est
+      silencieux, ce qui est justement le piège intéressant. La faute était répétée quatre fois
+      (commentaire, `aria-label` du schéma, étiquette `this = undefined`, légende).
+      (2) `bouton.addEventListener("click", gestionnaire.ajouter)` : la page annonçait
+      « this vaut undefined → (reading 'taches') ». Mesuré dans Chrome : **`this` est L'ÉLÉMENT**
+      (`event.currentTarget`), `this.taches` vaut `undefined`, et c'est le `.push` qui casse —
+      **`(reading 'push')`**. La page se contredisait elle-même : son propre encadré « Pour aller
+      plus loin » et son antisèche disent, eux, que `this` vaut l'élément.
+      (3) L'énoncé de l'exercice 2 promettait « au bout d'une seconde, l'appel plante » ; il
+      affiche `NaN` sans erreur. Les trois passages disent maintenant ce que la mesure montre.
+      · **`js/lecon-65`, le capstone du store, promettait deux garanties qu'il ne tient pas.**
+      (1) « Sans le try/catch, l'erreur du 2e abonné aurait interrompu la notification AVANT le
+      3e et serait remontée jusqu'à `etat.n = 1` » — **faux avec `EventTarget`**, dont la
+      spécification impose de signaler l'exception puis de continuer. Mesuré : `vus = a1,a3`,
+      **erreur remontée : aucune**. Contre-épreuve sur la version naïve du fil rouge (un `Set`
+      parcouru par `forEach`) : `vus = a1`, **erreur remontée jusqu'à l'écriture** — la phrase
+      n'était vraie que là. La leçon dit maintenant les deux, et ce que le `try/catch` apporte
+      vraiment ici : **journaliser** l'erreur au lieu de la laisser filer en « non capturée ».
+      Cinq endroits alignés, dont l'`explain` du QCM.
+      (2) « instantané IMMUABLE », « copie figée » (huit occurrences, jusqu'au glossaire et à la
+      bonne réponse d'un QCM) : `structuredClone` rend une copie **profonde et MUTABLE**.
+      Mesuré : `Object.isFrozen(snapshot())` → **`false`**, et `s.compteur = 99` réussit sans
+      toucher au store. Le mot juste est **détachée** — c'est le clonage qui protège, pas un
+      verrou ; la leçon l'écrit maintenant, et dit ce qu'il faudrait pour geler vraiment.
+      · **`typescript/lecon-19` annonçait un diagnostic que TypeScript n'émet pas.** Le bloc
+      `// @ts-check` sans annotation écrivait « TypeScript le signale AVANT toute exécution ».
+      Remesuré ici avec **tsc 6.0.3** (`ts.createProgram`, `allowJs`, les options de la leçon) :
+      **0 diagnostic** ; en mode strict, seulement trois **TS7006** sur des paramètres
+      implicitement `any`, **aucun sur l'appel fautif**. Avec l'annotation JSDoc que la leçon
+      enseigne au bloc SUIVANT : **TS2345**, dans les deux modes. Le bloc dit maintenant la
+      vérité — `@ts-check` seul ne voit rien ici, et c'est précisément ce que JSDoc vient
+      fermer — ce qui rend l'enchaînement des deux blocs cohérent au lieu de le contredire.
+
+      ⚠️ **DEUX FAUTES DE MA PROPRE PASSE, dans `js/lecon-59`.** Le commentaire « `'a&b=c'` :
+      ce qu'on a reçu dans `?q=...` » enseignait l'inverse du bloc : mesuré,
+      `new URLSearchParams('?q=a&b=c').get('q')` rend **`'a'`** — le `&` coupe le paramètre, et
+      il faut `?q=a%26b%3Dc`, c'est-à-dire le résultat que le bloc produit trois lignes plus
+      bas. Et ce `const q` **redéclarait** celui du bloc précédent, dans le même `app.js`.
+      Renommé en `recu`, commentaire réécrit sur la mesure ; l'épreuve du recollage ne signale
+      plus que l'`import` pré-existant.
+
+      **LE VÉRIFICATEUR QUI MENTAIT SUR LA LIGNE LA PLUS LUE.** `tools/lib/contexte-worker.js`
+      affichait **`{}`** pour toute `Error` passée à `console.error`, là où un vrai Worker écrit
+      `Error: <message>`. Cause isolée : **le realm**. L'objet créé par `new Error(...)` dans le
+      contexte `vm` n'est pas `instanceof Error` côté hôte (`Object.prototype.toString.call(v)`
+      rend bien `[object Error]`, mais l'héritage, non), si bien que `formaterPourLaSortie`
+      tombait dans `JSON.stringify` — et une `Error` n'a aucune propriété énumérable. C'est le
+      défaut du point B2b-15 sur l'objet d'à côté : l'instrument décrivait un moteur qui
+      n'existe pas. Réparé **sans toucher au moteur ni en dupliquer une ligne** : l'argument est
+      NORMALISÉ (`memeRealm`) avant d'être passé à la fonction lue dans `runner.js`.
+      **Ampleur mesurée, et elle est petite** — les 1 597 blocs à bouton exécutés deux fois,
+      une fois avec l'ancien formatage, une fois avec le nouveau, en ne retenant que les lignes
+      où l'ancien rend `{}` et le nouveau un nom d'erreur : **1 bloc, 1 ligne**
+      (`js/lecon-65` #5, « Abonné en échec : {} » → « Abonné en échec : Error: abonné 2
+      plante »), ce qui est **exactement ce que `verif-clic.js` avait relevé dans Chrome**. Le
+      gisement d'aujourd'hui tient dans une ligne ; le mensonge, lui, était structurel.
+
+      **Mesures.** `verif-js.js` : **1 597 blocs à bouton, 1 571 aboutis, 4 EN PANNE** (+1
+      assumé, la rétractation de `projets-js/lecon-18`), **16 annoncées, 79 non compilables,
+      32 orphelins, 1 hors de portée, 2 refus hors ligne — tous INCHANGÉS**. Le cliquet a
+      d'ailleurs ROUGI sur ce +1 avant que la référence ne soit descendue, ce qui est son
+      travail. Chaîne : `verif-html.js` 1 629 fichiers, 0 grave 0 remarque ; `verif-sorties.js`
+      **449 rejoués, 449 identiques au caractère près, 0 divergent** ; `verif-donnees.js`
+      25 contrôles, 0 erreur (les cinq index régénérés, les QCM ayant changé) ;
+      `verif-qcm-biais.js` **6 167 questions, « la plus longue » 55,3 % contre 55,4 % à la
+      référence, aucun cours empiré** — la bonne réponse retouchée n'a pas déplacé le biais.
 
 - [x] **B3 · Neuf langages, 184 leçons dont aucune sortie n'est rejouée par la chaîne.**
       `verif-exemples.js:837` : `const LANGS = { javascript, python }` — même `--lang all` ne rend que

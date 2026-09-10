@@ -86,7 +86,7 @@
                   <li>assembler les primitives du cours — <code>Proxy</code>, <code>EventTarget</code>, <code>structuredClone</code>, gestion d'erreurs, modules — en un composant réel&nbsp;;</li>
                   <li>construire un <strong>cœur réactif</strong> qui ne notifie que sur un <em>vrai</em> changement&nbsp;;</li>
                   <li><strong>isoler les abonnés</strong> pour qu'une erreur de l'un n'empêche pas les autres de recevoir&nbsp;;</li>
-                  <li>exposer des <strong>instantanés immuables</strong> et empaqueter le tout en module réutilisable.</li>
+                  <li>exposer des <strong>instantanés détachés de l'état vivant</strong> et empaqueter le tout en module réutilisable.</li>
                 </ul>
               </div>
             </header>
@@ -113,7 +113,7 @@
     <rect class="d-box" x="440" y="44" width="180" height="34" rx="5" /><text class="d-text" x="530" y="60" text-anchor="middle" font-size="9">EventTarget — abonnés</text><text class="d-mut" x="530" y="72" text-anchor="middle" font-size="8">dispatch (leçon 22)</text>
     <path class="d-line" d="M440 66 L395 92" />
 
-    <rect class="d-box" x="20" y="150" width="180" height="34" rx="5" /><text class="d-text" x="110" y="166" text-anchor="middle" font-size="9">structuredClone</text><text class="d-mut" x="110" y="178" text-anchor="middle" font-size="8">instantané figé (leçon 22)</text>
+    <rect class="d-box" x="20" y="150" width="180" height="34" rx="5" /><text class="d-text" x="110" y="166" text-anchor="middle" font-size="9">structuredClone</text><text class="d-mut" x="110" y="178" text-anchor="middle" font-size="8">instantané détaché (leçon 22)</text>
     <path class="d-line" d="M200 160 L245 122" />
 
     <rect class="d-box" x="440" y="150" width="180" height="34" rx="5" /><text class="d-text" x="530" y="166" text-anchor="middle" font-size="9">try/catch — isolation</text><text class="d-mut" x="530" y="178" text-anchor="middle" font-size="8">abonné qui plante (leçon 21)</text>
@@ -147,7 +147,7 @@
 <p>Plusieurs abonnés peuvent réagir au même changement&nbsp;: mettre à jour l'UI, journaliser, persister. Le danger&nbsp;: si l'un <strong>lève une erreur</strong>, il ne doit pas empêcher les suivants de recevoir la notification, ni faire remonter l'erreur dans le code qui a modifié l'état. On <em>enveloppe chaque abonné</em> dans un <code>try/catch</code> (leçon 21) et on journalise sans propager.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 178" role="img" aria-label="Le flux réactif du store avec isolation des abonnés. Une écriture état point compteur égale 2 déclenche le piège set. Le piège vérifie qu'il y a un vrai changement, puis émet un événement change. Trois abonnés le reçoivent : le premier met à jour l'interface, le deuxième journalise et lève une erreur qui est capturée et isolée, le troisième persiste dans le stockage. Grâce à l'isolation, l'erreur du deuxième abonné n'empêche pas le troisième de s'exécuter.">
+  <svg viewBox="0 0 640 178" role="img" aria-label="Le flux réactif du store avec isolation des abonnés. Une écriture état point compteur égale 2 déclenche le piège set. Le piège vérifie qu'il y a un vrai changement, puis émet un événement change. Trois abonnés le reçoivent : le premier met à jour l'interface, le deuxième journalise et lève une erreur qui est capturée et isolée, le troisième persiste dans le stockage. Avec EventTarget, le troisième reçoit de toute façon la notification ; le try/catch, lui, journalise l'erreur du deuxième là où on la lit au lieu de la laisser filer en erreur non capturée.">
     <text class="d-label" x="16" y="22" font-size="13">Un vrai changement notifie tous les abonnés — l'erreur de l'un n'arrête pas les autres</text>
     <rect class="d-box" x="20" y="44" width="150" height="40" rx="6" /><text class="d-text" x="95" y="62" text-anchor="middle" font-size="8">état.compteur = 2</text><text class="d-mut" x="95" y="76" text-anchor="middle" font-size="8">écriture</text>
     <path class="d-line" d="M170 64 H210" /><path class="d-line" d="M202 58 L210 64 L202 70" />
@@ -158,7 +158,7 @@
     <rect class="d-box" x="400" y="40" width="220" height="26" rx="5" /><text class="d-text" x="510" y="57" text-anchor="middle" font-size="8">abonné 1 → met à jour l'UI ✓</text>
     <rect class="d-frame" x="400" y="70" width="220" height="26" rx="5" /><text class="d-mut" x="510" y="87" text-anchor="middle" font-size="8">abonné 2 → lève une erreur (isolée) ✗</text>
     <rect class="d-box" x="400" y="100" width="220" height="26" rx="5" /><text class="d-text" x="510" y="117" text-anchor="middle" font-size="8">abonné 3 → persiste ✓</text>
-    <text class="d-mut" x="285" y="150" text-anchor="middle" font-size="9">Sans isolation, l'erreur de l'abonné 2 priverait l'abonné 3 de la notification</text>
+    <text class="d-mut" x="285" y="150" text-anchor="middle" font-size="9">Sans try/catch, l'erreur de l'abonné 2 file en « non capturée » — mesuré</text>
   </svg>
   <figcaption>Chaque abonné est appelé dans son propre <code>try/catch</code>&nbsp;: une panne est journalisée et contenue, la chaîne de notification continue. Le code qui a modifié l'état ne voit jamais l'erreur d'un abonné.</figcaption>
 </figure>
@@ -177,7 +177,9 @@ export function creerStore(etatInitial) {
   });
 
   function abonner(fn) {
-    // On enveloppe l'abonné : son erreur est isolée, pas propagée
+    // On enveloppe l'abonné : son erreur est JOURNALISÉE ici, au lieu de
+    // filer en erreur non capturée (EventTarget notifie les suivants de toute
+    // façon ; une boucle forEach, elle, s'arrêterait net — voir le fil rouge).
     const handler = (e) =&gt; {
       try { fn(e.detail); }
       catch (err) { console.error('Abonné en échec :', err); }
@@ -186,12 +188,14 @@ export function creerStore(etatInitial) {
     return () =&gt; bus.removeEventListener('change', handler); // désabonnement
   }
 
-  // Instantané IMMUABLE : l'abonné lit une copie, jamais l'état vivant
+  // Instantané DÉTACHÉ : l'abonné lit une copie profonde, jamais l'état
+  // vivant. ⚠️ La copie n'est pas GELÉE : la muter est sans effet sur le store,
+  // mais rien ne l'interdit (il faudrait Object.freeze, et un gel récursif).
   const snapshot = () =&gt; structuredClone({ ...etat });
 
   return { etat, abonner, snapshot };
 }</code></pre></figure>
-<p>Deux détails de conception professionnels apparaissent ici. <code>abonner</code> renvoie une fonction de <strong>désabonnement</strong> (le même patron que <code>AbortController</code>), ce qui évite les fuites mémoire de la leçon dédiée. Et <code>snapshot()</code> renvoie une <strong>copie figée</strong> via <code>structuredClone</code>&nbsp;: un abonné peut la garder, la comparer, la sérialiser, sans risquer de muter l'état réel par mégarde.</p>
+<p>Deux détails de conception professionnels apparaissent ici. <code>abonner</code> renvoie une fonction de <strong>désabonnement</strong> (le même patron que <code>AbortController</code>), ce qui évite les fuites mémoire de la leçon dédiée. Et <code>snapshot()</code> renvoie une <strong>copie détachée</strong> via <code>structuredClone</code>&nbsp;: un abonné peut la garder, la comparer, la sérialiser, sans risquer de muter l'état réel par mégarde. Détachée, et non « figée »&nbsp;: <code>Object.isFrozen(snapshot())</code> rend <code>false</code> — mesuré — et c'est la COPIE, pas un gel, qui protège le store.</p>
 
 <h2>Le résultat, à l'usage</h2>
 <figure class="code-block" data-file="app.js"><pre><code class="language-javascript">import { creerStore } from './store.js';
@@ -204,7 +208,7 @@ etat.compteur = 1;   // "compteur → 1"
 etat.compteur = 1;   // (rien : aucune vraie transition)
 etat.theme = 'sombre'; // "theme → sombre"
 
-console.log(snapshot()); // { compteur: 1, theme: 'sombre' }  (copie figée)
+console.log(snapshot()); // { compteur: 1, theme: 'sombre' }  (copie détachée)
 stop();                  // plus aucune notification ensuite</code></pre></figure>
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>Ce que tu viens d'écrire est l'ADN des vraies bibliothèques d'état. <strong>Zustand</strong> expose un store minimaliste avec <code>getState</code>/<code>setState</code>/<code>subscribe</code> — exactement notre trio. <strong>Redux</strong> ajoute l'immuabilité stricte et un <em>reducer</em> pur, mais garde le patron <code>subscribe</code>. Et la <strong>réactivité de Vue 3</strong> repose littéralement sur un <code>Proxy</code> qui intercepte lectures et écritures pour savoir quels composants re-rendre. En comprenant ce capstone, tu ne « subis » plus ces outils&nbsp;: tu sais ce qu'ils font sous le capot, et tu peux en écrire un en cinquante lignes quand une dépendance serait de trop.</p></div></div>
 
@@ -212,12 +216,12 @@ stop();                  // plus aucune notification ensuite</code></pre></figur
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>La version naïve (un <code>Set</code> d'abonnés notifiés sans garde) fonctionne… jusqu'au premier abonné qui plante, ou à la première réaffectation en boucle. Trois oublis classiques&nbsp;: <strong>notifier sans vérifier le changement</strong> (re-rendus en cascade), <strong>ne pas isoler les abonnés</strong> (une erreur casse la chaîne), et <strong>exposer l'état vivant</strong> (des mutations « fantômes » impossibles à tracer). Le passage à la version robuste tient en trois gardes.</p></div></div>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 176" role="img" aria-label="Checklist de qualité d'un store réactif. Cinq critères passent de la version naïve à la version robuste : notifier seulement sur un vrai changement, isoler chaque abonné dans un try catch, exposer un instantané immuable via structuredClone, fournir une fonction de désabonnement, et empaqueter le store en module ES réutilisable. Chaque critère est coché dans la version finale.">
+  <svg viewBox="0 0 640 176" role="img" aria-label="Checklist de qualité d'un store réactif. Cinq critères passent de la version naïve à la version robuste : notifier seulement sur un vrai changement, isoler chaque abonné dans un try catch, exposer un instantané détaché via structuredClone, fournir une fonction de désabonnement, et empaqueter le store en module ES réutilisable. Chaque critère est coché dans la version finale.">
     <text class="d-label" x="16" y="24" font-size="13">La checklist qui sépare le jouet du composant réutilisable</text>
     <rect class="d-frame" x="20" y="40" width="600" height="122" rx="6" />
     <circle class="d-dot" cx="44" cy="64" r="4" /><text class="d-text" x="60" y="68" font-size="10">Réactivité fine — ne notifier que si la valeur change vraiment</text>
-    <circle class="d-dot" cx="44" cy="88" r="4" /><text class="d-text" x="60" y="92" font-size="10">Abonnés isolés — chaque handler dans son try/catch</text>
-    <circle class="d-dot" cx="44" cy="112" r="4" /><text class="d-text" x="60" y="116" font-size="10">Instantané immuable — snapshot() via structuredClone</text>
+    <circle class="d-dot" cx="44" cy="88" r="4" /><text class="d-text" x="60" y="92" font-size="10">Abonnés isolés — chaque handler journalise dans son try/catch</text>
+    <circle class="d-dot" cx="44" cy="112" r="4" /><text class="d-text" x="60" y="116" font-size="10">Instantané détaché — snapshot() via structuredClone</text>
     <circle class="d-dot" cx="44" cy="136" r="4" /><text class="d-text" x="60" y="140" font-size="10">Désabonnement — abonner() renvoie une fonction stop()</text>
     <circle class="d-dot" cx="368" cy="136" r="4" /><text class="d-text" x="384" y="140" font-size="10">Module ES — export réutilisable</text>
   </svg>
@@ -234,7 +238,7 @@ stop();                  // plus aucune notification ensuite</code></pre></figur
       <tr><td>Rendre l'état réactif</td><td><code>Proxy</code> + piège <code>set</code></td><td>notifier <em>seulement</em> si changement</td></tr>
       <tr><td>Gérer les abonnements</td><td><code>EventTarget</code></td><td><code>dispatchEvent</code> / <code>addEventListener</code></td></tr>
       <tr><td>Isoler une panne d'abonné</td><td><code>try/catch</code></td><td>journaliser sans propager</td></tr>
-      <tr><td>Lecture sûre</td><td><code>structuredClone</code></td><td><code>snapshot()</code> figé et immuable</td></tr>
+      <tr><td>Lecture sûre</td><td><code>structuredClone</code></td><td><code>snapshot()</code> détaché de l'état vivant</td></tr>
       <tr><td>Éviter les fuites</td><td>fonction <code>stop()</code></td><td><code>removeEventListener</code></td></tr>
       <tr><td>Réutiliser</td><td>module ES</td><td><code>export</code> / <code>import</code></td></tr>
     </tbody>
@@ -250,11 +254,11 @@ stop();                  // plus aucune notification ensuite</code></pre></figur
   <dt>Piège set (trap)</dt>
   <dd>Fonction du <code>Proxy</code> qui intercepte les écritures&nbsp;; elle applique le changement, notifie, et doit renvoyer <code>true</code>.</dd>
   <dt>Abonné (subscriber)</dt>
-  <dd>Fonction enregistrée pour réagir aux changements&nbsp;; on l'appelle dans un <code>try/catch</code> pour qu'une erreur reste isolée.</dd>
+  <dd>Fonction enregistrée pour réagir aux changements&nbsp;; on l'appelle dans un <code>try/catch</code> pour que son erreur soit journalisée là où on la lit, et non laissée filer.</dd>
   <dt>Désabonnement</dt>
   <dd>Fonction renvoyée par <code>abonner()</code> qui retire l'écouteur (<code>removeEventListener</code>)&nbsp;; évite les fuites mémoire.</dd>
   <dt>Instantané (snapshot)</dt>
-  <dd>Copie profonde et figée de l'état à un instant donné, produite par <code>structuredClone</code>&nbsp;; sûre à lire, comparer ou sérialiser.</dd>
+  <dd>Copie profonde et détachée de l'état à un instant donné, produite par <code>structuredClone</code>&nbsp;; sûre à lire, comparer ou sérialiser. Détachée n'est pas gelée&nbsp;: la muter ne touche pas le store, mais rien ne l'empêche.</dd>
   <dt>Immuabilité</dt>
   <dd>Garantie qu'une valeur ne sera pas modifiée&nbsp;; l'instantané protège l'état vivant des mutations externes accidentelles.</dd>
   <dt>Module ES</dt>
@@ -266,7 +270,7 @@ stop();                  // plus aucune notification ensuite</code></pre></figur
 <li>Un store réactif = un <code>Proxy</code> (réactivité) + <code>EventTarget</code> (abonnements) + <code>structuredClone</code> (instantanés) + <code>try/catch</code> (isolation) + un module ES.</li>
 <li>Le piège <code>set</code> ne notifie qu'en cas de <strong>vrai changement</strong> pour éviter les re-rendus inutiles.</li>
 <li>Chaque abonné est appelé dans un <code>try/catch</code>&nbsp;: une panne est contenue, la chaîne continue.</li>
-<li><code>snapshot()</code> renvoie une copie <strong>immuable</strong>&nbsp;; <code>abonner()</code> renvoie une fonction de <strong>désabonnement</strong>.</li>
+<li><code>snapshot()</code> renvoie une copie <strong>détachée</strong> (profonde, indépendante)&nbsp;; <code>abonner()</code> renvoie une fonction de <strong>désabonnement</strong>.</li>
 <li>Ce patron est celui de Redux, Zustand et de la réactivité de Vue&nbsp;: tu sais désormais l'écrire toi-même.</li>
 </ul>
 <div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi le piège <code>set</code> vérifie-t-il l'égalité avant de notifier&nbsp;? Que se passe-t-il sans cette garde&nbsp;?</li><li>Pourquoi appeler chaque abonné dans un <code>try/catch</code> plutôt que dans une simple boucle&nbsp;?</li><li>Quel intérêt de renvoyer un <code>structuredClone</code> de l'état plutôt que l'état lui-même&nbsp;?</li></ol></div>
@@ -274,8 +278,8 @@ stop();                  // plus aucune notification ensuite</code></pre></figur
 <script type="application/json" data-quiz>
 [
   {"q":"Pourquoi le piège set vérifie-t-il l'égalité (cible[cle] === valeur) avant de notifier ?","a":["Pour ne notifier que sur un VRAI changement : réaffecter la même valeur ne doit déclencher aucun re-rendu, ce qui évite les mises à jour inutiles et les boucles","Pour regrouper les écritures d'un même cycle : le piège compare l'ancienne et la nouvelle valeur afin de n'émettre qu'un événement à la fin du lot","Pour convertir la valeur au moment de la notifier : la comparaison sert de test de type, et rien n'est écrit tant que l'ancienne et la nouvelle ne partagent pas le MÊME format","Pour notifier en priorité les abonnés les plus récents : la comparaison range la valeur identique en fin de file, TOUJOURS derrière les plus fraîches"],"correct":0,"explain":"Sans la garde, chaque affectation — même identique — notifie les abonnés, provoquant des re-rendus en cascade et, dans des scénarios réactifs, des boucles. Ne réagir qu'aux transitions réelles est ce qui rend le store utilisable."},
-  {"q":"Pourquoi appeler chaque abonné dans un try/catch lors de la notification ?","a":["Pour isoler une panne : si un abonné lève une erreur, elle est journalisée et contenue, sans empêcher les autres abonnés de recevoir la notification ni remonter dans le code qui a modifié l'état","Pour retarder la notification : le bloc place l'abonné dans la file des microtâches, ce qui étale les appels sur plusieurs cycles, et rend la main tout de suite au code qui a modifié l'état","Pour renvoyer une valeur de repli : quand un abonné échoue, la notification lui est représentée avec l'état précédent, ce qui garde l'affichage cohérent dans la durée","Pour trier les abonnés : le bloc classe l'abonné défaillant en fin de liste, si bien que la notification suivante ignore les handlers instables, dans l'ordre d'inscription"],"correct":0,"explain":"Une notification touche plusieurs abonnés. Sans isolation, le premier qui plante interrompt la chaîne et fait remonter l'erreur jusqu'à l'écriture d'état. Le try/catch par abonné garantit que chacun reçoit sa notification indépendamment."},
-  {"q":"Quel intérêt de renvoyer un structuredClone de l'état dans snapshot() plutôt que l'état lui-même ?","a":["On fournit une copie profonde et figée : l'abonné peut la lire, la comparer ou la sérialiser sans risquer de muter l'état réel par mégarde (immuabilité)","On construit l'historique du store : chaque appel à snapshot() empile la copie dans un journal interne, que le piège set peut rejouer pour revenir à un état antérieur (historique intégré)","On allège la mémoire : le clonage remplace l'état par une version compressée que le ramasse-miettes peut libérer plus tôt, ce qui réduit l'empreinte du store (copie compacte)","On verrouille l'état vivant : après le clonage, le piège set peut refuser toute écriture jusqu'au prochain instantané (gel temporaire)"],"correct":0,"explain":"Exposer l'état vivant laisse un consommateur le modifier hors du piège set — des mutations « fantômes » non notifiées et intraçables. Un instantané cloné isole la lecture de l'écriture et préserve l'intégrité du store."}
+  {"q":"Pourquoi appeler chaque abonné dans un try/catch lors de la notification ?","a":["Pour isoler une panne : si un abonné lève une erreur, elle est journalisée et contenue, sans empêcher les autres abonnés de recevoir la notification ni remonter dans le code qui a modifié l'état","Pour retarder la notification : le bloc place l'abonné dans la file des microtâches, ce qui étale les appels sur plusieurs cycles, et rend la main tout de suite au code qui a modifié l'état","Pour renvoyer une valeur de repli : quand un abonné échoue, la notification lui est représentée avec l'état précédent, ce qui garde l'affichage cohérent dans la durée","Pour trier les abonnés : le bloc classe l'abonné défaillant en fin de liste, si bien que la notification suivante ignore les handlers instables, dans l'ordre d'inscription"],"correct":0,"explain":"Une notification touche plusieurs abonnés. Avec une boucle ordinaire — un Set parcouru par forEach, la version naïve de ce cours — le premier qui plante interrompt la chaîne et fait remonter l'erreur jusqu'à l'écriture d'état : mesuré, l'abonné 3 n'est jamais appelé. Avec EventTarget, la chaîne continue d'elle-même, mais l'erreur part en « non capturée » : le try/catch la journalise là où on la lit. Dans les deux cas, chacun reçoit sa notification."},
+  {"q":"Quel intérêt de renvoyer un structuredClone de l'état dans snapshot() plutôt que l'état lui-même ?","a":["On fournit une copie profonde et détachée : l'abonné peut la lire, la comparer ou la sérialiser sans risquer de muter l'état réel par mégarde (isolation)","On construit l'historique du store : chaque appel à snapshot() empile la copie dans un journal interne, que le piège set peut rejouer pour revenir à un état antérieur (historique intégré)","On allège la mémoire : le clonage remplace l'état par une version compressée que le ramasse-miettes peut libérer plus tôt, ce qui réduit l'empreinte du store (copie compacte)","On verrouille l'état vivant : après le clonage, le piège set peut refuser toute écriture jusqu'au prochain instantané (gel temporaire)"],"correct":0,"explain":"Exposer l'état vivant laisse un consommateur le modifier hors du piège set — des mutations « fantômes » non notifiées et intraçables. Un instantané cloné isole la lecture de l'écriture et préserve l'intégrité du store. Attention au mot : la copie est DÉTACHÉE, pas gelée — Object.isFrozen(snapshot()) rend false ; c'est le clonage qui protège, pas un verrou."}
 ]
 </script>
 
@@ -345,8 +349,13 @@ etat.n = 1;
 // Abonné en échec : Error: abonné 2 plante   (journalisé, contenu)
 // abonné 3 ✓
 //
-// Sans le try/catch par abonné, l'erreur du 2e aurait interrompu la
-// notification AVANT le 3e et serait remontée jusqu'à `etat.n = 1`.</code></pre></figure></details></div>
+// Attention à ce que le try/catch fait ICI : avec EventTarget, l'abonné 3
+// serait notifié même sans lui, et `etat.n = 1` ne verrait passer aucune
+// erreur (mesuré dans Chrome comme dans Node). Ce qu'il apporte, c'est de
+// JOURNALISER l'erreur là où on la lit, au lieu de la laisser filer en
+// erreur non capturée. C'est la version naïve du fil rouge — un Set
+// parcouru par forEach — qui, elle, priverait l'abonné 3 de sa
+// notification et ferait remonter l'erreur jusqu'à `etat.n = 1`.</code></pre></figure></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Synthèse</span></div><p><code>abonner()</code> renvoie une fonction. À quoi sert-elle, et que risque un composant qui s'abonne à chaque affichage sans jamais l'appeler&nbsp;?</p>
 <details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">// Rappel du store de la leçon, réduit à ce que l'exercice met en jeu :

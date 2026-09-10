@@ -191,9 +191,30 @@ function estRefusHorsLigne(msg) {
 /* Le formatage d'une valeur affichée est LU dans `js/runner.js` (point B2b-16) : cette
    fonction en portait une copie, et la copie a divergé le jour où le moteur a cessé de
    sérialiser les `Error` en `{}`. C'est le défaut du point B2b-15, sur l'objet d'à côté. */
+/* ⚠️ UNE `Error` NÉE DANS LE CONTEXTE `vm` N'EST PAS `instanceof Error` ICI (2026-09-10,
+   point B2b-29). Chaque contexte a ses propres intrinsèques : l'objet que le bloc crée par
+   `new Error(...)` n'hérite pas de l'`Error` de l'hôte, si bien que le test
+   `v instanceof Error` de `formaterPourLaSortie` était FAUX et que la fonction tombait dans
+   `JSON.stringify(v)` — une `Error` n'ayant aucune propriété énumérable, l'outil affichait
+   `{}`. Or le vrai Worker, lui, formate dans SON realm et affiche « Error: message ».
+   Mesuré sur `pages/js/lecon-65.html` #5 : l'outil rendait « Abonné en échec : {} » là où un
+   Chrome `file://` affiche « Abonné en échec : Error: abonné 2 plante ». L'instrument mentait
+   donc sur la ligne la plus lue du panneau, celle qui explique une panne.
+   La réponse ne touche PAS au moteur et n'en duplique rien : on NORMALISE l'argument avant
+   de le passer à la fonction lue. `Object.prototype.toString` lit une marque interne, seule
+   façon de reconnaître une `Error` d'un autre realm. */
+function memeRealm(v) {
+  if (v && typeof v === 'object' && !(v instanceof Error) &&
+      Object.prototype.toString.call(v) === '[object Error]') {
+    var e = new Error(String(v.message === undefined ? '' : v.message));
+    if (v.name !== undefined) e.name = String(v.name);
+    return e;
+  }
+  return v;
+}
 function fmtArgs(a) {
   var f = lireDuRunner('formaterPourLaSortie');
-  return Array.prototype.slice.call(a).map(function (v) { return f(v); }).join(' ');
+  return Array.prototype.slice.call(a).map(function (v) { return f(memeRealm(v)); }).join(' ');
 }
 
 
@@ -288,7 +309,7 @@ function erreurAnnoncee(code, msg) {
   return false;
 }
 
-module.exports = { GLOBALES_WORKER: GLOBALES_WORKER, contexteWorker: contexteWorker, fmtArgs: fmtArgs, ERREUR_ANNONCEE: ERREUR_ANNONCEE, erreurAnnoncee: erreurAnnoncee,
+module.exports = { GLOBALES_WORKER: GLOBALES_WORKER, contexteWorker: contexteWorker, fmtArgs: fmtArgs, memeRealm: memeRealm, ERREUR_ANNONCEE: ERREUR_ANNONCEE, erreurAnnoncee: erreurAnnoncee,
   annonceNommeLErreur: annonceNommeLErreur, commentairesDe: commentairesDe,
   annonceCiteLeMessage: annonceCiteLeMessage, messageJeteParLeBloc: messageJeteParLeBloc,
   HORS_PORTEE: HORS_PORTEE, estHorsPortee: estHorsPortee,

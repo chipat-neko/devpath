@@ -195,12 +195,15 @@ function incrCasse() {
 
 // On passe la FONCTION, pas "compteur.incr()".
 setTimeout(compteur.incr, 1000);
-// Une seconde plus tard, setTimeout appelle incr() toute seule :
-// this vaut undefined -> TypeError sur this.n++</code></pre></figure>
+// Une seconde plus tard, setTimeout appelle incr() toute seule.
+// Le receveur n'est PAS compteur : c'est le navigateur qui appelle, et
+// this vaut alors l'objet global de la page.
+// this.n++ y écrit donc un n = NaN, SANS lever la moindre erreur :
+// le bug est silencieux, et compteur.n reste à 0.</code></pre></figure>
 
 <p class="code-caption"><code>compteur.incr</code> sans parenthèses, c'est juste la fonction. Le lien avec <code>compteur</code> est perdu dès qu'on la sort de l'objet.</p>
 <figure class="diagram">
-  <svg viewBox="0 0 640 172" role="img" aria-label="Passer compteur.incr en callback à setTimeout détache la méthode de son objet : au moment où setTimeout l'appelle, il n'y a plus de receveur, donc this vaut undefined et this.n plante.">
+  <svg viewBox="0 0 640 172" role="img" aria-label="Passer compteur.incr en callback à setTimeout détache la méthode de son objet : au moment où setTimeout l'appelle, le receveur n'est plus compteur mais l'objet global, si bien que this.n++ écrit window.n égale NaN sans lever d'erreur.">
     <rect class="d-box" x="20" y="48" width="150" height="56" rx="8" />
     <text class="d-label" x="95" y="72" text-anchor="middle" font-size="11.5">compteur.incr</text>
     <text class="d-mut" x="95" y="92" text-anchor="middle" font-size="10.5">méthode + objet</text>
@@ -214,11 +217,11 @@ setTimeout(compteur.incr, 1000);
     <circle class="d-dot" cx="472" cy="76" r="4" />
     <text class="d-tag" x="434" y="66" text-anchor="middle" font-size="10">appelée</text>
     <rect class="d-accent" x="474" y="48" width="150" height="56" rx="8" />
-    <text class="d-tag" x="549" y="72" text-anchor="middle" font-size="12">this = undefined</text>
-    <text class="d-mut" x="549" y="92" text-anchor="middle" font-size="10.5">plus de receveur</text>
-    <text class="d-mut" x="320" y="142" text-anchor="middle" font-size="10.5">le point est perdu dès que la méthode quitte son objet → this.n plante</text>
+    <text class="d-tag" x="549" y="72" text-anchor="middle" font-size="12">this = window</text>
+    <text class="d-mut" x="549" y="92" text-anchor="middle" font-size="10.5">plus le bon receveur</text>
+    <text class="d-mut" x="320" y="142" text-anchor="middle" font-size="10.5">le point est perdu dès que la méthode quitte son objet → window.n = NaN</text>
   </svg>
-  <figcaption>Sortie de son objet, <code>compteur.incr</code> n'est plus qu'une fonction «&nbsp;nue&nbsp;». Quand <code>setTimeout</code> la déclenche, il n'y a aucun receveur à gauche du point&nbsp;: <code>this</code> vaut <code>undefined</code>.</figcaption>
+  <figcaption>Sortie de son objet, <code>compteur.incr</code> n'est plus qu'une fonction «&nbsp;nue&nbsp;». Quand <code>setTimeout</code> la déclenche, le receveur n'est plus <code>compteur</code> mais l'objet global&nbsp;: <code>this.n++</code> écrit <code>window.n</code> à <code>NaN</code>, en silence. Mesuré dans Chrome.</figcaption>
 </figure>
 
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Le point reste invisible jusqu'au moment de l'appel. <code>setTimeout(compteur.incr, …)</code> évalue <code>compteur.incr</code> en une simple valeur-fonction. Plus tard, <code>setTimeout</code> l'appelle sans receveur : aucun objet à gauche, donc <code>this</code> est perdu.</p></div></div>
@@ -357,8 +360,10 @@ const gestionnaire = {
 
 // MAUVAIS : on passe la méthode détachée de son objet.
 bouton.addEventListener("click", gestionnaire.ajouter);
-// Au clic, ajouter() est appelée sans receveur :
-// this vaut undefined -> "Cannot read properties of undefined (reading 'taches')".</code></pre></figure>
+// Au clic, c'est le DOM qui appelle ajouter() : le receveur n'est pas
+// gestionnaire mais l'ÉLÉMENT bouton (event.currentTarget). this.taches
+// est donc undefined, et c'est le .push qui casse :
+// "Cannot read properties of undefined (reading 'push')".</code></pre></figure>
 
 <p class="code-caption">Le bug classique : <code>gestionnaire.ajouter</code> seul perd le lien avec <code>gestionnaire</code>.</p>
 
@@ -467,7 +472,9 @@ console.log(robot.direNomFleche());  // (c)</code></pre></figure>
 <details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.js"><pre><code class="language-javascript">// (a) "R2"
 //     Appel via robot. : this === robot, donc this.nom vaut "R2".
 
-// (b) TypeError: Cannot read properties of undefined (reading 'nom')
+// (b) TypeError : Cannot read properties of undefined (reading 'nom')
+//     (la ligne est composée par le catch de l'exercice, d'où l'espace
+//     avant les deux-points)
 //     detache() est appelée seule : this === undefined (mode strict),
 //     et undefined.nom plante.
 
@@ -478,7 +485,7 @@ console.log(robot.direNomFleche());  // (c)</code></pre></figure>
 //     pas robot, elle capture le this englobant (ici hors d'un objet).
 //     -> ne jamais utiliser une fléchée COMME méthode d'objet.</code></pre></figure></details></div>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Ce minuteur perd son <code>this</code> : au bout d'une seconde, l'appel plante. Corrige-le de <strong>deux</strong> façons différentes : une fois avec une fonction fléchée, une fois avec <code>bind</code>.</p>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Ce minuteur perd son <code>this</code> : au bout d'une seconde, il n'affiche pas <code>1</code> mais <code>NaN</code>, et sans la moindre erreur — le receveur est alors l'objet global. Corrige-le de <strong>deux</strong> façons différentes : une fois avec une fonction fléchée, une fois avec <code>bind</code>.</p>
 <figure class="code-block" data-file="exercice.js"><pre><code class="language-javascript">const chrono = {
   temps: 0,
   tic() { this.temps++; console.log(this.temps); },
