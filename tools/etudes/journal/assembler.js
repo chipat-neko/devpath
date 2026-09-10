@@ -74,6 +74,5 @@ if (page.indexOf('@@') !== -1) {
 }
 
 var cible = path.join(RACINE, 'pages', 'etude-journal.html');
-fs.writeFileSync(cible, page);
-console.log('✓ écrit : ' + path.relative(RACINE, cible) + ' (' + page.length + ' octets)');
+require("../../lib/publier-etude.js").publier(cible, page, RACINE);
 console.log('  sortie mesurée à l\'assemblage : ' + sortie.split('\n').length + ' lignes');

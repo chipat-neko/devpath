@@ -161,5 +161,4 @@ if (page.indexOf("@@") !== -1) {
 }
 
 var cible = path.join(RACINE, "pages", "etude-recherche.html");
-fs.writeFileSync(cible, page);
-console.log("✓ écrit : " + path.relative(RACINE, cible) + " (" + page.length + " octets)");
+require("../../lib/publier-etude.js").publier(cible, page, RACINE);

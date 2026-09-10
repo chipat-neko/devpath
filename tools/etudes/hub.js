@@ -154,5 +154,5 @@ if (page.indexOf('@@') !== -1) {
 }
 
 const cible = path.join(PAGES, 'etudes.html');
-fs.writeFileSync(cible, page);
-console.log('✓ écrit : pages/etudes.html (' + page.length + ' octets, ' + lues.length + ' cartes)');
+require("../lib/publier-etude.js").publier(cible, page, RACINE);
+console.log('  ' + lues.length + ' carte(s) assemblée(s)');

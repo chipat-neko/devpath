@@ -218,5 +218,4 @@ if (page.indexOf(echapper(vitrine1)) === -1) stop("la sortie publiée n'est pas 
 if (page.indexOf(echapper(sortieBanc)) === -1) stop("la sortie du banc publiée n'est pas celle qui vient d'être exécutée.");
 
 var cible = path.join(RACINE, "pages", "etude-reecriture.html");
-fs.writeFileSync(cible, page);
-console.log("✓ écrit : " + path.relative(RACINE, cible) + " (" + page.length + " octets)");
+require("../../lib/publier-etude.js").publier(cible, page, RACINE);

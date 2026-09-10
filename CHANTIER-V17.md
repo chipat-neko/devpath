@@ -4664,7 +4664,7 @@ affiché à l'apprenant — et l'audit a montré que la cause est presque toujou
       fichiers** · `verif-rendu.js` **256 pages, 1 536 mesures (page × largeur × thème),
       0 erreur, 0 avertissement** — mesure lancée après C4, elle couvre les deux points.
 
-- [ ] **C6 · Quatre études sur six publient des mesures que personne ne recontrôle.** Constat
+- [x] **C6 · Quatre études sur six publient des mesures que personne ne recontrôle.** Constat
       de C5, mesuré : seules `tools/preuves/etude-recherche.js` et `etude-inconnu.js`
       confrontent la page à son gabarit (contrôle des segments, posé au point C3). Les
       preuves de `etude-euclide`, `etude-journal`, `etude-moteur-exos`, `etude-reecriture`
@@ -4675,6 +4675,64 @@ affiché à l'apprenant — et l'audit a montré que la cause est presque toujou
       **1540**, soit exactement le total du site, ce qui demande à être vérifié plutôt que
       cru. Porter le contrôle des segments du gabarit dans les quatre preuves restantes et
       dans le hub, puis l'éprouver par injection sur chacune.
+
+      **FAIT le 2026-09-10, PAR UN AUTRE CHEMIN QUE CELUI ÉCRIT CI-DESSUS, et le chemin
+      compte.** Porter le contrôle des segments dans quatre preuves supposait que chaque
+      preuve sache recalculer les jetons de son gabarit — donc réécrire quatre assembleurs
+      pour qu'ils exposent leurs mesures, et entretenir ensuite **deux** chemins de calcul
+      par étude, qui divergeraient (c'est le défaut soldé à B2b-2, B2b-12, B2b-13, B2b-15).
+      La question posée était plus simple : **la page publiée est-elle celle que son
+      assembleur produit aujourd'hui ?** Elle se répond en relançant l'assembleur et en
+      comparant — comme `build-index.js` sans `--write` le fait pour les index dérivés.
+
+      **CE QUE LA MESURE A TROUVÉ, DÈS LE PREMIER ESSAI.** Les sept assembleurs rejoués :
+      **six reproduisent la page publiée à l'octet près**, un seul non.
+      `pages/etude-moteur-exos.html` publiait **« 4288 exercices de type text, 307 de type
+      code »** quand la mesure du jour en compte **4293 et 302** — cinq exercices ont changé
+      de type au fil du chantier B2b. La page l'affirmait faux **à trois endroits**, dont un
+      raisonnement adressé au lecteur (« pourquoi ce serait une très mauvaise idée sur 307
+      exercices de type code »). Corrigé par réassemblage : **4 lignes**. *Le soupçon du
+      constat ci-dessus portait sur le mauvais nombre* : « 1540 leçons » était juste, ce
+      sont les types d'exercices qui avaient dérivé.
+
+      **LE MÉCANISME, ÉCRIT UNE SEULE FOIS.** `tools/lib/publier-etude.js` remplace la
+      dernière ligne des **7** assembleurs (`fs.writeFileSync(cible, page)`). Sans argument
+      il écrit comme avant ; avec `--verifier` il n'écrit **rien** : il compare et nomme la
+      **première ligne divergente**, avec le publié et la mesure du jour. Fins de ligne
+      normalisées, sans quoi le contrôle rougirait sur chaque poste. `tools/verif-etudes.js`
+      les enchaîne — **la liste n'est pas écrite à la main**, tout dossier de `tools/etudes/`
+      portant un `assembler.js` en est une, et le hub passe **en dernier** puisqu'il LIT les
+      pages d'étude. **53ᵉ étape de la chaîne** (`verif.js`, mode rapide compris, **18,3 s**
+      la première fois puis **10,4 s**), déclarée : `verif-chaine-declaree.js` rend *« tout
+      vérificateur est soit dans un mode, soit déclaré hors chaîne »*, **52 vérificateurs**.
+
+      **ÉPREUVE PAR INJECTION — 6 cas sur 6 conformes** (`scratchpad/injection-etudes.js`) :
+      la dérive réelle rejouée (`4293 → 4288`) → *PÉRIMÉE, ligne 174* · un chiffre du texte
+      d'`euclide` (`2753 → 2754`) → *ligne 550* · une balise ajoutée dans `journal`,
+      dans le hub, dans `inconnu` → chacune nommée à sa ligne · et surtout **un assembleur
+      CASSÉ** (repère de ligne `1223 → 1224` dans `moteur-exos`, qui l'arrête avant toute
+      comparaison) → *« l'assembleur n'est pas allé jusqu'à la comparaison »*, **pas un
+      silence vert**. Code **1** sous chaque injection, **0** après restauration.
+
+      **CE QUE CE CONTRÔLE NE FAIT PAS, écrit dans son en-tête.** Il répond à « la page
+      est-elle à jour ? », pas à « ce que l'assembleur mesure est-il vrai ? » — un
+      assembleur qui se tromperait resterait vert ici et rougirait dans la preuve par
+      navigateur. Les deux contrôles sont complémentaires ; celui-ci est celui qui manquait.
+
+      **AU PASSAGE : les compteurs d'étapes de l'en-tête de `verif.js` étaient FAUX pour la
+      deuxième fois** (53 annoncées sans option pour **71**, 40 en rapide pour **53**, 62 en
+      complet pour **81**). Re-mesurés et rattachés à la commande qui les relit
+      (`verif-chaine-declaree.js`) — un compteur écrit à la main dans un commentaire se
+      périme à chaque étape ajoutée, c'est la leçon de C4 appliquée à l'outillage.
+
+      **ET LE POINT FIXE, UNE TROISIÈME FOIS.** Corriger `etude-moteur-exos.html` a périmé
+      `search-index.js` (même taille, contenu différent : `verif-donnees` I18 l'a vu à
+      **+0 o**). Régénéré ; l'étude 3 n'a pas bougé cette fois (mêmes mots, mêmes couples),
+      donc **convergence en 1 itération**.
+
+      **APRÈS.** `verif-etudes.js` **7 études, 0 périmée, 0 assembleur cassé (11,5 s)** ·
+      `verif-html.js` **0 problème sur 1 629 fichiers** · `verif-donnees.js` **0 erreur /
+      26 contrôles** · `verif.js --rapide` **53 étapes, tout vert (138,2 s)**.
 
 ---
 

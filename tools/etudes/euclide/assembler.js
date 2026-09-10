@@ -170,5 +170,4 @@ if (page.indexOf(echapper(sortieBanc)) === -1) stop("la sortie du banc publiée 
 if (page.indexOf(echapper(algo)) === -1) stop("le programme publié n'est pas celui du fichier.");
 
 var cible = path.join(RACINE, "pages", "etude-euclide.html");
-fs.writeFileSync(cible, page);
-console.log("✓ écrit : " + path.relative(RACINE, cible) + " (" + page.length + " octets)");
+require("../../lib/publier-etude.js").publier(cible, page, RACINE);

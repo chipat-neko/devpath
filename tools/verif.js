@@ -7,7 +7,8 @@
    un. Celui-ci les enchaine et rend UN verdict.
 
      source   node tools/verif-html.js       balise creee par erreur dans du code
-     donnees  node tools/verif-donnees.js    17 invariants (data.js, index, liens)
+     donnees  node tools/verif-donnees.js    27 invariants (data.js, index, liens, annonces)
+     etudes   node tools/verif-etudes.js     la page d'etude publiee == ce que son assembleur produit
      contenu  node tools/verif-contenu.js    standard editorial, maigreur, redondance
      exemples node tools/verif-exemples.js   sortie annoncee confrontee au reel (execution)
      rendu    node tools/verif-rendu.js      ce que le navigateur affiche
@@ -16,19 +17,20 @@
      gitgraf  node tools/verif-git-graphe.js  le graphe dessine face a git log --graph
      gitscen  node tools/verif-git-scenarios.js  les situations guidees : la solution atteint le but
 
-   USAGE (durees mesurees le 2026-09-09, apres le passage au port dynamique, point A6.
-   Les chiffres qui figuraient ici dataient du 2026-09-03 et etaient tous faux : 26
-   etapes annoncees en rapide pour 27, 51 pour 53, 54 pour 62. Une documentation de
-   mode qui ment est du meme bois que le mode qui tait ce qu'il ne joue pas.)
-     node tools/verif.js            # 53 etapes, plusieurs minutes (le rendu pilote Chrome)
-     node tools/verif.js --rapide   # 40 etapes, 151,1 s : tout ce qui coute 10 s ou moins,
-                                    #   plus les controles de fond ; il IMPRIME les 22 etapes
+   USAGE (nombres d'etapes RE-MESURES le 2026-09-10 avec « verif-chaine-declaree.js »,
+   point C6. Ceux qui figuraient ici dataient du 2026-09-09 et etaient de nouveau tous
+   faux — 53 annoncees sans option pour 71, 40 en rapide pour 53, 62 en complet pour 81 :
+   un compteur ecrit a la main dans un commentaire se perime a chaque etape ajoutee.
+   Pour le relire d'une commande : node tools/verif-chaine-declaree.js.)
+     node tools/verif.js            # 71 etapes, plusieurs minutes (le rendu pilote Chrome)
+     node tools/verif.js --rapide   # 53 etapes, ~200 s : tout ce qui coute 10 s ou moins,
+                                    #   plus les controles de fond ; il IMPRIME les etapes
                                     #   qu'il ne joue pas (voir l'arbitrage plus bas)
-     node tools/verif.js --complet  # 62 etapes, 4 217 s : le rendu balaie 229 pages, la
-                                    #   fraicheur est lue A L'AFFICHAGE, les verificateurs sont
-                                    #   mis a l epreuve par 9 + 13 fautes injectees, et le
+     node tools/verif.js --complet  # 81 etapes, plusieurs heures : le rendu balaie 256 pages,
+                                    #   la fraicheur est lue A L'AFFICHAGE, les verificateurs
+                                    #   sont mis a l epreuve par des fautes injectees, et le
                                     #   bouton « Tester » est clique sur 75 pages
-     node tools/verif.js --strict   # 53 etapes, code 1 des qu'un outil signale quoi que ce soit
+     node tools/verif.js --strict   # 71 etapes, code 1 des qu'un outil signale quoi que ce soit
      node tools/verif.js --lister   # la liste des etapes du mode demande, sans rien lancer
      node tools/verif.js --mutations  # les 16 epreuves par injection, et rien d'autre : elles
                                     #   MODIFIENT des fichiers avant de les restaurer, et le mode
@@ -87,6 +89,14 @@ var RACINE = path.join(TOOLS, "..");
 var ETAPES = [
   { nom: "source ", fichier: "verif-html.js", args: [], quoi: "balise creee par erreur dans un bloc de code" },
   { nom: "donnees", fichier: "verif-donnees.js", args: [], quoi: "invariants de data.js, index, liens" },
+  /* Les 7 pages d'etude n'ont aucun chiffre ecrit a la main : leur assembleur les
+     re-mesure a chaque execution. Encore faut-il le RELANCER — personne ne le faisait,
+     et le point C5 venait d'ecarter ces pages du controle des compteurs (I19) parce que
+     leurs nombres sont des mesures. Elles n'etaient donc controlees par personne :
+     etude-moteur-exos publiait 4288/307 exercices la ou la mesure du jour en compte
+     4293/302. Chaque assembleur est rejoue en mode COMPARAISON (il n'ecrit rien) et la
+     page publiee doit lui etre identique. 12 s pour les sept (point V17-C6). */
+  { nom: "etudes ", fichier: "verif-etudes.js", args: [], quoi: "chaque page d'etude est-elle celle que son assembleur produit aujourd'hui" },
   { nom: "contenu", fichier: "verif-contenu.js", args: STRICT ? ["--strict"] : [], quoi: "standard editorial, maigreur, redondance" },
   {
     nom: "exemple",

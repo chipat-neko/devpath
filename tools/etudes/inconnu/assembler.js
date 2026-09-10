@@ -251,5 +251,4 @@ if (page.indexOf(echapper(programme)) === -1) stop('le programme publié n’est
 if (page.indexOf(echapper(banc)) === -1) stop('le banc publié n’est pas celui qui vient d’être exécuté.');
 
 var cible = path.join(RACINE, 'pages', 'etude-inconnu.html');
-fs.writeFileSync(cible, page);
-console.log('✓ écrit : ' + path.relative(RACINE, cible) + ' (' + page.length + ' octets)');
+require("../../lib/publier-etude.js").publier(cible, page, RACINE);
