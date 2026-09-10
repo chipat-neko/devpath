@@ -5290,11 +5290,59 @@ des heures de travail perdues ou invisibles.
       I27 (annonces marquées `data-mesure`), `verif-etudes.js` (les 7 pages d'étude
       réassemblées et comparées) et les deux preuves d'étude qui suivent leur gabarit.
       `verif-donnees` : **0 erreur sur 26 contrôles**. `verif-etudes` : **7 études, 0 périmée**.
-- [ ] **F4 · Ce qui n'a pas été fait.** Lister et expliquer, sans arrondir. Reprendre aussi les cinq
+- [x] **F4 · Ce qui n'a pas été fait.** Lister et expliquer, sans arrondir. Reprendre aussi les cinq
       angles morts que l'audit s'est reconnus : aucune exécution réelle sur neuf langages (les
       compilateurs sont absents de la machine), le rendu visuel jamais regardé, 344 blocs `.txt` sur 793
       confrontés à rien, le mode `--mutations` jamais lancé, et `verif-clic.js` passé sur 8 leçons
       seulement.
+
+      **LES CINQ ANGLES MORTS DE L'AUDIT, repris un par un le 2026-09-10.**
+
+      1. **Aucune exécution réelle sur neuf langages — TOUJOURS VRAI, et la cause n'a pas
+         bougé** : `go`, `rustc`, `javac`, `php`, `gcc` sont **absents de la machine**
+         (vérifié à l'instant, les cinq). Le point B3 a donc pris l'autre chemin : les
+         sorties de ces neuf langages sont **transposées** et rejouées par les
+         `tools/preuves/rejoue-*.js`, ce qui contrôle la cohérence du programme publié avec
+         sa sortie publiée — **pas** le comportement du vrai compilateur. *La différence est
+         réelle et elle reste ouverte : un idiome que Go refuserait passerait ici.*
+      2. **Le rendu visuel — FERMÉ.** `verif-rendu.js` a tourné sur **256 pages × 3 largeurs
+         × 2 thèmes = 1 536 mesures, 0 erreur, 0 avertissement**. L'audit l'écrivait « jamais
+         regardé » parce que l'outil ne prenait alors que 20 pages.
+      3. **Les blocs `.txt` confrontés à rien — LARGEMENT FERMÉ, chiffré** : `verif-sorties.js`
+         rend aujourd'hui **449 blocs identiques au caractère près, 0 divergent**, et il en
+         reste **93 non jugés** (illustration, ou sortie d'un autre langage) contre **344**
+         au moment de l'audit. Le point B2b-24 a par ailleurs étiqueté 16 de ces blocs comme
+         illustrations, ce qui les sort du jugement **explicitement** plutôt que par défaut.
+      4. **Le mode `--mutations` — LANCÉ, et il a livré un défaut** (voir F2) : 16 épreuves,
+         4 938 s, une épreuve éteinte par des fins de ligne CRLF, corrigée et repassée à
+         **12/12**. Trois « en défaut » restent à identifier nommément.
+      5. **`verif-clic.js` sur 8 leçons — FERMÉ** : l'étape `clic` du mode `--complet` a
+         tourné **1 154 s** et rend **0 divergent** ; le point A9 avait auparavant établi
+         pourquoi son effectif variait.
+
+      **CE QUE CE CHANTIER N'A PAS FAIT, et qu'il faut dire.**
+
+      · **F1 n'est pas cochée** — voir sa propre case : `--complet` a tourné entièrement
+        (81 étapes, 4 278 s) mais **avant** la correction de `sonde-console-worker.js`, et le
+        temps machine n'a pas permis de le rejouer après.
+      · **Le point interne (E1) est mesuré et sa consigne est écrite, mais AUCUN QCM N'A ÉTÉ
+        RÉÉCRIT.** L'indice reste à **98,9 % de rendement sur 4,6 % du corpus**, et il est
+        **plus dense dans les cours déjà corrigés** (6,1 % contre 3,2 %). C'est du travail de
+        B4, pas du V17 — mais il faut le lire comme une dette ouverte, pas comme un point
+        réglé.
+      · **Les 52 cours au-dessus de la cible du biais (E2)** : rien n'a été détordu ici. Le
+        chantier a livré le **verdict** et le **classement**, pas la correction.
+      · **Quatre études sur six ne relisent toujours pas leur gabarit** (constat de C6) : le
+        contrôle par réassemblage les couvre désormais toutes, mais il répond à « la page
+        est-elle à jour ? », pas à « ce que l'assembleur mesure est-il vrai ? ».
+      · **La rotation du journal (D9) n'a pas été déclenchée** sur le fichier réel : 622 Ko,
+        sous le seuil de 1 Mo, et les mesures des points D1 et D8 venaient précisément de ces
+        lignes.
+      · **La branche d'échec de réparation (D4) n'a pas été déclenchée pour de vrai** : il
+        aurait fallu désactiver la tâche planifiée de production. La décision est éprouvée
+        isolée, son branchement lu dans le fichier.
+      · **Trois épreuves du mode `--mutations`** comptées « en défaut » n'ont pas été
+        identifiées nommément (82 min par passage).
 
 ---
 
