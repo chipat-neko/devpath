@@ -185,6 +185,13 @@ if ($seuilHebdo -gt 0) {
     $quand = $null
     if ($resetIso) { try { $quand = ([datetime]::Parse($resetIso)).ToLocalTime().AddMinutes(10) } catch {} }
     if (-not $quand) { $quand = (Get-Date).AddHours(12) }
+    # Une reprise DEJA PASSEE ne differe plus rien : le declencheur repartirait
+    # aussitot, ce que la pause voulait justement empecher (point D2).
+    $sure = Get-RepriseSure $quand 10
+    if ($sure.Corrige) {
+      Log "[$(Stamp)] reprise demandee $(if ($sure.Demande) { $sure.Demande.ToString('yyyy-MM-dd HH:mm') } else { 'aucune' }) DEJA PASSEE ou trop proche -- reportee a $($sure.Quand.ToString('yyyy-MM-dd HH:mm'))."
+    }
+    $quand = $sure.Quand
     Log "[$(Stamp)] ===== PAUSE : usage hebdomadaire a $pct % (seuil $seuilHebdo). Reveil reporte au $($quand.ToString('yyyy-MM-dd HH:mm')), apres la remise a zero. ====="
     try {
       $tPause = New-ScheduledTaskTrigger -Once -At $quand -RepetitionInterval (New-TimeSpan -Hours 2)
@@ -327,6 +334,13 @@ try {
     Log "[$(Stamp)] ===== LIMITE HEBDOMADAIRE ATTEINTE. Reveil reporte a $txt (source : $($res.Source)), pas de nouvelle tentative d ici la. ====="
     try {
       $reprise = if ($quand) { $quand.AddMinutes(10) } else { (Get-Date).AddHours(12) }
+      # Meme garde qu'au verrou de budget (point D2) : l'heure lue -- par l'API comme
+      # par le texte -- peut deja etre passee, et un declencheur passe ne reporte rien.
+      $sureLim = Get-RepriseSure $reprise 10
+      if ($sureLim.Corrige) {
+        Log "[$(Stamp)] reprise hebdomadaire $($reprise.ToString('yyyy-MM-dd HH:mm')) DEJA PASSEE ou trop proche -- reportee a $($sureLim.Quand.ToString('yyyy-MM-dd HH:mm'))."
+      }
+      $reprise = $sureLim.Quand
       $tLim = New-ScheduledTaskTrigger -Once -At $reprise -RepetitionInterval (New-TimeSpan -Hours 2)
       Set-ScheduledTask -TaskName 'Syntaxe-Autonomie' -Trigger $tLim -ErrorAction Stop | Out-Null
     } catch { try { & schtasks /Change /TN 'Syntaxe-Autonomie' /DISABLE | Out-Null } catch {} }
@@ -432,6 +446,15 @@ try {
     try {
       $next = if ($resetSession) { $resetSession.AddMinutes(2) } else { (Get-Date).AddMinutes(5) }
       $motif = if ($resetSession) { 'a la reprise annoncee par la limite de session' } else { '5 min apres la fin' }
+      # Point D2. Ici le cas est le plus courant des trois : la limite de session a ete
+      # lue AU DEBUT de la passe, et la passe a pu durer plus longtemps que le delai
+      # annonce -- l'heure de reprise est alors derriere nous quand on replanifie.
+      $sureNext = Get-RepriseSure $next 2
+      if ($sureNext.Corrige) {
+        Log "[$(Stamp)] reprise $($next.ToString('yyyy-MM-dd HH:mm')) DEJA PASSEE ou trop proche -- reportee a $($sureNext.Quand.ToString('yyyy-MM-dd HH:mm'))."
+        $motif = $motif + ', recalee car deja passee'
+      }
+      $next = $sureNext.Quand
       $tOnce = New-ScheduledTaskTrigger -Once -At $next -RepetitionInterval (New-TimeSpan -Hours 2)
       Set-ScheduledTask -TaskName 'Syntaxe-Autonomie' -Trigger $tOnce -ErrorAction Stop | Out-Null
       # POSER UN DECLENCHEUR NE SUFFIT PAS : si la tache est DESACTIVEE, rien ne se

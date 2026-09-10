@@ -97,6 +97,23 @@ if (-not $parApi) {
   }
 }
 
+# --- 3 bis. LA GARDE DU POINT D2 : une reprise passee ne differe rien ---------
+Write-Host "`n--- une heure de reprise deja passee (point D2) ---"
+function CasReprise($titre, $quand, $marge, $doitCorriger, $attenduPlancher) {
+  $r = Get-RepriseSure $quand $marge
+  $futur = $r.Quand -gt (Get-Date)
+  $bon = ($r.Corrige -eq $doitCorriger) -and $futur
+  if ($bon -and $attenduPlancher) { $bon = [math]::Abs(((Get-Date).AddMinutes($marge) - $r.Quand).TotalSeconds) -lt 5 }
+  if ($bon) { Write-Host ("  OK       " + $titre + "  ->  " + $r.Quand.ToString('yyyy-MM-dd HH:mm') + "  (corrige=" + $r.Corrige + ")"); $script:ok++ }
+  else { Write-Host ("  ECHEC    " + $titre + "  ->  " + $r.Quand + "  corrige=" + $r.Corrige + " futur=" + $futur); $script:ko++ }
+}
+CasReprise "reprise d'hier"            (Get-Date).AddDays(-1)      10 $true  $true
+CasReprise "reprise il y a 30 s"       (Get-Date).AddSeconds(-30)  10 $true  $true
+CasReprise "reprise dans 1 min < marge 10" (Get-Date).AddMinutes(1) 10 $true  $true
+CasReprise "reprise nulle"             $null                       10 $true  $true
+CasReprise "reprise dans 4 jours"      (Get-Date).AddDays(4)       10 $false $false
+CasReprise "reprise dans 20 min"       (Get-Date).AddMinutes(20)   10 $false $false
+
 # --- 4. LE BRANCHEMENT, lu dans le wrapper REEL -------------------------------
 # Une lib juste dont personne ne se sert ne corrige rien : on verifie sur le
 # fichier de production qu'il la charge, qu'il passe par la decision, et que
@@ -107,8 +124,21 @@ $controles = @(
   @{ quoi = "il charge lib-reset.ps1";                    motif = "Join-Path \`$dir 'lib-reset\.ps1'"; present = $true },
   @{ quoi = "la branche hebdo passe par Resolve-ResetHebdo"; motif = 'Resolve-ResetHebdo \$proj \$sortie'; present = $true },
   @{ quoi = "il n'appelle plus usage-anthropic.js en direct"; motif = "usage-anthropic\.js'\) reset"; present = $false },
-  @{ quoi = "l'ancienne lecture d'heure n'y dort plus";   motif = 'Date\.AddHours\(\$h\)\.AddMinutes\(\$min\)'; present = $false }
+  @{ quoi = "l'ancienne lecture d'heure n'y dort plus";   motif = 'Date\.AddHours\(\$h\)\.AddMinutes\(\$min\)'; present = $false },
+  @{ quoi = "les 3 replanifications passent par Get-RepriseSure"; motif = '(?s)Get-RepriseSure.*Get-RepriseSure.*Get-RepriseSure'; present = $true }
 )
+# Aucun New-ScheduledTaskTrigger ne doit poser une heure qui n'a pas ete filtree :
+# on compte les deux, ils doivent etre en nombre egal.
+$nbTrigger = ([regex]::Matches($wrapper, 'New-ScheduledTaskTrigger -Once -At')).Count
+$nbGarde   = ([regex]::Matches($wrapper, 'Get-RepriseSure')).Count
+$script:total++
+if ($nbTrigger -eq $nbGarde -and $nbTrigger -ge 3) {
+  Write-Host ("  OK       " + $nbTrigger + " declencheur(s) pose(s), " + $nbGarde + " passage(s) par la garde")
+  $script:ok++
+} else {
+  Write-Host ("  ECHEC    " + $nbTrigger + " declencheur(s) pour seulement " + $nbGarde + " garde(s)")
+  $script:ko++
+}
 foreach ($c in $controles) {
   $vu = [regex]::IsMatch($wrapper, $c.motif)
   if ($vu -eq $c.present) { Write-Host ("  OK       " + $c.quoi); $script:ok++ }

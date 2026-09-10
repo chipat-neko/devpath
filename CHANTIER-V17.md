@@ -4786,9 +4786,36 @@ des heures de travail perdues ou invisibles.
       Les cinq scripts PowerShell du projet passent l'analyse syntaxique
       (`[Parser]::ParseFile`), **0 erreur**.
 
-- [ ] **D2 · Le verrou de pause d'usage peut poser une reprise DÉJÀ PASSÉE**, auquel cas il ne diffère
+- [x] **D2 · Le verrou de pause d'usage peut poser une reprise DÉJÀ PASSÉE**, auquel cas il ne diffère
       plus rien. Vérifier que la date calculée est dans le futur, sinon reporter au prochain créneau
       utile, et le journaliser.
+
+      **FAIT le 2026-09-10.** *Le constat vaut pour trois endroits, pas un* : `autonomie.ps1`
+      pose **3** déclencheurs `New-ScheduledTaskTrigger -Once -At` — le verrou de budget
+      (pause à N %), la limite hebdomadaire, et la replanification de fin de passe — et
+      **aucun** ne vérifiait que l'heure posée était encore devant lui. Une heure passée ne
+      reporte rien : la tâche repart aussitôt, c'est-à-dire exactement ce que la pause
+      voulait empêcher.
+
+      **LE CAS N'EST PAS THÉORIQUE POUR LE TROISIÈME.** `$resetSession` est lu **au début**
+      de la passe, et la reprise est posée **à la fin** : toute passe plus longue que le
+      délai annoncé pose une heure derrière elle. Les passes de ce chantier durent
+      couramment plus d'une heure.
+
+      **`Get-RepriseSure $quand $margeMinutes`** (dans `.autonomie/lib-reset.ps1`, à côté de
+      la lecture d'heure de D1) garantit un plancher `maintenant + marge` — **10 min** pour
+      les deux verrous d'usage, **2 min** pour la fin de passe — et rend `.Corrige`, que le
+      wrapper **journalise** : *« reprise ... DEJA PASSEE ou trop proche — reportée à ... »*,
+      et le motif du prochain réveil devient « recalée car déjà passée ». Une correction
+      silencieuse aurait rendu le journal faux sur le point même qu'on cherche à comprendre.
+
+      **ÉPREUVE — 23 cas sur 23** au total dans `epreuve-reset.ps1` (D1 + D2), dont **6 pour
+      cette garde** : reprise d'hier, il y a 30 s, dans 1 min (sous la marge), nulle →
+      **corrigées**, toutes dans le futur ; dans 4 jours et dans 20 min → **laissées
+      intactes**. Et **2 contrôles lus dans le wrapper réel** : les 3 replanifications
+      passent par la garde, et surtout **le compte des déclencheurs égale le compte des
+      gardes (3 = 3)** — un quatrième déclencheur ajouté un jour sans garde ferait rougir
+      l'épreuve. `[Parser]::ParseFile` : **0 erreur**.
 
 - [ ] **D3 · La réparation horaire de `sante-autonomie.ps1` écrase le report d'usage par un réveil dans
       2 minutes**, et ignore la pause décidée par le wrapper. Les deux mécanismes doivent se parler : la

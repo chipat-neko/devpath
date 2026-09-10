@@ -103,6 +103,26 @@ function Get-ResetHebdoApi($proj) {
   return $null
 }
 
+# UNE HEURE DE REPRISE QUI EST DEJA PASSEE NE DIFFERE PLUS RIEN (point D2).
+# Les trois endroits qui replanifient la tache posent un declencheur « -Once -At
+# $quand ». Si $quand est dans le passe -- cache d'usage perime, message lu apres
+# coup, horloge decalee, ou simplement une passe qui a dure plus longtemps que le
+# delai calcule -- le declencheur ne reporte plus rien : la tache repart aussitot,
+# c'est-a-dire exactement ce que la pause voulait empecher. On garantit donc une
+# marge minimale, et on DIT quand on a du corriger : une correction silencieuse
+# rendrait le journal faux sur le point qu'on cherchait justement a comprendre.
+#
+# Rend un objet : .Quand (DateTime, toujours au moins maintenant + marge),
+#                 .Corrige ($true si la date demandee etait passee ou trop proche),
+#                 .Demande (la date d'origine, pour le journal).
+function Get-RepriseSure($quand, $margeMinutes) {
+  if (-not $margeMinutes) { $margeMinutes = 5 }
+  $plancher = (Get-Date).AddMinutes($margeMinutes)
+  if (-not $quand) { return [pscustomobject]@{ Quand = $plancher; Corrige = $true; Demande = $null } }
+  if ($quand -gt $plancher) { return [pscustomobject]@{ Quand = $quand; Corrige = $false; Demande = $quand } }
+  return [pscustomobject]@{ Quand = $plancher; Corrige = $true; Demande = $quand }
+}
+
 # LA DECISION, pour la limite hebdomadaire : l'API D'ABORD, le texte en repli.
 # C'est l'inversion demandee par le point D1 -- le texte ne porte au mieux qu'une
 # date sans annee, au pire qu'une heure sans jour.
