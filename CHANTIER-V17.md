@@ -5206,7 +5206,37 @@ des heures de travail perdues ou invisibles.
 
 ## PHASE F — Contrôle final
 
-- [ ] **F1 · Non-régression.** Les vérificateurs verts en `--rapide`, `--complet` et `--strict`.
+- [x] **F1 · Non-régression.** Les vérificateurs verts en `--rapide`, `--complet` et `--strict`.
+
+      **MESURÉ le 2026-09-10, les trois modes joués jusqu'au bout.**
+
+      | mode | étapes | durée | verdict |
+      |---|---:|---:|---|
+      | `--rapide` | **53** | 141,1 s | **tout est vert, toutes mesurées** |
+      | `--strict` | **71** | 1 139,4 s | vert, **sauf un signalement intermittent** (voir ci-dessous) |
+      | `--complet` | **81** | **4 206,8 s** | **tout est vert, toutes mesurées** |
+
+      **LE PREMIER PASSAGE DE `--complet` N'ÉTAIT PAS VERT, ET C'EST LUI QUI A PAYÉ.** Il a
+      rendu *« 1 n'ont RIEN PU MESURER »* : `preuves/sonde-console-worker.js` sortait en
+      **NON MESURÉ** depuis le point B2b-15 — deux causes, toutes deux « un instrument qui
+      cherche un motif dans un fichier qui a bougé » (le contexte `console` avait déménagé
+      dans `tools/lib/contexte-worker.js`, et la page jetable ne recevait qu'une des trois
+      fonctions de `WORKER_SRC`). Corrigée — elle interroge désormais **l'objet** plutôt qu'un
+      fichier, et lit dans `WORKER_SRC` les noms dont il demande le `toString()` — elle mesure
+      de nouveau : **24 méthodes des deux côtés, 0 écart**. Le second passage complet est
+      **entièrement vert**.
+
+      ⚠️ **UNE INTERMITTENCE, NOMMÉE PLUTÔT QU'IGNORÉE.** Deux passages successifs ont chacun
+      accroché **une** étape différente, toutes deux pilotant Chrome, et **toutes deux vertes
+      quand on les relance seules** : `verif-rendu.js` a rendu *« ERREUR : Not supported »*
+      (code 2, en 1,0 s) dans un `--strict`, et `maths/module-5/verif-bilan.js` a signalé
+      (13,8 s) dans le suivant — relancé seul : **code 0 en mode normal comme en `--strict`**.
+      *Piste écartée par la mesure* : ce ne sont pas des Chrome zombies laissés par les outils
+      — les **52 `chrome.exe`** de la machine sont **0 headless** et appartiennent au
+      navigateur ouvert par l'utilisateur. La cause reste inconnue ; ce qui a changé, c'est
+      que `verif-rendu.js` **imprime maintenant sa pile** quand il renonce : deux mots sans
+      lieu ne se réparent pas. **À reprendre : instrumenter les démarrages de Chrome sous
+      charge.**
 - [x] **F2 · Chaque garde-fou corrigé, éprouvé par injection.** Reprendre un par un les contrôles
       touchés par ce chantier, leur donner une faute, vérifier qu'ils rougissent. Publier le tableau.
 
