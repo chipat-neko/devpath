@@ -47,6 +47,10 @@ else {
                               Alertes = @('lib-reset.ps1 ABSENTE : jetons neutralises') }
   }
   function Get-MesuresSite($p) { return $null }
+  # Sans la lib, aucun drapeau n'est valide : on refait une passe de securite plutot
+  # que d'eteindre l'autonomie sur la foi d'un fichier qu'on ne sait pas relire.
+  function Test-DrapeauFin($f, $p, $c) { return [pscustomobject]@{ Valide = $false; Pourquoi = 'lib-reset.ps1 absente'; Ecrit = (Get-Date); Empreinte = '' } }
+  function Write-DrapeauFin($f, $p, $c) { Set-Content -Path $f -Value ('date=' + (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) -Encoding ascii }
   function Build-PromptTravail($modele, $proj, $chaine, $plan, $mes) {
     $t = $modele.Replace('@@PLAN@@', $plan).Replace('@@CHAINE@@', 'chaine : ' + ($chaine -join ', '))
     return [pscustomobject]@{ Texte = [regex]::Replace($t, '@@[A-Z_0-9]+@@', '(chiffre non mesure)')
@@ -147,11 +151,20 @@ $arretDemande = $false   # VRAIE fin de chantier, confirmee par la passe de secu
 # Une variable qui sert a deux choses finit par mentir sur l'une des deux.
 $replanifFaite = $false  # un declencheur a deja ete pose (limite atteinte) : ne pas en reposer
 if (Test-ChantierFini) {
-  if (Test-Path $okFile) {
-    Log "[$(Stamp)] ===== CHANTIER TERMINE : plus rien a faire et verification finale VERTE. Tache desactivee. ====="
+  # LE DRAPEAU DOIT TEMOIGNER DE L'ETAT COURANT, PAS D'UN ETAT QUELCONQUE (point D7).
+  # Il n'etait jamais supprime : un drapeau vieux de six mois eteignait l'autonomie
+  # SANS passe de securite des que la chaine se re-terminait -- typiquement apres
+  # l'ajout d'un chantier, c'est-a-dire quand une verification compte le plus.
+  $drapeau = Test-DrapeauFin $okFile $proj $CHAINE
+  if ($drapeau.Valide) {
+    Log "[$(Stamp)] ===== CHANTIER TERMINE : plus rien a faire et verification finale VERTE du $($drapeau.Ecrit.ToString('yyyy-MM-dd HH:mm')). Tache desactivee. ====="
     try { Disable-ScheduledTask -TaskName 'Syntaxe-Autonomie' -ErrorAction Stop | Out-Null }
     catch { Log "[$(Stamp)] ATTENTION desactivation KO ($_) -- couper a la main." }
     exit 0
+  }
+  if (Test-Path $okFile) {
+    Log "[$(Stamp)] drapeau de fin IGNORE ($($drapeau.Pourquoi)) -- une passe de securite va etre relancee."
+    Remove-Item $okFile -Force -ErrorAction SilentlyContinue
   }
   $echecs = 0
   if (Test-Path $cptFile) { $echecs = [int](Get-Content $cptFile -TotalCount 1) }
@@ -161,6 +174,13 @@ if (Test-ChantierFini) {
     exit 0
   }
   $modeVerif = $true
+}
+elseif (Test-Path $okFile) {
+  # Il reste des cases : un drapeau de fin qui traine ici ne peut etre que celui d'un
+  # chantier precedent. On le retire tout de suite plutot que d'attendre qu'il serve
+  # une seule fois, au pire moment (point D7).
+  Log "[$(Stamp)] drapeau de fin retire : le chantier a de nouveau des cases a cocher."
+  Remove-Item $okFile -Force -ErrorAction SilentlyContinue
 }
 
 # Horodatage du debut de la passe : sert a verifier que le rapport de la passe
@@ -437,7 +457,9 @@ try {
       }
     }
     if ($verdict -eq 'VERT' -and $code -eq 0) {
-      New-Item -ItemType File -Path $okFile -Force | Out-Null
+      # Le drapeau porte sa date ET l'empreinte de l'etat verifie (point D7) : un
+      # fichier vide ne dit pas DE QUOI il temoigne.
+      Write-DrapeauFin $okFile $proj $CHAINE
       Remove-Item $cptFile -Force -ErrorAction SilentlyContinue
       $arretDemande = $true
     } else {

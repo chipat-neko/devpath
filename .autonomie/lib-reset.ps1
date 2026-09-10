@@ -216,6 +216,67 @@ function Get-DescriptionChaine($proj, $chaine, $planCourant) {
   return $txt
 }
 
+# LE DRAPEAU DE FIN DE CHANTIER, DATE ET RATTACHE A UN ETAT (point D7).
+# `.autonomie/verif-finale.ok` autorise le wrapper a DESACTIVER la tache. Il etait
+# cree une fois et JAMAIS supprime : trois occurrences dans le wrapper, aucune
+# suppression, et les 21 versions du fichier depuis le 2026-08-02 identiques sur ce
+# point. Reproduit sur copie : drapeau vieux de 180 jours + chaine re-terminee ->
+# extinction SANS passe de securite. Le risque n'a jamais ete pris en ~10 creations
+# du drapeau, mais il etait arme -- et il se declenche precisement le jour ou on
+# ajoute un chantier a $CHAINE, c'est-a-dire le jour ou une verification compte.
+#
+# Le drapeau porte donc maintenant la DATE et l'EMPREINTE de l'etat qui l'a produit :
+# les plans de la chaine avec leur nombre de cases faites et restantes. Un drapeau
+# dont l'empreinte ne correspond plus n'autorise plus rien.
+function Get-EmpreinteChaine($proj, $chaine) {
+  $morceaux = @()
+  foreach ($nom in $chaine) {
+    $chemin = Join-Path $proj $nom
+    if (-not (Test-Path $chemin)) { $morceaux += "$nom=absent"; continue }
+    $faites = 0; $reste = 0
+    try {
+      $faites = (Select-String -Path $chemin -Pattern '^- \[x\]').Count
+      $reste = (Select-String -Path $chemin -Pattern '^- \[ \]').Count
+    } catch {}
+    $morceaux += "$nom=$faites/$($faites + $reste)"
+  }
+  return ($morceaux -join ';')
+}
+
+# Rend .Valide, .Pourquoi, .Ecrit (date), .Empreinte (celle du drapeau).
+function Test-DrapeauFin($okFile, $proj, $chaine) {
+  if (-not (Test-Path $okFile)) {
+    return [pscustomobject]@{ Valide = $false; Pourquoi = 'aucun drapeau'; Ecrit = $null; Empreinte = '' }
+  }
+  $contenu = ''
+  try { $contenu = (Get-Content $okFile -Raw -ErrorAction Stop) } catch {}
+  $mDate = [regex]::Match($contenu, 'date=([0-9T:\- ]+)')
+  $mEmp = [regex]::Match($contenu, 'empreinte=(.+)')
+  $ecrit = $null
+  if ($mDate.Success) { try { $ecrit = [datetime]::Parse($mDate.Groups[1].Value.Trim()) } catch {} }
+  if (-not $ecrit) { try { $ecrit = (Get-Item $okFile).LastWriteTime } catch {} }
+  $emp = ''
+  if ($mEmp.Success) { $emp = $mEmp.Groups[1].Value.Trim() }
+  # Un drapeau de l'ancien format (fichier VIDE, cree par New-Item) ne porte aucune
+  # empreinte : on ne peut pas savoir de quel etat il temoigne, donc il ne vaut rien.
+  if (-not $emp) {
+    return [pscustomobject]@{ Valide = $false; Pourquoi = 'drapeau sans empreinte (ancien format)'; Ecrit = $ecrit; Empreinte = '' }
+  }
+  $actuelle = Get-EmpreinteChaine $proj $chaine
+  if ($emp -ne $actuelle) {
+    return [pscustomobject]@{ Valide = $false; Pourquoi = "l'etat des plans a change depuis la verification finale"; Ecrit = $ecrit; Empreinte = $emp }
+  }
+  return [pscustomobject]@{ Valide = $true; Pourquoi = 'drapeau conforme a l etat courant'; Ecrit = $ecrit; Empreinte = $emp }
+}
+
+function Write-DrapeauFin($okFile, $proj, $chaine) {
+  $lignes = @(
+    'date=' + (Get-Date).ToString('yyyy-MM-dd HH:mm:ss'),
+    'empreinte=' + (Get-EmpreinteChaine $proj $chaine)
+  )
+  Set-Content -Path $okFile -Value ($lignes -join [Environment]::NewLine) -Encoding ascii
+}
+
 # LES CHIFFRES DU SITE, MESURES AU LANCEMENT (point D6).
 # Le prompt annoncait << 83 cours, 1463 lecons >> quand le site en comptait 90 et
 # 1540, et decrivait les outils avec des chiffres tout aussi vieux (1425 lecons pour

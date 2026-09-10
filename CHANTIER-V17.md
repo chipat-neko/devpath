@@ -4977,12 +4977,40 @@ des heures de travail perdues ou invisibles.
       `1425 lecons`, `17 invariants`, `echantillon de 20 pages`). Le prompt réel assemblé :
       **7 798 caractères, 0 alerte, 0 mojibake**. `[Parser]::ParseFile` : 0 erreur.
 
-- [ ] **D7 · Le drapeau `.autonomie/verif-finale.ok` n'est jamais supprimé.** Trois occurrences dans le
+- [x] **D7 · Le drapeau `.autonomie/verif-finale.ok` n'est jamais supprimé.** Trois occurrences dans le
       wrapper, aucune suppression, et les 21 versions du fichier depuis le 2026-08-02 sont identiques
       sur ce point. Reproduit sur copie : drapeau vieux de 180 jours + chaîne re-terminée → extinction
       **sans passe de sécurité**. Nuance mesurée à conserver : la branche n'a **jamais** été prise en
       ~10 créations du drapeau, donc le risque est théorique mais armé. Dater le drapeau et le refuser
       si `$CHAINE` a changé, ou le supprimer dès qu'un plan retrouve une case décochée.
+
+      **FAIT le 2026-09-10 — les DEUX parades, parce qu'elles ne couvrent pas le même
+      instant.** Le constat se reproduit tel quel : trois occurrences de `$okFile` dans le
+      wrapper (déclaration, test, création), **aucune suppression**, et le drapeau était créé
+      par `New-Item -ItemType File`, donc **vide** — un fichier vide ne peut rien dire de ce
+      dont il témoigne.
+
+      · **Le drapeau porte maintenant sa date ET une empreinte** : la liste des plans de
+        `$CHAINE` avec leurs cases (`CHANTIER-V12.md=42/42;…;CHANTIER-V17.md=71/80;…`).
+        `Test-DrapeauFin` le refuse si l'empreinte ne correspond plus à l'état courant —
+        c'est-à-dire exactement le jour où un chantier est ajouté à la chaîne, le jour où
+        une passe de sécurité compte le plus. Refusé, il est **supprimé** et une passe de
+        sécurité est relancée, avec la raison au journal.
+      · **Et il est retiré dès qu'une case redevient à cocher**, sans attendre la fin :
+        un drapeau qui traîne pendant qu'il reste du travail ne peut être que celui d'un
+        chantier précédent.
+      · **Un drapeau de l'ancien format (vide) n'est plus jamais valide** : impossible de
+        savoir de quel état il témoigne, donc il ne vaut rien. Le premier réveil qui en
+        trouve un relancera une vérification — comportement voulu, et prudent.
+
+      **ÉPREUVE — 64 cas sur 64** au total (`epreuve-reset.ps1`), dont **5 pour le drapeau**,
+      joués sur un fichier temporaire — *celui de production n'est jamais touché*, et il
+      n'existe pas aujourd'hui : aucun drapeau · drapeau **vide** (l'ancien format) · drapeau
+      d'un **autre état** (une empreinte modifiée) → **tous refusés** ; drapeau conforme →
+      accepté ; et le drapeau écrit par `Write-DrapeauFin` **se relit valide**. Plus
+      **3 contrôles lus dans le wrapper** : le drapeau est *jugé* et non seulement testé, un
+      drapeau périmé est *supprimé*, et `New-Item -ItemType File -Path $okFile` **a disparu**.
+      `[Parser]::ParseFile` : 0 erreur.
 
 - [ ] **D8 · `autonomie.ps1` ne regarde jamais le marqueur d'arrêt volontaire au démarrage.** Un
       lancement manuel repart donc même quand un arrêt a été demandé — c'est exactement ce qui s'est

@@ -238,6 +238,41 @@ if (-not $mModele.Success -or $chaine.Count -eq 0) {
   } else { Write-Host "  ECHEC    injection : un jeton oublie passe inapercu"; $script:ko++ }
 }
 
+# --- 3 sexies. LE DRAPEAU DE FIN DE CHANTIER (point D7) -----------------------
+# Le drapeau autorise le wrapper a DESACTIVER la tache : on l'eprouve sur un fichier
+# temporaire, jamais sur celui de production.
+Write-Host "`n--- le drapeau de fin, date et rattache a un etat (point D7) ---"
+$proj3 = Split-Path -Parent $PSScriptRoot
+$srcW = Get-Content (Join-Path $PSScriptRoot 'autonomie.ps1') -Raw
+$mC3 = [regex]::Match($srcW, "(?ms)^\`$CHAINE\s*=\s*@\((.*?)\)\s*$")
+$chaine3 = @([regex]::Matches($mC3.Groups[1].Value, "'([^']+)'") | ForEach-Object { $_.Groups[1].Value })
+$tmpOk = Join-Path $env:TEMP ('drapeau-' + [guid]::NewGuid().ToString('N').Substring(0, 8) + '.ok')
+
+function CasDrapeau($titre, $contenu, $attendu) {
+  $script:total++
+  if ($null -eq $contenu) { Remove-Item $tmpOk -Force -ErrorAction SilentlyContinue }
+  else { Set-Content -Path $tmpOk -Value $contenu -Encoding ascii }
+  $d = Test-DrapeauFin $tmpOk $proj3 $chaine3
+  if ($d.Valide -eq $attendu) { Write-Host ("  OK       " + $titre + "  ->  valide=" + $d.Valide + " (" + $d.Pourquoi + ")"); $script:ok++ }
+  else { Write-Host ("  ECHEC    " + $titre + "  ->  valide=" + $d.Valide + " (" + $d.Pourquoi + "), attendu " + $attendu); $script:ko++ }
+}
+
+$empActuelle = Get-EmpreinteChaine $proj3 $chaine3
+CasDrapeau "aucun drapeau" $null $false
+CasDrapeau "drapeau VIDE (ancien format, celui d'avant D7)" "" $false
+CasDrapeau "drapeau d'un AUTRE etat (un plan de plus a faire)" `
+  ("date=2026-01-02 03:04:05" + [Environment]::NewLine + "empreinte=" + ($empActuelle -replace '/\d+', '/999')) $false
+CasDrapeau "drapeau conforme a l'etat courant" `
+  ("date=" + (Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + [Environment]::NewLine + "empreinte=" + $empActuelle) $true
+
+# Ecrit par la fonction de production, il doit se relire lui-meme.
+$script:total++
+Write-DrapeauFin $tmpOk $proj3 $chaine3
+$d = Test-DrapeauFin $tmpOk $proj3 $chaine3
+if ($d.Valide) { Write-Host ("  OK       ecrit par Write-DrapeauFin, relu valide (ecrit le " + $d.Ecrit.ToString('yyyy-MM-dd HH:mm') + ")"); $script:ok++ }
+else { Write-Host ("  ECHEC    ecrit par Write-DrapeauFin mais relu invalide : " + $d.Pourquoi); $script:ko++ }
+Remove-Item $tmpOk -Force -ErrorAction SilentlyContinue
+
 # --- 4. LE BRANCHEMENT, lu dans le wrapper REEL -------------------------------
 # Une lib juste dont personne ne se sert ne corrige rien : on verifie sur le
 # fichier de production qu'il la charge, qu'il passe par la decision, et que
@@ -249,7 +284,10 @@ $controles = @(
   @{ quoi = "la branche hebdo passe par Resolve-ResetHebdo"; motif = 'Resolve-ResetHebdo \$proj \$sortie'; present = $true },
   @{ quoi = "il n'appelle plus usage-anthropic.js en direct"; motif = "usage-anthropic\.js'\) reset"; present = $false },
   @{ quoi = "l'ancienne lecture d'heure n'y dort plus";   motif = 'Date\.AddHours\(\$h\)\.AddMinutes\(\$min\)'; present = $false },
-  @{ quoi = "les 3 replanifications passent par Get-RepriseSure"; motif = '(?s)Get-RepriseSure.*Get-RepriseSure.*Get-RepriseSure'; present = $true }
+  @{ quoi = "les 3 replanifications passent par Get-RepriseSure"; motif = '(?s)Get-RepriseSure.*Get-RepriseSure.*Get-RepriseSure'; present = $true },
+  @{ quoi = "le drapeau de fin est juge, pas seulement teste"; motif = 'Test-DrapeauFin \$okFile'; present = $true },
+  @{ quoi = "un drapeau perime est SUPPRIME"; motif = 'Remove-Item \$okFile'; present = $true },
+  @{ quoi = "le drapeau n'est plus un fichier vide"; motif = 'New-Item -ItemType File -Path \$okFile'; present = $false }
 )
 # Aucun New-ScheduledTaskTrigger ne doit poser une heure qui n'a pas ete filtree :
 # on compte les deux, ils doivent etre en nombre egal.
