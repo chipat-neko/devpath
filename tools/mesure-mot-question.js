@@ -82,7 +82,7 @@
  * reponse qui porte le mot (elle est intouchable), on l'AJOUTE aux distracteurs.
  *
  * Usage :
- *   node tools/mesure-mot-question.js <cours> [--min=5] [--liste]
+ *   node tools/mesure-mot-question.js <cours> [--min=5] [--liste|--plan]
  *   node tools/mesure-mot-question.js --tous [--min=5]      # tous les cours, tri decroissant
  */
 "use strict";
@@ -95,6 +95,7 @@ var LISTE = argv.indexOf("--liste") !== -1;
 var MIN = 5;
 argv.forEach(function (a) { var m = /^--min=(\d+)$/.exec(a); if (m) MIN = Number(m[1]); });
 var COURS = argv.filter(function (a) { return a.charAt(0) !== "-"; })[0] || null;
+var PLAN = argv.indexOf("--plan") !== -1;
 
 var SEUIL = 0.28;   /* au-dela, la lecture est exploitable — meme seuil que mot-fetiche */
 
@@ -212,6 +213,78 @@ function tousLesCours() {
     return fs.statSync(path.join(d, n)).isDirectory() &&
            fs.readdirSync(path.join(d, n)).some(function (f) { return /^lecon-\d+\.html$/.test(f); });
   }).sort();
+}
+
+/* MODE --plan : ce qu'il faut ECRIRE pour fermer les quatre lectures. La cible n'est
+   pas un taux, c'est l'absence d'intrus : chaque mot porte par 0, 2 ou 4 options des
+   quatre, jamais par 1 (EXCES tranche), jamais par 3 (DEFAUT tranche). Comme la bonne
+   reponse est INTOUCHABLE, la manoeuvre est toujours sur un distracteur :
+     mot sur 3 options -> le RETIRER d'un porteur, ou l'AJOUTER au quatrieme ;
+     mot sur 1 option  -> l'AJOUTER a une deuxieme, ou le RETIRER de la seule. */
+if (PLAN) {
+  var qsP = questionsDe(COURS || "typescript");
+  console.log("");
+  console.log("PLAN DE FERMETURE DE L'INTRUS LEXICAL — " + (COURS || "typescript"));
+  console.log("  cible : plus aucun mot porte par exactement 1 ou 3 options sur 4.");
+  console.log("  la BONNE reponse est intouchable : agir toujours sur un distracteur.");
+  console.log("");
+  var totM = 0, totQ = 0;
+  qsP.forEach(function (e, idx) {
+    var q = e.q, n = q.a.length;
+    var jeux = q.a.map(function (o) { return mots(o, MIN); });
+    var compte = new Map();
+    jeux.forEach(function (st, i) {
+      st.forEach(function (m) {
+        if (!compte.has(m)) compte.set(m, []);
+        compte.get(m).push(i);
+      });
+    });
+    var trois = [], un = [];
+    compte.forEach(function (ou, m) {
+      if (ou.length === n - 1) trois.push({ m: m, ou: ou });
+      else if (ou.length === 1) un.push({ m: m, ou: ou });
+    });
+    /* ⚠ NE LISTER QUE CE QUI TRANCHE VRAIMENT. Un mot porte par UNE option ne tranche
+       pas si, sur la meme question, d'autres mots isolent chacune des autres options :
+       la lecture designe alors les quatre et ne dit plus rien. Un premier jet de ce
+       mode listait 1 131 mots sur 65 questions, dont l'immense majorite etaient inertes
+       -- c'est-a-dire une consigne d'ecriture impossible a suivre, donc inutile. On ne
+       garde donc que les questions ou une lecture designe UNE SEULE option. */
+    var r = intrus(q.a, MIN);
+    var vise = (r.defaut.length === 1 ? r.defaut : []).concat(r.exces.length === 1 ? r.exces : []);
+    if (!vise.length) return;
+    trois = trois.filter(function (t) {
+      var manque = -1;
+      for (var i = 0; i < n; i++) if (t.ou.indexOf(i) === -1) manque = i;
+      return r.defaut.length === 1 && manque === r.defaut[0];
+    });
+    un = un.filter(function (u) { return r.exces.length === 1 && u.ou[0] === r.exces[0]; });
+    if (!trois.length && !un.length) return;
+    totQ++;
+    console.log("  " + e.f + "  q" + (idx + 1) + "  (bonne reponse = option " + q.correct + ")");
+    trois.forEach(function (t) {
+      var manque = -1;
+      for (var i = 0; i < n; i++) if (t.ou.indexOf(i) === -1) manque = i;
+      totM++;
+      console.log("      3/4 « " + t.m + " » manque a l'option " + manque +
+        (manque === q.correct
+          ? "  [LA BONNE] -> RETIRER le mot d'UN des distracteurs " + t.ou.join("/")
+          : "  -> AJOUTER le mot a l'option " + manque + ", ou le RETIRER d'un porteur"));
+    });
+    un.forEach(function (u) {
+      totM++;
+      console.log("      1/4 « " + u.m + " » n'est que sur l'option " + u.ou[0] +
+        (u.ou[0] === q.correct
+          ? "  [LA BONNE] -> AJOUTER le mot a un distracteur"
+          : "  -> le RETIRER, ou l'AJOUTER a une deuxieme option"));
+    });
+  });
+  console.log("");
+  console.log("  " + totM + " mot(s) a traiter sur " + totQ + " question(s) qui TRANCHENT,");
+  console.log("  pour " + qsP.length + " questions au total. Les autres configurations 1/4 et 3/4");
+  console.log("  sont inertes : d'autres mots y designent deja les autres options.");
+  console.log("");
+  process.exit(0);
 }
 
 console.log("");
