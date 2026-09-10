@@ -6281,6 +6281,129 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
 
       ---
 
+      **PASSE DU 2026-09-11 — `scala` CLOS (39ᵉ cours), et la leçon du 38ᵉ confirmée par la mesure :
+      LE BIAIS DE LONGUEUR SE REMPLACE PAR UN BIAIS DE COHÉRENCE SÉMANTIQUE.**
+
+      | | départ | arrivée |
+      |---|---:|---:|
+      | « la plus longue » | **91,9 %** | **25,0 %** |
+      | pire des 43 stratégies | 91,9 % | **26,6 %** |
+      | rangs de longueur | 63/3/1/1 | **17/17/17/17**, 0 question à retoucher |
+      | indice lexical | **59 exploitables** sur 68 | **0**, et 0 à mettre en forme |
+      | mot fétiche | **10 alertes** | **0** |
+      | intrus lexical (45ᵉ indice) | **4 questions sûres** | **0**, dans les DEUX lectures |
+      | sens inverse (42 stratégies) | — | **0 alerte** |
+
+      **Déroulé** : six écrivains en parallèle sur des lots de fichiers disjoints (68 questions,
+      **203 des 204 distracteurs réécrits**), puis **six relecteurs adversariaux en lecture seule**,
+      puis six correcteurs, puis deux rattrapages que j'ai menés moi-même.
+
+      ⚠️⚠️ **LA CONTRADICTION A RENDU 54 PRISES, DONT 8 GRAVES — ET 30 SONT DES « SALADES DE MOTS ».**
+      C'est la confirmation chiffrée de la leçon écrite au 38ᵉ cours, et elle est plus grave qu'on ne
+      l'avait dite : **sur quatre questions, DEUX options sur quatre ne voulaient rien dire** (« le
+      type réel vient de la plateforme virtuelle », « using la duplique », « chaque maillon abandonné
+      reste invisible au calcul final de la suite »), et la bonne réponse était **la seule phrase
+      signifiante**. Un apprenant qui n'a jamais lu une ligne de Scala cochait juste par élimination
+      du charabia. **Le biais de longueur avait été fermé et remplacé par un biais de cohérence
+      sémantique, qui se mesure exactement au même endroit — et qu'aucun des 43 outils ne voit.**
+      Sept autres prises étaient des distracteurs **VRAIS en Scala** : « un tuple » répond exactement
+      à « quelle classe concise pour des données, immuable, avec pattern matching ? » puisque la
+      bibliothèque standard déclare `final case class Tuple2`.
+
+      🔴 **TROIS DÉFAUTS FONDATEURS DANS DES CORPS DE LEÇON — le type même qui a fondé cette chaîne :**
+      1. `lecon-14` : `naturels.map(_ * _).take(5).toList // List(0, 1, 4, 9, 16)`. **Ce code ne
+         compile pas** — en Scala chaque `_` est un paramètre distinct, donc `_ * _` est un
+         `(Int, Int) => Int` que `map` refuse. La sortie annoncée est celle des carrés.
+      2. `lecon-11` : une propriété ScalaCheck **donnée en exemple est RÉFUTÉE**, par débordement
+         `Int` — vérifié par exécution, `(2147483647*2)|0` rend **-2** — et c'est la leçon elle-même
+         qui garantit le contre-exemple en écrivant que ScalaCheck tire « les valeurs extrêmes ».
+         **Dans la seule leçon du cours qui apprend à écrire des propriétés.**
+      3. `lecon-04` : « `List.from(1)` chercherait à construire une infinité d'éléments et
+         planterait » — il ne compile pas, il n'atteint jamais l'exécution.
+      Plus : `Future.fromOption` qui n'existe pas dans la bibliothèque standard, un `Encoder[Double]`
+      exigé et défini nulle part, un **schéma SVG inversé par rapport à son propre texte**, `Ok(...)`
+      annoté « 201 Created » (c'est 200), un « GET » pour un POST, une **sécurité en concurrence
+      affirmée trois fois** que le `var` réaffecté de la page ne procure pas (*lost update*), et un
+      tableau qui renvoyait `copy` à la leçon 14 (**0 occurrence**) au lieu de la 5 (**21**).
+
+      🟢 **QUATRE ATTEINTES À L'INTOUCHABLE, DÉLIBÉRÉES, LISTÉES ET COMMITÉES COMME TELLES.**
+      - `lecon-12` q2 : **la BONNE RÉPONSE contredisait sa propre leçon.** Elle enseignait le motif
+        **ETL** (« Extraction, Transformation, Chargement ») quand le corps enseigne **dix fois**
+        « lire → transformer → **agréger** » — titre de section, figure, antisèche, récap — et
+        l'énoncé est copié mot pour mot d'un « Vérifie ta compréhension » dont la réponse est
+        *agréger*. `ETL` n'apparaissait que **2 fois, toutes deux dans le QCM**. Bonne réponse et
+        explication refaites ; `ETL` ne figure plus dans la leçon.
+      - `lecon-09` q1 : la bonne réponse parlait du paramètre de type `T` quand le code de la leçon
+        écrit `def premier[A]`.
+
+      ⚠️ **LE RETOURNEMENT, MESURÉ UNE FOIS DE PLUS, ET LE COÛT EXACT DE LE FERMER.** Fermer « le mot
+      technique exclusif » l'a fait tomber à **13,3 %** en direct sur 15 questions — donc l'ÉCARTER
+      rendait **28,9 %**, au-dessus du seuil. **Une seule question retournée a suffi** à ramener
+      l'inverse à 26,7 %. Mais cette retouche a rouvert **la règle du `k`** (un mot de 6+ lettres
+      absent de la page), puis **la règle du `w`** (la bonne réponse redevenue la plus fournie), puis
+      **le mot exclusif lui-même** parce que le mot de remplacement, « programme », fait 9 lettres et
+      redevenait exclusif. **Quatre allers-retours pour une seule question** — chacun mesuré, aucun
+      deviné.
+
+      🔴 **RÉSIDU ASSUMÉ, CHIFFRÉ, NON MASQUÉ** : « la moins bavarde » rend **27,3 %** (seuil 28,0 %).
+      Elle était à 25,9 % avant mon rattrapage du mot exclusif. Le geste qui ferme l'un ouvre l'autre
+      — **mesuré quatre fois dans cette seule passe** (le lot 1 a vu « la plus détaillée » monter à
+      33,3 % en inverse, le lot 6 « la plus dense » à 28,8 %, le lot 4 « la moins bavarde » à 27,7 %).
+      Décision : on s'arrête au premier point sous tous les seuils.
+
+      ⚠️ **UNE PRISE DE RELECTEUR RÉFUTÉE PAR LE CORRECTEUR, avec preuve** : le relecteur du lot 5
+      jugeait « historiquement défendable » un distracteur disant qu'une garde de `for` devient un
+      `filter` strict (vrai avant Scala 2.8). Le cours enseigne Scala 3, où le désucrage est
+      `withFilter` — c'est le texte de l'`explain` intouchable. Le remède proposé aurait remplacé un
+      bon piège par une salade de mots. **Non corrigée.** Le lot 2 en a réfuté une autre de même
+      nature. C'est la deuxième passe où des relecteurs se trompent : la contradiction doit elle-même
+      être contredite.
+
+      **Contrôles** : `verif.js --rapide` **53 étapes tout vert (142,6 s)** ; `verif-html` **0** sur
+      1 629 pages ; `verif-donnees` **0 erreur** sur 26 invariants ; `verif-normatif` **75/75** ;
+      `verif-rendu` **0 erreur** sur les pages au SVG modifié ; épreuves par injection **10/10** et
+      **6/6** ; `mesure-qcm-intouchable` **4 atteintes, toutes délibérées et listées** ; **0 CR,
+      0 BOM, 0 URL externe** ; cliquets refigés, **`scala` marqué `traite` — 38 cours verrouillés**.
+      `doc/lecon-03` remis à jour (**13ᵉ repérimage** : 40,5 % → **39,5 %**, 2 473 → **2 411**,
+      3 630 → **3 692**, 36/89 → **37/89**) sans toucher aux deux chiffres **datés** ni au document
+      normatif publié. **Point fixe de la cascade index ⇄ études atteint en deux tours.**
+
+      ⚠️ **LIMITE DE CETTE PASSE, écrite plutôt que lissée** : aucune toolchain Scala sur la machine.
+      Les corrections de langage sont raisonnées sur la spécification et l'API standard, **pas
+      prouvées par compilation**. Le seul débordement vérifiable l'a été par exécution (`node -e`).
+      C'est le seul point où la règle fondatrice du chantier n'a pas pu s'appliquer.
+
+      **ÉTAT DU SITE** : **38 cours verrouillés**, global « la plus longue » **53,1 %**,
+      **49 cours** encore au-dessus de 60 %.
+
+      **LE 40ᵉ COURS EST MESURÉ ET SA CONSIGNE EST ÉCRITE — la prochaine passe démarre sur
+      l'écriture, pas sur le diagnostic.** Classement par **nocivité réelle** (questions × taux) :
+      `crypto` **61 devinables**, puis `haskell` 61, `pandas` 61, `clojure` 59, `powershell` 59,
+      `sass` 59, `securite` 59, `elixir` 58. **Le 40ᵉ est `crypto`** — 68 questions sur 11 leçons,
+      dont **22 en QCM bilan** (`lecon-03` et `lecon-11`) :
+
+      | indice | réussite | rendement |
+      |---|---:|---:|
+      | la plus longue (couverture **100 %**) | **89,7 %** | 89,7 % |
+      | la plus détaillée | 69,7 % | 88,4 % |
+      | la seule qui nie | 45,3 % | 65,4 % |
+      | **la seule avec un tiret** | 40,8 % | **100 %** |
+      | le mot technique exclusif | 37,3 % | 43,5 % |
+      | la MAJUSCULE d'emphase | 32,4 % | 56,3 % |
+
+      Rangs **61/4/0/3**, **48 questions à retoucher, 5 255 caractères** ; lexique **58 exploitables
+      sur 68 et 68 sur 68 à mettre en forme** ; **CINQ mots fétiches** au-dessus du seuil (`chaque`
+      34,1 %, `compte` 32,8 %, `chiffré` 31,2 %, `jamais` 30,2 %, `secret` 28,4 %) ; intrus lexical
+      **1 question sûre**.
+      Consigne réutilisable : `scratchpad/CONSIGNE-CRYPTO.md`. Elle met **la salade de mots en tête**
+      (c'est la leçon chiffrée du 39ᵉ : 30 prises sur 54), porte l'avertissement sur le
+      **retournement du mot technique exclusif** et son piège dans le piège (le mot de remplacement
+      qui redevient exclusif), le **singulier/pluriel** qui laisse les deux outils verts, et les
+      trois leçons de méthode : contredire la contradiction, rejouer les six mesures après **chaque**
+      retouche, et corriger le corps avant le QCM.
+
+      ---
+
       ## B4 NE PEUT PAS ETRE COCHEE — verdict inscrit ici le 2026-09-10 par le point E2 du chantier V17
 
       **Ce paragraphe existe pour qu'une passe future ne coche pas B4 par erreur.** Le plan a
