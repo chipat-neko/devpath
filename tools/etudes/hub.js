@@ -41,7 +41,7 @@ const ETUDES = [
     fichier: 'etude-moteur-exos.html', accent: 'typescript',
     badge: 'Un fichier trop gros',
     apprend: 'La situation ordinaire : un fichier que personne ne lit en entier. On y apprend à cartographier plutôt qu\'à lire, à entrer par un point, à suivre un seul fil — et à savoir ce qu\'on ne lit pas.',
-    preuve: '2019 lignes',
+    preuve: '2051 lignes',
     preuveTexte: 'un fichier de 2 019 lignes, dont les extraits publiés sont relus dans le code du site à chaque assemblage',
   },
   {

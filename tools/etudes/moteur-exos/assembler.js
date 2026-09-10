@@ -33,11 +33,11 @@ var fautes = [];
    décalage d'une seule ligne dans js/lecon.js fait échouer l'assemblage. */
 var REPERES = {
   ENTREE:    { a: 1223, b: 1229, debut: /^  function initExos\(\) \{$/,          fin: /var exercises = document\.querySelectorAll/ },
-  APPARIER:  { a: 1231, b: 1236, debut: /^    \/\/ L'appariement se fait par index/, fin: /if \(data\.length !== exercises\.length/ },
-  TYPES:     { a: 1258, b: 1269, debut: /^      var isCode = entry\.type === "code";$/, fin: /^      var multiligne = isCode \|\| isSql \|\| isPython;$/ },
-  LABEL:     { a: 1275, b: 1284, debut: /^      \/\* La vraie micro-question/,    fin: /"Ta réponse :"\);$/ },
-  AIDE:      { a: 1334, b: 1340, debut: /^      function refreshHelp\(\) \{$/,   fin: /while \(shownHints < target\) \{$/ },
-  VERDICT:   { a: 1409, b: 1423, debut: /^            var pass;$/,               fin: /^              pass = normExo\(output\) === normExo\(expect\) \|\| uneLigneEgale\(output, expect\);$/ },
+  APPARIER:  { a: 1261, b: 1266, debut: /^    \/\/ L'appariement se fait par index/, fin: /if \(data\.length !== exercises\.length/ },
+  TYPES:     { a: 1290, b: 1301, debut: /^      var isCode = entry\.type === "code";$/, fin: /^      var multiligne = isCode \|\| isSql \|\| isPython;$/ },
+  LABEL:     { a: 1307, b: 1316, debut: /^      \/\* La vraie micro-question/,    fin: /"Ta réponse :"\);$/ },
+  AIDE:      { a: 1366, b: 1372, debut: /^      function refreshHelp\(\) \{$/,   fin: /while \(shownHints < target\) \{$/ },
+  VERDICT:   { a: 1441, b: 1455, debut: /^            var pass;$/,               fin: /^              pass = normExo\(output\) === normExo\(expect\) \|\| uneLigneEgale\(output, expect\);$/ },
   UNELIGNE:  { a: 706,  b: 715,  debut: /^  \/\* Vrai si l'une des lignes de la sortie/, fin: /^  \}$/ },
   NORMEXO:   { a: 717,  b: 725,  debut: /^  function normExo\(s\) \{$/,          fin: /^  \}$/ },
 };
@@ -57,8 +57,8 @@ Object.keys(REPERES).forEach(function (nom) {
   r.texte = extrait(r.a, r.b);
 });
 
-if (lignesLecon.length !== 2019) {
-  fautes.push("js/lecon.js fait " + lignesLecon.length + " lignes ; l'étude en annonce 2019 (mets à jour le texte de la page)");
+if (lignesLecon.length !== 2051) {
+  fautes.push("js/lecon.js fait " + lignesLecon.length + " lignes ; l'étude en annonce 2051 (mets à jour le texte de la page)");
 }
 
 if (fautes.length) {
