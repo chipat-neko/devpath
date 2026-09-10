@@ -4741,10 +4741,50 @@ affiché à l'apprenant — et l'audit a montré que la cause est presque toujou
 Huit constats retenus sur le wrapper et sa surveillance. Aucun n'a touché un apprenant ; tous ont coûté
 des heures de travail perdues ou invisibles.
 
-- [ ] **D1 · `Get-HeureReset` reporte au lendemain au maximum, alors qu'une limite HEBDOMADAIRE peut se
+- [x] **D1 · `Get-HeureReset` reporte au lendemain au maximum, alors qu'une limite HEBDOMADAIRE peut se
       remettre à zéro six jours plus tard.** L'API donne la date exacte
       (`tools/usage-anthropic.js reset`) : s'en servir toujours, et ne garder le message texte que comme
       repli. Éprouver sur les quatre formes réelles trouvées dans les transcrits.
+
+      **FAIT le 2026-09-10.** *Le défaut est chiffré, pas supposé* : au moment du travail,
+      le texte de `claude.exe` (« resets 1am ») faisait calculer une reprise au
+      **2026-09-11 01:00** quand l'API annonçait **2026-09-15 00:59** — **96 heures
+      d'écart**. Le wrapper serait donc reparti toutes les deux heures pendant **quatre
+      jours** pour se faire refuser aussitôt. Et la trace du défaut était sur le disque :
+      `.autonomie/limite-hebdo.txt` contenait `2026-09-08 01:00`, c'est-à-dire le lendemain
+      du refus, jamais le vrai jour.
+
+      **UN SECOND DÉFAUT, TROUVÉ EN COMPTANT LES FORMES RÉELLES.** Le relevé des 726
+      réveils du journal donne quatre formes, et l'ancienne expression n'en lisait que
+      deux : `resets Aug 11, 1am` (**73 fois**, hebdomadaire, **avec la date**),
+      `resets 1am` (8), `resets 2:30pm` (14), `resets 5am` (6). Sur **la plus fréquente**,
+      elle ne trouvait rien et le journal notait « heure inconnue » — la date était pourtant
+      écrite noir sur blanc. Le mois nommé est maintenant lu (abrégé ou entier), l'année
+      déduite, et seule la forme **sans date** reporte encore au lendemain.
+
+      **CE QUI A ÉTÉ FAIT.** Les trois fonctions vivent dans `.autonomie/lib-reset.ps1`,
+      chargée par le wrapper : l'épreuve met ainsi à l'épreuve **la fonction de
+      production**, et non une copie qui divergerait. La branche hebdomadaire appelle
+      `Resolve-ResetHebdo` — **l'API d'abord, le texte en repli**, l'inverse de l'ordre
+      précédent — et le journal note désormais la **provenance** de l'heure retenue
+      (`source : api` / `texte` / `aucune`). `limite-hebdo.txt`, lui, ne reçoit que la date :
+      un fichier que d'autres outils peuvent relire ne doit pas changer de forme.
+      **Garde-fou** : si la lib manquait, le wrapper ne s'arrête pas — il retombe sur le
+      report prudent de 12 h, parce qu'une autonomie morte est pire que le défaut corrigé.
+
+      **ÉPREUVE — 15 cas sur 15** (`powershell -File .autonomie\epreuve-reset.ps1`) : les
+      **4 formes réelles**, puis les pièges de la conversion 12 h (`12am` → 00:00,
+      `Dec 3, 12pm` → 12:00, `Sep 1, 11:50pm` → 23:50, mois entier « August »), les deux
+      cas où il n'y a rien à lire, la **comparaison API / texte** (96 h d'écart, décision
+      « source api »), et **4 contrôles du branchement lus dans le wrapper réel** : il
+      charge la lib, la branche hebdo passe par `Resolve-ResetHebdo`, il n'appelle plus
+      `usage-anthropic.js` en direct, et l'ancienne implémentation n'y dort plus.
+
+      **ET LE CHARGEMENT EST PROUVÉ DANS LE CONTEXTE DU WRAPPER**, pas seulement en
+      théorie : les 45 premières lignes d'`autonomie.ps1` exécutées telles quelles rendent
+      *« lib chargée : OUI »* puis *« decision : 09/15/2026 00:59:59 · source : api »*.
+      Les cinq scripts PowerShell du projet passent l'analyse syntaxique
+      (`[Parser]::ParseFile`), **0 erreur**.
 
 - [ ] **D2 · Le verrou de pause d'usage peut poser une reprise DÉJÀ PASSÉE**, auquel cas il ne diffère
       plus rien. Vérifier que la date calculée est dans le futur, sinon reporter au prochain créneau

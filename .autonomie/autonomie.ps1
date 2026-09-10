@@ -21,22 +21,23 @@ $claude = 'C:\Users\chipat\.local\bin\claude.exe'
 if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
 function Stamp { (Get-Date).ToString('yyyy-MM-dd HH:mm:ss') }
 
-# Lecture de l'heure de reprise annoncee par claude.exe. Les messages ont la forme
-# exacte : You've hit your session limit - resets 2:30pm (Europe/Paris), ou bien
-# resets 1am. On rend un DateTime local, reporte au lendemain si l'heure est passee.
-function Get-HeureReset($texte) {
-  if (-not $texte) { return $null }
-  $m = [regex]::Match($texte, 'resets\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)', 'IgnoreCase')
-  if (-not $m.Success) { return $null }
-  $h = [int]$m.Groups[1].Value
-  $min = 0
-  if ($m.Groups[2].Success) { $min = [int]$m.Groups[2].Value }
-  $ampm = $m.Groups[3].Value.ToLower()
-  if ($ampm -eq 'pm' -and $h -ne 12) { $h = $h + 12 }
-  if ($ampm -eq 'am' -and $h -eq 12) { $h = 0 }
-  $d = (Get-Date).Date.AddHours($h).AddMinutes($min)
-  if ($d -le (Get-Date)) { $d = $d.AddDays(1) }
-  return $d
+# Lecture de l'heure de reprise annoncee par claude.exe : Get-HeureReset,
+# Get-ResetHebdoApi et Resolve-ResetHebdo vivent dans .autonomie/lib-reset.ps1,
+# pour que .autonomie/epreuve-reset.ps1 mette a l'epreuve LA MEME fonction que
+# celle qui tourne ici (point D1 du chantier V17). L'ancienne version, ecrite a
+# cet endroit, ne savait rendre qu'une heure du jour ou du lendemain -- exact pour
+# une limite de session, faux de QUATRE JOURS pour une limite hebdomadaire -- et
+# elle ne savait pas lire la forme datee << resets Aug 11, 1am >>, pourtant la
+# plus frequente du journal (73 occurrences sur 726 reveils).
+$libReset = Join-Path $dir 'lib-reset.ps1'
+if (Test-Path $libReset) { . $libReset }
+else {
+  # Sans la lib, le wrapper doit continuer : une autonomie qui s'arrete parce qu'un
+  # fichier annexe manque est pire que le defaut qu'il corrigeait. On retombe alors
+  # sur le comportement le plus prudent : aucune heure lue, donc report par defaut.
+  function Get-HeureReset($texte) { return $null }
+  function Get-ResetHebdoApi($p) { return $null }
+  function Resolve-ResetHebdo($p, $t) { return [pscustomobject]@{ Quand = $null; Source = 'lib-absente' } }
 }
 
 # Ecriture du journal a l'epreuve d'un verrou. Constate le 2026-08-21 : un simple
@@ -313,17 +314,17 @@ try {
   if ($sortie -match "hit your weekly limit") {
     # LIMITE HEBDOMADAIRE : on arrete TOUT. Sans ce controle, la tache se reveillait
     # toutes les 2 h pour echouer aussitot, ce qui ne sert qu'a brasser du vide.
-    $quand = Get-HeureReset $sortie
-    if (-not $quand) {
-      # Le message ne portait pas d'heure lisible (constate le 2026-08-27 : la reprise
-      # a ete notee heure inconnue). L'API, elle, donne la date exacte de remise a zero.
-      try {
-        $iso = (& node (Join-Path $proj 'tools\usage-anthropic.js') reset 2>$null | Select-Object -Last 1)
-        if ($iso) { $quand = ([datetime]::Parse($iso)).ToLocalTime() }
-      } catch {}
-    }
+    # L'API D'ABORD, LE TEXTE EN REPLI (point D1, inverse le 2026-09-10). L'ancien
+    # ordre demandait au TEXTE une information qu'il ne porte pas : le JOUR de la
+    # remise a zero hebdomadaire. Mesure du 2026-09-10 : le texte disait 2026-09-11
+    # 01:00, l'API 2026-09-15 00:59 -- 96 heures d'ecart, soit quatre jours de
+    # reveils toutes les deux heures pour se faire refuser aussitot.
+    $res = Resolve-ResetHebdo $proj $sortie
+    $quand = $res.Quand
+    # Le fichier limite-hebdo.txt ne recoit que la DATE (il peut etre relu par un
+    # outil) ; la provenance ne va qu'au journal, ou elle sert a comprendre apres coup.
     $txt = if ($quand) { $quand.ToString('yyyy-MM-dd HH:mm') } else { 'heure inconnue' }
-    Log "[$(Stamp)] ===== LIMITE HEBDOMADAIRE ATTEINTE. Reveil reporte a $txt, pas de nouvelle tentative d ici la. ====="
+    Log "[$(Stamp)] ===== LIMITE HEBDOMADAIRE ATTEINTE. Reveil reporte a $txt (source : $($res.Source)), pas de nouvelle tentative d ici la. ====="
     try {
       $reprise = if ($quand) { $quand.AddMinutes(10) } else { (Get-Date).AddHours(12) }
       $tLim = New-ScheduledTaskTrigger -Once -At $reprise -RepetitionInterval (New-TimeSpan -Hours 2)
