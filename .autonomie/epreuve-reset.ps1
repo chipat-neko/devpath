@@ -273,6 +273,59 @@ if ($d.Valide) { Write-Host ("  OK       ecrit par Write-DrapeauFin, relu valide
 else { Write-Host ("  ECHEC    ecrit par Write-DrapeauFin mais relu invalide : " + $d.Pourquoi); $script:ko++ }
 Remove-Item $tmpOk -Force -ErrorAction SilentlyContinue
 
+# --- 3 septies. LA ROTATION DU JOURNAL (point D9) -----------------------------
+# Jouee sur un faux journal, dans un dossier temporaire : le journal de production
+# n'est jamais touche par cette epreuve.
+Write-Host "`n--- la rotation du journal (point D9) ---"
+$tmpJ = Join-Path $env:TEMP ('journal-essai-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+New-Item -ItemType Directory -Path $tmpJ -Force | Out-Null
+$fauxLog = Join-Path $tmpJ 'journal.log'
+
+# 1. Sous le seuil : on ne touche a rien.
+$script:total++
+Set-Content -Path $fauxLog -Value @('[2026-01-01 00:00:00] petit journal') -Encoding utf8
+$r1 = Invoke-RotationJournal $fauxLog 1MB 400 8
+$intact = ((Get-Content $fauxLog).Count -eq 1)
+if (-not $r1.Fait -and $intact) { Write-Host ("  OK       sous le seuil : rien n'est fait (" + $r1.Pourquoi + ")"); $script:ok++ }
+else { Write-Host ("  ECHEC    sous le seuil : Fait=" + $r1.Fait + " intact=" + $intact); $script:ko++ }
+
+# 2. Au-dessus du seuil : archive, et la FIN reste en place.
+$script:total++
+$lignes = 1..5000 | ForEach-Object { '[2026-01-01 00:00:00] ligne ' + $_ + ' ' + ('x' * 100) }
+Set-Content -Path $fauxLog -Value $lignes -Encoding utf8
+$tailleAvant = (Get-Item $fauxLog).Length
+$r2 = Invoke-RotationJournal $fauxLog 100KB 50 8
+$apres = Get-Content $fauxLog
+$derniere = $apres[$apres.Count - 1]
+$bon = $r2.Fait -and (Test-Path $r2.Archive) -and ($apres.Count -eq 51) -and ($derniere -like '*ligne 5000*') -and
+       ((Get-Item $fauxLog).Length -lt $tailleAvant)
+if ($bon) {
+  Write-Host ("  OK       " + [math]::Round($tailleAvant / 1KB) + " Ko -> " + [math]::Round((Get-Item $fauxLog).Length / 1KB) +
+              " Ko, " + $apres.Count + " lignes, archive " + (Split-Path $r2.Archive -Leaf))
+  $script:ok++
+} else {
+  Write-Host ("  ECHEC    Fait=" + $r2.Fait + " lignes=" + $apres.Count + " derniere=" + $derniere); $script:ko++
+}
+
+# 3. LA CONTRAINTE QUI COMPTE : la surveillance doit encore trouver une trace datee.
+$script:total++
+$trace = Select-String -Path $fauxLog -Pattern '^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]' | Select-Object -Last 1
+if ($trace) { Write-Host ("  OK       la derniere trace horodatee est toujours lisible apres rotation"); $script:ok++ }
+else { Write-Host "  ECHEC    plus aucune trace horodatee : sante-autonomie inventerait une anomalie"; $script:ko++ }
+
+# 4. La purge des archives : on n'en garde que N.
+$script:total++
+1..12 | ForEach-Object {
+  Set-Content -Path $fauxLog -Value $lignes -Encoding utf8
+  Invoke-RotationJournal $fauxLog 100KB 20 3 | Out-Null
+  Start-Sleep -Milliseconds 1100   # les archives sont nommees a la seconde
+}
+$nbArchives = @(Get-ChildItem -Path $tmpJ -Filter 'journal-*.log' -File).Count
+if ($nbArchives -le 3) { Write-Host ("  OK       purge : " + $nbArchives + " archive(s) conservee(s) sur 13 rotations (max 3)"); $script:ok++ }
+else { Write-Host ("  ECHEC    purge : " + $nbArchives + " archives, plus que le maximum de 3"); $script:ko++ }
+
+Remove-Item $tmpJ -Recurse -Force -ErrorAction SilentlyContinue
+
 # --- 4. LE BRANCHEMENT, lu dans le wrapper REEL -------------------------------
 # Une lib juste dont personne ne se sert ne corrige rien : on verifie sur le
 # fichier de production qu'il la charge, qu'il passe par la decision, et que
@@ -285,6 +338,7 @@ $controles = @(
   @{ quoi = "il n'appelle plus usage-anthropic.js en direct"; motif = "usage-anthropic\.js'\) reset"; present = $false },
   @{ quoi = "l'ancienne lecture d'heure n'y dort plus";   motif = 'Date\.AddHours\(\$h\)\.AddMinutes\(\$min\)'; present = $false },
   @{ quoi = "les 3 replanifications passent par Get-RepriseSure"; motif = '(?s)Get-RepriseSure.*Get-RepriseSure.*Get-RepriseSure'; present = $true },
+  @{ quoi = "le journal est mis en rotation au demarrage"; motif = 'Invoke-RotationJournal \$log 1MB 400 8'; present = $true },
   @{ quoi = "l'arret volontaire est lu AU DEMARRAGE"; motif = '(?s)\$marqueurArret = Join-Path \$dir .arret-volontaire\.txt.*?exit 0'; present = $true },
   @{ quoi = "la garde d'arret precede le verrou anti-chevauchement"; motif = '(?s)arret volontaire en place.*?if \(Test-Path \$lock\)'; present = $true },
   @{ quoi = "le drapeau de fin est juge, pas seulement teste"; motif = 'Test-DrapeauFin \$okFile'; present = $true },

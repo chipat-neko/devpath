@@ -216,6 +216,60 @@ function Get-DescriptionChaine($proj, $chaine, $planCourant) {
   return $txt
 }
 
+# LA ROTATION DU JOURNAL (point D9).
+# `journal.log` recevait l'INTEGRALITE de la sortie du modele et n'avait aucune
+# rotation : 622 847 octets, 7 310 lignes, 762 reveils au 2026-09-10, depuis le
+# 2026-07-01. Il grossit d'environ 9 Ko par jour et rien ne l'arrete.
+#
+# ⚠ DEUX CONTRAINTES QUI DICTENT LA FORME DE CETTE FONCTION.
+# 1. `tools/sante-autonomie.ps1` cherche la DERNIERE ligne horodatee du journal pour
+#    savoir depuis quand l'autonomie se tait. Une rotation qui repartirait d'un fichier
+#    VIDE lui ferait lire << aucune trace >>, donc $silenceH = 999, donc une ANOMALIE
+#    inventee -- et, avec -Reparer, une reactivation qui ne repare rien. On conserve
+#    donc la FIN du journal dans le fichier courant.
+# 2. Sous Windows, un fichier ouvert ailleurs (le piege du `tail -f`, mesure le
+#    2026-08-21) ne peut etre ni renomme ni reecrit. Tout echec est donc AVALE : la
+#    rotation est un confort, jamais une condition pour travailler.
+#
+# Rend : .Fait, .Pourquoi, .Archive, .LignesGardees, .TailleAvant.
+function Invoke-RotationJournal($log, $tailleMaxOctets, $lignesGardees, $archivesMax) {
+  if (-not $tailleMaxOctets) { $tailleMaxOctets = 1MB }
+  if (-not $lignesGardees) { $lignesGardees = 400 }
+  if (-not $archivesMax) { $archivesMax = 8 }
+  $res = [pscustomobject]@{ Fait = $false; Pourquoi = ''; Archive = ''; LignesGardees = 0; TailleAvant = 0 }
+  if (-not (Test-Path $log)) { $res.Pourquoi = 'aucun journal'; return $res }
+  try { $res.TailleAvant = (Get-Item $log).Length } catch { $res.Pourquoi = 'journal illisible'; return $res }
+  if ($res.TailleAvant -lt $tailleMaxOctets) { $res.Pourquoi = 'sous le seuil'; return $res }
+
+  $dossier = Split-Path $log -Parent
+  $base = [System.IO.Path]::GetFileNameWithoutExtension($log)
+  $archive = Join-Path $dossier ($base + '-' + (Get-Date).ToString('yyyyMMdd-HHmmss') + '.log')
+  try {
+    $contenu = Get-Content $log -ErrorAction Stop
+    $fin = $contenu | Select-Object -Last $lignesGardees
+    Copy-Item -Path $log -Destination $archive -ErrorAction Stop
+    $entete = '[' + (Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '] ===== ROTATION : ' +
+              $contenu.Count + ' lignes (' + [math]::Round($res.TailleAvant / 1KB) + ' Ko) archivees dans ' +
+              (Split-Path $archive -Leaf) + ', les ' + (@($fin).Count) + ' dernieres restent ici. ====='
+    Set-Content -Path $log -Value (@($entete) + @($fin)) -Encoding utf8 -ErrorAction Stop
+    $res.Fait = $true
+    $res.Archive = $archive
+    $res.LignesGardees = @($fin).Count
+    $res.Pourquoi = 'rotation effectuee'
+  } catch {
+    $res.Pourquoi = "rotation impossible ($_)"
+    return $res
+  }
+  # Purge des archives les plus anciennes : le but est de ne pas grossir sans fin.
+  try {
+    Get-ChildItem -Path $dossier -Filter ($base + '-*.log') -File |
+      Sort-Object LastWriteTime -Descending |
+      Select-Object -Skip $archivesMax |
+      Remove-Item -Force -ErrorAction SilentlyContinue
+  } catch {}
+  return $res
+}
+
 # LE DRAPEAU DE FIN DE CHANTIER, DATE ET RATTACHE A UN ETAT (point D7).
 # `.autonomie/verif-finale.ok` autorise le wrapper a DESACTIVER la tache. Il etait
 # cree une fois et JAMAIS supprime : trois occurrences dans le wrapper, aucune

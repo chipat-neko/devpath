@@ -5040,10 +5040,44 @@ des heures de travail perdues ou invisibles.
       Plus **2 contrôles lus dans le wrapper** (`epreuve-reset.ps1`, **66 cas sur 66**) : le
       marqueur est lu au démarrage, et cette lecture **précède** `if (Test-Path $lock)`.
 
-- [ ] **D9 · `journal.log` n'a aucune rotation** et reçoit l'intégralité de la sortie du modèle : 640 Ko,
+- [x] **D9 · `journal.log` n'a aucune rotation** et reçoit l'intégralité de la sortie du modèle : 640 Ko,
       6 693 lignes, 726 réveils. Poser une rotation, et vérifier qu'elle ne casse pas la lecture de
       `sante-autonomie.ps1`. **Piège connu à respecter** : ne jamais ouvrir ce fichier avec un `tail -f`
       — sous Windows cela le verrouille et `Add-Content` échoue en silence.
+
+      **FAIT le 2026-09-10.** *Mesure du jour* : **622 847 octets, 7 310 lignes, 762 réveils**
+      depuis le 2026-07-01 — **71 jours, soit environ 9 Ko par jour**, et rien ne l'arrêtait.
+
+      **LA CONTRAINTE QUI DICTE LA FORME DE LA ROTATION, et qui interdit la solution
+      évidente.** `tools/sante-autonomie.ps1` cherche la **dernière ligne horodatée** pour
+      savoir depuis quand l'autonomie se tait. Une rotation qui repartirait d'un fichier
+      **vide** lui ferait lire « aucune trace », donc `$silenceH = 999`, donc une **anomalie
+      inventée** — et, en `-Reparer`, une réactivation qui ne répare rien. `Invoke-RotationJournal`
+      **conserve donc les 400 dernières lignes** dans le fichier courant, copie le tout dans
+      `journal-AAAAMMJJ-HHMMSS.log`, et laisse en tête une ligne qui dit ce qui a été archivé.
+      Seuil **1 Mo**, **8 archives** au plus (purgées de la plus ancienne), et le motif
+      `.autonomie/journal-*.log` est ajouté au `.gitignore`.
+
+      **LE PIÈGE DU FICHIER VERROUILLÉ EST TRAITÉ, PAS IGNORÉ** : sous Windows, un journal
+      ouvert ailleurs ne peut être ni copié ni réécrit. Tout échec est **avalé** et signalé au
+      journal — la rotation est un confort, jamais une condition pour travailler.
+
+      **ÉPREUVE — 71 cas sur 71** au total, dont **5 pour la rotation**, joués sur un **faux
+      journal en dossier temporaire** : *celui de production n'est jamais touché*.
+      · sous le seuil → **rien n'est fait**, fichier intact ;
+      · au-dessus → **658 Ko → 7 Ko, 51 lignes**, archive écrite, et la dernière ligne du
+        fichier courant est bien **la dernière ligne d'origine** (« ligne 5000 ») ;
+      · **la trace horodatée reste lisible** après rotation — le contrôle qui garantit que
+        la surveillance n'inventera pas d'anomalie ;
+      · **purge** : 13 rotations avec un maximum de 3 → **3 archives** conservées ;
+      · plus un contrôle lu dans le wrapper : la rotation est bien appelée au démarrage.
+
+      **CE QUI N'A PAS ÉTÉ FAIT, ET POURQUOI.** La rotation n'a **pas** été déclenchée sur le
+      journal réel : à 622 Ko il est sous le seuil, et le forcer aurait sorti de leur place
+      des lignes qui ont servi **aujourd'hui même** — les mesures des points D1 (les quatre
+      formes de « resets ») et D8 (l'arrêt manuel suivi d'un réveil neuf secondes plus tard)
+      viennent de ce fichier. Elle se déclenchera d'elle-même vers **1 Mo**, soit ~40 jours au
+      rythme mesuré.
 
 - [ ] **D10 · Le verrou anti-chevauchement peut prendre un PID recyclé pour la passe précédente** et
       sauter les réveils jusqu'au plafond de 6 h. Ajouter une vérification de l'heure de démarrage du

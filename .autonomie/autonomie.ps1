@@ -89,6 +89,16 @@ function Log($texte) {
 # arret.ps1 pose ce marqueur precisement pour que rien ne redemarre ; le supprimer est
 # ce qui autorise la reprise. Drapeau explicite pour passer outre :
 #   $env:SYNTAXE_MALGRE_ARRET = '1'  (une seule execution, jamais persistant)
+# ROTATION DU JOURNAL (point D9), avant tout le reste : il grossissait sans fin
+# (622 Ko, 7 310 lignes, 762 reveils au 2026-09-10). Les 400 dernieres lignes restent
+# en place -- sans quoi tools/sante-autonomie.ps1, qui cherche la derniere trace
+# horodatee, lirait << aucune trace >> et inventerait une anomalie.
+if (Get-Command Invoke-RotationJournal -ErrorAction SilentlyContinue) {
+  $rot = Invoke-RotationJournal $log 1MB 400 8
+  if ($rot.Fait) { Log "[$(Stamp)] journal archive : $(Split-Path $rot.Archive -Leaf) ($([math]::Round($rot.TailleAvant / 1KB)) Ko), $($rot.LignesGardees) lignes conservees." }
+  elseif ($rot.Pourquoi -like 'rotation impossible*') { Log "[$(Stamp)] ATTENTION $($rot.Pourquoi) -- le journal continue de grossir." }
+}
+
 $marqueurArret = Join-Path $dir 'arret-volontaire.txt'
 if (Test-Path $marqueurArret) {
   $quoi = ''
