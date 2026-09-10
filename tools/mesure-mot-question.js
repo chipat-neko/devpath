@@ -68,7 +68,11 @@ function questionsDe(cours) {
     while ((x = rx.exec(src))) {
       try {
         JSON.parse(x[1]).forEach(function (q) {
-          if (q && Array.isArray(q.a) && q.a.length === 4 && typeof q.correct === "number") {
+          /* >= 3 options : a deux, « le mot que l'autre n'a pas » designe les deux
+             lectures a la fois et la mesure degenere. `mesure-biais-qcm` accepte
+             `a.length >= 2` : c'est TOUTE la difference entre ses 6 151 questions et
+             les 5 983 d'ici. L'ecart est explique, pas subi. */
+          if (q && Array.isArray(q.a) && q.a.length >= 3 && typeof q.correct === "number") {
             out.push({ q: q, f: f });
           }
         });
@@ -91,6 +95,7 @@ function mots(t, min) {
    DEFAUT : il existe un mot porte par exactement 3 options -> la 4e est designee.
    EXCES  : il existe un mot porte par exactement 1 option  -> celle-la est designee. */
 function intrus(opts, min) {
+  var n = opts.length;
   var jeux = opts.map(function (o) { return mots(o, min); });
   var compte = new Map();
   jeux.forEach(function (s, i) {
@@ -101,8 +106,8 @@ function intrus(opts, min) {
   });
   var parDefaut = new Set(), parExces = new Set(), motsD = [], motsE = [];
   compte.forEach(function (ou, m) {
-    if (ou.length === 3) {
-      for (var i = 0; i < 4; i++) if (ou.indexOf(i) === -1) { parDefaut.add(i); motsD.push(m); }
+    if (ou.length === n - 1) {
+      for (var i = 0; i < n; i++) if (ou.indexOf(i) === -1) { parDefaut.add(i); motsD.push(m); }
     } else if (ou.length === 1) {
       parExces.add(ou[0]); motsE.push(m);
     }
@@ -122,7 +127,8 @@ function mesurer(cours) {
     var q = e.q, r = intrus(q.a, MIN);
     ["defaut", "exces"].forEach(function (sens) {
       var d = r[sens];
-      if (!d.length || d.length === 4) { res[sens].credit += 0.25; return; }
+      var h = 1 / q.a.length;
+      if (!d.length || d.length === q.a.length) { res[sens].credit += h; return; }
       res[sens].tranchees++;
       if (d.indexOf(q.correct) !== -1) {
         res[sens].credit += 1 / d.length;
