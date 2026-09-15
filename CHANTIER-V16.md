@@ -6581,6 +6581,48 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       2 654 questions dont **2 434 devinables**, global « la plus longue » **52,4 %**.
       **Il reste 29 cours** sur les 30 du périmètre fixé par Noah.
 
+
+      **LE 41ᵉ COURS EST MESURÉ ET SA CONSIGNE EST ÉCRITE — la prochaine passe démarre sur
+      l'écriture, pas sur le diagnostic.** Classement par nocivité réelle rejoué sur les 29 cours
+      restants du périmètre : `pandas` **61 devinables**, `haskell` 61, `sass` 59, `securite` 59,
+      `clojure` 59, `powershell` 59, `go` 58, `elixir` 58. **Le 41ᵉ est `pandas`** — 65 questions sur
+      14 leçons, 195 distracteurs, dont **15 questions dans `lecon-14`** (3 de leçon, **12 en
+      bilan**) :
+
+      | indice | réussite | couverture | rendement |
+      |---|---:|---:|---:|
+      | la plus longue | **93,8 %** | 95,4 % | 96,8 % |
+      | la plus détaillée | **82,2 %** | 73,8 % | **100 %** |
+      | l'incise entre parenthèses | 61,5 % | 53,8 % | 91,4 % |
+      | RESTREINDRE à la ponctuation forte | 59,1 % | 41,5 % | **100 %** |
+      | le mot technique exclusif | 53,2 % | 64,6 % | 64,3 % |
+      | RESTREINDRE aux deux-points | 49,0 % | 30,8 % | 95,0 % |
+      | l'écho de la question | 47,6 % | 36,9 % | 75,0 % |
+
+      Rangs **62/2/0/1**, **60 questions à retoucher sur 65, 12 457 caractères** — **2,4 fois le lot
+      de `crypto`** (5 255) ; lexique **52 exploitables sur 65 et 55 sur 65 à mettre en forme** ;
+      **HUIT mots fétiches** au-dessus du seuil, et ce sont des mots du DOMAINE qu'on ne peut pas
+      retirer (`ligne` 34,2 %, `colonne` 33,1 %, `lignes` 32,8 %, `chaque` 32,7 %, `colonnes` 30,6 %,
+      `index` 30,5 %, `table` 30,4 %, `valeurs` 28,8 %) ; intrus lexical **2 questions sûres** ; sens
+      inverse **6 alertes** (« la TROISIÈME plus longue » 32,1 % en global).
+
+      **DEUX MESURES QUI CHANGENT LA MANIÈRE DE PRENDRE CE COURS :**
+      1. **La bonne réponse fait 119,5 caractères en moyenne, un distracteur 41,9 — rapport 2,85.**
+         La médiane du même rapport est **0,99 sur les 39 cours déjà traités** et **3,41 sur les 51
+         autres**. Presque tout le travail est donc de l'**allongement** de télégrammes (le plus court
+         distracteur du cours fait **6 caractères**) : c'est le terrain exact de la salade de mots,
+         et la consigne met cet avertissement en tête.
+      2. 🟢 **`pandas` EST INSTALLÉ SUR LA MACHINE** — `pd.__version__` = **3.0.5**, Python 3.14.5.
+         Pour la première fois depuis le 37ᵉ cours, la règle fondatrice (« ne jamais affirmer un
+         comportement de tête ») est **applicable sans réserve**, là où `scala` avait dû inscrire
+         l'absence de toolchain comme sa seule limite. ⚠️ **Mais le cours enseigne 2.0 / 2.2**, et
+         deux écarts de version sont déjà mesurés : le `dtype` d'une colonne de texte est **`str`**
+         en 3.0 (le cours dit `object`), et **`applymap` n'existe plus**. Une exécution qui diverge
+         doit donc être analysée, pas appliquée.
+
+      Consigne réutilisable : `scratchpad/CONSIGNE-PANDAS.md`. Douze faits de pandas y sont vérifiés
+      par exécution, pour que les écrivains n'aient pas à les redécouvrir.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
