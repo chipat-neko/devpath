@@ -6491,6 +6491,34 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       **Et n'oublier ni la sixième consigne (le POINT INTERNE, ci-dessus), ni le fait que le cliquet
       ne la voit pas.**
 
+      **⚠️ PÉRIMÈTRE RÉDUIT PAR NOAH le 2026-09-15, après mesure — pas par arrondi.** État à cette
+      date : **41 cours faits, 49 restants** (2 722 questions). J'avais d'abord proposé de ne traiter
+      que les 15 plus nocifs en disant que ça rapporterait « l'essentiel du gain » : c'était faux, et
+      la mesure l'a montré avant que le choix soit fait — la nocivité cumulée croît **presque
+      linéairement** avec le nombre de cours traités (10 cours → 24 %, 15 → 35 %, 30 → 66 %, 49 →
+      100 % : aucun coude). Le tri par nocivité a déjà aplani les écarts entre cours ; il n'existe pas
+      de petit sous-ensemble qui rapporte disproportionnellement.
+
+      Noah a choisi **30 cours, pour 66 % de la nocivité restante couverte**, en connaissance de ce
+      calcul :
+
+      **Les 30 cours que B4 doit encore traiter**, dans l'ordre de nocivité (repris du tableau
+      ci-dessus, rangs 1 à 30) :
+      `pandas`, `haskell`, `crypto`, `sass`, `securite`, `clojure`, `powershell`, `go`, `elixir`,
+      `nosql`, `julia`, `vue`, `perl`, `dart`, `perf-web`, `lisp`, `observabilite`, `docker`, `r`,
+      `bash`, `tests`, `pascal`, `fsharp`, `prolog`, `linux`, `vb`, `objc`, `api`, `asm`, `cobol`.
+      **1 775 questions.**
+
+      **Les 19 cours que B4 n'attaquera PAS**, décision assumée et non silencieuse : `cloud`,
+      `reseaux`, `wasm`, `ml`, `erlang`, `ada`, `llm`, `fortran`, `groovy`, `compilation`, `patterns`,
+      `http`, `graphql`, `kubernetes`, `cicd`, `markdown`, `formats`, `regex`, `vscode`. **947
+      questions qui resteront devinables au biais de longueur** — à reprendre dans un chantier
+      ultérieur si Noah le demande, pas à cacher dans F5.
+
+      **Quand traiter le 30ᵉ cours de cette liste (ou si elle est épuisée avant les 30) : cocher B4**
+      avec le compte rendu habituel, PUIS ajouter ici la mesure globale sur les 30 (et non sur 90) —
+      le taux global du site restera au-dessus de 60 % à dessein, ce n'est plus la cible.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
