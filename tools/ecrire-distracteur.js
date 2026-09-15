@@ -43,19 +43,25 @@ if (!LOT) {
   process.exit(2);
 }
 
-var RE_BLOC = /(<script type="application\/json" data-quiz(?:-bilan)?>\n)(\[\n[\s\S]*?\n\])(\n<\/script>)/g;
+/* ⚠️ `\r?\n` et non `\n` : trouve au 41e cours (`pandas`), ou `pages/pandas/lecon-09.html`
+   est le SEUL des 14 fichiers du cours a etre en CRLF sur le disque. L'outil y voyait
+   « 0 bloc » et refusait d'ecrire, sans dire pourquoi. Le bloc est reecrit avec la fin de
+   ligne QU'IL AVAIT (voir `eol`), sans quoi on melangerait CRLF et LF dans un meme fichier. */
+var RE_BLOC = /(<script type="application\/json" data-quiz(?:-bilan)?>\r?\n)(\[\r?\n[\s\S]*?\r?\n\])(\r?\n<\/script>)/g;
 
 function blocsDe(src) {
   var out = [], m;
   RE_BLOC.lastIndex = 0;
   while ((m = RE_BLOC.exec(src))) {
-    out.push({ debut: m.index + m[1].length, fin: m.index + m[1].length + m[2].length, json: m[2] });
+    out.push({ debut: m.index + m[1].length, fin: m.index + m[1].length + m[2].length, json: m[2],
+      eol: /\r\n/.test(m[2]) ? "\r\n" : "\n" });
   }
   return out;
 }
 
-function serialise(arr) {
-  return "[\n" + arr.map(function (o) { return "  " + JSON.stringify(o); }).join(",\n") + "\n]";
+function serialise(arr, eol) {
+  var fl = eol || "\n";
+  return "[" + fl + arr.map(function (o) { return "  " + JSON.stringify(o); }).join("," + fl) + fl + "]";
 }
 
 var lot;
@@ -126,7 +132,7 @@ Object.keys(parFichier).forEach(function (rel) {
   var neuf = src;
   var idx = Object.keys(touche).map(Number).sort(function (a, b) { return b - a; });
   idx.forEach(function (b) {
-    var s = serialise(tables[b]);
+    var s = serialise(tables[b], blocs[b].eol);
     try { JSON.parse(s); } catch (err) { erreurs.push(rel + " bloc" + b + " : le resultat n'est pas du JSON — " + err.message); return; }
     neuf = neuf.slice(0, blocs[b].debut) + s + neuf.slice(blocs[b].fin);
   });
