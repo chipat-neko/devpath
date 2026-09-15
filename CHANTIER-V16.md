@@ -6519,6 +6519,68 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       avec le compte rendu habituel, PUIS ajouter ici la mesure globale sur les 30 (et non sur 90) —
       le taux global du site restera au-dessus de 60 % à dessein, ce n'est plus la cible.
 
+
+      ---
+
+      **PASSE DU 2026-09-15 — `crypto` CLOS (40ᵉ cours), et le fait marquant n'est pas le biais :
+      LA RELECTURE ADVERSARIALE A TROUVÉ DEUX CHIFFRES FAUX DANS L'INTOUCHABLE.**
+
+      | | départ | arrivée |
+      |---|---:|---:|
+      | « la plus longue » | **89,7 %** | **25,0 %** |
+      | pire des 43 stratégies | 89,7 % | **26,5 %** (« écarter les deux extrêmes », qui ne tranche que **3 questions sur 68**) |
+      | rangs de longueur | 61/4/0/3 | **17/17/17/17**, hors bande 70-130 % : **0** |
+      | indice lexical | **58 exploitables** sur 68, 68 à mettre en forme | **0** et **0** |
+      | mot fétiche | **5 alertes** (`chaque` 34,1 %, `compte` 32,8 %, `chiffré` 31,2 %, `jamais` 30,2 %, `secret` 28,4 %) | **0** |
+      | intrus lexical | **1 question sûre** | **0**, dans les DEUX lectures |
+      | sens inverse (42 stratégies) | — | **0 alerte** (pire : 27,2 %) |
+
+      **Déroulé** : six lots d'écriture sur fichiers disjoints (68 questions, **204 distracteurs sur
+      204 réécrits**, compté par `mesure-qcm-intouchable`), puis six relecteurs adversariaux en
+      lecture seule — **77 réécritures chiffrées proposées** (`scratchpad/PRISES-CRYPTO-LOT1..6.md`,
+      comptées au motif « (avant → après) ») —, puis correction et re-simulation.
+
+      🔴 **DEUX CHIFFRES FAUX DANS DES ÉLÉMENTS DÉCLARÉS INTOUCHABLES — et c'est la relecture
+      adversariale, pas un vérificateur, qui les a vus.** `mesure-qcm-intouchable crypto` signale
+      donc **2 atteintes, délibérées** ; les deux corrections sont **prouvées par exécution**
+      (`node tools/verif-sorties.js pages/crypto/lecon-11.html` : **8 blocs rejoués, 8 identiques au
+      caractère près**) :
+      1. **bilan q4, LA BONNE RÉPONSE** annonçait un remplissage « **+107 %** au lieu de **+29 %** »
+         quand le programme `fuite-coffre.js` produit, ligne par ligne, **+111 %** et **+34 %** — et
+         que le corps de la leçon écrit déjà ces deux chiffres-là. La réécriture des distracteurs
+         avait de plus **propagé le « +107 % » dans l'option [1]** : une bonne réponse fausse
+         contamine ce qu'on écrit autour d'elle.
+      2. **bilan q1, L'EXPLICATION** disait « **8 084 fois** moins d'octets réécrits » — un rapport
+         bricolé entre **deux grandeurs différentes** (614 400 octets *chiffrés* ÷ 76 octets
+         d'enveloppe et de sel). La sortie mesurée affiche **96 octets réécrits contre 307 200, soit
+         3 200 fois moins**. Corrigée à ce que le programme dit.
+
+      ⚠️ **LE LOT A SURVÉCU À UNE COUPURE, ET IL FAUT DIRE POURQUOI.** La passe d'écriture a été
+      arrêtée à **14 h 31 par la limite de session**, lot terminé mais **non commité** — la situation
+      exacte qui avait tout détruit au 30ᵉ cours (`ocaml`). Il a tenu ici parce que **rien n'a touché
+      l'arbre de travail entre les deux réveils** : ni `git stash`, ni `checkout`, ni le contrôle
+      horaire. Le réveil suivant a **remesuré le lot de bout en bout avant de le verser**, plutôt que
+      de le croire fini : c'est ce remesurage qui a fait apparaître les 2 atteintes ci-dessus.
+
+      **Contrôles** : `verif-html` **0 problème** sur **1 629 pages** ; `verif-donnees` **0 erreur**
+      sur 26 invariants ; `verif-normatif` **75/75** ; `build-index` en comparaison : **quiz,
+      flashcards, search, search-lite, antisèches tous identiques au fichier cible** (6 151 questions,
+      11 586 cartes, 1 577 fiches, 1 614 pages indexées) ; **23 blocs JSON valides, 0 BOM** sur les
+      11 leçons. `doc/lecon-03` remis à la mesure du jour (**14ᵉ repérimage** : S3 39,5 % → **38,9 %**,
+      2 411 → **2 377**, 3 692 → **3 726** ; S4 37/89 → **38/89**, 41,6 % → **42,7 %**).
+
+      🟠 **DETTE LAISSÉE, ÉCRITE PLUTÔT QUE TUE** : dans `pages/crypto/lecon-11.html`, la question 2
+      du QCM de leçon et la question 10 du QCM bilan **posent la même question** (les 49 refus sur 150
+      du coffre naïf) et ont la **même bonne réponse**. L'invariant `I17` ne le voit pas : il compare
+      des leçons **entre elles**, pas deux blocs d'une **même page**. Corriger demande de toucher un
+      énoncé et une bonne réponse, donc de rejouer les six mesures de la page — hors du périmètre de
+      B4, qui traite le biais de longueur. **À reprendre dans un point dédié.**
+
+      **ÉTAT DU SITE après ce cours** : **39 cours marqués `traite`**, **42 cours à la cible**
+      (≤ 40 % sur la longueur) totalisant 3 513 questions, **48 cours au-dessus** totalisant
+      2 654 questions dont **2 434 devinables**, global « la plus longue » **52,4 %**.
+      **Il reste 29 cours** sur les 30 du périmètre fixé par Noah.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
