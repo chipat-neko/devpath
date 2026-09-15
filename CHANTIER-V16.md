@@ -6623,6 +6623,109 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       Consigne réutilisable : `scratchpad/CONSIGNE-PANDAS.md`. Douze faits de pandas y sont vérifiés
       par exécution, pour que les écrivains n'aient pas à les redécouvrir.
 
+
+      ---
+
+      **PASSE DU 2026-09-15 (suite) — `pandas` CLOS (41ᵉ cours), et le fait marquant est que
+      FERMER LA LONGUEUR A RETOURNÉ DEUX STRATÉGIES D'UN COUP.**
+
+      | | départ | arrivée |
+      |---|---:|---:|
+      | « la plus longue » | **93,8 %** | **26,2 %** |
+      | rangs de longueur | 62/2/0/1 | **17/16/16/16** |
+      | indice lexical | **52 exploitables** sur 65, 55 à mettre en forme | **0** et **0** |
+      | mot fétiche | **8 alertes** (des mots du DOMAINE : `ligne`, `colonne`, `index`…) | **0** |
+      | intrus lexical | **2 questions sûres** | **0**, dans les DEUX lectures |
+      | sens inverse (42 stratégies) | 6 alertes | **0** (pire : la plus dense, 25,8 %) |
+
+      **Déroulé** : cinq écrivains sur lots de leçons disjointes (**191 des 195 distracteurs
+      réécrits**), puis — à la mesure — trois correcteurs pour rattraper ce que l'écriture avait
+      retourné (**20 distracteurs de plus**).
+
+      🔴 **LE LOT D'ÉCRITURE A FERMÉ LA LONGUEUR ET RETOURNÉ DEUX INDICES**, mesuré juste après :
+
+      | stratégie | tranche | DIRECTE | INVERSE | GLOBAL |
+      |---|---:|---:|---:|---:|
+      | le mot technique exclusif | 15 | **0,0 %** | **33,3 %** | 26,9 % |
+      | la moins bavarde | 53 | 15,1 % | 28,3 % | 27,7 % |
+
+      **Une DIRECTE à 0,0 % sur 15 questions, c'est le plafond théorique de l'inverse** : la
+      stratégie ne désignait JAMAIS la bonne réponse, donc l'écarter était une **élimination sûre**.
+      C'est exactement le piège que la consigne portait depuis le 39ᵉ cours (« ne le ferme pas à
+      fond, vise l'égalité ») — et il s'est produit quand même, parce que les écrivains fermaient
+      chacun *leur* lot sans voir la lecture inverse du cours entier. Ramené à **26,0 %** et
+      **26,3 %** par 7 bascules de chaque côté.
+
+      ⚠️ **LA CONTRAINTE À QUATRE CONDITIONS, trouvée indépendamment par les trois correcteurs.**
+      Un mot de remplacement doit satisfaire **quatre** règles à la fois : **moins de 9 lettres**
+      (sinon il redevient le mot technique exclusif), **au moins 6 lettres** (sinon le `w` tombe et
+      la bonne réponse redevient « la plus fournie à elle seule », ce qui rouvre PROPORTION),
+      **présent dans la page** (sinon il est étranger et casse le `k`), et **absent de l'énoncé**
+      (sinon il fabrique « l'écho de la question »). **Trois sur quatre ne suffit pas — et les deux
+      fois, c'est un outil DIFFÉRENT de celui qu'on visait qui a rougi.** Le correcteur du lot 1 l'a
+      payé en deux tours : `largement` → `de la place` a cassé le `w`, puis `mémoire` (le mot de
+      l'énoncé) a ouvert l'écho ; seul `espace` tenait les quatre.
+
+      🟢 **TROIS DÉFAUTS DE FOND, remontés par les écrivains et prouvés par exécution** — aucun
+      vérificateur ne les voyait :
+      1. `lecon-04`, **la FIGURE** : intitulée « La colonne prix_unitaire vue de haut », elle
+         montrait **9 cellules dont 3 NaN** et annonçait « 3 trous sur 9 » — **33,3 %**, quand la
+         même page publie `(df.isna().mean()*100).round(1)` → **prix_unitaire 8.3** et « 11
+         non-null » sur 12. **Quatre fois le taux que son propre cours calcule.** Refaite à 12
+         cellules, 1 trou en 4ᵉ position (la commande `C1004`, celle que le corps désigne) ;
+         `verif-rendu` sur la page : **0 erreur**.
+      2. `lecon-10` q3, **la BONNE RÉPONSE** : « deux colonnes 'variable' et 'valeur' » quand `melt`
+         produit `['ville', 'variable', 'value']` — et que le corps de la même leçon écrit
+         correctement « une colonne `value` ».
+      3. `lecon-14` bilan q4, **l'ÉNONCÉ** : « un calcul comme une somme ligne à ligne » rendait la
+         bonne réponse **fausse** sous sa lecture littérale — `d.sum(axis=1)` sur une ligne à NaN
+         rend **3.0**, pas `NaN` (`skipna=True` par défaut). Seule l'arithmétique terme à terme
+         propage. Énoncé précisé.
+
+      ⚠️ **UN PIÈGE DE MESURE, à connaître pour les 28 cours suivants** : `mesure-lexique-qcm` capte
+      les mots de 6 lettres et plus — et **une apostrophe fermante compte comme un signe**. Écrire
+      `'value'` dans une option en fait un mot de 6 signes, donc un mot *mesuré* ; mais le corps
+      l'écrit `<code>value</code>`, où l'outil ne voit que 5 lettres. **Le mot devenait étranger à sa
+      propre page.** La forme retenue (« en deux colonnes, variable et value ») ne porte plus aucun
+      mot étranger.
+
+      ⚠️ **ET UN PIÈGE D'OUTILLAGE, signalé par le lot 1** : le script de diagnostic que j'avais
+      fourni comptait comme « tranchée » toute question où la stratégie désigne **deux ou trois**
+      options ; `mesure-biais-inverse`, lui, ne compte que les désignations **uniques**. D'où **27
+      contre 15** sur le même cours. Le correcteur a réaligné sa copie sur l'outil **avant** de
+      décider quoi que ce soit — sans quoi il aurait visé les mauvaises questions.
+
+      🟢 **CE COURS EST LE PREMIER DEPUIS LE 37ᵉ OÙ LA RÈGLE FONDATRICE S'APPLIQUE SANS RÉSERVE** :
+      `pandas` **3.0.5** est installé. Chaque distracteur a été **exécuté** : `prix.at[0]` →
+      `KeyError`, `astype('float')` sur `'NC'` → `ValueError`, `.dt` sur du texte →
+      `AttributeError`, mémoire `str` **6 600 132** octets contre `category` **120 297** sur
+      120 000 lignes. ⚠️ Avec la réserve inverse, elle aussi mesurée : le cours enseigne 2.0/2.2, et
+      en 3.0 le `dtype` d'une colonne de texte est `str` (le cours dit `object`) et `applymap`
+      n'existe plus. **Un énoncé vrai en 2.x n'est pas employable comme distracteur, même s'il
+      échoue en 3.0.**
+
+      🔴 **RÉSIDU ASSUMÉ, chiffré** : en sens direct, « écarter les absolus » rend **29,7 %** et
+      « écarter les deux extrêmes » **28,5 %**. Les deux tranchent **3 et 7 questions** — sous les 8
+      qu'exige l'outil pour juger une fenêtre mesurable. Non corrigé, et dit plutôt que lissé.
+
+      🟠 **DETTE DE CONTENU, mesurée et non corrigée** : le jeu `ventes.csv` (12 lignes) n'est publié
+      **en entier nulle part** ; chaque leçon en montre un extrait, et les extraits ne concordent
+      pas. Le plus net est dans `lecon-14` : le CA par ville de l'exercice 2 fait **244,90**
+      (98,30 + 86,70 + 59,90) quand le CA par catégorie, par segment et le CA mensuel font tous
+      **245,30**. L'écart de **0,40** ne s'explique pas par la ligne à `ville` manquante : le corps
+      lui donne un `prix_unitaire` de **12,00**. **Aucun des 44 vérificateurs ne lit ces chiffres-là**
+      — ils ne sont ni dans un bloc de sortie rejoué, ni dans un QCM. À reprendre dans un point dédié.
+
+      **Contrôles** : `verif-html` **0** sur 1 629 pages ; `verif-donnees` **0 erreur** sur 26
+      invariants ; `verif-normatif` **75/75** (9 étaient en échec avant le repérimage) ;
+      `verif-rendu` **0 erreur** sur la page à la figure refaite ; `mesure-qcm-marques` **20 options
+      réécrites, aucune marque n'a bougé** ; **29 blocs JSON valides, 0 BOM** ; cliquets refigés
+      **dans le même commit que la correction**, `pandas` marqué `traite`. Cascade index ⇄ études
+      remise au point fixe deux fois.
+
+      **ÉTAT DU SITE** : **40 cours marqués `traite`**, **43 à la cible**, global « la plus longue »
+      **51,6 %** sur 6 167 questions. **Il reste 28 cours** sur les 30 du périmètre fixé par Noah.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
