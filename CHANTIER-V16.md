@@ -6809,6 +6809,77 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       **ÉTAT DU SITE** : **41 cours marqués `traite`**, **44 à la cible**, global « la plus longue »
       **50,9 %** sur 6 167 questions. **Il reste 27 cours** sur les 30 du périmètre fixé par Noah.
 
+      ---
+
+      **43ᵉ COURS — `clojure`, clos le 2026-09-22 : 89,4 % → 25,8 %, rangs 59/6/1/0 → 17/17/16/16.**
+      **197 distracteurs sur 198 réécrits** sur 66 questions et 17 leçons — **8 538 caractères**
+      (rapport de départ **3,02**, contre 5,06 pour `haskell`). Cinq lots d'écriture en parallèle,
+      puis **trois vagues de retouche**. Options hors bande 70-130 % : **174 → 5** (des jetons de
+      code trop courts, exemptés par le seuil de l'outil).
+
+      | indice | avant | après |
+      |---|---:|---:|
+      | la plus longue (couverture 100 %) | 89,4 % | **25,8 %** |
+      | la plus détaillée | 59,2 % | sous l'étalon |
+      | le mot technique exclusif | 52,0 % | sous l'étalon |
+      | RESTREINDRE à la ponctuation forte | 51,1 % | **25,0 %** |
+      | l'incise entre parenthèses | 50,8 % | **25,0 %** |
+      | RESTREINDRE à la parenthèse | 47,9 % | **25,0 %** |
+      | RESTREINDRE aux deux-points | 42,4 % | **25,0 %** |
+
+      🟢 **LA PLUS HAUTE DES 43 STRATÉGIES EST À 26,3 % AVEC UNE COUVERTURE DE 0,0 %** : aucune ne
+      tranche plus une seule question. Lexique **53 exploitables → 0** et 58 à mettre en forme → 0 ;
+      mot fétiche **2 alertes → 0** ; intrus lexical **4 questions sûres → 0** ; sens INVERSE
+      **3 alertes → 0**. `mesure-qcm-intouchable` : **0 atteinte**.
+
+      🔴 **LA LEÇON DE CE COURS — UN DIAGNOSTIC QUI N'EST PAS LA COPIE EXACTE DE L'OUTIL FAIT
+      TRAVAILLER CINQ AGENTS À CÔTÉ DE LA CIBLE.** Le script de diagnostic que j'ai fourni à la
+      deuxième vague comptait les mots avec `/[\wà-ÿ'-]+/gi` ; `mesure-biais-qcm` compte avec
+      **`/[A-Za-zÀ-ÿ0-9_]+/g`**, où **l'apostrophe et le tiret SÉPARENT les mots** (`l'option` = 2
+      mots, `c'est-à-dire` = 4). Le diagnostic annonçait **« 0 question tranchée »** quand l'outil en
+      comptait **22**. Les quatre agents ont donc égalisé un compte qui n'était pas le bon, et ont
+      rendu des comptes rendus tous verts. ⚠️ **Le piège est en mémoire depuis le 41ᵉ cours** (un
+      script qui comptait les ex aequo autrement donnait 27 contre 15 sur le même cours) — **il
+      s'est représenté sur une AUTRE dimension**. La parade n'est pas « se souvenir du cas », c'est
+      **recopier la fonction de l'outil, pas son intention**.
+
+      🔴 **ET LA FERMETURE DE « la moins bavarde » N'EST PAS « partager le minimum ».** `choisir`
+      rend l'ENSEMBLE des options au compte minimal : un minimum partagé par **deux** options laisse
+      encore un demi-point à l'apprenant, et l'outil ne cesse de compter la question que si
+      l'ensemble vaut **les quatre**. La seule fermeture est donc **les quatre options au même
+      nombre de mots** — couverture **33,3 % → 0,0 %**, rendement **31,8 % → 0,0 %**. Même geste
+      pour « ECARTER la moins bavarde » (rendement **42,9 % sur 7 questions**, sous la fenêtre de 8
+      donc invisible à l'alerte) : traitée quand même, **et sur les sept** — n'en fermer que les
+      trois qui désignaient la bonne réponse aurait laissé **0 succès sur 4**, c'est-à-dire une
+      élimination sûre, le même défaut retourné.
+
+      🔴 **UN DÉFAUT DE FOND, relevé par deux relectures indépendantes et prouvé par exécution**
+      (`scratchpad/preuve-clojure-assertions.js` compte les assertions des blocs de la page) :
+      `lecon-13` publie `;; Ran 3 tests containing 11 assertions.` alors que ses trois `deftest` en
+      contiennent **9** — `somme-test` 3 `is`, `panier-test` 2, `pair-test` 4, et **la page l'écrit
+      elle-même** (« 4 assertions générées à partir du tableau », et sa figure « 4 lignes → 4
+      assertions »). Le nombre de **tests** était juste, celui des **assertions** faux de 2. Corrigé
+      en 9. Même famille que les trois défauts de `haskell` : une page qui se contredit elle-même,
+      là où aucun des 45 vérificateurs ne regarde.
+
+      **Autres remontées, non corrigées et consignées** : `lecon-05` q1 (bonne réponse intouchable)
+      emploie `pair?`, qui n'existe pas en Clojure et n'apparaît nulle part ailleurs dans le cours —
+      la page enseigne `even?` ; `lecon-09` et `lecon-12` se déclarent chacune « cette dernière
+      leçon » alors que le cours en compte 17 (reliquats d'un cours qui en faisait 9 puis 12) ;
+      `lecon-03` appelle `defn` et `fn` des « mots-clés » quand `lecon-02` réserve ce terme aux
+      `:keywords` ; `lecon-17` exige par `s/keys :req-un` trois clés dont deux ne sont jamais
+      enregistrées par un `s/def`.
+
+      **Contrôles** : `verif.js --rapide` **53 étapes tout vert (201,1 s)** ; `verif-html` **0** sur
+      1 629 pages ; `verif-donnees` **0 erreur** sur 26 invariants ; `verif-normatif` **75/75**
+      (`doc/lecon-03` repérimé une **7ᵉ** fois : 3 847 → **3 907** conformes, 63,0 % → **64,0 %**,
+      S4 40/89 → **41/89**) ; `verif-sorties` **449 blocs identiques au caractère près** ; les
+      **deux** cliquets refigés dans le commit, `clojure` marqué `traite`. Cascade index ⇄ études
+      au point fixe.
+
+      **ÉTAT DU SITE** : **42 cours marqués `traite`**, **45 à la cible**, global « la plus longue »
+      **50,2 %** sur 6 167 questions. **Il reste 26 cours** sur les 30 du périmètre fixé par Noah.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
