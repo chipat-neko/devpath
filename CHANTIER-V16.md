@@ -7255,6 +7255,27 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       **Dette d'outillage laissée, non corrigée** : la liste blanche `SIGLES` ignore toujours
       `RCE`, `SSRF`, `SBOM`, `OSV` (relevée au 45ᵉ cours). Rien de neuf ici.
 
+      🟠 **TROIS EFFETS DE BORD À DISTANCE, tous trouvés par `verif.js --rapide` et par aucun
+      contrôle du cours lui-même.** Ils valent d'être listés parce que **la passe se croyait
+      finie** quand ils sont apparus :
+
+      1. **Le cliquet lexical n'avait pas été refigé.** `verif-qcm-biais --ecrire` avait été
+         lancé, `verif-qcm-lexique --ecrire` non : l'outil signalait `powershell : STRICTE
+         21,1 % → 0,0 %` et **la référence protégeait encore l'ancien niveau**, donc un retour
+         en arrière serait resté VERT. **Il y a DEUX cliquets, pas un.**
+      2. **`doc/lecon-03` repérimé une 10ᵉ fois** — la page publie la conformité du site à sa
+         propre spécification, et notre passe l'a bougée : S3 conformes **4 023 → 4 077**
+         (65,9 % → **66,8 %**), manquements **2 080 → 2 026** (34,1 % → **33,2 %**), S4
+         **43/89 → 44/89** (48,3 % → **49,4 %**), corpus de l'ancienne clause **3 046 → 3 090**
+         (rang 1 inchangé à 35,6 %). `verif-normatif` : **67 OK / 8 échecs → 75 OK / 0 échec**.
+         La bonne réponse chiffrée de la page suit toujours la mesure (33,2 % = « trois cas sur
+         dix »), donc rien à corriger de ce côté cette fois.
+      3. **Deux pages d'étude périmées** : `etude-inconnu` (10 614 → **10 615** blocs de code) et
+         `etude-recherche` (930 361 → **930 447** couples mot × leçon). ⚠️ **`etude-recherche`
+         est elle-même indexée** : la réécrire change l'index qu'elle mesure (46 042 → **46 043**
+         mots), il faut donc un **second tour** assembleur + `build-index` pour converger.
+         `verif-etudes` : **0 périmée sur 7**.
+
       **Contrôles** : `verif-html` **0** sur 1 629 pages ; `verif-donnees` **0 erreur** sur les
       26 invariants (les 6 erreurs d'index périmés levées par la régénération `--fresh`) ;
       **35 blocs JSON** du cours valides, 0 BOM ; `mesure-explain-orpheline --depuis=856f088` :
