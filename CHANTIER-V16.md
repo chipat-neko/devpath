@@ -7005,6 +7005,110 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       CONSEIL DANGEREUX plausible.** C'est le seul cours du périmètre où une option mal écrite
       apprend une pratique nuisible.
 
+      **45ᵉ COURS — `securite`, clos le 2026-09-22 : 95,2 % → 25,0 %, rangs 59/2/1/0 → 16/16/15/15.**
+      **184 distracteurs sur 186 réécrits** sur 62 questions et 14 leçons — **≈ 13 130 caractères**
+      pour les **10 085** demandés par `plan-rangs-qcm`. Six lots d'écriture en parallèle
+      (01-03, 04-06, 07-09, 10-11, 12-13, et `lecon-14` avec ses 4 questions de leçon et 12 de bilan),
+      puis **une seule vague de retouche**, sur une question. Rapport bonne réponse / distracteur
+      **2,86 → 0,97** (distracteur moyen **36,5 → 107,1 car.**, la bonne réponse restant à 104,4
+      puisqu'elle est intouchable). Options hors bande 70-130 % : **172 → 0** (fourchette 0,71 à 1,30).
+
+      | indice | avant | après |
+      |---|---:|---:|
+      | la plus longue (couverture 100 %) | 95,2 % | **25,0 %** |
+      | la plus détaillée | 73,5 % | **25,0 %** (couverture 0,0 %) |
+      | le mot technique exclusif | 70,2 % | **25,0 %** (couverture 0,0 %) |
+      | RESTREINDRE à la ponctuation forte | 53,2 % | **25,0 %** (couverture 0,0 %) |
+      | RESTREINDRE à la parenthèse | 50,0 % | **25,0 %** (couverture 0,0 %) |
+      | l'incise entre parenthèses | 47,6 % | **25,0 %** (couverture 0,0 %) |
+      | la seule qui nie | 36,8 % | **25,0 %** (couverture 0,0 %) |
+      | l'écho de la question | 35,5 % | **25,0 %** (couverture 0,0 %) |
+      | la plus prudente | 34,3 % | **25,0 %** (couverture 0,0 %) |
+      | l'attaque unique | 31,5 % | **25,0 %** (couverture 0,0 %) |
+
+      🟢 **PLUS AUCUNE DES 43 STRATÉGIES NE DÉSIGNE UNE OPTION UNIQUE**, à la seule exception des
+      rangs de longueur, qui sont mécaniques : la plus haute rend **26,6 %** (« la DEUXIÈME plus
+      longue »). Sens INVERSE : **3 alertes → 0** (pire 25,7 %). Lexique **50 exploitables → 0** et
+      **60 à mettre en forme → 0** ; mot fétiche **3 alertes → 0** ; intrus lexical **8 questions
+      sûres → 0** dans les deux lectures — c'était le **record du chantier**, il est fermé. Point
+      interne : `securite` sort du tableau. `mesure-qcm-intouchable` : **0 atteinte**.
+
+      ⚠️ **UN CARACTÈRE RESTE, ET IL EST ASSUMÉ** : la q4 du bilan demande quel attribut rend un
+      cookie inaccessible au JavaScript ; son option `SameSite` fait **8 caractères, exactement la
+      longueur de la bonne réponse `HttpOnly`**, donc `plan-rangs-qcm` la classe hors bande d'un
+      caractère. La raccourcir rendrait l'`explain` **ORPHELINE** — elle nomme « `Secure` impose
+      HTTPS ; `SameSite` limite le CSRF ». `verif-explain-orpheline` confirme **0 orpheline** sur les
+      62 questions à risque : garder le mot est le bon choix, et il coûte ±0,8 point de rang.
+
+      🔴 **LA LEÇON DE CE COURS — FERMER UN INDICE PAR UN MOT PEUT LE DÉPLACER D'UN CRAN, ET
+      L'ORCHESTRATEUR NE DOIT PAS SE FIER À LA LISIBILITÉ ANNONCÉE.** Une seule question résistait
+      après les six lots : `lecon-11`, où `la MAJUSCULE d'emphase` rendait **100 % sur son unique
+      question**. Cause mesurée : la bonne réponse **intouchable** porte `RCE`, **absent de la liste
+      blanche `SIGLES`** de `tools/mesure-biais-qcm.js` (ligne 209, qui contient pourtant `XSS`,
+      `CSRF`, `CVE`, `JWT`) — l'outil comptait donc un sigle du métier comme un **cri**. Corrigé par
+      le CONTENU, pas par l'instrument : les trois distracteurs portent désormais `RCE` eux aussi
+      (1/1/1/1). Trois choses s'y sont enchaînées :
+      - **la première rédaction a fait passer l'indice de « la MAJUSCULE » au « mot technique
+        exclusif »**, au même chiffre exact (26,2 %, couverture 1,6 %, rendement 100 %) : en
+        supprimant `programme` et `sérialisation` pour tenir la fenêtre, elle avait cassé un
+        **3/3/3/3** sur les mots de 9 lettres. L'indice n'était pas fermé, il avait **changé de nom** ;
+      - **j'ai accepté une mesure verte sur un texte qui ne voulait rien dire.** Les options
+        rendues disaient « la chaîne reçue **(une valeur, une RCE)** » et « refuse normalement
+        **toute RCE en sérialisation** » : les neuf contrôles étaient verts, et c'était une **salade
+        de mots** — le défaut du 39ᵉ cours, qu'**aucun des 45 outils ne voit**. Renvoyé en
+        reformulation avec la critique sémantique ; les deux options finales emploient `RCE` dans son
+        sens réel (une conséquence qu'on *subit* ou qu'on *empêche*, jamais un contenu transporté) ;
+      - un troisième candidat a été **rejeté par la mesure et non par le goût** : `toute RCE de
+        l'attaquant` lisait bien, mais l'apostrophe de `l'attaquant` fabrique un jeton d'une lettre,
+        la densité de l'option tombait à 4,947 et **la bonne réponse devenait la plus dense** (5,333).
+
+      🟠 **TROIS FAUTES DE FOND, remontées par les écrivains et vérifiées par moi avant
+      correction** — et la première est visible par l'apprenant :
+      - `lecon-13` : la **matrice de risque était dessinée à l'envers**. Dans un SVG, `y` croît vers
+        le bas ; la flèche de l'axe pointe vers le haut (`points="146,40 150,32 154,40"`) et
+        l'`aria-label` annonce « de faible en bas à fort en haut » — or les deux cases « fort impact »
+        étaient à `y="110"` (en bas) et les « faible impact » à `y="46"` (en haut). **Le dessin
+        contredisait son propre axe, son `aria-label` et son `figcaption`.** Rangées échangées,
+        `d-accent` (le CRITIQUE) déplacé en haut à droite. `verif-rendu` : **0 erreur, 0
+        avertissement** sur 18 mesures.
+      - `lecon-06` : le mini-projet annonçait **cinq** défenses empilées, dont la « comparaison à
+        temps constant » — qui n'était **expliquée nulle part** dans la page (une seule occurrence,
+        celle de la promesse). Ajoutée à l'étape `bcrypt.compare`, avec le pourquoi (même durée de
+        réponse, là où un `===` s'arrête au premier écart).
+      - `lecon-01` : un lien de rattrapage d'exercice portait `Revoir « Le code défensif »`, **titre
+        qui n'existe dans aucune section** ; les deux autres liens du même bloc citent des titres
+        réels. Corrigé en « L'état d'esprit défensif ». Les deux retouches de corps n'ont **rien
+        rouvert** (lexique toujours 0 exploitable / 0 à mettre en forme).
+
+      **Remontée consignée, non corrigée** : `lecon-08`, le mot `base64` n'apparaît **que dans le
+      bloc `data-quiz`** — le corps de la leçon ne l'introduit jamais. L'`explain` le réfute
+      (« base64 n'est qu'un encodage, pas une protection »), donc rien n'est faux, mais la fausseté
+      du distracteur n'est établie que par l'explication.
+
+      ⚠️ **DETTE D'OUTILLAGE MESURÉE, à ne pas perdre** : la liste blanche `SIGLES` ignore `RCE`,
+      `SSRF`, `SBOM` et `OSV` — des sigles courants du métier de la sécurité. Tant qu'ils y manquent,
+      `la MAJUSCULE d'emphase` les compte comme des cris et **force une écriture artificielle** : le
+      lot 07-09 a dû choisir `(CSP)/(URL)/(UI)` pour cette seule raison. L'instrument n'a **pas** été
+      modifié dans cette passe — le corriger demande de rejouer les 43 stratégies sur les 90 cours.
+
+      **Contrôles** : `verif.js --rapide` **53 étapes**, 4 signalements (les 3 avertissements
+      préexistants de `verif-donnees` et `verif-normatif`, traité ci-dessous), **0 erreur** sur les
+      26 invariants de données ; `verif-html` **0** sur 1 629 pages ; `verif-explain-orpheline`
+      **0 orpheline** ; `verif-rendu` **0 erreur, 0 avertissement** sur 24 mesures ; `quiz-index` et
+      `search-index` régénérés ; les **deux** cliquets refigés, `securite` marqué `traite`.
+
+      ⚠️ **`doc/lecon-03` repérimé une 9ᵉ fois** — la page publie les chiffres du site, et notre
+      passe les a bougés : **65/75 → 75/75**. Conformes S3 3 964 → **4 023** (65,0 % → **65,9 %**),
+      manquements 2 139 → **2 080** (35,0 % → **34,1 %**), S4 42/89 → **43/89** (47,2 % → **48,3 %**),
+      corpus de l'ancienne clause 3 003 → **3 046** (rang 1 : 35,7 % → **35,6 %**). Et **une bonne
+      réponse de QCM est devenue fausse par le seul effet de notre travail** : elle disait « ignorée
+      dans près de **quatre** cas sur dix » quand la mesure du jour donne 34,1 % — corrigée en
+      « **trois** cas sur dix ». C'est le cas prévu par la contrainte 1 de la consigne, et il s'est
+      produit **sans que personne ne touche à cette page**.
+
+      **ÉTAT DU SITE** : **44 cours marqués `traite`**, global « la plus longue » **49,6 % → 48,8 %**
+      sur 6 167 questions. **Il reste 24 cours** sur les 30 du périmètre fixé par Noah.
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
