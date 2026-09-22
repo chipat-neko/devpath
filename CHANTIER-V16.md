@@ -6726,6 +6726,89 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       **ÉTAT DU SITE** : **40 cours marqués `traite`**, **43 à la cible**, global « la plus longue »
       **51,6 %** sur 6 167 questions. **Il reste 28 cours** sur les 30 du périmètre fixé par Noah.
 
+      ---
+
+      **42ᵉ COURS — `haskell`, clos le 2026-09-22 : 92,4 % → 25,8 %, rangs 61/4/1/0 → 17/17/16/16.**
+      **198 distracteurs réécrits** sur 66 questions et 18 leçons — **17 138 caractères**, le plus gros
+      lot d'écriture du chantier (1,4 fois `pandas`, 3,3 fois `crypto`), parce que le rapport
+      bonne réponse / distracteur partait de **5,06** (médiane des cours traités ≈ 1,0). Cinq lots
+      d'écriture en parallèle, puis **trois vagues de retouche**. Fourchette distracteur/bonne
+      réponse **0,01–1,73 → 0,75–1,30**, options hors bande 70-130 % : **187 → 0**.
+
+      | indice | avant | après |
+      |---|---:|---:|
+      | la plus longue (couverture 100 %) | 92,4 % | **25,8 %** |
+      | la plus détaillée | 89,1 % | **26,9 %** |
+      | RESTREINDRE à la ponctuation forte (UNION) | 81,2 % | **25,0 %** (couverture 0,0 %) |
+      | RESTREINDRE à la parenthèse | 79,0 % | **25,0 %** |
+      | le mot technique exclusif | 72,2 % | **25,8 %** |
+      | RESTREINDRE aux deux-points | 61,9 % | **25,0 %** |
+      | l'écho de la question | 60,7 % | **24,6 %** |
+      | la seule avec un point-virgule | 60,2 % | **25,0 %** |
+
+      Lexique : **58 questions exploitables → 0** et **61 à mettre en forme → 0** ; mot fétiche
+      **5 alertes → 0** ; intrus lexical **5 questions sûres → 0** ; sens INVERSE **3 alertes → 0**
+      (la plus mauvaise désormais à **24,5 %**). `mesure-qcm-intouchable` : **0 atteinte**.
+
+      🔴 **CE QUE CE COURS APPREND, ET C'EST UNE CHAÎNE DE TROIS MAILLONS — fermer un indice en
+      rouvre un autre, et le remède du deuxième rouvre le premier si on l'applique bêtement.**
+
+      1. **L'INCISE SE COMPTE, ELLE NE SE TESTE PAS.** Après le lot d'écriture, « l'incise entre
+         parenthèses » rendait **36,0 %** (10 questions tranchées, **9 fois la bonne réponse**). Les
+         cinq écrivains avaient pourtant tous « égalisé la parenthèse » — mais la stratégie est un
+         `argMax` sur le **NOMBRE** d'incises de 4 signes et plus, pas sur leur présence. Un
+         **2/1/1/1** est vert pour qui regarde « toutes les options en portent une » et rend **100 %**
+         à qui compte. Ramené à **n/n/n/n exact : 0 question tranchée.**
+      2. **LE MOT EXCLUSIF FERMÉ À 0,0 % EN DIRECT EST UNE ÉLIMINATION SÛRE.** Sur **11 questions**,
+         la stratégie désignait une option unique et **jamais la bonne** — donc **26,4 % au global
+         inverse**. C'est le piège déjà mesuré aux 38ᵉ et 41ᵉ cours : *la cible est l'égalité, pas le
+         taux bas*. Ramené à **0 question tranchée**.
+      3. **LE REMÈDE DU 1 A OUVERT UN TROISIÈME INDICE, ET IL ÉTAIT PRÉVISIBLE** : pour égaliser les
+         incises, les correcteurs les ont posées **en fin** de distracteur — ce qui a fait passer
+         « écarter la glose finale » de **24,9 % à 28,9 %** (19 questions déséquilibrées, 8
+         tranchées). La fermeture ne pouvait pas être « supprimer une incise » (cela rouvrait le
+         point 1) : il a fallu **DÉPLACER** chaque incise sans changer le compte. Les trois agents de
+         la vague l'ont fait à **longueur constante au caractère près** — donc sans toucher ni aux
+         rangs, ni au lexique, ni à la ponctuation. Résultat : **0 question déséquilibrée**.
+
+      🟠 **RÉSIDU ASSUMÉ, chiffré** : « écarter les deux extrêmes » rend **28,8 %** sur **6 questions
+      tranchées** — sous les 8 qu'exige l'outil pour juger une fenêtre mesurable. « la moins bavarde »
+      **27,0 %** (rendement 31,1 %) et « la plus dense » **27,7 %** (rendement 29,0 %) : au-dessus de
+      l'étalon, pas nettement. Non corrigés, et dits plutôt que lissés.
+
+      🔴 **TROIS DÉFAUTS DE FOND, tous des contradictions INTERNES que la page se fait à elle-même**
+      — trouvés par la relecture, prouvés par exécution (`scratchpad/preuve-haskell-fond.js`, la
+      sémantique du code publié rejouée en JS faute de toolchain Haskell) :
+      - `lecon-15` : la pile `ExceptT String (StateT Int IO)` annonce `Left "solde insuffisant : 70"`
+        et `70` pour `retirer 30 >> retirer 50` depuis 100. Déroulement réel : `put 70`, puis
+        **50 > 70 est FAUX**, donc aucun `throwError` → la sortie est `Right ()` et **20**. **Les deux
+        commentaires étaient faux.** Corrigé en `retirer 90`, qui rend *exactement* les deux valeurs
+        déjà écrites sans y toucher. Même bloc : le commentaire nommait `execStateT` là où le code
+        appelle `runStateT` — la figure de la même page disait déjà `runStateT`.
+      - `lecon-18` : le schéma de `foldMap statsDe` affiche `{1, 15} {1, 16} {1, 9.6}` et un total
+        `Stats {3, 40.6}` — **un article par produit**, alors que `statsDe p = Stats (quantite p) …`
+        donne `{10, 15} {5, 16} {12, 9.6}` et **{27, 40.6}**, ce que la sortie GHCi de **la même page**
+        imprime (« Articles : 27 »). Seule la valeur 40,6 était juste.
+      - `lecon-04` : la figure du pipeline illustre un bloc dont les transactions sont
+        `[120.0, -45.5, -12.0, 300.0, -8.25] → 65.75`, mais affiche `[120,-45,-12,300] → 57` — une
+        transaction supprimée, une autre arrondie. **Juste avec ses propres chiffres, fausse pour
+        l'exemple qu'elle illustre.**
+
+      **Aucun des 45 vérificateurs ne lit ces trois endroits** : ni bloc de sortie rejoué
+      (`verif-sorties` : **449 blocs identiques au caractère près, 0 divergent**), ni QCM. C'est la
+      même famille que la dette relevée sur `pandas`.
+
+      **Contrôles** : `verif.js --rapide` **53 étapes tout vert (190,1 s)** ; `verif-html` **0** sur
+      1 629 pages ; `verif-donnees` **0 erreur** sur 26 invariants ; `verif-normatif` **75/75**
+      (9 en échec avant, `doc/lecon-03` repérimé une **6ᵉ** fois : 3 785 → **3 847** conformes,
+      62,0 % → **63,0 %**, S4 39/89 → **40/89**) ; `verif-rendu` **0 erreur, 0 avertissement** sur les
+      3 pages corrigées (18 mesures) ; `verif-sorties` **449/449** ; épreuve par injection **10/10** ;
+      cliquet refigé, `haskell` marqué `traite`. Cascade index ⇄ études remise au point fixe **deux
+      fois** (la correction du corps l'a rouverte).
+
+      **ÉTAT DU SITE** : **41 cours marqués `traite`**, **44 à la cible**, global « la plus longue »
+      **50,9 %** sur 6 167 questions. **Il reste 27 cours** sur les 30 du périmètre fixé par Noah.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
