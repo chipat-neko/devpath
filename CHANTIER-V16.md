@@ -6878,7 +6878,133 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       au point fixe.
 
       **ÉTAT DU SITE** : **42 cours marqués `traite`**, **45 à la cible**, global « la plus longue »
-      **50,2 %** sur 6 167 questions. **Il reste 26 cours** sur les 30 du périmètre fixé par Noah.
+      **50,2 %** sur 6 167 questions. **Il reste 26 cours** sur les 30 du périmètre fixé par Noah.      ---
+
+      **44ᵉ COURS — `sass`, clos le 2026-09-22 : 96,7 % → 26,2 %, rangs 59/1/1/0 → 16/15/15/15.**
+      **182 distracteurs sur 183 réécrits** sur 61 questions et 14 leçons — **10 916 caractères**
+      demandés par `plan-rangs-qcm` (rapport de départ **3,33** : 103,2 caractères de bonne réponse
+      contre 31,0 de distracteur, le troisième taux le plus haut des 90 cours). Cinq lots d'écriture
+      en parallèle (01-03, 04-07, 08-10, 11-13, et `lecon-14` avec ses 12 questions de bilan), puis
+      **deux vagues de retouche**. Options hors bande 70-130 % : **179 → 0** (fourchette 0,71 à 1,28).
+
+      | indice | avant | après |
+      |---|---:|---:|
+      | la plus longue (couverture 98,4 %) | 96,7 % | **26,2 %** |
+      | la plus détaillée | 78,7 % | **25,0 %** (couverture 0,0 %) |
+      | l'incise entre parenthèses | 69,3 % | **25,0 %** (couverture 0,0 %) |
+      | RESTREINDRE à la parenthèse | 69,3 % | **25,0 %** (couverture 0,0 %) |
+      | le mot technique exclusif | 65,2 % | **25,8 %** (couverture 0,0 %) |
+      | RESTREINDRE à la ponctuation forte | 62,0 % | **25,0 %** (couverture 0,0 %) |
+      | la seule avec un point-virgule | 44,7 % | **25,0 %** (couverture 0,0 %) |
+      | ECARTER la moins bavarde | 43,2 % | **25,3 %** (couverture 0,0 %) |
+      | l'écho de la question | 42,6 % | **24,6 %** |
+
+      🟢 **PLUS AUCUNE DES 43 STRATÉGIES NE DÉSIGNE UNE OPTION UNIQUE**, à la seule exception des
+      rangs de longueur eux-mêmes, qui sont mécaniques : la plus haute rend **26,2 %**, c'est-à-dire
+      **16 questions sur 61** — la cible exacte que `plan-rangs-qcm` avait fixée. Sens INVERSE :
+      **4 alertes → 0** (la pire à 25,6 %). Lexique **54 exploitables → 0** et **59 à mettre en
+      forme → 0** ; mot fétiche **1 alerte → 0** ; intrus lexical **4 questions sûres → 0**.
+      `mesure-qcm-intouchable` : **0 atteinte**.
+
+      🔴 **LA LEÇON DE CE COURS EST SUR MES PROPRES RETOUCHES, PAS SUR LE LOT D'ÉCRITURE.** Les cinq
+      écrivains ont rendu un travail dont toutes les mesures étaient vertes ; c'est
+      **l'orchestrateur** — moi — qui a cassé deux questions en fermant « écarter les deux extrêmes »
+      à la main, et **aucun des deux dégâts n'était visible dans la mesure que je visais** :
+      - j'ai écrit « un parent **recollé** » en vérifiant d'un `grep -ci recoll` que le mot était dans
+        la page. Il y est — mais sous la forme **« recolle »**, sans accent final, et
+        `mesure-lexique-qcm` compare des **jetons entiers** : « recollé » était donc un mot étranger,
+        et le `k` de la question passait de `0/0/0` à `0/0/1` ;
+      - j'ai remplacé « (alerte) » par « (appel) » pour gagner un caractère : « alerte » fait
+        **6 lettres** et « appel » **5**, donc l'option perdait d'un coup **un mot long et un mot
+        étranger** — `k` à `1/2/2` pour une cible de 2, et la règle du `w` en défaut.
+      Les deux ont été rattrapés en prenant les mots **dans le dictionnaire de la page** (`collé` +
+      `devient`, et `(bloc)` à la place de `(mixin)` pour rendre le caractère perdu ailleurs).
+      ⚠️ **C'est la même faute qu'au 43ᵉ cours, d'un cran plus bas : là-bas un diagnostic ne copiait
+      pas la regex de l'outil, ici un `grep` ne copie pas sa notion de JETON.** La parade est
+      identique : **lancer l'outil, pas un substitut.**
+
+      🔴 **ET LES DEUX AGENTS DE RETOUCHE ONT CONTREDIT LEUR PROPRE CONSIGNE, tous les deux avec la
+      preuve.** Les deux pistes que je leur avais données comme « déjà vérifiées » étaient fausses :
+      « n'accepte aucun .css » introduisait `accepte`, absent de la page ; « Pour laisser Sass
+      accepter » introduisait `laisser` **et** `accepter`, tous deux absents, faisant passer le `k`
+      de 2 à 3. Chacun a mesuré, rejeté, et proposé un remplacement pris dans la page. **Une piste
+      d'orchestrateur n'est pas un ordre** — la consigne le disait, et cette fois elle a servi.
+
+      🟠 **UN EFFET DE BORD MESURÉ, ET CONTRE-INTUITIF** : fermer les 4 questions que « le mot
+      technique exclusif » tranchait **faisait MONTER** la stratégie de 25,8 % à 27,5 %. Une question
+      tranchée qui vaut 0 rapporte +0,25 à la moyenne quand on la ferme, alors que les **égalités à
+      deux** incluant la bonne réponse valent 0,50. Il a fallu égaliser aussi **4 ex æquo** du même
+      lot pour que le solde revienne à zéro. **La couverture et la réussite ne se ferment pas du même
+      geste.**
+
+      **Autres remontées, non corrigées et consignées** (aucun des 45 vérificateurs ne lit ces
+      endroits — même famille que `pandas`, `haskell` et `clojure`) :
+      - `lecon-01` : la figure « ce qui est produit » annonce `#1d50a4` pour `darken(#2563c8, 10%)`.
+        Recalculé (`scratchpad/darken.js`, conversion RGB↔HSL, faute de compilateur Sass) : `#2563c8`
+        est à **46,47 %** de luminosité, `darken(…, 10 %)` donne **36,47 % → `#1d4e9d`**, quand
+        `#1d50a4` vaut 37,84 % — soit **8,63 points d'assombrissement au lieu de 10**.
+      - `lecon-06` : `height: 100% - 30px;  // calc-compatible si unités mixtes`, annoté comme les
+        deux lignes voisines qui donnent un **résultat** — or Dart Sass refuse d'additionner `%` et
+        `px`, et la même page enseigne plus bas que « le calcul doit rester au navigateur, avec
+        `calc()` ».
+      - `lecon-10` : le bloc `sass:math` écrit `math.percentage(2/5)` **quatre lignes au-dessus** du
+        callout qui déclare `$a / $b` déprécié — et la bonne réponse intouchable de sa q1 dit la même
+        chose.
+      - `lecon-11` : la fonction `fluid()` divise `1.2rem` par `800px` : `$pente` porte l'unité
+        composée `rem/px`, que `#{$pente * 100}vw` interpole telle quelle. Dart Sass ne sérialise pas
+        un nombre à unité au dénominateur ; le remède usuel est `math.div($w2 - $w1, 1px)`.
+      - `lecon-14` : `abstracts/_index.scss` est décrit deux fois de façons contradictoires — l'un
+        des blocs **émet du CSS** (`:root { @include vars-theme(...) }`, `.carte { … }`) quand la
+        bonne réponse **intouchable** de la q13 du bilan affirme « du Sass qui ne produit aucun CSS
+        direct ». Et `_responsive.scss` appelle `jeton()` en n'ayant chargé que `sass:map`, alors que
+        `@use` namespace tous les membres (règle enseignée en `lecon-04`).
+      - `lecon-14` : l'`aria-label` du premier schéma énumère trois clés d'espacement quand la map en
+        déclare **quatre** (`xl` manque) — le SVG, lui, les affiche toutes.
+
+      **Contrôles** : `verif.js --rapide` **53 étapes**, seul `verif-donnees` signale (ses 3
+      avertissements préexistants, **0 erreur** sur 26 invariants) ; `verif-html` **0** sur 1 629
+      pages ; `verif-normatif` **75/75** (67/75 avant : `doc/lecon-03` repérimé une **8ᵉ** fois —
+      3 907 → **3 964** conformes, 64,0 % → **65,0 %**, S4 41/89 → **42/89**, et le corpus de
+      l'ancienne clause 2 960 → **3 003**) ; `verif-rendu` **0 erreur, 0 avertissement** sur 18
+      mesures ; `quiz-index` régénéré (**6 151 entrées**, +13 415 o) ; les **deux** cliquets refigés
+      dans le commit, `sass` marqué `traite`.
+
+      **ÉTAT DU SITE** : **43 cours marqués `traite`**, **46 à la cible**, global « la plus longue »
+      **49,6 %** sur 6 167 questions — *le site passe sous la barre des 50 %*. **Il reste 25 cours**
+      sur les 30 du périmètre fixé par Noah.
+      ⚠️ Le message du commit `197a354` annonce **49,5 %** : chiffre écrit de tête avant la mesure,
+      qui donne **49,6 %**. Corrigé ici plutôt que lissé — c'est la règle du chantier, et elle vaut
+      aussi pour un dixième de point.
+
+      **LE 45ᵉ COURS EST MESURÉ — la prochaine passe démarre sur l'écriture.** Classement par
+      nocivité réelle rejoué sur les 25 cours restants du périmètre : `securite` **59 devinables**,
+      `powershell` 59, `go` 59, `elixir` 58, `julia` 57, `nosql` 56, `vue` 56, `perl` 56. **Le 45ᵉ
+      est `securite`** — 62 questions sur 13 leçons, 186 distracteurs, **10 085 caractères** à écrire
+      sur **60 questions** (rangs 59/2/1/0, cible 16/16/15/15) :
+
+      | indice | réussite | couverture | rendement |
+      |---|---:|---:|---:|
+      | la plus longue | **95,2 %** | **100 %** | 95,2 % |
+      | la plus détaillée | **73,5 %** | 62,9 % | **100 %** |
+      | le mot technique exclusif | **70,2 %** | 72,6 % | 82,2 % |
+      | RESTREINDRE à la ponctuation forte | **53,2 %** | 37,1 % | **100 %** |
+      | RESTREINDRE à la parenthèse | **50,0 %** | 35,5 % | 95,5 % |
+      | l'incise entre parenthèses | **47,6 %** | 32,3 % | 95,0 % |
+      | la seule qui nie | **36,8 %** | 32,3 % | 60,0 % |
+      | l'écho de la question | **35,5 %** | 24,2 % | 60,0 % |
+      | la plus prudente | **34,3 %** | 17,7 % | 72,7 % |
+      | l'attaque unique | **31,5 %** | 25,8 % | 50,0 % |
+
+      ⚠️ **`securite` bat le record de l'intrus lexical : 8 questions « sûres » en lecture PAR
+      DÉFAUT** (31,5 %), contre 4 sur `sass` et 3 sur `clojure` — dont `lecon-01` (`quelle`),
+      `lecon-02` et `lecon-06` (`parce`). Et **3 alertes de mot fétiche** : `parce` (1 bonne / 25
+      distracteurs, ÉCARTER rend **31,7 %**), `serveur` (6/7, RESTREINDRE 29,0 %), `données` (6/8,
+      28,2 %). Lexique : **50 exploitables sur 62, 60 à mettre en forme**. Sens inverse : **3
+      alertes** (la moins bavarde 31,5 %, les 2ᵉ et 3ᵉ plus longues 32,4 % et 32,3 %).
+      ⚠️ **Le cours enseigne la sécurité : un distracteur faux doit le rester sans devenir un
+      CONSEIL DANGEREUX plausible.** C'est le seul cours du périmètre où une option mal écrite
+      apprend une pratique nuisible.
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
