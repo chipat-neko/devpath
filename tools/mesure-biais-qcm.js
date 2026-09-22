@@ -528,6 +528,30 @@ var STRATEGIES = [
     quoi: "le rang 2 de longueur",
     choisir: function (q) { return parRang(q, 2); },
   },
+  /* ⚠️ LE QUATRIEME RANG MANQUAIT, et le trou etait dans l'OUTIL, pas dans le contenu.
+     Ajoute au point B4 (cours `powershell`, 2026-09-22) apres une prise du 6e relecteur
+     que les 43 strategies ne voyaient pas : sur les 3 questions du bloc `data-quiz` de
+     `lecon-17`, la bonne reponse etait la plus COURTE 2 fois sur 3, et « la plus courte
+     OU la 2e plus courte » rendait 3/3 = 100 %. L'outil connaissait le rang 0, le rang 1
+     et le rang 2 -- jamais le rang 3, c'est-a-dire la plus courte. Mesure du jour sur les
+     6 167 questions : rang 3 = 16,5 % de reussite pour 92,2 % de couverture, donc SOUS le
+     hasard au niveau du site, et 25,0 % sur `powershell` traite. L'ajout ne change donc le
+     verdict d'aucun cours ; ce qu'il rend visible, c'est le LOT -- la lecon de `react`,
+     un indice de lot vaut 100 % sur le lot et 25 % sur le site. */
+  {
+    nom: "la QUATRIEME plus longue",
+    quoi: "le rang 3 de longueur, c'est-a-dire LA PLUS COURTE — le rang que les trois autres oubliaient",
+    choisir: function (q) { return parRang(q, 3); },
+  },
+  {
+    nom: "ECARTER la plus courte",
+    quoi: "le sens inverse du rang 3 : ecarter la plus courte et tirer parmi les autres",
+    choisir: function (q) {
+      var ex = parRang(q, 3);
+      var s = toutes(q).filter(function (i) { return ex.indexOf(i) === -1; });
+      return s.length ? s : toutes(q);
+    },
+  },
   {
     nom: "ecarter les deux extremes",
     quoi: "ni la plus longue ni la plus courte — la zone ou la correction pousse la bonne reponse",

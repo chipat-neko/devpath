@@ -98,7 +98,7 @@ function mesurer(cours) {
    33 fois. C'est la regle du `k` du cours `mobile` (fermer un indice a fond le
    RETOURNE) appliquee a une deuxieme famille d'indices.
 
-   Les 43 strategies ne sont PAS recopiees : elles sont importees de
+   Les strategies (45 depuis le 2026-09-22) ne sont PAS recopiees : elles sont importees de
    mesure-biais-qcm.js, qui s'exporte quand on le requiert. Une copie se perimerait
    au premier ajout de strategie — c'est exactement la faute qu'a corrigee
    `recense-chaine.js` sur la liste des etapes de verif.js.
