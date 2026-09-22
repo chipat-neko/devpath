@@ -7152,6 +7152,121 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       contredit ne l'est pas tant que l'écart de version n'est pas écarté.** La consigne le dit en
       tête (`scratchpad/CONSIGNE-POWERSHELL.md`).
 
+      ---
+
+      **LE 46ᵉ COURS EST CLOS — `powershell`, 91,8 % tombé à 25,0 % EXACT.** Les six lots
+      d'écriture, leurs six contradictions et leurs six corrections avaient été produits à la
+      passe précédente **sans pouvoir être commités** (coupure). Ils ont survécu parce que rien
+      n'a touché à l'arbre entre-temps — c'est la deuxième fois que ce pari passe, et il ne
+      faut pas en faire une habitude. **Tout a été remesuré ce réveil avant le moindre commit**,
+      aucun chiffre n'est repris du compte rendu des agents :
+
+      | indice | avant | après |
+      |---|---:|---:|
+      | la plus longue | 91,8 % | **25,0 %** (rendement 25,0 %, rangs 16/16/16/16) |
+      | la plus détaillée | 73,4 % | 24,2 % (couverture 6,3 %, rendement 0,0 %) |
+      | le mot technique exclusif | 72,8 % | 22,0 % (couverture 14,1 %, rendement 0,0 %) |
+      | l'incise entre parenthèses | 67,6 % | 25,1 % (couverture **0,0 %**) |
+      | la seule avec une PONCTUATION FORTE | 54,3 % | 25,0 % (couverture **0,0 %**) |
+      | la seule avec un point-virgule | 44,9 % | 25,0 % (couverture **0,0 %**) |
+      | mot fétiche | 2 alertes | **0** |
+      | intrus lexical | 4 questions sûres | **0** |
+      | biais inverse (direct / inverse) | — | 22,0 % / 25,4 %, **+0,4 pt** |
+
+      **Plus aucune des 45 stratégies ne tranche** : la plus haute est `ECARTER la plus dense`
+      à 26,8 % avec un rendement de **0,0 %**, et `ecarter les deux extrêmes` à 26,2 % ne
+      couvre que **2 questions**. Site : **45 cours traités**, global « la plus longue »
+      **48,8 % → 48,2 %** sur 6 167 questions.
+
+      🟠 **UNE BONNE RÉPONSE QUI CONTREDISAIT LE GLOSSAIRE DE SA PROPRE PAGE**, remontée par le
+      2ᵉ correcteur et tranchée ici **par exécution** (PowerShell **5.1.26100.8875**).
+      `lecon-06` q3 attribuait à `[CmdletBinding()]` « la validation et le support du
+      pipeline ». Mesuré :
+
+      | scénario | résultat |
+      |---|---|
+      | `[ValidateSet("a","b")]` **sans** l'attribut | `z` **REJETÉ** (`ParameterBindingValidationException`) |
+      | `[Parameter(ValueFromPipeline)]` **sans** l'attribut | `pipeline: 1` / `pipeline: 2` |
+      | `$PSCmdlet` sans / avec | `null` / **disponible** |
+      | `-Inconnu 9` **sans** l'attribut | part dans `$args`, **aucune erreur** |
+      | `-Inconnu 9` **avec** l'attribut | `ParameterBindingException` |
+
+      Validation et pipeline marchent donc **sans** l'attribut, et le glossaire de la page
+      (l. 259) comme son corps (l. 165) ne citaient déjà que les paramètres communs : **la bonne
+      réponse disait le contraire de sa propre leçon.** Remplacée par le rejet des paramètres
+      inconnus, prouvé ci-dessus ; l'`explain` corrigé de même. Profil tenu : 146 → **144 car.**
+      (rang de longueur inchangé, 185/144/130/127), **k = 2** mots étrangers comme les trois
+      distracteurs, densité 6,16 → 6,11. Le biais inverse s'est même **amélioré** (−0,8 → +0,4 pt).
+
+      🟠 **LES TROIS ATTEINTES À L'INTOUCHABLE ONT ÉTÉ REJUGÉES UNE PAR UNE, PAR EXÉCUTION**,
+      au lieu d'être acceptées sur parole. Les trois sont des **corrections de fond**, pas des
+      retouches de forme, et les trois anciennes formulations étaient **fausses** :
+
+      - `lecon-09` q2 : « sans `-Raw`, le parseur n'interprète pas correctement » — faux pour la
+        forme **pipeline**, qui est celle qu'enseigne la page. Mesuré sur un JSON de 4 lignes :
+        `Get-Content x | ConvertFrom-Json` → **OK** ; `ConvertFrom-Json (Get-Content x)` →
+        **`ParameterBindingException`** (« Impossible de convertir System.Object[] en
+        System.String ») ; avec `-Raw`, **OK dans les deux formes**. ⚠️ Mon premier test avait
+        *confirmé à tort* l'ancienne version, parce que j'avais écrit le JSON **sur une seule
+        ligne** — un tableau d'un seul élément se convertit implicitement. Le scénario ne prouve
+        rien s'il n'a pas la forme du cas réel.
+      - `lecon-13` q2 : `$_.Matches.Groups['nom'].Value` rend **vide, en silence** ;
+        `$_.Matches[0].Groups['nom'].Value` rend **`42`**. `.Matches` est un
+        `System.Text.RegularExpressions.Match[]`, pas un `Match`.
+      - `lecon-14` q3 : au-delà de `-Depth`, `ConvertTo-Json` ne « montre pas des types » — il
+        rend `"@{valeur=profond}"`, c'est-à-dire la **représentation texte du contenu**.
+
+      **DÉCISION D'ORCHESTRATEUR — la remontée du 4ᵉ lot est REFUSÉE, et c'est le correcteur qui
+      avait raison de ne pas écrire.** Le relecteur demandait un encadré sur la perte des méthodes
+      à la désérialisation du remoting. Vérifié : un balayage de `pages/powershell/` ne sort le
+      radical « sérial » que dans `lecon-14` et `lecon-17`, tous deux sur **JSON** ; aucune page
+      ne lie `Invoke-Command` à une désérialisation. Les quatre affirmations « renvoie des
+      objets » de `lecon-11` sont **vraies** (ce sont des objets, désérialisés mais des objets) :
+      il n'y a pas de faute à corriger, seulement un enrichissement possible — **hors du
+      périmètre de B4**.
+
+      ⚠️ **DETTE D'OUTILLAGE SOLDÉE DANS LA FOULÉE, ET C'EST LE 46ᵉ INDICE : LA PLUS COURTE.**
+      Le 6ᵉ relecteur a vu ce qu'aucun des 43 outils ne mesurait — sur les 3 questions du bloc
+      `data-quiz` de `lecon-17`, la bonne réponse était la **plus COURTE** 2 fois sur 3, et
+      « la plus courte **ou** la 2ᵉ plus courte » rendait **3/3 = 100 %**. L'outil connaissait le
+      rang 0, le rang 1 et le rang 2 — **jamais le rang 3**. Deux stratégies câblées, vérifiées
+      contre une sonde indépendante qui reproduit les rangs 0 à 2 au dixième près (48,2 / 17,9 /
+      17,5) :
+
+      | stratégie | réussite | couverture | rendement |
+      |---|---:|---:|---:|
+      | `la QUATRIEME plus longue` (la plus courte) | **16,5 %** | 92,2 % | 17,1 % |
+      | `ECARTER la plus courte` | 29,0 % | 1,1 % | 68,2 % |
+
+      Au niveau du site le rang 3 est **sous le hasard**, et il vaut **25,0 % sur `powershell`
+      traité : l'ajout ne change le verdict d'aucun cours.** Ce qu'il rend visible est le **LOT**
+      — la leçon de `react`, un indice de lot vaut 100 % sur le lot et 25 % sur le site.
+      `verif-qcm-biais` lit la mesure par `--json`, donc il voit les 45 **sans copie à mettre à
+      jour** : vert, aucun cours empiré ; épreuve par injection **10 / 10 cas vus**, fichiers
+      restaurés.
+
+      ⚠️ **AVERTISSEMENT DE MÉTHODE REMONTÉ PAR LE 1ᵉʳ CORRECTEUR, à retenir pour les 23 cours
+      restants** : deux agents ont écrit **en parallèle sur le même cours**, et trois mesures
+      successives du même outil ont rendu `0 exploitable` / `3 exploitables` / `1 exploitable`
+      à quelques minutes d'intervalle. **Un correcteur qui juge son lot sur l'arbre vivant juge
+      le travail d'un autre.** La parade employée — deux copies gelées de `pages/` + `tools/` ne
+      différant que par les questions du lot — doit devenir la règle dès qu'un cours est partagé.
+
+      **Dette d'outillage laissée, non corrigée** : la liste blanche `SIGLES` ignore toujours
+      `RCE`, `SSRF`, `SBOM`, `OSV` (relevée au 45ᵉ cours). Rien de neuf ici.
+
+      **Contrôles** : `verif-html` **0** sur 1 629 pages ; `verif-donnees` **0 erreur** sur les
+      26 invariants (les 6 erreurs d'index périmés levées par la régénération `--fresh`) ;
+      **35 blocs JSON** du cours valides, 0 BOM ; `mesure-explain-orpheline --depuis=856f088` :
+      **0 orpheline** (2 cas indicatifs, mots du français) ; `quiz-index`, `pieges-data` et
+      `search-index` regénérés ; cliquet refigé, `powershell` marqué `traite`.
+
+      ---
+
+      **LE 47ᵉ COURS EST DÉSIGNÉ — `go`.** Classement par nocivité réelle rejoué sur les
+      23 cours restants du périmètre : `go` **58,5 devinables** (62 questions, 94,3 %),
+      `elixir` 57,8, `julia` 56,5, `nosql` 56,5, `vue` 56,0, `perl` 55,8, `dart` 55,5.
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
