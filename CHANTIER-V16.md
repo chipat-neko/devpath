@@ -7109,6 +7109,49 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       **ÉTAT DU SITE** : **44 cours marqués `traite`**, global « la plus longue » **49,6 % → 48,8 %**
       sur 6 167 questions. **Il reste 24 cours** sur les 30 du périmètre fixé par Noah.
 
+      ---
+
+      **LE 46ᵉ COURS EST MESURÉ — `powershell`.** Classement par nocivité réelle rejoué sur les
+      24 cours restants du périmètre : `powershell` **58,8 devinables**, `go` 58,5, `elixir` 57,8,
+      `nosql` 56,5, `julia` 56,5, `vue` 56,0, `perl` 55,8, `dart` 55,5. **Le 46ᵉ est `powershell`**
+      — 64 questions sur **17 leçons**, 192 distracteurs, **11 132 caractères** à écrire sur
+      **56 questions** (rangs 60/2/1/1, cible 16/16/16/16) :
+
+      | indice | réussite | couverture | rendement |
+      |---|---:|---:|---:|
+      | la plus longue | **91,8 %** | 96,9 % | **93,5 %** |
+      | la plus détaillée | **73,4 %** | 65,6 % | **97,6 %** |
+      | le mot technique exclusif | **72,8 %** | 67,2 % | 93,0 % |
+      | l'incise entre parenthèses | **67,6 %** | 60,9 % | 94,9 % |
+      | RESTREINDRE à la parenthèse | **65,8 %** | 57,8 % | 94,6 % |
+      | la seule avec une PONCTUATION FORTE | **54,3 %** | 39,1 % | **100 %** |
+      | ECARTER la moins bavarde | **45,3 %** | 15,6 % | 90,0 % |
+      | la seule avec un point-virgule | **44,9 %** | 26,6 % | **100 %** |
+      | l'écho de la question | **43,8 %** | 34,4 % | 72,7 % |
+      | la plus dense (mots longs) | **40,2 %** | 90,6 % | 41,4 % |
+
+      ⚠️ **LE RAPPORT DE LONGUEUR EST LE PLUS FORT DU PÉRIMÈTRE RESTANT : 3,97** (bonne réponse
+      **90,8 car.** contre **22,9 car.** pour le distracteur moyen ; `securite` 2,86, `sass` 3,33).
+      Le distracteur médian est un télégramme — « C'est l'inverse », « Un booléen », « Get-Help ».
+      ⚠️ **AUCUN des 192 distracteurs ne porte de point-virgule**, pour **17 bonnes réponses** :
+      indice à **100 %** sur 17 questions. Parenthèse **38 bonnes / 12 distracteurs** (39 questions
+      tranchées, 89,7 % pour la bonne), UNION de ponctuation forte **45 questions, 93,3 %**, et
+      **37 questions** où la bonne réponse est SEULE en tête du **compte** d'incises. Lexique :
+      **54 exploitables sur 64, 56 à mettre en forme**. Mot fétiche : **2 alertes** (`objet` 8
+      bonnes / 2 distracteurs, RESTREINDRE **33,2 %** ; `powershell` 5/5, 28,9 %). Intrus lexical :
+      **4 questions sûres** (2 en EXCÈS, 2 en DÉFAUT), lecture EXCÈS **31,6 %**. Sens inverse :
+      **4 alertes** (la moins bavarde 29,7 %, les 3ᵉ et 2ᵉ plus longues 32,0 % et 31,6 %, l'attaque
+      unique 26,0 %).
+
+      ⚠️⚠️ **CE COURS S'EXÉCUTE, ET C'EST LE PREMIER DEPUIS SEPT.** Les 39ᵉ à 45ᵉ n'avaient rien à
+      faire tourner. Ici `powershell.exe` est présent dans l'environnement — **version mesurée
+      5.1.26100.8875** — donc la règle fondatrice du chantier redevient applicable. **Mais le cours
+      enseigne largement PowerShell 7** (`lecon-12` compare les deux) : ternaire `? :`, `&&`/`||`,
+      `ForEach-Object -Parallel`, `$PSStyle`, l'encodage par défaut de `Out-File` et la portabilité
+      `pwsh` diffèrent. **Une exécution qui CONFIRME la leçon est une preuve ; une exécution qui la
+      contredit ne l'est pas tant que l'écart de version n'est pas écarté.** La consigne le dit en
+      tête (`scratchpad/CONSIGNE-POWERSHELL.md`).
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
