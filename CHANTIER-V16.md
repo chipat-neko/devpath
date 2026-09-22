@@ -7267,6 +7267,57 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       23 cours restants du périmètre : `go` **58,5 devinables** (62 questions, 94,3 %),
       `elixir` 57,8, `julia` 56,5, `nosql` 56,5, `vue` 56,0, `perl` 55,8, `dart` 55,5.
 
+      **Mesure complète, rejouée ce réveil** (62 questions sur **18 leçons**, dont un QCM bilan de
+      8 questions dans `lecon-18`, 186 distracteurs) :
+
+      | indice | réussite | couverture | rendement |
+      |---|---:|---:|---:|
+      | la plus longue | **94,4 %** | 98,4 % | **95,1 %** |
+      | la plus détaillée | **84,7 %** | 77,4 % | **100 %** |
+      | RESTREINDRE à la parenthèse | **77,0 %** | 71,0 % | 97,7 % |
+      | l'incise entre parenthèses | **74,6 %** | 67,7 % | 97,6 % |
+      | RESTREINDRE à la ponctuation forte | **74,6 %** | 64,5 % | **100 %** |
+      | le mot technique exclusif | **73,1 %** | 66,1 % | 92,7 % |
+      | RESTREINDRE aux deux-points | **56,0 %** | 40,3 % | **100 %** |
+      | l'écho de la question | **54,6 %** | 53,2 % | 72,7 % |
+      | RESTREINDRE au point-virgule | **49,6 %** | 32,3 % | **100 %** |
+      | ECARTER la moins bavarde | **44,2 %** | 11,3 % | **100 %** |
+
+      ⚠️ **LE DÉSÉQUILIBRE EST LE DEUXIÈME DU CHANTIER : rapport 4,76** (bonne réponse **123,0 car.**
+      contre **25,8 car.** pour le distracteur moyen ; `haskell` 5,06, `powershell` 3,97, `sass` 3,33).
+      `plan-rangs-qcm` demande **15 184 caractères sur 58 questions des 62** ; rangs **59 / 1 / 0 / 2**,
+      cible **16 / 16 / 15 / 15** ; **177 distracteurs sur 186 hors de la bande 70–130 %**, fourchette
+      **0,03 à 4,17**.
+
+      ⚠️ **TROIS MARQUES DE PONCTUATION À 100 %** : les **deux-points** (25 questions tranchées), le
+      **point-virgule** (20), le **point interne** (8) ; parenthèse **45 questions à 93,3 %**, virgule
+      30 à 93,3 %, barre oblique 8 à 87,5 %. La MAJUSCULE est **déjà retournée à 50 %** (7 bonnes
+      contre 11 distracteurs) : la refermer « à fond » la renverrait dans l'autre sens.
+
+      ⚠️ **L'INDICE LEXICAL EST INVERSÉ, ET C'EST ATYPIQUE** : STRICTE 21,0 % de couverture pour un
+      rendement de **0,0 %**, PROPORTION 43,5 % / 44,4 %, mais **INVERSE 64,5 % de couverture pour
+      62,5 % de rendement**. Sur `powershell`, l'INVERSE était à 0,0 %. Ici la bonne réponse porte
+      **plus** de mots étrangers à la page que ses distracteurs, et l'écarter paie.
+
+      ⚠️ **LES QUATRE ALERTES DU SENS INVERSE SONT TOUTES DES RANGS DE LONGUEUR**, et **la stratégie
+      câblée ce réveil en fait partie** : `la TROISIEME plus longue` (55 questions, DIRECTE 0,0 %,
+      INVERSE **33,3 %**, soit le plafond théorique), `la DEUXIEME` (57, 1,8 % / 32,7 %),
+      `la moins bavarde` (39, 2,6 % / 32,5 %) et **`la QUATRIEME plus longue`** (59, 3,4 % / 32,2 %).
+      Mot fétiche : **1 alerte** (`valeur`, 8 bonnes / 2 distracteurs, RESTREINDRE 33,5 %). Intrus
+      lexical : **0 question sûre** — le seul indicateur déjà propre, à garder à couverture nulle.
+      Biais inverse du mot technique : directe **73,1 %**, inverse **5,6 %**, écart **−19,4 points**.
+
+      ⚠️⚠️ **CE COURS NE S'EXÉCUTE PAS.** `go version` → *command not found* ; `runner.js` ne pose un
+      bouton « Tester » que sur du JavaScript. **Aucune affirmation ne pourra être prouvée par
+      exécution**, donc la règle est stricte : on n'écrit un distracteur que sur un point que la page
+      elle-même établit. Piège de version nommé dans la consigne : la **capture de la variable de
+      boucle a changé en Go 1.22**, donc « la variable de boucle est partagée par toutes les
+      goroutines » est vrai avant et faux après — à ne jamais écrire sans que la page fixe la version.
+
+      Consigne écrite : `scratchpad/CONSIGNE-GO.md`. Découpage proposé, équilibré par question et
+      **sans deux agents sur un même fichier** : L1 `lecon-01..04` (12 q), L2 `05..08` (12),
+      L3 `09..11` (9), L4 `12..14` (9), L5 `15..17` (9), L6 `lecon-18` + son bilan (11).
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
