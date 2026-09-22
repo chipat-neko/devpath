@@ -265,9 +265,16 @@ Règle : **par mot, les quatre options le portent, ou aucune**, appliquée **que
 deux. **Lis la colonne « sûres », pas la colonne « taux ».**
 ⚠️ **LA SEULE MANŒUVRE SÛRE EST L'AJOUT, PAS LE RETRAIT**, et **ne crée pas un 3/4 dont l'intrus
 serait la bonne réponse** : elle est intouchable, donc l'indice deviendrait irrattrapable.
-⚠️ Le mot `parce` tranche **19 bonnes réponses contre 3 distracteurs** sur le cours : c'est la
-formule « Parce que… » des bonnes réponses. Si la bonne réponse commence par « Parce que », **les
-trois distracteurs doivent commencer pareil.**
+⚠️ Le mot `parce` est **vu 19 fois** sur le cours, réparties en **3 bonnes réponses et 16
+distracteurs** — c'est-à-dire l'inverse de ce qu'on croit spontanément : c'est la formule
+« Parce que… » des **distracteurs**. La règle pratique tient quand même, dans les deux sens : **par
+question, les quatre options commencent par « Parce que », ou aucune.**
+⚠️⚠️ **CORRECTION DU 2026-09-22, relevée par un écrivain du lot 5, et c'est une leçon de méthode** :
+cette consigne annonçait d'abord « 19 bonnes réponses contre 3 distracteurs », en lisant de travers
+les colonnes de `mesure-mot-fetiche` (`vu / bonnes / distracteurs`). Un écrivain qui aurait cru la
+statistique aurait **ajouté** des « Parce que » partout et aggravé le déséquilibre. **Relis les
+en-têtes de colonnes avant de recopier un chiffre dans une consigne** — c'est la même faute, au
+niveau du prompt, que celle du diagnostic qui ne copiait pas la regex de l'outil.
 
 ### (10) LE SENS INVERSE — déjà **3 alertes AVANT ton passage**
 
