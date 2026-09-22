@@ -151,7 +151,7 @@ $liste.Count      # 2</code></pre></figure>
 $personne["Nom"]       # Lovelace
 $personne.Prenom       # Ada
 $personne.Pays = "UK"  # ajout
-$personne.Keys         # Nom, Prenom, Annee, Pays</code></pre></figure>
+$personne.Keys         # les 4 clés (l'ordre n'est pas garanti)</code></pre></figure>
 <p>Les hashtables servent partout&nbsp;: regrouper des options, compter des occurrences, construire des objets.</p>
 <figure class="diagram">
   <svg viewBox="0 0 640 190" role="img" aria-label="Une hashtable associe des clés à des valeurs. La clé Nom pointe vers Lovelace, la clé Prenom vers Ada, la clé Annee vers 1815. On accède à une valeur en donnant sa clé, par exemple personne crochet Nom renvoie Lovelace.">
@@ -180,9 +180,10 @@ $personne.Keys         # Nom, Prenom, Annee, Pays</code></pre></figure>
 <p>Idiome classique&nbsp;: dénombrer des éléments en incrémentant une entrée par clé.</p>
 <figure class="code-block" data-file="Console"><pre><code class="language-powershell">$compte = @{}
 foreach ($lettre in "abracadabra".ToCharArray()) {
-    $compte[$lettre]++     # crée la clé à 0 si absente, puis +1
+    $compte["$lettre"]++   # crée la clé à 0 si absente, puis +1
 }
 $compte['a']    # 5</code></pre></figure>
+<p><strong>Le détail qui coince&nbsp;:</strong> <code>ToCharArray()</code> renvoie des <code>[char]</code>, et une clé <code>[char]</code> n'est <em>pas</em> la même qu'une clé <code>[string]</code>. Sans les guillemets de <code>$compte["$lettre"]</code>, le comptage fonctionne mais <code>$compte['a']</code> ne renvoie <strong>rien</strong> — il faudrait alors écrire <code>$compte[[char]'a']</code>.</p>
 
 <h2>Construire des objets&nbsp;: PSCustomObject</h2>
 <p>Pour produire de vrais objets aux propriétés nommées (idéals dans un pipeline), utilise <code>[PSCustomObject]</code> à partir d'une hashtable. L'ordre des propriétés est préservé.</p>
@@ -264,9 +265,9 @@ $personnes | Sort-Object Annee | Format-Table</code></pre></figure><p>Une fois e
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Pourquoi préférer une List à un tableau quand on ajoute beaucoup d'éléments ?","a":["Parce qu'un tableau @() est de taille fixe : chaque += recrée tout le tableau (copie coûteuse). Une [System.Collections.Generic.List[T]] grandit efficacement avec .Add()","Parce qu'un tableau ne peut pas grandir du tout","Parce que List trie automatiquement","Il n'y a aucune différence de performance"],"correct":0,"explain":"Ajouter à un tableau avec += alloue un nouveau tableau et recopie l'existant à chaque fois, ce qui devient quadratique. Une List générique gère un tampon redimensionnable : .Add() est amorti efficace, idéal pour de nombreux ajouts."},
-  {"q":"Comment créer un objet à trois propriétés nommées ?","a":["Avec [PSCustomObject]@{ Nom='...'; Age=30; Ville='...' }","Avec New-Object String","Avec un tableau @(1,2,3)","Avec Format-List"],"correct":0,"explain":"La syntaxe [PSCustomObject]@{ ... } construit un objet aux propriétés nommées à partir d'une table de hachage, en préservant l'ordre des clés. C'est la façon idiomatique de produire des objets structurés."},
-  {"q":"Quel opérateur transforme \"a;b;c\" en tableau ?","a":["-split (ex. \"a;b;c\" -split ';')","-join","-replace","-match"],"correct":0,"explain":"L'opérateur -split découpe une chaîne selon un séparateur (ou une regex) et renvoie un tableau. \"a;b;c\" -split ';' donne trois éléments. À l'inverse, -join recolle un tableau en chaîne."}
+  {"q":"Pourquoi préférer une List à un tableau quand on ajoute beaucoup d'éléments ?","a":["Parce qu'un tableau @() est de taille fixe : chaque += recrée tout le tableau (copie coûteuse). Une [System.Collections.Generic.List[T]] grandit efficacement avec .Add()","Parce que .Add() recopie à chaque boucle les collections entières : chaque += recrée le tableau efficacement (une recopie par élément unique). Une List grandit au même prix","Parce qu'un tableau @() garde de la place libre au bout et que chaque += y range la valeur : le tableau grandit donc sur place (une simple position de plus). Une List donne surtout un tri clair","Parce que le coût d'un += tient à la taille de chaque valeur plus qu'au nombre d'ajouts : mille valeurs légères vont plus vite que dix chaînes (le poids seul compte). Une List trie et compte efficacement ces données"],"correct":0,"explain":"Ajouter à un tableau avec += alloue un nouveau tableau et recopie l'existant à chaque fois, ce qui devient quadratique. Une List générique gère un tampon redimensionnable : .Add() est amorti efficace, idéal pour de nombreux ajouts."},
+  {"q":"Comment créer un objet à trois propriétés nommées ?","a":["Avec [PSCustomObject]@{ Nom='...'; Age=30; Ville='...' }","Avec une hashtable @{ Nom='...'; Age='...'; Ville='...' }","Avec [ordered]@{ Nom='...'; Age=30; Ville='...' } et Format-List","Avec les collections indexées Nom; Age; Ville"],"correct":0,"explain":"La syntaxe [PSCustomObject]@{ ... } construit un objet aux propriétés nommées à partir d'une table de hachage, en préservant l'ordre des clés. C'est la façon idiomatique de produire des objets structurés."},
+  {"q":"Quel opérateur transforme \"a;b;c\" en tableau ?","a":["-split (ex. \"a;b;c\" -split ';')","-join (ex. \"a;b;c\" -join ';')","-like (ex. \"a;b;c\" -like ';*')","-is (ex. \"a;b;c\" -is [array])"],"correct":0,"explain":"L'opérateur -split découpe une chaîne selon un séparateur (ou une regex) et renvoie un tableau. \"a;b;c\" -split ';' donne trois éléments. À l'inverse, -join recolle un tableau en chaîne."}
 ]
 </script>
 
@@ -291,7 +292,7 @@ $livre | Format-List</code></pre></figure></details></div>
 foreach ($mot in ("le chat le chien le chat" -split " ")) {
     $compte[$mot]++
 }
-$compte    # le=3  chat=2  chien=1</code></pre></figure></details></div>
+$compte    # chat=2  le=3  chien=1 (l'ordre n'est pas garanti)</code></pre></figure></details></div>
 
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">

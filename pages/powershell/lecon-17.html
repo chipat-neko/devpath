@@ -227,8 +227,12 @@ $tb.TopProcessus | Format-Table -AutoSize</code></pre></figure></details></div>
 
 <h2>Un cas réel — le rapport du matin</h2>
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: un rapport HTML envoyé chaque matin</p><p>Parce que <code>Get-TableauDeBord</code> renvoie un <strong>objet</strong>, on l'exporte sans effort. Une tâche planifiée le lance à 7&nbsp;h, convertit la synthèse en page HTML et l'archive&nbsp;: l'équipe consulte l'état du parc avant même d'ouvrir sa session.</p><figure class="code-block" data-file="rapport-matin.ps1"><pre><code class="language-powershell">Get-TableauDeBord |
+    Select-Object Machine, MemoireLibrePct,
+        @{ N='Disque';       E={ "$($_.Disque.Lettre) $($_.Disque.RempliPct) % rempli" } },
+        ServicesArretes,
+        @{ N='TopProcessus'; E={ ($_.TopProcessus.Name) -join ', ' } } |
     ConvertTo-Html -Title "État système" -PreContent "&lt;h1&gt;$env:COMPUTERNAME&lt;/h1&gt;" |
-    Out-File "C:\rapports\etat-$(Get-Date -Format 'yyyy-MM-dd').html"</code></pre></figure><p>La sortie objet, martelée depuis la leçon&nbsp;3, paie ici&nbsp;: le même calcul alimente la console, un CSV ou une page web sans une ligne de plus.</p></div></div>
+    Out-File "C:\rapports\etat-$(Get-Date -Format 'yyyy-MM-dd').html"</code></pre></figure><p>La sortie objet, martelée depuis la leçon&nbsp;3, paie ici&nbsp;: le même calcul alimente la console, un CSV ou une page web sans une ligne de plus.</p><p><strong>Pourquoi le <code>Select-Object</code>&nbsp;?</strong> <code>ConvertTo-Html</code> ne descend pas dans les objets imbriqués et n'a aucun paramètre de profondeur&nbsp;: envoyé tel quel, <code>$tb</code> rendrait <code>&lt;td&gt;@{Lettre=C:; LibreGo=120,4; RempliPct=78}&lt;/td&gt;</code> et <code>&lt;td&gt;System.Object[]&lt;/td&gt;</code>. Les propriétés calculées <strong>aplatissent</strong> ces deux colonnes avant la mise en page.</p></div></div>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 186" role="img" aria-label="Un seul objet de synthèse, calculé une fois par Get-TableauDeBord, alimente trois présentations différentes sans être recalculé : un affichage console avec Format-Table, un fichier CSV avec Export-Csv, et une page HTML avec ConvertTo-Html.">
@@ -290,9 +294,9 @@ $tb.TopProcessus | Format-Table -AutoSize</code></pre></figure></details></div>
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Quelle cmdlet interroge les grandeurs système comme la mémoire et les disques ?","a":["Get-CimInstance (interface CIM/WMI de Windows)","Get-Content","Get-Process","Get-Service"],"correct":0,"explain":"Get-CimInstance lit les classes CIM (Win32_OperatingSystem pour la mémoire, Win32_LogicalDisk pour les disques). Get-Process et Get-Service ciblent, eux, processus et services."},
-  {"q":"Pourquoi faire renvoyer des objets au tableau de bord plutôt qu'afficher du texte ?","a":["Un objet se réutilise : même calcul pour la console, un CSV, une page HTML ou une alerte","Parce que le texte est interdit en PowerShell","Parce que c'est plus rapide à taper","Cela n'a aucune importance"],"correct":0,"explain":"La sortie objet est le fil conducteur du cours : en renvoyant un [pscustomobject], on branche ensuite Format-Table, Export-Csv ou ConvertTo-Html sans retoucher la logique."},
-  {"q":"Comment convertir lisiblement des octets en gigaoctets ?","a":["Diviser par le suffixe 1GB : $d.Size / 1GB","Multiplier par 1000","Utiliser [string] sur la valeur","Diviser par 1024 une seule fois"],"correct":0,"explain":"PowerShell comprend 1KB, 1MB, 1GB, 1TB. $disque.Size / 1GB donne des gigaoctets directement, bien plus clair qu'une division par 1073741824."}
+  {"q":"Quelle cmdlet interroge les grandeurs système comme la mémoire et les disques ?","a":["Get-CimInstance (interface CIM/WMI de Windows)","Get-Content (la classe CIM/WMI d'un fichier)","Get-Process (le relevé CIM/WMI de tous les processus)","Get-Service (inventaire CIM/WMI Windows)"],"correct":0,"explain":"Get-CimInstance lit les classes CIM (Win32_OperatingSystem pour la mémoire, Win32_LogicalDisk pour les disques). Get-Process et Get-Service ciblent, eux, processus et services."},
+  {"q":"Pourquoi faire renvoyer des objets au tableau de bord plutôt qu'afficher du texte ?","a":["Un objet se réutilise : même calcul pour la console, un CSV, une page HTML ou une alerte","Un objet se compile : son calcul part en natif, la console, un CSV en deviennent plus sûrs","Un objet impose la mise en forme dès le calcul : la console, un CSV, une page HTML la gardent","Un objet fige une valeur : le calcul recommence, donc la console, un CSV ou la page varie"],"correct":0,"explain":"La sortie objet est le fil conducteur du cours : en renvoyant un [pscustomobject], on branche ensuite Format-Table, Export-Csv ou ConvertTo-Html sans retoucher la logique."},
+  {"q":"Comment convertir lisiblement des octets en gigaoctets ?","a":["Diviser par le suffixe 1GB : $d.Size / 1GB","Diviser par suffixe 1KB : $d.Size / 1KB","Diviser deux fois par le suffixe 1KB : $d.Size/1KB/1KB","Diviser par le seul suffixe 1TB : $d.Size / 1TB"],"correct":0,"explain":"PowerShell comprend 1KB, 1MB, 1GB, 1TB. $disque.Size / 1GB donne des gigaoctets directement, bien plus clair qu'une division par 1073741824."}
 ]
 </script>
 
@@ -325,18 +329,18 @@ if ($tb.Alerte) { Write-Warning "Mémoire critique : $($tb.MemoireLibrePct) %" }
 
 <script type="application/json" data-quiz-bilan>
 [
-  {"q":"Que transmet le pipeline de PowerShell ?","a":["Des objets (.NET)","Du texte brut","Des octets","Des fichiers"],"correct":0,"explain":"Grande différence avec les shells Unix qui passent du texte."},
-  {"q":"Quelle convention de nommage suivent les commandes ?","a":["Verbe-Nom (Get-Process)","des noms courts (ls)","tout en majuscules","des symboles"],"correct":0,"explain":"Get-, Set-, New-, Remove-…"},
-  {"q":"Par quoi commence une variable ?","a":["$nom","%nom","&nom","@nom"],"correct":0,"explain":"$maVar = 5."},
-  {"q":"Quelle commande filtre les objets du pipeline ?","a":["Where-Object","grep","filter()","SELECT"],"correct":0,"explain":"… | Where-Object { $_.Prop -gt 0 }."},
-  {"q":"Quelle commande boucle sur chaque objet du pipeline ?","a":["ForEach-Object","map()","loop","do-each"],"correct":0,"explain":"… | ForEach-Object { … }."},
-  {"q":"Comment crée-t-on un objet personnalisé ?","a":["[pscustomobject]@{ Nom = …; … }","{ … }","new Object()","dict()"],"correct":0,"explain":"@{ } est une table de hachage ; le cast en fait un objet."},
-  {"q":"Quelle commande affiche l'aide d'une cmdlet ?","a":["Get-Help","man","--help (seulement)","info"],"correct":0,"explain":"Get-Help Get-Process -Examples."},
-  {"q":"PowerShell est-il multiplateforme ?","a":["Oui, PowerShell 6+ (Core) tourne sur Linux/macOS aussi","Non, Windows uniquement","Seulement sur macOS","Seulement dans le navigateur"],"correct":0,"explain":"Le moteur s'appuie sur .NET, désormais multiplateforme."},
-  {"q":"Quel opérateur teste une correspondance regex et remplit $Matches ?","a":["-match","-like","-eq","-contains"],"correct":0,"explain":"\"abc123\" -match '(\\d+)' renvoie $true et $Matches[1] vaut 123. -like fait du glob (*, ?), pas de la regex."},
-  {"q":"Quelle cmdlet appelle une API REST et renvoie déjà des objets ?","a":["Invoke-RestMethod","Invoke-WebRequest","curl","Get-Content"],"correct":0,"explain":"Invoke-RestMethod désérialise automatiquement le JSON en objets. Invoke-WebRequest renvoie la réponse HTTP brute (statut, en-têtes, contenu)."},
-  {"q":"Quel mot-clé définit un type avec propriétés typées et méthodes ?","a":["class","function","struct","def"],"correct":0,"explain":"class Compte { [decimal]$Solde; [void] Deposer(...) { $this... } } — introduit en PowerShell 5."},
-  {"q":"Que renvoie Get-Credential ?","a":["Un objet PSCredential (utilisateur + mot de passe protégé)","Le mot de passe en clair","Un booléen","Le nom de la machine"],"correct":0,"explain":"On le passe aux cmdlets via -Credential sans jamais exposer le secret ; son mot de passe est un SecureString."}
+  {"q":"Que transmet le pipeline de PowerShell ?","a":["Des objets (.NET)","Du texte (ASCII)","Des bits (bruts)","Des pages (HTML)"],"correct":0,"explain":"Grande différence avec les shells Unix qui passent du texte."},
+  {"q":"Quelle convention de nommage suivent les commandes ?","a":["Verbe-Nom (Get-Process)","Minuscules (dont get-process)","Nom-Verbe (format inverse)","Un nom (en majuscule)"],"correct":0,"explain":"Get-, Set-, New-, Remove-…"},
+  {"q":"Par quoi commence une variable ?","a":["$nom","%nom%","dim","&n"],"correct":0,"explain":"$maVar = 5."},
+  {"q":"Quelle commande filtre les objets du pipeline ?","a":["Where-Object","Sort-Object","Export-Csv","Compare"],"correct":0,"explain":"… | Where-Object { $_.Prop -gt 0 }."},
+  {"q":"Quelle commande boucle sur chaque objet du pipeline ?","a":["ForEach-Object","Select-Object","Format-Table","Sort-Object"],"correct":0,"explain":"… | ForEach-Object { … }."},
+  {"q":"Comment crée-t-on un objet personnalisé ?","a":["[pscustomobject]@{ Nom = …; … }","@{ Nom = …; … } [pscustomobject]","[pscustomobject] = @{ Nom = …; … }","[pscustomobject]{ Nom = …; … }"],"correct":0,"explain":"@{ } est une table de hachage ; le cast en fait un objet."},
+  {"q":"Quelle commande affiche l'aide d'une cmdlet ?","a":["Get-Help","Get-Member","Get-Job","Manual"],"correct":0,"explain":"Get-Help Get-Process -Examples."},
+  {"q":"PowerShell est-il multiplateforme ?","a":["Oui, PowerShell 6+ (Core) tourne sur Linux/macOS aussi","Non, PowerShell 7 (Core) exige toujours Windows/serveur","Oui, PowerShell 7 (Core) passe par une couche Mono côté Unix","Non, PowerShell 7 (Core) doit être réécrit pour Linux/macOS"],"correct":0,"explain":"Le moteur s'appuie sur .NET, désormais multiplateforme."},
+  {"q":"Quel opérateur teste une correspondance regex et remplit $Matches ?","a":["-match","-compare","-like","-eq"],"correct":0,"explain":"\"abc123\" -match '(\\d+)' renvoie $true et $Matches[1] vaut 123. -like fait du glob (*, ?), pas de la regex."},
+  {"q":"Quelle cmdlet appelle une API REST et renvoie déjà des objets ?","a":["Invoke-RestMethod","Invoke-WebRequest -Uri","New-WebServiceProxy","Start-BitsTransfer"],"correct":0,"explain":"Invoke-RestMethod désérialise automatiquement le JSON en objets. Invoke-WebRequest renvoie la réponse HTTP brute (statut, en-têtes, contenu)."},
+  {"q":"Quel mot-clé définit un type avec propriétés typées et méthodes ?","a":["class","function","filter","enum"],"correct":0,"explain":"class Compte { [decimal]$Solde; [void] Deposer(...) { $this... } } — introduit en PowerShell 5."},
+  {"q":"Que renvoie Get-Credential ?","a":["Un objet PSCredential (utilisateur + mot de passe protégé)","Un objet SecureString (la valeur seule sans utilisateur associé)","Un objet PSModuleInfo (utilisateur + mot de passe bien visible)","Un objet PSSessionOption (utilisateur + session non chiffrée)"],"correct":0,"explain":"On le passe aux cmdlets via -Credential sans jamais exposer le secret ; son mot de passe est un SecureString."}
 ]
 </script>
 

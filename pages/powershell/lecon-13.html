@@ -164,7 +164,8 @@ $Matches.jour    # 26
 # → 2026-07-26
 
 # Masquer un numéro : ne garder que les 4 derniers chiffres
-"4970-1234-5678-9010" -replace '\d(?=(\d{4}-?)*\d{4}$)', '*'
+"4970-1234-5678-9010" -replace '\d(?=[\d-]*\d{4}$)', '*'
+# → ****-****-****-9010
 </code></pre></figure>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Attention&nbsp;: le motif d'abord, le texte ensuite</p><p>Dans <code>chaîne -replace motif, remplacement</code>, le <strong>premier</strong> argument est une regex, le <strong>second</strong> une chaîne. Pour insérer un <code>$</code> littéral dans le remplacement, il faut le doubler&nbsp;: <code>'$$'</code>.</p></div></div>
 
@@ -189,9 +190,10 @@ Select-String -Path *.log -Pattern 'Exception'
 
 # Extraire chaque adresse IP d'un journal
 Select-String app.log -Pattern '(?&lt;ip&gt;\d+\.\d+\.\d+\.\d+)' |
-    ForEach-Object { $_.Matches.Groups['ip'].Value } |
+    ForEach-Object { $_.Matches[0].Groups['ip'].Value } |
     Sort-Object -Unique
 </code></pre></figure>
+<p>Note l'index&nbsp;: la propriété <code>Matches</code> d'un <code>MatchInfo</code> est un <strong>tableau</strong> de correspondances, et non une seule. Un groupe nommé se relit donc sur son <strong>premier élément</strong>, <code>$_.Matches[0].Groups['ip'].Value</code>&nbsp;; écrite sans l'index, l'expression rend une chaîne <strong>vide</strong> — sans la moindre erreur, ce qui en fait un piège silencieux.</p>
 <figure class="diagram">
   <svg viewBox="0 0 640 180" role="img" aria-label="Select-String reçoit à gauche un ensemble de fichiers de journaux. Au centre, il applique un motif d'expression régulière. À droite, il ne renvoie pas du texte mais des objets MatchInfo, chacun portant le nom du fichier, le numéro de ligne, la ligne entière et les groupes capturés.">
     <rect class="d-box" x="24" y="54" width="150" height="72" rx="8" />
@@ -213,8 +215,8 @@ Select-String app.log -Pattern '(?&lt;ip&gt;\d+\.\d+\.\d+\.\d+)' |
 
 <h2>Un cas réel — analyser un journal web</h2>
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: qui a provoqué les erreurs 500&nbsp;?</p><p>Après un incident, on veut connaître les adresses IP à l'origine des erreurs serveur (code <code>500</code>) dans un journal d'accès, et les compter. Une regex isole l'IP et le code&nbsp;; le pipeline fait le reste.</p><figure class="code-block" data-file="analyse-log.ps1"><pre><code class="language-powershell">Select-String access.log -Pattern '^(?&lt;ip&gt;\d+\.\d+\.\d+\.\d+).* (?&lt;code&gt;\d{3}) ' |
-    Where-Object { $_.Matches.Groups['code'].Value -eq '500' } |
-    ForEach-Object { $_.Matches.Groups['ip'].Value } |
+    Where-Object { $_.Matches[0].Groups['code'].Value -eq '500' } |
+    ForEach-Object { $_.Matches[0].Groups['ip'].Value } |
     Group-Object |
     Sort-Object Count -Descending |
     Select-Object Count, Name -First 5</code></pre></figure><p>Résultat&nbsp;: le top 5 des IP fautives, prêtes à être bloquées. Aucun découpage de texte à la main&nbsp;: la regex nomme, le pipeline agrège.</p></div></div>
@@ -267,9 +269,9 @@ Select-String app.log -Pattern '(?&lt;ip&gt;\d+\.\d+\.\d+\.\d+)' |
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Que fait l'opérateur -match et où trouve-t-on le résultat détaillé ?","a":["Il teste si le texte contient le motif (True/False) et remplit la variable automatique $Matches avec le fragment et les groupes capturés","Il remplace le texte trouvé","Il découpe la chaîne en tableau","Il ne renvoie que True ou False, sans détail"],"correct":0,"explain":"-match renvoie un booléen mais, en cas de succès, il peuple $Matches : $Matches[0] contient le fragment entier, et les groupes (numérotés ou nommés) leurs valeurs respectives."},
-  {"q":"Comment nommer un groupe de capture et relire sa valeur ?","a":["Avec (?<nom>…) dans le motif, puis $Matches.nom","Avec [nom] puis $Matches[nom]","Avec {nom} puis $nom","On ne peut pas nommer un groupe en PowerShell"],"correct":0,"explain":"La syntaxe (?<nom>…) crée un groupe nommé. Après un -match réussi, on le relit via $Matches.nom (ou $_.Matches.Groups['nom'].Value avec Select-String), ce qui rend le code bien plus lisible que $Matches[1]."},
-  {"q":"Pourquoi Select-String est-il souvent préférable à un grep classique ?","a":["Parce qu'il renvoie des objets MatchInfo (fichier, numéro de ligne, ligne, groupes) que l'on peut trier, filtrer et projeter dans le pipeline","Parce qu'il est plus rapide à taper","Parce qu'il modifie les fichiers","Parce qu'il ne gère pas les regex"],"correct":0,"explain":"Fidèle au pipeline d'objets, Select-String ne renvoie pas du texte brut mais des objets MatchInfo. On accède directement au numéro de ligne, au nom du fichier et aux groupes capturés, sans re-découper la sortie."}
+  {"q":"Que fait l'opérateur -match et où trouve-t-on le résultat détaillé ?","a":["Il teste si le texte contient le motif (True/False) et remplit la variable automatique $Matches avec le fragment et les groupes capturés","Il renvoie la portion de texte qui correspond au motif (le vrai/faux étant rangé dans $Matches) et garde ce passage en vue du second appel","Il découpe ce texte partout où le motif figure (les fragments capturés) et range ensuite le passage dans une variable","Il renvoie le nombre de caractères (un compte de mots ou de chiffres) que le motif prend dans le texte"],"correct":0,"explain":"-match renvoie un booléen mais, en cas de succès, il peuple $Matches : $Matches[0] contient le fragment entier, et les groupes (numérotés ou nommés) leurs valeurs respectives."},
+  {"q":"Comment nommer un groupe de capture et relire sa valeur ?","a":["Avec (?<nom>…) dans le motif, puis $Matches.nom","Avec (?nom?) dans le motif, puis $Matches[nom]","Avec ({nom}) dans le motif, puis $Matches{nom}","Avec ($1nom) dans le motif, puis $1"],"correct":0,"explain":"La syntaxe (?<nom>…) crée un groupe nommé. Après un -match réussi, on le relit via $Matches.nom (ou $_.Matches[0].Groups['nom'].Value avec Select-String), ce qui rend le code bien plus lisible que $Matches[1]."},
+  {"q":"Pourquoi Select-String est-il souvent préférable à un grep classique ?","a":["Parce qu'il renvoie des objets MatchInfo (fichier, numéro de ligne, ligne, groupes) que l'on peut trier, filtrer et projeter dans le pipeline","Parce qu'il rend une chaîne unique, mise en forme, où le nom du fichier, le numéro de ligne et la ligne entière sont compris (rien à reformater), et qu'il n'y a plus qu'à la relire","Parce qu'il remplace dans le fichier, ligne par ligne, tout résultat trouvé (un seul passage sur le journal), puis renvoie le nombre de caractères que l'on peut compter","Parce qu'il rend les correspondances en texte lisible, une ligne par résultat (ni objets, ni pipeline), que l'on peut relire"],"correct":0,"explain":"Fidèle au pipeline d'objets, Select-String ne renvoie pas du texte brut mais des objets MatchInfo. On accède directement au numéro de ligne, au nom du fichier et aux groupes capturés, sans re-découper la sortie."}
 ]
 </script>
 
@@ -291,7 +293,7 @@ Select-String app.log -Pattern '(?&lt;ip&gt;\d+\.\d+\.\d+\.\d+)' |
 
 # Variante détaillée : les chemins les plus souvent en 404
 Select-String acces.log -Pattern '"[A-Z]+ (?&lt;url&gt;\S+).* 404 ' |
-    ForEach-Object { $_.Matches.Groups['url'].Value } |
+    ForEach-Object { $_.Matches[0].Groups['url'].Value } |
     Group-Object | Sort-Object Count -Descending</code></pre></figure></details></div>
 
 
