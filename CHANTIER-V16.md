@@ -7453,6 +7453,129 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       la liste des erreurs de langage ; ajouter les deux règles apprises ici (substitut **présent
       dans la page** et **de moins de 9 lettres**, posé dans **deux** distracteurs à la fois).
 
+      ---
+
+      **48ᵉ COURS — `elixir` : 91,7 % → 25,4 %, rangs 16/16/16/15 EXACTS, le 2026-09-23.**
+
+      Deux vagues (6 agents d'écriture, 5 de rattrapage) puis 15 retouches d'orchestrateur.
+      **18 238 caractères écrits** là où `plan-rangs-qcm` en demandait 12 847 — l'écart est le prix
+      des cinq autres dimensions, pas de la longueur.
+
+      | mesure | avant | après |
+      |---|---:|---:|
+      | **« la plus longue »** | **91,7 %** (couv. 96,8 %, rend. 93,4 %) | **25,4 %** (couv. 98,4 %, rend. **25,8 %**) |
+      | rangs de longueur | 59 / 1 / 2 / 1 | **16 / 16 / 16 / 15** (cible exacte) |
+      | `mesure-biais-inverse` | **5 alertes** | **0 alerte** (pire : 25,0 %) |
+      | mot fétiche | **3 alertes** (36,1 / 34,9 / 28,7 %) | **0 alerte** |
+      | intrus lexical | 29,4 %, **3 questions sûres** | **25,0 % / 25,0 %, 0 sûre** |
+      | lexique STRICTE | couv. **36,5 %** | couv. **0,0 %** |
+      | lexique PROPORTION | 52,4 % / 45,5 % | **14,3 % / 22,2 %** |
+      | lexique INVERSE | 49,2 % / **51,6 %** | 1,6 % / 0,0 % |
+      | `ecarter les absolus` | couv. 3,2 %, rend. 100 % | couv. **0,0 %** |
+      | `ecarter les deux extremes` | couv. 12,7 %, rend. 50,0 % | couv. **0,0 %** |
+
+      **CE QUE CETTE PASSE AJOUTE AU CHANTIER — trois résultats, dont deux sont neufs.**
+
+      **1. Fermer la longueur a déplacé TROIS indices d'un coup, et le dosage les a tous ramenés.**
+      C'est le motif connu depuis B3, mais c'est la première fois que les trois se mesurent et se
+      dosent dans la même passe, *avant* d'écrire une seule correction :
+
+      | indice déplacé | après la vague 1 | dosage calculé | après la vague 2 |
+      |---|---:|---|---:|
+      | la plus dense (mots longs) | **50,8 %** de rendement sur 59 q. | retourner **15** des 30, pas 30 | **25,4 %** |
+      | le mot technique exclusif | 53,3 % sur 15 q. | retourner **4** des 8 | 30,8 % |
+      | lexique PROPORTION | 63,2 % sur 19 q. | égaliser **9** des 12 | 22,2 % |
+
+      Le calcul du premier, écrit avant la vague : fermer les 30 aurait porté l'INVERSE à 33 %, soit
+      pire que le défaut de départ. **La cible n'est jamais « fermer », c'est « ramener à 25 % ».**
+
+      **2. ⚠️⚠️ LE MOT TECHNIQUE EXCLUSIF ET L'INTRUS LEXICAL SONT EN TENSION STRUCTURELLE —
+      fermer l'un rouvre l'autre, et ce n'est pas une maladresse, c'est arithmétique.**
+      `le mot technique exclusif` désigne l'option qui porte le plus de mots de **9 lettres et plus**
+      qu'aucune autre n'emploie. La bonne réponse étant intouchable, le fermer exige d'**ajouter un
+      mot de 9+ lettres exclusif à un distracteur** — or un mot porté par exactement 1 option sur 4
+      est précisément ce que `mesure-mot-question` compte en EXCÈS. La seule issue qui ferme les deux
+      est de **reprendre un mot de 9+ lettres de la bonne réponse et de le poser dans les TROIS
+      distracteurs** (4/4 = neutre pour l'intrus, et le mot cesse d'être exclusif) — mesuré à
+      **~45 caractères par question**, ce qui déplace les rangs de longueur déjà calés.
+      **Arbitrage retenu : garder l'intrus lexical à couverture zéro** (rendement 100 % quand il
+      tranche) et laisser `le mot technique exclusif` à 29,6 %.
+
+      **3. La preuve par l'erreur : mes propres retouches ont rouvert l'intrus, et le cliquet l'a
+      vu.** Ma correction de `ecarter les absolus` sur `lecon-07` (« sans aucune sortie » → « sans
+      autre sortie ») a mis « autre » sur **3 options sur 4** — configuration qui désigne la
+      quatrième à coup sûr. L'outil l'a rendue en une ligne (`--plan`), et le remède a fermé **deux**
+      trous d'un coup : « sans sortie propre » retire « autre » (3/4 → 2/4) *et* pose « propre »,
+      jusque-là exclusif à la bonne réponse (1/4 → 2/4), **à longueur rigoureusement identique**.
+      C'est la quatrième fois du chantier que la faute vient de l'orchestrateur et non des agents.
+
+      **Reliquat assumé et chiffré** : `ecarter les absolus` **29,8 %** et `le mot technique
+      exclusif` **29,6 %**. Le premier ne se ferme qu'en retirant les absolus des **22 distracteurs**
+      de 11 questions — et le calcul dit que le faire seul ne gagnerait que **0,2 point** sur le
+      chiffre du cours, puisque le second prendrait aussitôt la tête. Comparaison des cours clos :
+      `sass` **29,5 %**, `haskell` **28,8 %**, `go` 26,6 %.
+
+      **Ce cours ne s'exécute pas** (`elixir --version` → *command not found*, et `runner.js` ne pose
+      un bouton « Tester » que sur du JavaScript). La consigne l'a borné : n'écrire que ce que la page
+      établit. **Aucune bonne réponse n'a été jugée fausse par les onze agents** — une première depuis
+      plusieurs cours. Les six écrivains ont tous écarté les mêmes familles : le texte exact des
+      messages du compilateur, l'ordre de livraison des messages entre processus, le nombre
+      d'ordonnanceurs de la BEAM, l'API réelle d'ETS, et tout point de version qu'aucune page ne date
+      (Ecto, Phoenix, LiveView, options de `Task.async_stream`).
+
+      🟠 **TROUVÉ EN MARGE, ET C'EST LE SEUL CAS DU SITE : un exercice INSOLUBLE.**
+      `pages/elixir/lecon-11` (Mix, tests et écosystème) portait en 4ᵉ exercice un exercice **recopié
+      de la leçon 05** : son énoncé disait *« la valeur de cette première ligne »* **sans qu'aucun
+      code ne soit affiché**, ses indices parlaient de graine, de `take` et de `Stream`, et son lien
+      de secours pointait vers `lecon-05.html`. Signalé par un agent écrivain hors de sa tâche.
+      Deux sondes successives l'ont cerné : le lien de secours qui sort de sa leçon ne prouve rien
+      (**337 exercices sur 4 864**, et la plupart légitimes — une leçon de synthèse cite la leçon
+      d'origine) ; le bon critère est le **démonstratif sans référent** — un énoncé qui *désigne* un
+      code qu'il ne *cite* pas. Sur ce critère : **1 cas sur 4 864**. Remplacé par un exercice sur
+      `mix deps.get`, que la section « Les dépendances et Hex » de la page établit.
+
+      **Contrôles** : `mesure-qcm-intouchable elixir b28168f` **0 atteinte** sur **181 distracteurs
+      réécrits** (`q` / `correct` / `explain` / bonne réponse intacts) ; `verif-html` **0** sur
+      1 629 pages ; `verif-donnees` **0 erreur** sur 26 invariants (3 avertissements pré-existants :
+      doublon `zig`, trou d'index `doc`, 7 pages d'étude écartées) ; `verif.js --rapide` **53 étapes,
+      1 seul vérificateur qui signale** (les 3 avertissements ci-dessus) ; `verif-etudes` **0 périmée
+      sur 7** ; **les DEUX cliquets refigés**, `elixir` marqué `traite` (**47 cours**) ; épreuves par
+      injection **10/10** et **6/6**.
+
+      🟠 **`doc/lecon-03` repérimée une 12ᵉ fois** et réassemblée par `tools/doc/gen.js` :
+      `verif-normatif` **66 OK / 9 échecs → 75 OK / 0 échec**. 🟠 **`etude-recherche` repérimée aussi**
+      — 46 043 → **46 042 mots indexés**, un seul mot de différence, et c'est la réécriture des QCM
+      qui l'a produit ; réassemblée par `tools/etudes/recherche/assembler.js`. Index régénérés avec
+      **`--fresh`** : sans lui, `verif-donnees [I18]` déclarait `search-index.js` divergent **pour un
+      écart de 0 octet** (l'ordre diffère quand l'index reprend l'ancien au lieu de repartir de zéro).
+
+      ---
+
+      **LE 49ᵉ COURS EST DÉSIGNÉ — `julia`.** Classement par nocivité réelle rejoué sur les
+      **43 cours restants** (2 348 questions, **1 993 devinables**) : `julia` **56,5 devinables**
+      (59 questions, 95,8 %), `nosql` 56,5, `vue` 56,0, `perl` 55,8, `dart` 55,5, `perf-web` 54,5,
+      `r` 54,0.
+
+      **Mesure de départ** : « la plus longue » **95,8 %** (couverture 98,3 %, rendement 96,6 %),
+      « la plus détaillée » **81,6 %** (rendement 97,8 %), « RESTREINDRE à la ponctuation forte »
+      70,5 % (rendement 97,2 %), « le mot technique exclusif » **70,1 %** (couverture 71,2 %,
+      rendement 85,7 %), « l'incise entre parenthèses » 64,1 % (**rendement 100 %**),
+      « RESTREINDRE aux deux-points » 52,5 %, « l'écho de la question » 48,0 %.
+      Rangs **57 / 1 / 1 / 0**, cible **15 / 15 / 15 / 14**.
+      ⚠️ **Les quatre rangs de longueur ont une DIRECTE de 0,0 % exactement** (2ᵉ, 3ᵉ, 4ᵉ plus longue
+      et « la moins bavarde ») : quatre éliminations sûres à **33,3 %**, le plafond théorique de
+      l'inverse, sur 35 à 54 questions chacune. C'est la configuration la plus franche vue jusqu'ici.
+      ⚠️ Mots fétiches : `fonction` (10 bonnes / 7 distracteurs, RESTREINDRE **34,0 %**) et `types`
+      (8/2, **33,5 %**). ⚠️ Intrus lexical exploitable **dans les deux sens** : DÉFAUT 26,7 % avec
+      **3 questions sûres**, EXCÈS **31,5 %** avec **4 sûres** — sept questions tranchées à coup sûr.
+      Lexique : STRICTE 37,3 %/18,2 %, PROPORTION 61,0 %/44,4 %, **INVERSE 52,5 %/54,8 %**.
+      **`julia` n'est pas installé** (`julia --version` → *command not found*) : même régime que les
+      47ᵉ et 48ᵉ cours, on n'écrit que ce que la page établit.
+      La consigne `scratchpad/CONSIGNE-ELIXIR.md` se reprend telle quelle en changeant les chiffres
+      et la liste des erreurs de langage ; **y ajouter les deux résultats de cette passe** : le
+      dosage des trois indices déplacés se calcule AVANT d'écrire, et le mot technique exclusif ne se
+      ferme qu'en posant un mot de la bonne réponse dans les TROIS distracteurs, jamais dans un seul.
+
 
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
