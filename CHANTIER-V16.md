@@ -7339,6 +7339,121 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       **sans deux agents sur un même fichier** : L1 `lecon-01..04` (12 q), L2 `05..08` (12),
       L3 `09..11` (9), L4 `12..14` (9), L5 `15..17` (9), L6 `lecon-18` + son bilan (11).
 
+      **LE 47ᵉ COURS EST CLOS — `go` : « la plus longue » 94,4 % → 25,8 %, et les 46 stratégies
+      tiennent toutes entre 23,0 % et 26,6 %.** Rangs de longueur **16 / 16 / 15 / 15**, la cible
+      exacte. 177 distracteurs sur 186 réécrits.
+
+      **Deux vagues, et la seconde n'a pas été un fan-out.** Vague 1 : six agents sur fichiers
+      disjoints (L1 `01-04`, L2 `05-08`, L3 `09-11`, L4 `12-14`, L5 `15-17`, L6 `lecon-18` + bilan),
+      +19 262 caractères. Elle a ramené la longueur à 25,8 % d'un coup. Vague 2 : **30 retouches
+      chirurgicales faites par l'orchestrateur seul**, parce que le résidu n'était plus de la
+      réécriture mais du **dosage** — il ne fallait pas fermer, il fallait ramener à un quart :
+
+      | indice | après vague 1 | après vague 2 |
+      |---|---:|---:|
+      | la plus dense (mots longs) — couverture **100 %** | **32,3 %** | **24,2 %** |
+      | la moins bavarde | 29,6 % | 23,9 % |
+      | écarter la glose finale (rendement 100 %) | 28,2 % | 25,8 %, couverture **0** |
+      | l'attaque unique | 27,8 % | 23,0 % |
+      | intrus lexical DÉFAUT | 28,1 %, **4 questions sûres** | 22,0 %, **0 sûre** |
+      | mot fétiche INVERSE (`compilateur` / `reste`) | 28,2 % / 28,1 % | **0 alerte** |
+
+      ⚠️ **LE DOSAGE EST LE CŒUR DE CE COURS, ET IL SE CALCULE.** « la plus dense » désignait la
+      bonne réponse dans **20 questions sur 62**. La fermer partout l'aurait renvoyée à 0 % et aurait
+      porté son inverse à 33 %. La cible est **15 ou 16 questions sur 62**, c'est-à-dire 25 % : j'ai
+      donc retouché **exactement 5 questions**, choisies par l'écart au deuxième (0,038 à 0,266 de
+      densité). `ECARTER la plus dense` a suivi mécaniquement : 22,6 % → **25,3 %**. Les deux sens se
+      ferment par le **même** réglage quand on vise le quart, et par aucun quand on vise zéro.
+
+      ⚠️⚠️ **DEUX INDICES ROUVERTS PAR LEUR PROPRE FERMETURE — mesurés les deux fois, à quelques
+      minutes d'intervalle.** Pour éteindre le mot fétiche inverse, j'ai remplacé `compilateur` par
+      `vérificateur`, `construction`, `générateur` dans douze distracteurs. Conséquences :
+
+      1. **Le mot technique exclusif s'est RETOURNÉ** : 24,6 % → **19,8 %**, et son inverse
+         25,1 % → **28,4 %**. Cause : ces substituts font **9 lettres ou plus** et n'étaient posés
+         que dans **un seul** distracteur de la question — la stratégie compte les mots longs
+         exclusifs. **Parade trouvée, et elle ne coûte rien : donner le MÊME substitut aux DEUX
+         distracteurs de la même question.** Un mot porté par deux options n'est exclusif pour
+         aucune ; le compte retombe à égalité sans toucher à une seule longueur. Retour à 25,0 %,
+         couverture 0. (Bonus : un mot porté par exactement 2 options sur 4 est neutre pour
+         l'intrus lexical, qui ne voit que les partages à 3 et les uniques.)
+      2. **Le cliquet lexical a vu STRICTE/restreint passer de 10,5 % à 50,0 %** : mes substituts
+         sont **absents des pages**. Règle qui en sort : **un substitut doit être PRÉSENT dans la
+         page ET faire moins de 9 lettres.** `compilation` y figure 5 à 8 fois selon la leçon,
+         `construction` et `générateur` dans `lecon-05`, `08` et `12` seulement, `vérificateur`
+         nulle part. Le contrôle est un `grep` de trois secondes, et il aurait évité les deux
+         allers-retours.
+
+      **Ce qui a fermé le STRICTE pour de bon** n'était pas mon travail mais deux questions du bilan
+      laissées hors plan par le 6ᵉ agent (`un tableau [3]T figé` / `un Vector`, `HashMap` /
+      `object`) : sur une page de récapitulatif au vocabulaire très pauvre, **presque tout mot de
+      6 lettres est étranger** (`taille`, `structure`, `tableau`, `objet` : tous absents de
+      `lecon-18`). Réécrits sans aucun mot long (`un [3]T, N est dans le type`, `un Vec`,
+      `new Map()`, `un objet`), à longueur préservée pour ne pas bouger les rangs.
+
+      **La glose finale et l'attaque unique se ferment en DÉPLAÇANT, jamais en supprimant** (leçon
+      `haskell`). Les trois distracteurs de `lecon-11 q1` et de `lecon-16 q1` finissaient par une
+      incise entre parenthèses, la bonne non. Les supprimer aurait fait de la bonne réponse **la
+      seule à porter une parenthèse** — l'indice voisin. Les incises ont donc été déplacées au
+      milieu de la phrase : glose fermée, parenthèse inchangée. De même `Parce qu'` et `Parce que`
+      sont **deux attaques différentes** pour l'outil (liste `LOCUTIONS`) : `lecon-17 q3` se
+      tranchait sur cette apostrophe seule.
+
+      ⚠️ **PIÈGE D'OUTILLAGE RENCONTRÉ DEUX FOIS : le heredoc mange un niveau d'antislash**, même
+      quoté. Un `new RegExp('([\\s\\S]*?)')` écrit ainsi devient `[sS]` et la sonde rend
+      silencieusement **zéro résultat** — pas une erreur, un zéro. Les scripts de mesure doivent être
+      écrits avec l'outil d'édition, jamais par heredoc. (Déjà consigné en mémoire ; s'est
+      représenté deux fois dans la même passe.)
+
+      **Ce cours ne s'exécute pas** (`go version` → *command not found*, et `runner.js` ne pose un
+      bouton « Tester » que sur du JavaScript). La consigne l'a donc borné : n'écrire que ce que la
+      page établit. Les six agents ont tous refusé le même périmètre — ce que rapporte `go vet`,
+      l'ordonnancement des goroutines, la sortie du *race detector*, et **la capture de la variable
+      de boucle**, qui a changé en **Go 1.22** et qu'aucune page ne date. Aucune bonne réponse n'a
+      été jugée fausse. **Une seule remontée à arbitrer, et elle est REFUSÉE** : `lecon-10 q2`
+      compare `err != http.ErrServerClosed` alors que le corps de sa propre page emploie
+      `errors.Is` — même famille que le `[CmdletBinding()]` du 46ᵉ cours, mais **la comparaison
+      d'identité sur une sentinelle est juste**. C'est une incohérence de style entre le QCM et la
+      page, pas une faute : hors périmètre de B4.
+
+      **Contrôles** : `mesure-qcm-intouchable go d794baa` **0 atteinte** sur 177 distracteurs
+      réécrits (`q` / `correct` / `explain` / bonne réponse intacts) ; `mesure-biais-inverse`
+      **0 alerte** ; `mesure-mot-fetiche` **0 alerte** ; `mesure-mot-question` **0 question sûre**
+      dans les deux lectures ; `verif-html` **0** sur 1 629 pages ; `verif-donnees` **0 erreur** sur
+      26 invariants ; `verif.js --rapide` **53 étapes** ; `verif-etudes` **0 périmée sur 7** ;
+      **les DEUX cliquets refigés**, `go` marqué `traite` (**46 cours**).
+
+      🟠 **`doc/lecon-03` repérimée une 11ᵉ fois** et réassemblée par `tools/doc/gen.js` : S3
+      conformes **4 077 → 4 132** (66,8 % → **67,7 %**), manquements **2 026 → 1 971** (33,2 % →
+      **32,3 %**), S4 **44/89 → 45/89** (49,4 % → **50,6 %**), corpus de l'ancienne clause
+      **3 090 → 3 133**. `verif-normatif` : **67 OK / 8 échecs → 75 OK / 0 échec**. La bonne réponse
+      chiffrée de la page suit toujours la mesure. Index régénérés en **deux tours** (`quiz-index`
+      puis `search-index`, qui ne converge qu'au second).
+
+      ---
+
+      **LE 48ᵉ COURS EST DÉSIGNÉ — `elixir`.** Classement par nocivité réelle rejoué sur les
+      **44 cours restants** (2 411 questions, **2 051 devinables**) : `elixir` **57,8 devinables**
+      (63 questions, 91,7 %), `julia` 56,5, `nosql` 56,5, `vue` 56,0, `perl` 55,8, `dart` 55,5,
+      `perf-web` 54,5.
+
+      **Mesure de départ** : « la plus longue » **91,7 %** (couverture 96,8 %, rendement 93,4 %),
+      « la seule avec une PONCTUATION FORTE » **62,7 %** (rendement **97,0 %**), « le mot technique
+      exclusif » **60,8 %** (rendement **81,1 %** — le plus haut vu depuis longtemps sur cet
+      indice), « la plus détaillée » 73,4 %, « la seule avec un point-virgule » 50,0 % (rendement
+      100 %), « la seule qui nie » 41,0 %. Rangs **59 / 1 / 2 / 1**, cible **16 / 16 / 16 / 15**,
+      `plan-rangs-qcm` demande **12 847 caractères sur 60 questions des 63**.
+      ⚠️ **Trois mots fétiches en alerte, tous du côté de la bonne réponse** : `processus`
+      (11 bonnes / 3 distracteurs, RESTREINDRE **36,1 %**), `fonction` (10/3, 34,9 %), `valeur`
+      (5/6, 28,7 %). ⚠️ **Le lexique est ouvert dans les TROIS lectures à la fois** (STRICTE 36,5 %
+      de couverture, PROPORTION 52,4 % / 45,5 %, INVERSE 49,2 % / **51,6 %**) — configuration
+      qu'aucun des 47 cours n'avait présentée. ⚠️ Intrus lexical **exploitable par EXCÈS** (29,4 %,
+      1 question sûre) en plus des 2 sûres par DÉFAUT. `mesure-biais-inverse` : **5 alertes**.
+      La consigne `scratchpad/CONSIGNE-GO.md` se reprend telle quelle en changeant les chiffres et
+      la liste des erreurs de langage ; ajouter les deux règles apprises ici (substitut **présent
+      dans la page** et **de moins de 9 lettres**, posé dans **deux** distracteurs à la fois).
+
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
