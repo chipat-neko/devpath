@@ -7765,6 +7765,205 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       donc il faut le chercher au `grep` après écriture ; et trois distracteurs de même longueur
       livrent `ECARTER la plus courte` à 100 %.
 
+      ---
+
+      ### 50ᵉ cours — `nosql` (2026-09-23) : **99,1 % → 26,3 %**, et le **47ᵉ indice livré en outil**
+
+      Le cours le plus tordu rencontré depuis `stats` : la bonne réponse était la plus longue dans
+      **toutes** les questions tranchées — rangs **57 / 0 / 0 / 0**, couverture 98,2 %, **rendement
+      100,0 %**. 57 questions, 172 distracteurs, longueur moyenne 111,8 contre 32,8 caractères
+      (**rapport 3,41**), **11 059 caractères** à écrire sur 56 questions.
+
+      **TROIS VAGUES de six agents, 172 distracteurs sur 172 réécrits, 0 atteinte aux
+      intouchables** (`q` / `correct` / `explain` / bonne réponse).
+
+      | | départ | vague 1 | vague 2 | **final** |
+      |---|---:|---:|---:|---:|
+      | « la plus longue » | **99,1 %** | 26,3 % | 26,3 % | **26,3 %** |
+      | rangs | 57/0/0/0 | 15/14/14/14 | 15/14/14/14 | **15/14/14/14** (0/57 à retoucher) |
+      | tics de lot | — | **2** (dont un à 100 %) | 2 | **AUCUN** |
+      | biais inverse | 4 alertes (DIRECTE **0,0 %**) | 0 | 0 | **0 alerte** |
+      | mot fétiche | 3 alertes | **2** (`chaque` 6/**44**) | 0 | **0** |
+      | intrus lexical | 2 questions sûres | 0 | 0 | **0** |
+      | lexique STR / PROP / INV | 42,1 / 59,6 / 54,4 % | 0,0 / **21,1** / 0,0 % | 0,0 / 8,8 / 0,0 % | **0,0 / 1,8 / 0,0 %** |
+
+      Pire des 46 stratégies à l'arrivée : **27,3 %** (`ECARTER la moins bavarde`, couverture 7,0 %).
+      « la plus longue » à 26,3 % **est** le quota de rang 0 imposé par le plan (15 questions sur 57).
+
+      ---
+
+      #### ⚠️⚠️⚠️ LE RÉSULTAT DE CETTE PASSE : LES MESURES ÉTAIENT VERTES ET LE TEXTE NE VOULAIT PLUS RIEN DIRE
+
+      Après la vague 2, **les 46 stratégies étaient à couverture 0,0 %**, les trois variantes du
+      lexique à 0,0 %, zéro mot fétiche, zéro question sûre. Une vague de contradiction (6 agents,
+      lecture seule) a trouvé que **15 distracteurs sur 27** d'un lot ne voulaient rien dire, et que
+      sur **4 questions des 9**, *les trois* distracteurs contenaient une proposition inintelligible :
+      la consigne « **choisis la seule option qui a un sens** » tranchait ces questions à **100 %**.
+
+      Échantillon, à lire à voix haute : « le réglage **y protège le solde à la fin de la nuit** » ;
+      « le « tout ou rien » peut alors **protéger gratuitement le tout dernier numéro** » ; « le moteur
+      peut donc **unir ses listes par leur seul nom exact** » ; « Entre la durabilité (D) et la réponse
+      des serveurs, **car la règle inévitable ne peut plus valoir sur un virement** ».
+
+      C'est le défaut du 39ᵉ cours (`scala`, 30 prises sur 54) et du 45ᵉ (`securite`, neuf contrôles
+      verts sur une salade de mots), **reproduit à l'identique malgré la consigne qui le nommait**.
+      Un relecteur l'a dit mieux que le tableau : la vague avait échangé **trois erreurs pédagogiques
+      NETTES** (« Une collection est une colonne, un document une table ») contre **trois
+      non-phrases**. Du point de vue de l'apprenant, le QCM était devenu **PIRE** qu'avant, pendant
+      que toutes les mesures s'amélioraient.
+
+      **Ce que ça enseigne pour les 41 cours restants : la relecture par contradiction n'est pas un
+      luxe de fin de passe, c'est le seul instrument qui mesure ce que les 47 outils ne voient pas.**
+      Elle a coûté 6 agents et rendu 4 défauts BLOQUANTS, 2 bonnes pratiques présentées comme des
+      erreurs de sécurité, et 5 tics de lot chiffrés.
+
+      ---
+
+      #### 🟢 47ᵉ INDICE, LE TIC DE LOT — `tools/mesure-tics-lot.js`, outil neuf
+
+      **Cinq relecteurs sur cinq ont remonté le même type d'indice, chacun avec une sonde jetable
+      écrite à la main** — parce qu'aucun des 46 outils ne le voyait.
+
+      **Ce que c'est** : quand six agents rallongent les distracteurs d'un cours, ils emploient tous
+      le même *matériau de rallonge* — une glose entre parenthèses ouverte par un article
+      (« (un plan figé) », « (une option) »), un connecteur causal, un adverbe de reprise, une virgule
+      avant « et ». **La bonne réponse, elle, n'y a pas droit : elle est intouchable.** Le matériau de
+      rallonge devient donc **la signature du distracteur**.
+
+      Mesure fondatrice sur `nosql`, après deux vagues qui avaient tout ramené à 0,0 % de couverture :
+
+      | tic | bonnes / distracteurs | tranchées | rendement | gain au cours |
+      |---|---|---:|---:|---:|
+      | parenthèse ouverte par un article | **3 / 45** | 14 | **78,6 %** | **38,2 %** |
+      | la même, en fin d'option | **1 / 22** | 7 | **100,0 %** | **34,2 %** |
+
+      **Sur le site entier : 533 tics de lot sur 94 cours.** Le pire est `fsharp` — deux-points
+      médian, **25 bonnes / 1 distracteur**, 24 questions tranchées, rendement **100 %**, gain
+      **58,3 %**, soit **plus du double du hasard**. Puis `prolog` 57,9 %, `dart` 57,5 %, `ada`
+      55,6 %, `objc` 55,1 %, `bash` 54,0 %, `docker` 53,1 %. Les cours **déjà traités par B4**
+      tombent à 28-30 % (`julia` 1 tic, `clojure` 1, `sass` 1, `powershell` 2), et **`elixir` est le
+      seul cours du site totalement exempt**.
+
+      **Calibrage — et c'est la leçon d'outillage de la passe.** Un premier seuil naïf (« rendement
+      local ≥ 70 % ou ≤ 30 % ») rendait **39 alertes sur `nosql`**, noyées de bruit : un motif qui
+      tranche 5 questions sur 57 à rendement 0 % ne rapporte que 26,3 %. Recalibré sur le **GAIN AU
+      COURS ENTIER**, comme `mesure-biais-inverse` le prescrit explicitement : **2 alertes**, exactement
+      les deux prises des relecteurs.
+
+      ⚠️ **Un agent a trouvé un bug dans l'outil le jour même de sa livraison, et un second l'a
+      rencontré indépendamment** : **`\b` est ASCII en JavaScript**. `/\bcar/i.test("s'écartent")`
+      rend **true** (frontière entre « é » et « c »), `/\b(?:alors|puis)\b/i.test("épuisé")` aussi.
+      Deux faux positifs mesurés sur un corpus français, et un agent a réécrit un distracteur pour
+      rien (« à la **car**te » compté comme connecteur causal). Corrigé : `AV`/`AP` encadrent chaque
+      motif par « pas une lettre, accents compris ». 5 cas de contrôle passent.
+
+      ---
+
+      #### 🟠 DÉFAUT DE CONTENU corrigé — le fil rouge violait la règle que sa propre page énonce
+
+      `lecon-14.html` posait `db.produits.createIndex({ stock: 1, prix: 1 })` pour la requête
+      `db.produits.find({ stock: { $gt: 0 } }).sort({ prix: 1 })`. Or `stock` y est un **Range**
+      (`$gt`) et `prix` le **Sort** : l'index place le **Range avant le Sort**, l'inverse exact de la
+      **règle ESR** que le glossaire de la **même page** énonce (« *Equality*, puis *Sort*, puis
+      *Range* ») et que `lecon-07` répète. L'index ordonne par `(stock, prix)`, pas par `prix` : le
+      tri ne peut pas être servi. **Et la figure d'architecture de la même page écrivait déjà l'ordre
+      correct** (« + index sur **prix / stock** ») — le code contredisait sa propre illustration.
+      Corrigé en `{ prix: 1, stock: 1 }`, avec la mention de l'ordre ESR dans le commentaire et dans
+      l'étape « Indexer ». Défaut **pré-existant**, identique dans `HEAD` : il a traversé toute la
+      chaîne, et c'est la contradiction qui l'a vu. Plus : « **La** bonne réflexe » → « **Le** bon
+      réflexe » dans le corps de `lecon-10`.
+
+      ---
+
+      #### CE QUE LES TROIS VAGUES ONT APPRIS, et qui vaut pour les 41 cours restants
+
+      **1. La correction FABRIQUE ses propres indices, et il en faut une deuxième pour les solder.**
+      La vague 1 a créé de toutes pièces : le mot `chaque` (**6 bonnes / 44 distracteurs**, ECARTER
+      29,9 % — les six agents ont allongé avec le même mot **sans se concerter**, exactement le tic
+      de lot annoncé par la passe `julia`), le mot `données` (RESTREINDRE 33,5 %), et une **règle du
+      `w`** ouverte (PROPORTION tranchait 21,1 % des questions à rendement **0,0 %**, donc 33,3 % à
+      qui l'écarte).
+
+      **2. `PROPORTION` compare `k` ET `w`.** À `k` égal, c'est le nombre de mots de 6+ lettres qui
+      désigne. Égaliser `k` sans égaliser `w` rouvre l'indice — un agent l'a payé d'un aller-retour.
+
+      **3. Supprimer une marque la RETOURNE.** Deux agents ont conclu séparément qu'il ne fallait
+      **pas** supprimer les parenthèses des distracteurs : la bonne réponse restant seule à en
+      porter, `RESTREINDRE à la parenthèse` serait passé à 100 % (c'était le pire indice du cours au
+      départ, **33 bonnes / 0 distracteur**). Ce qu'il faut retirer, c'est **l'article qui les
+      ouvre**, pas l'incise.
+
+      **4. Le tokeniseur d'écho de `mesure-biais-qcm` coupe sur l'apostrophe mais PAS sur le trait
+      d'union** : « suffit-elle » est **un seul jeton**, donc « qu'elle » n'y fait pas écho. Un
+      diagnostic écrit à la main se trompe ici.
+
+      **5. Une sonde doit CHARGER l'outil, pas le recopier.** Le meilleur compte rendu de la passe
+      vient de l'agent dont la sonde importe `STRATEGIES` depuis `tools/mesure-biais-qcm.js` et
+      extrait le tableau `FORMES` du source de `mesure-tics-lot.js` : sa mesure de non-régression est
+      un `diff` **vide** contre un relevé de référence pris avant sa passe.
+
+      **6. Le piège du heredoc, reconfirmé deux fois** : un `\b` passé par heredoc devient **U+0008**
+      et rend les regex silencieusement fausses. Il a touché un agent — et l'orchestrateur, sur le
+      correctif de l'outil lui-même.
+
+      ---
+
+      **RELIQUAT ASSUMÉ ET CHIFFRÉ** : `lecon-01` q2 laisse `PROPORTION` trancher **1 question sur
+      57** (`w` = 14/17/11/11 à `k` égal). Fermer exigerait de réécrire deux options portant
+      **14 mots de 6+ lettres sous 173 caractères** et rapporterait **0,1 point** (25,1 % → 25,0 %) :
+      **refusé par le calcul de ce qu'il coûterait**, comme au 35ᵉ cours — le risque de refabriquer
+      une salade de mots dépasse le gain.
+
+      **DETTE D'OUTILLAGE, confirmée par deux témoins indépendants** : `mesure-lexique-qcm --liste`
+      accepte `wSup > 0` (« un distracteur porte plus de mots longs que la bonne ») et annonce
+      « 0 question à mettre en forme » pendant que la variante **PROPORTION tranche encore**. **Le
+      cliquet VALIDE une fermeture par RETOURNEMENT.** Quand `k > 0`, seule l'égalité stricte des
+      quatre `w` ferme. À corriger dans une passe d'outillage.
+
+      **Ce cours ne s'exécute pas** (aucun moteur NoSQL installé) : même régime que les 47ᵉ à 49ᵉ.
+      **Aucune bonne réponse n'a été jugée fausse** par les dix-huit agents — troisième cours
+      d'affilée. Périmètres refusés, convergents d'un agent à l'autre : chiffres de latence, messages
+      d'erreur exacts, comportements de version (transactions multi-documents de MongoDB, niveaux de
+      cohérence de Cassandra, éviction de Redis, index HNSW/IVF), quorum et `W + R > N`, journalisation
+      sur disque (`j:true`), compression automatique attribuée à Redis, CouchDB et Riak (absents ou
+      mal étiquetés par le cours).
+
+      **Contrôles** : `verif.js --rapide` **53 étapes tout vert (200,8 s)** ; `verif-html` **0 sur
+      1 629 pages** ; `verif-donnees` **0 erreur sur 26 invariants** (3 avertissements pré-existants) ;
+      `mesure-qcm-intouchable nosql a943c2f` **172/172 réécrits, 0 atteinte** ; épreuves par injection
+      **10/10** et **6/6** ; les **DEUX cliquets refigés**, `nosql` marqué `traite` (**49 cours**) ;
+      `doc/lecon-03` repérimée une **14ᵉ** fois et réassemblée (`verif-normatif` **67 OK / 8 échecs →
+      75 OK / 0 échec**) ; `etude-inconnu` **et** `etude-recherche` réassemblées, cycle index ↔ étude
+      bouclé au **point fixe dès le 1er tour**, stabilité vérifiée sur **3 tours à vide** ; 29 blocs
+      JSON valides, **0 BOM, 0 CRLF, 0 chargement externe actif**.
+
+      ---
+
+      **LE 51ᵉ COURS EST DÉSIGNÉ — `vue`.** Classement par nocivité réelle rejoué sur les **41 cours
+      restants** (`stats` exclu, il reste le cours-témoin de `verif-qcm-biais-mutations`) : `vue`
+      **56,0 devinables** (62 questions, **90,3 %**), `perl` 55,8, `dart` 55,5, `perf-web` 54,5,
+      `docker` 54,0, `observabilite` 54,0, `lisp` 54,0, `r` 54,0, `bash` 53,5, `tests` 53,5.
+      **Site : 6 167 questions, 2 802 devinables (45,4 %), 49 cours marqués traités.**
+
+      **Mesure de départ de `vue`** : « la plus longue » **90,3 %** (couverture **100 %**, rendement
+      90,3 %), rangs **56 / 5 / 0 / 1**, cible 16/16/15/15, **11 379 caractères** sur 58 questions/62.
+      Puis « la plus détaillée » **76,9 %** (rendement 100 %), « le mot technique exclusif » **60,1 %**
+      (couverture 54,8 %, rendement 85,3 %), « la seule avec une PONCTUATION FORTE » **60,1 %**
+      (rendement **100 %**), « la seule avec un point-virgule » **44,4 %** (rendement **100 %**).
+      ⚠️ **`vue` porte NEUF tics de lot**, dont trois au-dessus de 41 % : point-virgule médian
+      (**16 bonnes / 0 distracteur**, 16 tranchées, rendement **100 %**, gain **44,4 %**), glose
+      finale entre parenthèses (16/4, **87,5 %**, gain 41,1 %), deux-points médian (15/3, 87,5 %,
+      gain 41,1 %). **C'est le premier cours traité en connaissant ses tics AVANT d'écrire** :
+      la consigne doit les fermer dès le premier lot, au lieu de les fabriquer.
+
+      La consigne se reprend de `scratchpad/CONSIGNE-NOSQL.md` **et** de
+      `scratchpad/CONSIGNE-NOSQL-V3.md` — cette dernière porte la règle qui prime sur toutes les
+      mesures : *un distracteur est une phrase française qui énonce une thèse fausse, précise et
+      plausible ; si l'on ne peut pas dire en une phrase pourquoi c'est faux, ce n'est pas un
+      distracteur*. **Les deux doivent être données ensemble dès le premier lot** : c'est en les
+      séparant qu'on a payé une troisième vague ici.
+
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
