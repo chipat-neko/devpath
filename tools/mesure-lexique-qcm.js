@@ -110,7 +110,7 @@ function credit(ens, correct, nbOptions) {
 
 /* ---- mode --liste : ce qu'il faut reecrire, mot par mot ---- */
 if (liste) {
-  var d = path.join(PAGES, liste), tot = 0, exploitables = 0, aFaire = 0;
+  var d = path.join(PAGES, liste), tot = 0, exploitables = 0, aFaire = 0, retournees = 0;
   console.log("\nmots ETRANGERS a la page, option par option — cours " + liste);
   console.log("  REGLE (revisee le 2026-09-07) : soit k le nombre de mots etrangers de la");
   console.log("  BONNE reponse (intouchable). LES TROIS DISTRACTEURS EN PORTENT EXACTEMENT k.");
@@ -164,8 +164,28 @@ if (liste) {
         if (i === q.correct) return;
         if (v > wc) wSup++; else if (v === wc) wEgaux++;
       });
-      var wOK = k === 0 || wSup > 0 || wEgaux === nMots.length - 1;
-      var conforme = kEgaux && wOK;
+      /* ⚠️ DETTE SOLDEE le 2026-09-23 (relevee a la cloture du 50e cours, `nosql`,
+         par deux temoins independants). La condition portait `wSup > 0` : « il
+         suffit qu'un distracteur porte PLUS de mots longs que la bonne reponse ».
+         C'est une fermeture par RETOURNEMENT, pas une fermeture : PROPORTION
+         designe alors ce distracteur SEUL, et il suffit de l'ECARTER pour tirer
+         a 33,3 % parmi les trois restantes. Le cliquet validait donc le meme
+         defaut qu'il avait ete ecrit pour attraper (variante INVERSE du cours
+         `mobile`). Quand k > 0, seule l'EGALITE STRICTE des quatre w ferme les
+         deux sens. Mesure du jour de la dette, sonde a l'appui : 1 question
+         retournee sur 57 dans `nosql`, 19 sur 59 dans `julia`, 27 sur 61 dans
+         `sass`, 21 sur 66 dans `clojure`, 35 sur 62 dans `vue` avant traitement. */
+      var wOK = k === 0 || wEgaux === nMots.length - 1;
+      /* RETOURNEMENT : une variante designe UN SEUL DISTRACTEUR. La designation
+         est fausse, donc l'ECARTER rend 33,3 % : c'est un defaut de meme gravite
+         qu'une designation juste, et l'ancien code le comptait comme conforme
+         (credit() rend 0, pas null, quand la bonne reponse n'est pas dans
+         l'ensemble). */
+      var rS = zeros_.length === 1 && zeros_[0] !== q.correct;
+      var rP = argMax(part).length === 1 && argMax(part)[0] !== q.correct;
+      var rI = pire.length === 1 && pire[0] !== q.correct;
+      var retourne = rS || rP || rI;
+      var conforme = kEgaux && wOK && !retourne;
 
       /* EXPLOITABLE : l'une des trois variantes designe la bonne reponse seule,
          OU la RESTREINT a un ensemble strictement plus petit que les 4 options
@@ -178,23 +198,27 @@ if (liste) {
 
       var exploitable = expS || expP || expI || expR;
       if (exploitable) exploitables++;
+      if (retourne) retournees++;
       if (conforme && !exploitable) return;
       aFaire++;
       var etiq = (expS ? "[STRICTE] " : "") + (expP ? "[PROPORTION] " : "") + (expI ? "[INVERSE] " : "") +
-                 (expR ? "[RESTREINT] " : "");
+                 (expR ? "[RESTREINT] " : "") +
+                 (retourne ? "[RETOURNE " + (rS ? "S" : "") + (rP ? "P" : "") + (rI ? "I" : "") + "] " : "");
       console.log("  " + f + " q" + nq + "  " + etiq + String(q.q).slice(0, 52));
       console.log("      k = " + k + "  ->  distracteurs vises : " + k + " / " + k + " / " + k +
                   "   (aujourd'hui " + dist.join(" / ") + ")" + (kEgaux ? "  [k DEJA TENU]" : ""));
       if (!wOK) {
-        console.log("      w = " + wc + " mots longs pour la BONNE reponse, la plus fournie a elle seule" +
-                    "  ->  un distracteur doit en porter " + (wc + 1) + " ou plus, ou les quatre " + wc +
-                    "  (regle du w : c'est ELLE qui ferme PROPORTION, pas le k)");
+        console.log("      w = " + nMots.join(" / ") + " mots longs (la BONNE est opt" + q.correct + ")" +
+                    "  ->  LES QUATRE doivent porter " + wc + " mots longs" +
+                    "  (regle du w : c'est ELLE qui ferme PROPORTION, pas le k ; et" +
+                    " en faire porter PLUS a un distracteur ne ferme rien, ca RETOURNE)");
       }
       sortie.forEach(function (l) { console.log(l); });
     });
   });
   console.log("\n  " + exploitables + " questions EXPLOITABLES sur " + tot +
-              " ; " + aFaire + " questions a mettre en forme.");
+              " ; " + retournees + " RETOURNEE(S) — une variante y designe un DISTRACTEUR seul," +
+              " donc l'ecarter rend 33,3 % ; " + aFaire + " questions a mettre en forme.");
   console.log("  Objectif : 0 exploitable ET 0 a mettre en forme — les deux, sinon l'indice");
   console.log("  se contente de changer de sens.\n");
   process.exit(0);
