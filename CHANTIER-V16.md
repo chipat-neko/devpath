@@ -7578,6 +7578,194 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
 
 
 
+      ---
+
+      **49ᵉ COURS — `julia` : 95,8 % → 25,4 %, rangs 15/15/15/14 EXACTS, le 2026-09-23.**
+      **Et c'est désormais LE COURS LE MOINS BIAISÉ DU SITE** : son pire indice rend **25,7 %**
+      (devant `clojure` 26,3 %), et celui-là tranche sur **0,0 %** des questions.
+
+      Trois vagues (6 agents d'écriture, 6 de contradiction, 6 de rattrapage) puis
+      8 retouches d'orchestrateur. **15 073 caractères écrits** là où `plan-rangs-qcm` en
+      demandait 12 312 — l'écart est le prix des cinq autres dimensions, pas de la longueur.
+
+      | mesure | avant | après |
+      |---|---:|---:|
+      | **« la plus longue »** | **95,8 %** (couv. 98,3 %, rend. 96,6 %) | **25,4 %** (couv. 98,3 %, rend. **25,9 %**) |
+      | rangs de longueur | 57 / 1 / 1 / 0 | **15 / 15 / 15 / 14** (cible exacte) |
+      | **pire des 46 stratégies** | 95,8 % | **25,7 %**, couverture **0,0 %** |
+      | `mesure-biais-inverse` | **4 alertes**, les quatre à DIRECTE **0,0 %** | **0 alerte** (pire : 25,1 %) |
+      | mot fétiche | **2 alertes** (34,0 % / 33,5 %) | **0 alerte** |
+      | intrus lexical | 26,7 % **3 sûres** / 31,5 % **4 sûres** | **25,0 % / 25,0 %, 0 sûre** |
+      | lexique STRICTE | couv. 37,3 %, rend. 18,2 % | couv. **0,0 %** |
+      | lexique PROPORTION | 61,0 % / 44,4 % | 39,0 % / **21,7 %** |
+      | lexique INVERSE | 52,5 % / **54,8 %** | 3,4 % / **0,0 %** |
+      | `la plus dense (mots longs)` | 31,0 % de rendement | **25,0 % exact** |
+
+      **CE QUE CETTE PASSE AJOUTE AU CHANTIER — dix résultats, dont six sont neufs.**
+
+      **1. Le dosage calculé AVANT d'écrire a touché la cible au dixième, sans un seul
+      tâtonnement.** `la plus dense (mots longs)` rendait 31,5 % sur **54 questions tranchées**,
+      soit **17 où elle désignait la bonne**. Le calcul posé avant la moindre retouche : cible
+      25 % = 13,5, donc **retourner 4**, pas 17. Cinq retouches chirurgicales (3 pleines, 2 sur
+      des ex æquo qui ne valaient qu'un demi-crédit) → **25,0 % exact**. C'est la leçon du 47ᵉ
+      cours appliquée d'entrée, et elle a coûté cinq modifications là où « fermer » en aurait
+      demandé dix-sept — pour un résultat pire.
+
+      **2. ⚠️ RETOURNER « LA PLUS DENSE » SE FAIT EN RETIRANT DE PETITS MOTS, PAS EN AJOUTANT
+      DES LONGS.** La stratégie compare la longueur **MOYENNE** des mots. Supprimer « le »,
+      « un », « à la création » d'un distracteur **monte** sa densité sans toucher à un seul mot
+      de 5 lettres et plus — donc **sans rouvrir l'intrus lexical ni le lexique**. Les trois
+      autres voies (remplacer un mot par un synonyme plus long, en ajouter un, en déplacer un)
+      le rouvrent toutes. ⚠️ Et le tokeniseur **coupe sur l'apostrophe et le trait d'union** :
+      `l'écriture` compte **deux** jetons, `ramasse-miettes` **trois** — écrire « joliment »
+      effondre la densité et retourne l'indice. Trois agents l'ont retrouvé indépendamment.
+
+      **3. ⚠️⚠️ DEUX FAUTES DE CORPS QUE LE COURS SE CONTREDISAIT À LUI-MÊME, ET QU'AUCUN
+      VÉRIFICATEUR NE POUVAIT VOIR.**
+      - `lecon-08` affirmait **trois fois** (paragraphe, texte visible du SVG, `aria-label`) que
+        « le code global, lui, **reste interprété** et lent ». Or `lecon-03` donne cette phrase
+        comme **distracteur marqué faux** (sa bonne réponse est « les variables globales sont
+        lentes, type incertain »), et `lecon-01` marque faux « à cause de l'interprétation ».
+        **Le cours enseignait comme vrai, dans une leçon, ce qu'il sanctionnait comme faux dans
+        deux autres.** La cause réelle est la globale non typée — ce que dit la section suivante
+        de la page elle-même.
+      - `lecon-12` étiquetait le nœud racine `Expr :+` pendant que le paragraphe au-dessus, la
+        légende ET l'`aria-label` de la même figure disaient `head` = `:call`. **Le lecteur
+        voyant apprenait le contraire du lecteur d'écran.** L'arbre a été redessiné : `:call` en
+        tête, `+` comme **premier des `args`**.
+      Ces deux fautes tenaient dans des **figures** et un `aria-label` : aucun des 53 étapes de
+      `verif.js` ne compare le texte d'un SVG au corps qui l'introduit.
+
+      **4. Deux exemples de code qui ne s'exécutent pas, et pour la MÊME raison.**
+      `pairs = [x for x in 1:10 if x % 2 == 0]` (`lecon-03`) et `function minmax(v)`
+      (`lecon-06`). En Julia, **affecter ou étendre un nom exporté par `Base` sans `import` est
+      une erreur, pas un masquage** (`cannot assign a value to variable Base.pairs from module
+      Main` / `function Base.minmax must be explicitly imported to be extended`). Un balayage
+      sur ~250 noms de `Base` n'en a trouvé **aucun autre** dans les 16 leçons.
+
+      **5. Un test annoncé passant qui LÈVE une erreur — et c'est une autre page du cours qui
+      l'a prouvé.** `@test somme_carres(0) == 0` avec `somme_carres(n) = sum(i^2 for i in 1:n)` :
+      `1:0` est vide, et `sum` sur un **générateur** vide sans `init` lève `ArgumentError`
+      (l'eltype d'un `Base.Generator` est `EltypeUnknown`, donc pas de `zero` à produire).
+      **`lecon-16` écrit pourtant, dans un `explain` intouchable : « `init = 0.0` […] évite
+      l'erreur sur un stock vide ».** Corrigé par `; init = 0`.
+
+      **6. Une sortie fausse prouvée par exécution, dans un bloc dont tout le reste était juste.**
+      `# Gomme : 12 × 0.8 € = 9.6 €` → `node -e "console.log(0.8*12)"` rend
+      **`9.600000000000001`**. Les deux autres lignes du même bloc sont exactes (`1.5*10 = 15.0`,
+      `3.2*5 = 16.0`) **et le total aussi** (`0.0+15.0+16.0+0.8*12 === 40.6` rend `true`) :
+      **un motif de remplacement large aurait cassé ce qui était juste.** Ironie utile : la
+      question 11 du bilan de **cette même page** enseigne précisément ce piège
+      (« `0.1 + 0.2 == 0.3` vaut `false` »).
+
+      **7. Un SVG qui démontrait l'inverse de sa légende, par UNE SEULE coordonnée.** Figure
+      « Séquentiel vs `Threads.@threads` » : les cœurs 1 à 3 étaient à `x="96"` mais le **cœur 4
+      à `x="228" y="118"`**, donc **à la suite du cœur 1 sur la même rangée**. Le lecteur voyait
+      le travail finir à x = 356, soit **4 itérations de long**, quand les deux textes de la
+      figure annoncent « temps total ≈ durée × 2 » et « ≈ 4× plus rapide ». Ramené à
+      `x="96" y="190"`, `viewBox` porté de 196 à 220.
+
+      **8. ⚠️⚠️ LA RÉÉCRITURE FABRIQUE DES TICS DE LOT QU'AUCUN DES 46 OUTILS NE VOIT — et ils
+      rendent 100 %.** Trois cas mesurés dans cette seule passe :
+      - **`et/ou`** dans les **TROIS** distracteurs de `lecon-12` q1 et dans aucune bonne
+        réponse — **3 occurrences dans tout le cours**, donc rendement **100 % sans lire
+        l'énoncé**. `mesure-mot-question` ne peut pas la voir : elle coupe sur la barre oblique
+        et ne compte que les mots de **5 lettres et plus** ;
+      - **`compilateur`** : 4 distracteurs / 0 bonne réponse sur la même page. Cumulé au premier,
+        « écarter toute option portant *et/ou* ou *compilateur* » éliminait **5 distracteurs sur
+        9 et 0 bonne réponse** ;
+      - **le caractère `…` (U+2026)**, présent dans exactement **deux** options des 14 questions
+        de `lecon-16` — **les deux bonnes réponses** (`function nom(x) … end`, `struct Nom … end`).
+        Deux questions sur onze tranchées au clavier.
+      **La leçon générale : un outil qui compte des MOTS est aveugle à une LOCUTION, à un SIGNE
+      et à un GABARIT DE PHRASE.** Le quatrième cas est du même ordre : sur `lecon-08` q2, les
+      trois distracteurs ouvraient tous sur « une fonction est/reste type-stable **quand ses
+      variables** … ; **elle peut alors utiliser** … », gabarit absent de la bonne réponse.
+
+      **9. Trois pièges de retouche retrouvés indépendamment par trois agents, tous chiffrés.**
+      - **Retirer un mot de 9+ lettres d'un distracteur le rend EXCLUSIF à la bonne réponse** :
+        `le mot technique exclusif` passe d'inerte à **50 %** sur la question, sans qu'on ait
+        rien ajouté à la bonne réponse. C'est la tension structurelle du 48ᵉ cours, vue depuis
+        l'autre bout.
+      - **« les trois distracteurs à la même longueur » livre `ECARTER la plus courte` à 100 %** :
+        les écarter ne laisse que la bonne réponse. Deux questions du bilan y sont passées.
+      - **Un seul distracteur absolutiste (« toujours ») fait désigner les trois autres**, bonne
+        réponse comprise — il faut **0, 2 ou 3** porteurs par question, jamais 1.
+
+      **10. `verif-etudes` et `build-index` forment un CYCLE, et il faut le boucler jusqu'au
+      point fixe.** `pages/etude-recherche.html` publie une mesure de `js/search-index.js`, qui
+      indexe `pages/etude-recherche.html`. **Trois tours** (assembleur → index → assembleur) ont
+      été nécessaires ici, contre deux au 48ᵉ cours ; la stabilité a été vérifiée en rejouant le
+      cycle **trois fois de plus** sans aucune écriture.
+
+      **Reliquat assumé et chiffré** : `lecon-15` q3 opt C reste auto-contradictoire (« au
+      premier appel » puis « à chaque exécution ») — non corrigée parce qu'elle porte le dosage
+      de densité ; `lecon-11` q1 et q3 gardent un `k` inégal (13 et 11 mots étrangers contre 3
+      et 1) parce que l'égaliser aurait demandé d'écrire un domaine faux avec le seul
+      vocabulaire de la page, c'est-à-dire la salade de mots que la consigne interdit ; et
+      `lecon-16` bilan q4 garde la seule ligne de `plan-rangs-qcm` qui soit **insoluble**
+      (resserrer l'option « 0 », longue d'un caractère, vers la bande [1..0]).
+
+      **Ce cours ne s'exécute pas** (`julia --version` → *command not found*). La consigne l'a
+      borné : n'écrire que ce que la page établit. **Aucune bonne réponse n'a été jugée fausse
+      par les dix-huit agents** — deuxième cours d'affilée. Les périmètres refusés sont les mêmes
+      d'un agent à l'autre : texte exact des messages d'erreur, chiffres de temps et
+      d'allocation, nombre de fils d'un `@threads`, ordre d'exécution des tâches, et tout point
+      de version qu'aucune page ne date (`Pkg`, `@inbounds`, `Base.Threads`, *time to first
+      plot*, versions de `DataFrames` / `Plots` / `PackageCompiler`).
+
+      🟠 **Corrigés en marge** : le cadrage « fin de cours » de `lecon-11` (« Tu connais désormais
+      le langage », « Pour continuer », « Le meilleur moyen d'apprendre Julia ») alors que c'est
+      la **11ᵉ leçon sur 16** ; le prérequis de `lecon-16` (« leçons 01 à 11 » pour un bilan qui
+      interroge les leçons 12, 13 et 14) ; `partiels[threadid()]` sous un `@threads` sans
+      annotation, devenu `@threads :static` ; **quatre masques de `data-exos` sur six** dont le
+      nombre de `?` ne valait pas celui de la réponse attendue ; et l'appariement **positionnel**
+      des `data-exos` de `lecon-16`, décalé d'un cran.
+
+      **Contrôles** : `mesure-qcm-intouchable julia fd3754c` **0 atteinte** sur **176 distracteurs
+      réécrits sur 177** (`q` / `correct` / `explain` / bonne réponse intacts) ; `verif-html`
+      **0 sur 1 629 pages** ; `verif-donnees` **0 erreur sur 26 invariants** (3 avertissements
+      pré-existants : doublon `zig`, 7 pages d'étude écartées, trou d'index `doc`) ;
+      `verif.js --rapide` **53 étapes** ; `verif-etudes` **0 périmée sur 7** ; **les DEUX cliquets
+      refigés**, `julia` marqué `traite` (**48 cours**) ; épreuves par injection **10/10** et
+      **6/6** ; 33 blocs JSON valides, **0 BOM, 0 CRLF, 0 URL externe**.
+
+      🟠 **`doc/lecon-03` repérimée une 13ᵉ fois** et réassemblée par `tools/doc/gen.js` :
+      `verif-normatif` **67 OK / 8 échecs → 75 OK / 0 échec**. 🟠 **`etude-recherche` ET
+      `etude-inconnu` repérimées**, réassemblées, puis le cycle index ↔ étude bouclé jusqu'au
+      point fixe (voir le résultat 10).
+
+      ---
+
+      **LE 50ᵉ COURS EST DÉSIGNÉ — `nosql`.** Classement par nocivité réelle rejoué sur les
+      **42 cours restants** : `nosql` **56,5 devinables** (57 questions, **99,1 %**), `vue` 56,0,
+      `perl` 55,7, `dart` 55,5, `perf-web` 54,5, `r` 54,0, `observabilite` 54,0, `lisp` 54,0.
+
+      **Mesure de départ — c'est le cours le plus tordu qu'ait rencontré B4 depuis `stats`** :
+      « la plus longue » **99,1 %** (couverture 98,2 %, **rendement 100,0 %**), et les rangs sont
+      **57 / 0 / 0 / 0** : la bonne réponse est la plus longue dans **toutes** les questions
+      tranchées, sans une seule exception. Cible **15 / 14 / 14 / 14**.
+      Puis « la plus détaillée » **78,1 %** (rendement **100 %**), « le mot technique exclusif »
+      **73,8 %** (couverture 77,2 %, rendement 86,4 %), « RESTREINDRE à la parenthèse » 68,3 %
+      (rendement **100 %**), « l'incise entre parenthèses » 63,1 % (rendement **100 %**),
+      « la ponctuation forte » 49,5 % (rendement 95,0 %), « ECARTER la moins bavarde » 43,4 %
+      (rendement **100 %**).
+      ⚠️ `mesure-biais-inverse` : **4 alertes**, les quatre rangs de longueur à **DIRECTE 0,0 %**
+      — même configuration franche que `julia`. ⚠️ Mots fétiches : `chaque` (6 bonnes / 3
+      distracteurs, **31,7 %**), `données` (10/14, 30,5 %), `documents` (8/11, 29,5 %).
+      ⚠️ Lexique **ouvert dans les trois lectures** : STRICTE 42,1 % / **54,2 %**, PROPORTION
+      59,6 % / **58,8 %**, INVERSE 54,4 % / 29,0 %. Intrus lexical : DÉFAUT 24,0 % avec **2
+      questions sûres**, EXCÈS 26,2 %.
+      **`nosql` ne s'exécute pas** (aucun moteur installé) : même régime que les 47ᵉ, 48ᵉ et 49ᵉ
+      cours, on n'écrit que ce que la page établit.
+      La consigne `scratchpad/CONSIGNE-JULIA.md` se reprend telle quelle en changeant les chiffres
+      et la liste des erreurs de langage ; **y ajouter les trois résultats de cette passe** :
+      retourner « la plus dense » se fait en RETIRANT de petits mots ; un tic de LOCUTION
+      (`et/ou`), de SIGNE (`…`) ou de GABARIT DE PHRASE rend 100 % et aucun outil ne le voit,
+      donc il faut le chercher au `grep` après écriture ; et trois distracteurs de même longueur
+      livrent `ECARTER la plus courte` à 100 %.
+
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 

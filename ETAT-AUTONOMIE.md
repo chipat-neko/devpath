@@ -1,6 +1,6 @@
 ﻿# Etat de l'autonomie
 
-Releve du **2026-09-23 09:44**. Ce fichier est reecrit a chaque controle : s'il est vieux, c'est que le controle ne tourne plus.
+Releve du **2026-09-23 11:44**. Ce fichier est reecrit a chaque controle : s'il est vieux, c'est que le controle ne tourne plus.
 
 ## SAIN
 
@@ -10,9 +10,9 @@ Releve du **2026-09-23 09:44**. Ce fichier est reecrit a chaque controle : s'il 
 |---|---|
 | tache | DESACTIVEE |
 | passe en cours | oui |
-| prochain reveil | 09/23/2026 10:13:09 |
-| derniere trace | 2026-09-23 08:13  (il y a 1.5 h) |
-| usage hebdomadaire | 56 % |
+| prochain reveil | 09/23/2026 12:17:45 |
+| derniere trace | 2026-09-23 10:17  (il y a 1.5 h) |
+| usage hebdomadaire | 63 % |
 | pause decidee | aucune |
 | cases restantes | **14** |
 | plan courant | CHANTIER-V16.md |
@@ -26,4 +26,4 @@ Releve du **2026-09-23 09:44**. Ce fichier est reecrit a chaque controle : s'il 
 | CHANTIER-V17.md | 80/80 | termine |
 | CHANTIER-V16.md | 8/22 | 14 |
 
-Derniere ligne du journal : `[2026-09-23 08:13:11] prompt : 8216 caracteres, plan courant CHANTIER-V16.md, 6 chantiers decrits, 90 cours / 1540 lecons mesures, 0 alerte(s).`
+Derniere ligne du journal : `[2026-09-23 10:17:46] prompt : 8216 caracteres, plan courant CHANTIER-V16.md, 6 chantiers decrits, 90 cours / 1540 lecons mesures, 0 alerte(s).`

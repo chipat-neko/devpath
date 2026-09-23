@@ -100,7 +100,7 @@
 <p>Julia promet la vitesse du C — mais à une condition&nbsp;: écrire du code que le compilateur peut optimiser. La clé tient en deux mots&nbsp;: <strong>stabilité de type</strong>. Cette leçon t'apprend les quelques règles qui séparent un code Julia lent d'un code Julia fulgurant, et les outils pour les vérifier.</p>
 
 <h2>La règle d'or&nbsp;: tout dans des fonctions</h2>
-<p>La première règle de performance&nbsp;: ne fais pas de calcul lourd au niveau global d'un script. Mets-le dans une <strong>fonction</strong>. Julia compile et optimise les fonctions&nbsp;; le code global, lui, reste interprété et lent.</p>
+<p>La première règle de performance&nbsp;: ne fais pas de calcul lourd au niveau global d'un script. Mets-le dans une <strong>fonction</strong>. Julia compile et optimise les fonctions&nbsp;; au niveau global, les variables ne portent pas de type fixe, si bien que le code produit y reste générique et lent.</p>
 <figure class="code-block" data-file="exemple.jl"><pre><code class="language-julia"># Lent : boucle au niveau global
 total = 0
 for i in 1:10^7
@@ -117,12 +117,12 @@ function somme(n)
 end
 somme(10^7)   # bien plus rapide</code></pre></figure>
 <figure class="diagram">
-  <svg viewBox="0 0 640 158" role="img" aria-label="Au niveau global d'un script, le type des variables est incertain, donc Julia exécute un code générique interprété, lent. Le même calcul placé dans une fonction reçoit des types connus : Julia compile un code machine spécialisé, rapide.">
+  <svg viewBox="0 0 640 158" role="img" aria-label="Au niveau global d'un script, le type des variables est incertain, donc Julia ne peut compiler qu'un code générique non spécialisé, lent. Le même calcul placé dans une fonction reçoit des types connus : Julia compile un code machine spécialisé, rapide.">
     <text class="d-label" x="165" y="18" text-anchor="middle" font-size="12">Au niveau global</text>
     <text class="d-label" x="475" y="18" text-anchor="middle" font-size="12">Dans une fonction</text>
     <rect class="d-frame" x="30" y="30" width="270" height="100" rx="8" />
     <rect class="d-box" x="52" y="44" width="226" height="26" rx="5" /><text class="d-text" x="165" y="61" text-anchor="middle" font-size="9">total = 0 &nbsp;(type incertain)</text>
-    <text class="d-mut" x="165" y="88" text-anchor="middle" font-size="9">code générique interprété</text>
+    <text class="d-mut" x="165" y="88" text-anchor="middle" font-size="9">code générique non spécialisé</text>
     <rect class="d-box" x="90" y="98" width="150" height="24" rx="5" /><text class="d-tag" x="165" y="114" text-anchor="middle" font-size="10">lent</text>
     <rect class="d-frame" x="340" y="30" width="270" height="100" rx="8" />
     <rect class="d-accent" x="362" y="44" width="226" height="26" rx="5" /><text class="d-text" x="475" y="61" text-anchor="middle" font-size="9">somme(n) &nbsp;(types connus)</text>
@@ -134,7 +134,7 @@ somme(10^7)   # bien plus rapide</code></pre></figure>
 </figure>
 
 <h2>La stabilité de type</h2>
-<p>Une fonction est <strong>type-stable</strong> si le type de chaque variable ne change pas en cours de route. Le compilateur peut alors générer du code machine spécialisé. Une variable qui change de type le force à des vérifications coûteuses.</p>
+<p>Une fonction est <strong>type-stable</strong> si le type de sa valeur de retour se déduit du seul type de ses arguments, sans dépendre de leur valeur. Le compilateur peut alors générer du code machine spécialisé. Une variable qui change de type en cours de route casse cette prévisibilité et le force à des vérifications coûteuses.</p>
 <figure class="code-block" data-file="exemple.jl"><pre><code class="language-julia"># Instable : x est Int puis Float64
 function instable(n)
     x = 0          # Int
@@ -154,20 +154,20 @@ function stable(n)
 end</code></pre></figure>
 <p class="code-caption">Un détail aussi minime que <code>0</code> vs <code>0.0</code> peut multiplier le temps d'exécution.</p>
 <figure class="diagram">
-  <svg viewBox="0 0 640 170" role="img" aria-label="Une fonction instable démarre x à 0, un entier, puis lui ajoute 0.5, ce qui le transforme en Float64 : le type devient incertain (Any) et le code est lent. Une fonction stable démarre x à 0.0, un Float64 conservé du début à la fin : le type est concret et le code est rapide.">
+  <svg viewBox="0 0 640 170" role="img" aria-label="Une fonction instable démarre x à 0, un entier, puis lui ajoute 0.5, ce qui le transforme en Float64 : le type inféré n'est plus concret mais une union des deux, Union de Float64 et Int64, et le code est lent. Une fonction stable démarre x à 0.0, un Float64 conservé du début à la fin : le type est concret et le code est rapide.">
     <text class="d-label" x="165" y="18" text-anchor="middle" font-size="12">Instable — x change de type</text>
     <text class="d-label" x="475" y="18" text-anchor="middle" font-size="12">Stable — x reste Float64</text>
     <rect class="d-frame" x="30" y="30" width="270" height="112" rx="8" />
     <rect class="d-box" x="52" y="46" width="92" height="28" rx="5" /><text class="d-text" x="98" y="65" text-anchor="middle" font-size="9.5">x = 0</text><text class="d-mut" x="98" y="90" text-anchor="middle" font-size="8.5">Int</text>
     <text class="d-mut" x="164" y="65" text-anchor="middle" font-size="12">→</text>
     <rect class="d-box" x="184" y="46" width="94" height="28" rx="5" /><text class="d-text" x="231" y="65" text-anchor="middle" font-size="9.5">x += 0.5</text><text class="d-mut" x="231" y="90" text-anchor="middle" font-size="8.5">Float64 ?!</text>
-    <rect class="d-box" x="90" y="104" width="150" height="26" rx="5" /><text class="d-tag" x="165" y="121" text-anchor="middle" font-size="9.5">type = Any → lent</text>
+    <rect class="d-box" x="90" y="104" width="150" height="26" rx="5" /><text class="d-tag" x="165" y="121" text-anchor="middle" font-size="9.5">type = Union → lent</text>
     <rect class="d-frame" x="340" y="30" width="270" height="112" rx="8" />
     <rect class="d-accent" x="408" y="46" width="134" height="28" rx="5" /><text class="d-text" x="475" y="65" text-anchor="middle" font-size="9.5">x = 0.0</text><text class="d-mut" x="475" y="90" text-anchor="middle" font-size="8.5">Float64 partout</text>
     <rect class="d-accent" x="400" y="104" width="150" height="26" rx="5" /><text class="d-tag" x="475" y="121" text-anchor="middle" font-size="9.5">Float64 → rapide</text>
     <text class="d-mut" x="320" y="160" text-anchor="middle" font-size="9"><tspan class="d-tag">0</tspan> vs <tspan class="d-tag">0.0</tspan> : un seul caractère décide de la vitesse.</text>
   </svg>
-  <figcaption>Une fonction est <strong>type-stable</strong> quand le type de chaque variable ne varie pas&nbsp;: le compilateur produit alors un code machine spécialisé.</figcaption>
+  <figcaption>Une fonction est <strong>type-stable</strong> quand le type de sa sortie se déduit du type de ses entrées&nbsp;: ici, une variable qui change de type casse cette prévisibilité, et le compilateur perd son code machine spécialisé.</figcaption>
 </figure>
 
 <h2>Éviter les variables globales</h2>
@@ -232,7 +232,7 @@ using BenchmarkTools
 <h2>Glossaire</h2>
 <dl class="glossary">
   <dt>Stabilité de type</dt><dd>Propriété d'une fonction dont le type de retour se déduit des seuls types des arguments&nbsp;; condition d'un code rapide.</dd>
-  <dt>Instabilité de type</dt><dd>Cas où une variable ou une valeur de retour change de type&nbsp;: l'inférence retombe sur <code>Any</code> et le code ralentit.</dd>
+  <dt>Instabilité de type</dt><dd>Cas où une variable ou une valeur de retour change de type&nbsp;: l'inférence retombe sur un type non concret (<code>Union</code>, voire <code>Any</code>) et le code ralentit.</dd>
   <dt>Inférence de type</dt><dd>Analyse par laquelle le compilateur déduit le type de chaque expression avant de générer le code machine.</dd>
   <dt>Type concret</dt><dd>Type instanciable et précis (<code>Float64</code>, <code>Int64</code>) sur lequel Julia peut spécialiser&nbsp;; s'oppose à <code>Any</code>.</dd>
   <dt>Compilation JIT</dt><dd>Compilation «&nbsp;juste à temps&nbsp;»&nbsp;: la première exécution d'une fonction compile un code natif, réutilisé ensuite (d'où l'appel de «&nbsp;chauffe&nbsp;»).</dd>
@@ -252,9 +252,9 @@ using BenchmarkTools
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Pourquoi une variable globale non typée ralentit-elle une fonction qui l'utilise, et comment y remédier ?","a":["Son type peut changer entre deux appels, donc le compilateur ne peut rien inférer et génère du code générique ; la passer en argument ou la déclarer const fige son type et rétablit la vitesse","Une globale est stockée sur le disque, d'où la lenteur ; il faut la mettre en cache","Les globales sont recalculées à chaque tour de boucle, il faut les mettre dans un tableau","Le problème vient du nom trop long ; le raccourcir suffit"],"correct":0,"explain":"Une globale ordinaire pouvant être réassignée à un autre type, le compilateur doit tout traiter comme Any : plus d'inférence, code lent. La déclarer const promet un type stable, et la passer en argument permet à Julia de spécialiser la fonction pour ce type précis."},
-  {"q":"Qu'est-ce que la stabilité de type ?","a":["Une fonction est type-stable si le type de sa valeur de retour ne dépend que des types (pas des valeurs) de ses arguments ; le compilateur peut alors inférer un type concret et générer un code rapide","C'est quand les variables ne changent jamais de valeur","C'est l'absence de types","C'est un type qui ne compile pas"],"correct":0,"explain":"La stabilité de type garantit que le type de sortie est prévisible à partir des seuls types d'entrée. L'inférence aboutit alors à un type concret, ce qui permet une compilation efficace. L'instabilité force des vérifications dynamiques coûteuses."},
-  {"q":"Quel outil révèle les types incertains d'une fonction ?","a":["@code_warntype, qui signale en couleur les types non concrets (Any) susceptibles de ralentir le code","@time","println","@code_native uniquement"],"correct":0,"explain":"La macro @code_warntype affiche le code typé par l'inférence et met en évidence les emplacements où le type reste abstrait (Any). C'est l'outil de référence pour diagnostiquer une instabilité de type."}
+  {"q":"Pourquoi une variable globale non typée ralentit-elle une fonction qui l'utilise, et comment y remédier ?","a":["Son type peut changer entre deux appels, donc le compilateur ne peut rien inférer et génère du code générique ; la passer en argument ou la déclarer const fige son type et rétablit la vitesse","Julia range les globales hors du tas et peut les relire dans le fichier source du script à chaque tour de boucle, sans passer par la mémoire ; rien qu'un disque plus rapide leur rendrait la vitesse perdue","Ce n'est pas le type qui pèse mais l'accès lui-même, car le compilateur ne peut rien demander à la globale sans passer par le ramasse-miettes avant chaque boucle ; grouper ces passages par dix réduit le coût","Le compilateur peut relire chaque globale dans la table interne des symboles, ce qui alourdit la lecture de chaque tour de boucle chaude ; rien ne rendrait sa vitesse au calcul"],"correct":0,"explain":"Une globale ordinaire pouvant être réassignée à un autre type, le compilateur doit tout traiter comme Any : plus d'inférence, code lent. La déclarer const promet un type stable, et la passer en argument permet à Julia de spécialiser la fonction pour ce type précis."},
+  {"q":"Qu'est-ce que la stabilité de type ?","a":["Une fonction est type-stable si le type de sa valeur de retour ne dépend que des types (pas des valeurs) de ses arguments ; le compilateur peut alors inférer un type concret et générer un code rapide","Les variables d'une fonction type-stable gardent la même valeur du début à la fin de son corps (le type ne comptant pas vraiment) ; on peut alors ne pas vérifier le type de ses arguments et le code machine produit reste rapide","Le compilateur déclare type-stable toute fonction dont les variables n'ont pas de type annoté et qu'il garde toutes en Any (le type restant libre) ; ce flou peut générer partout ailleurs un code concret précis et rapide","La stabilité de type est la propriété d'une fonction dont le compilateur remplace les variables de son corps par une valeur entière (le type concret par défaut) ; son exécution peut donc ne plus vérifier le type concret de ses arguments reçus"],"correct":0,"explain":"La stabilité de type garantit que le type de sortie est prévisible à partir des seuls types d'entrée. L'inférence aboutit alors à un type concret, ce qui permet une compilation efficace. L'instabilité force des vérifications dynamiques coûteuses."},
+  {"q":"Quel outil révèle les types incertains d'une fonction ?","a":["@code_warntype, qui signale en couleur les types non concrets (Any) susceptibles de ralentir le code","@time, la macro qui affiche en couleur les types non concrets (Any) susceptibles de fausser tout le calcul","La macro println, qui signale en couleur les types non déclarés (Any) inférés ensuite","@code_native, macro qui signale les types non concrets (Any) restés sans valeur exacte"],"correct":0,"explain":"La macro @code_warntype affiche le code typé par l'inférence et met en évidence les emplacements où le type reste abstrait (Any). C'est l'outil de référence pour diagnostiquer une instabilité de type."}
 ]
 </script>
 
@@ -263,7 +263,7 @@ using BenchmarkTools
 [
   {"type":"text","accept":["@time"],"placeholder":"la macro pour CHRONOMÉTRER une fonction (et voir ses allocations) : …","hints":["@???? somme(1_000_000).","Le @ marque une macro.","@ + time."],"link":{"href":"lecon-08.html","label":"Revoir « Mesurer »"}},
   {"type":"text","accept":["instabilité de type","instabilité","type instability","instabilite de type","instabilite"],"placeholder":"le problème de performance quand s = 0 (Int) reçoit ensuite des flottants : … de type","hints":["Le type de s change en cours de route.","Le compilateur ne peut plus optimiser.","« … de type »."],"link":{"href":"lecon-08.html","label":"Revoir « La stabilité de type »"}},
-  {"type":"text","accept":["@code_warntype","code_warntype"],"placeholder":"la macro pour DIAGNOSTIQUER une instabilité de type (les ::Any en rouge) : …","hints":["@?????_???????(f, (Int,)).","Affiche les types inférés.","@code_????????"],"link":{"href":"lecon-08.html","label":"Revoir « @code_warntype »"}}
+  {"type":"text","accept":["@code_warntype","code_warntype"],"placeholder":"la macro pour DIAGNOSTIQUER une instabilité de type (les ::Any en rouge) : …","hints":["@????_???????? stable(100).","Affiche les types inférés.","@code_????????"],"link":{"href":"lecon-08.html","label":"Revoir « @code_warntype »"}}
 ]
 </script>
 
