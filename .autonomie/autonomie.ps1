@@ -143,6 +143,15 @@ if (Test-Path $lock) {
   }
 }
 $env:Path = 'C:\Program Files\nodejs;' + $env:Path
+# Plafond d'attente des taches de fond (Workflow) en fin de tour -- correctif du
+# 2026-09-23. Verifie dans le binaire (fonction Tm/Rm) : ce compte a rebours ne
+# demarre QUE quand l'agent a fini de produire et attend passivement la fin d'un
+# Workflow encore actif -- jamais sur la duree totale de la passe. Le defaut de
+# claude.exe est 600000 ms (10 min) ; un Workflow de cette autonomie a deja mis
+# 82 min a repondre (passe pandas, 2 workflows), et une passe s'est terminee
+# sans rien produire faute d'avoir attendu assez longtemps. Marge large au-dessus
+# du pire cas connu, choisie avec Noah.
+$env:CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS = '7200000'
 
 # =============================================================================
 # Fin de chantier + passe de securite (ajout 2026-07-27, demande de Noah).
