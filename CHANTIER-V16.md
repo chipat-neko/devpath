@@ -7963,6 +7963,89 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       distracteur*. **Les deux doivent être données ensemble dès le premier lot** : c'est en les
       séparant qu'on a payé une troisième vague ici.
 
+      ---
+
+      **ÉTAT DU 51ᵉ COURS (`vue`) AU 2026-09-25 — LE POINT N'EST PAS CLOS, ET VOICI OÙ IL EN EST.**
+      Deux réveils y ont travaillé : celui du 23/09, coupé par la limite de session, et celui-ci.
+
+      | | départ | après le 23/09 | ce réveil |
+      |---|---:|---:|---:|
+      | « la plus longue » | 90,3 % | 25,8 % | **25,8 %** |
+      | pire des 44 stratégies | 90,3 % | 25,8 % | **28,6 %** |
+      | fautes de rédaction | — | **98** | **0** |
+      | rangs | 56/5/0/1 | 16/16/15/15 | **16/16/15/15** |
+
+      **1. L'indice de DENSITÉ fermé par un dosage CALCULÉ.** 17 questions où « la plus dense (mots
+      longs) » désignait seule la bonne réponse, 18,75 points sur 62, cible 15,50 : **3,25 à retirer,
+      donc 3 bascules**, pas 17. Mesuré : **30,2 % → 25,4 %**. Un premier jeu de retouches a été
+      **annulé** : il fermait la densité mais **retournait « la moins bavarde » à 21,0 %** (rendement
+      17,8 %) et rouvrait le lexique sur les trois mêmes questions. Cause : réduire le nombre de mots
+      d'un distracteur le fait passer **sous** la bonne réponse, qui est intouchable. Le second jeu ne
+      touche **qu'aux mots de 5 lettres ou moins** — ce qui laisse `w` et `k` intacts par construction.
+
+      **2. LES 46 MESURES ÉTAIENT VERTES ET LE TEXTE ÉTAIT MAUVAIS — pour la deuxième fois.** Une
+      relecture adversariale (5 agents, lecture seule, 14 leçons) a rendu **98 fautes** : **79
+      distracteurs inintelligibles**, **8 accidentellement VRAIS**, 27 bloquantes. Exactement le
+      défaut du 50ᵉ cours. **Deux de mes propres retouches du jour y figuraient** : empiler des
+      démonstratifs (« cette key », « ce duo », « ces entrées ») pour tenir un compteur de caractères
+      tient la mesure et détruit le français. Rapport archivé : `scratchpad/vue-relecture/`, un
+      fichier par leçon.
+
+      **3. UN GARDE-FOU QUI NE SURVEILLE QU'UNE PARTIE DES STRATÉGIES EST VERT PENDANT QUE LA FAILLE
+      EST ENTIÈRE.** C'est la leçon principale de la passe, et c'est le défaut du cliquet de `lua`,
+      à l'identique. `scratchpad/vue-sonde/controle.js` v1 surveillait **sept** indicateurs écrits à
+      la main. Les cinq agents de réécriture les ont **tous tenus** — et la mesure s'est rouverte
+      ailleurs : l'incise entre parenthèses **25,0 % → 36,6 %** (rendement 100 %), le tiret 27,2 %,
+      le COMBINE tiret+longueur 29,0 %, le tic de lot « glose finale » 29,0 %. **La cause était dans
+      la consigne** : « aucune parenthèse de remplissage » a été suivie à la lettre, les distracteurs
+      ont perdu leurs incises, et la bonne réponse — intouchable — est restée **seule** à en porter.
+      Fermer une faute de rédaction rouvre un indice de forme.
+      `controle.js` **v2** ne recopie plus aucune définition : il **charge les 44 stratégies** depuis
+      `tools/mesure-biais-qcm.js` et compare, question par question, l'**ensemble des options que
+      chacune désigne**. Tout indice présent ou futur est couvert.
+
+      **4. LA TENSION STRUCTURELLE, MESURÉE TOUR PAR TOUR.** Sept lots de retouches ont ramené le pire
+      indice de **36,6 % à 28,6 %**, et chaque fermeture en a ouvert une autre :
+      incise 36,6 → 32,9 → 27,4 (fermée) · tiret 27,2 → fermé · densité 28,6 → fermée → **rouverte à
+      30,2 % par les corrections lexicales** → 28,6 %. Le lexique, lui, est passé de fermé à
+      **5 exploitables** (mes ajouts de parenthèses portaient des mots absents des pages) puis
+      redescendu à **3**.
+
+      **CE QUI RESTE À FAIRE, chiffré** (une passe dédiée suffit ; tout est outillé) :
+      - `la plus dense` **28,6 %** — 17 questions listées par `scratchpad/vue-sonde/densite.js`,
+        **2 bascules** suffisent (dosage calculé).
+      - `COMBINE : tiret puis longueur` **27,4 %**, `ecarter les absolus` 27,0 %, `le mot technique
+        exclusif` 27,0 % (**6 questions, −2,00 points, l'outil dit lesquelles**), `ecarter la glose
+        finale` 27,0 %, `la MAJUSCULE d'emphase` 26,6 %.
+      - lexique : **3 exploitables, 5 à mettre en forme** — `mesure-lexique-qcm --liste=vue` nomme
+        les mots exacts à remplacer.
+      - mot fétiche : **1 alerte**, « chaque » (3 bonnes / 35 distracteurs, ÉCARTER rend 30,6 %).
+      - **Décision qui ne revient pas à un écrivain** : la bonne réponse de `lecon-09` q2 enseigne la
+        priorité `v-for`/`v-if` de **Vue 2** dans un cours Vue 3. L'agent a retiré le distracteur qui
+        disait le vrai comportement de Vue 3 (la question n'a donc plus deux réponses défendables),
+        mais **la bonne réponse et son `explain` restent datés**. Toucher à l'intouchable est une
+        décision d'orchestrateur : à trancher.
+
+      **Contrôles de cette passe** : `verif-html` **0 sur 1 629 pages** ; `verif-donnees` **0 erreur
+      sur 26 invariants** (3 avertissements pré-existants) ; `verif.js --rapide` **53 étapes, 154,5 s**
+      (les 5 signalements sont les attendus d'un cours en cours de traitement : les deux cliquets non
+      refigés, `doc/lecon-03` repérimée, `etude-inconnu` à réassembler) ; `quiz-index` régénéré
+      (**6 151 entrées**) ; `mesure-qcm-intouchable vue c1c3b1f` **183/186 distracteurs réécrits,
+      0 atteinte** ; **aucune explication orpheline** ; tics de lot **0 alerte** ; 29 blocs JSON
+      valides, **0 BOM, 0 chargement externe**. **Les deux cliquets ne sont PAS refigés** : figer
+      verrouillerait un état intermédiaire.
+
+      ⚠️ **DEUX RÈGLES DE MÉTHODE PAYÉES CETTE PASSE.** (a) **Commiter une vague AVANT d'y toucher** :
+      un `git checkout -- pages/vue/` lancé pour annuler un applicateur défectueux a écrasé les
+      **107 réécritures non commitées** des cinq agents. Elles ont été reconstruites depuis les
+      fichiers de patchs laissés dans leurs dossiers de travail (`scratchpad/vue-ecriture-A..E`, cinq
+      formats différents) par `scratchpad/vue-sonde/recupere.js` — 107 remplacements, 0 refus, et
+      l'état obtenu redonne **au chiffre près** la mesure d'après la vague. Rien n'a été perdu, mais
+      la reconstruction a coûté plus cher que le commit qui l'aurait évitée. (b) **Un applicateur qui
+      réécrit un bloc JSON doit en réécrire les CROCHETS** : les oublier a cassé les 29 blocs des
+      14 leçons d'un coup, silencieusement. `pose.js` reparse maintenant chaque bloc avant d'écrire,
+      et refuse si un seul est invalide.
+
 
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
