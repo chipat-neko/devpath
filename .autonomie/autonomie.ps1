@@ -380,19 +380,18 @@ $prompt = if ($modeVerif) { $promptVerif } else { $promptTravail }
 
 try {
   Set-Location $proj
-  # Modele + effort EPINGLES (choix utilisateur, 2026-08-21) : Opus 5, effort max, pour du
-  # travail non surveille. --dangerously-skip-permissions = agir sans prompt.
+  # Modele + effort EPINGLES (choix utilisateur, 2026-09-26) : Opus 5.5, effort high,
+  # pour du travail non surveille. --dangerously-skip-permissions = agir sans prompt.
   # Le mot-cle ultracode est dans le prompt : il ouvre l'outil Workflow (multi-agents).
   # Il n'existe PAS de drapeau CLI equivalent ; le declencheur est le mot dans le texte.
-  # SUFFIXE [1m] OBLIGATOIRE, ne pas l'enlever : le binaire epingle est en 2.1.168
-  # (8 juin) et ne connait pas claude-opus-5 -- zero occurrence dans le fichier, contre
-  # 42 dans la version 2.1.238. Sa table de fenetre de contexte n'accorde le million de
-  # jetons qu'a claude-opus-4-7 et claude-opus-4-8, codes en dur ; tout autre nom retombe
-  # a 200 000. Or sur les 390 passes deja journalisees, 125 ont depasse 200 000 jetons
-  # (pic mesure : 608 342) : sans ce suffixe, une passe sur trois se ferait compacter en
-  # plein milieu d'une case, juste avant d'ecrire son compte rendu chiffre. Le suffixe est
-  # retire du nom avant l'appel a l'API, donc il ne change pas le modele appele : teste,
-  # exit 0. Quand le binaire sera mis a jour, le suffixe restera valide (opus 5 y est natif 1M).
+  # PAS DE SUFFIXE [1m] ICI, contrairement a l'ancien reglage opus-5 : verifie dans le
+  # binaire epingle (mis a jour a 2.1.283 le jour meme) que claude-opus-5-5 porte
+  # nativement context:{window:1e6, native_1m:true} -- le million de jetons n'est plus
+  # conditionne a un suffixe de contournement. Verifie aussi par un appel reel avant
+  # d'ecrire cette ligne : exit 0, is_error:false. Le piege du 21/08 (binaire trop vieux
+  # pour connaitre le modele demande, contexte retombant en silence a 200 000) reste un
+  # risque a chaque futur changement de modele : revérifier `grep -ac "<nom>" <binaire>`
+  # avant d'epingler un nouveau nom, ne jamais le supposer.
   # RETRY : les echecs sont surtout des coupures API transitoires (ex 529 Overloaded).
   # On reessaie UNE fois apres 30s. Le reveil est idempotent (une lecon deja enrichie,
   # reperable a son glossaire, n'est jamais refaite), donc relancer est sans risque.
@@ -402,7 +401,7 @@ try {
       Log "[$(Stamp)] echec (exit $code) -- nouvelle tentative ($try/2) dans 30s..."
       Start-Sleep -Seconds 30
     }
-    $sortie = (& $claude -p $prompt --model 'claude-opus-5[1m]' --effort high --dangerously-skip-permissions 2>&1 | Out-String)
+    $sortie = (& $claude -p $prompt --model claude-opus-5-5 --effort high --dangerously-skip-permissions 2>&1 | Out-String)
     $code = $LASTEXITCODE
   }
   # Reparation du mojibake : sous le Planificateur (aucune console), [Console]::OutputEncoding
