@@ -6,14 +6,15 @@
    ⚠️ Un service worker ne s'enregistre qu'en HTTPS ou http://localhost — JAMAIS
    en file://. L'enregistrement (js/main.js) ne tente donc rien en local.
    ============================================================================= */
-var CACHE = "syntaxe-v2"; /* incrémenté quand un fichier de SHELL change (V12-B1 : theme.js) */
+var CACHE = "syntaxe-v3"; /* incrémenté quand un fichier de SHELL change (V12-B1 : theme.js ;
+                             v3 : manifeste rangé dans assets/, 2026-09-26) */
 
 /* Coquille minimale pré-chargée à l'installation (chemins relatifs à la racine
    où vit ce service worker). */
 var SHELL = [
   "./",
   "index.html",
-  "manifest.webmanifest",
+  "assets/manifest.webmanifest",
   "css/fonts.css",
   "assets/fonts/inter-latin.woff2",
   "assets/fonts/inter-latin-ext.woff2",

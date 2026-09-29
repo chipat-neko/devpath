@@ -460,9 +460,12 @@ function Build-PromptTravail($modele, $proj, $chaine, $planCourant, $mesures) {
   }
   # Le point 1 doit nommer LE plan courant, et pas un autre de la chaine : c'est
   # exactement la phrase que l'ancienne substitution rendait contradictoire.
+  # Depuis le rangement du 2026-09-29, $planCourant porte son chemin relatif
+  # (docs\chantiers\CHANTIER-V16.md) : on compare le NOM du fichier, le chemin complet
+  # etant deja exige par le controle juste au-dessus.
   $m1 = [regex]::Match($t, 'TON PLAN DE TRAVAIL EST [^\s]*?(CHANTIER-V\d+\.md)')
   if (-not $m1.Success) { $alertes += 'la phrase << TON PLAN DE TRAVAIL EST >> est introuvable' }
-  elseif ($m1.Groups[1].Value -ne $planCourant) {
+  elseif ($m1.Groups[1].Value -ne (Split-Path $planCourant -Leaf)) {
     $alertes += "le point 1 annonce $($m1.Groups[1].Value) alors que le plan courant est $planCourant"
   }
   # LE MOJIBAKE, mesure le 2026-09-10 sur le prompt REELLEMENT recu par le modele :

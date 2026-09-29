@@ -143,7 +143,7 @@ function propre() {
   return cp.execSync('git status --porcelain -uno', { cwd: RACINE }).toString().replace(/[\r\n]+$/, '');
 }
 
-/* On ne demande PAS un arbre vierge : le journal de l'autonomie (ETAT-AUTONOMIE.md)
+/* On ne demande PAS un arbre vierge : le journal de l'autonomie (en-cours/ETAT-AUTONOMIE.md)
    est réécrit à chaque réveil, et un plan de chantier en cours d'édition l'est aussi.
    Ce qu'il faut prouver est plus précis, et plus fort : l'état de l'arbre APRÈS doit
    être IDENTIQUE à l'état d'AVANT. Aucune mutation n'a donc laissé de trace, et aucun

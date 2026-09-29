@@ -157,7 +157,7 @@ $env:CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS = '7200000'
 # Fin de chantier + passe de securite (ajout 2026-07-27, demande de Noah).
 # Le chantier est FINI quand les trois conditions sont vraies :
 #   1. plus aucun cours -avance declare dans js/data.js (phase C bouclee) ;
-#   2. le plan ENRICHISSEMENT-3.md n'a plus aucune case a cocher ;
+#   2. le plan docs\enrichissements\ENRICHISSEMENT-3.md n'a plus aucune case a cocher ;
 #   3. toutes les vraies lecons ont un glossaire (les pages de redirection,
 #      reconnaissables a leur meta refresh, sont exclues du test).
 # Alors : une PASSE DE SECURITE (verification globale du site) est lancee ; si son
@@ -167,7 +167,7 @@ $env:CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS = '7200000'
 # =============================================================================
 $okFile  = Join-Path $dir 'verif-finale.ok'
 $cptFile = Join-Path $dir 'verif-finale.echecs'
-$rapport = Join-Path $proj 'VERIF-FINALE.md'
+$rapport = Join-Path $proj 'docs\audits\VERIF-FINALE.md'
 
 # CHAINE DE CHANTIERS (2026-08-21) : l'autonomie enchaine les plans dans l'ordre,
 # sans intervention. Chaque plan est traite jusqu'a sa derniere case, puis on passe
@@ -177,7 +177,11 @@ $rapport = Join-Path $proj 'VERIF-FINALE.md'
 # page d examen, n etait PAS regenere et que le garde-fou cense le detecter etait VERT.
 # Chaque cours detordu restait donc devinable la ou l apprenant est evalue. Le V17
 # repare les instruments, puis la chaine revient au V16 la ou il s etait arrete.
-$CHAINE = @('CHANTIER-V12.md', 'CHANTIER-V13.md', 'CHANTIER-V14.md', 'CHANTIER-V15.md', 'CHANTIER-V17.md', 'CHANTIER-V16.md')
+# RANGEMENT DU 2026-09-26 : les plans vivent dans docs\chantiers\. Chaque entree porte
+# son chemin RELATIF a $proj, parce que tous les lecteurs de cette liste (Get-PlanCourant,
+# lib-reset.ps1, tools\sante-autonomie.ps1) font Join-Path $proj $nom. Le jeton
+# @@PLAN@@ du prompt recoit donc le chemin complet, et d:\test-claude\@@PLAN@@ reste juste.
+$CHAINE = @('docs\chantiers\CHANTIER-V12.md', 'docs\chantiers\CHANTIER-V13.md', 'docs\chantiers\CHANTIER-V14.md', 'docs\chantiers\CHANTIER-V15.md', 'docs\chantiers\CHANTIER-V17.md', 'docs\chantiers\CHANTIER-V16.md')
 
 # Renvoie le premier plan de la chaine qui a encore une case a cocher, ou $null
 # si tout est fini.
@@ -221,7 +225,7 @@ if (Test-ChantierFini) {
   $echecs = 0
   if (Test-Path $cptFile) { $echecs = [int](Get-Content $cptFile -TotalCount 1) }
   if ($echecs -ge 3) {
-    Log "[$(Stamp)] ===== ARRET : verification finale ROUGE 3 fois de suite. Intervention humaine requise (voir VERIF-FINALE.md). Tache desactivee. ====="
+    Log "[$(Stamp)] ===== ARRET : verification finale ROUGE 3 fois de suite. Intervention humaine requise (voir docs\audits\VERIF-FINALE.md). Tache desactivee. ====="
     try { Disable-ScheduledTask -TaskName 'Syntaxe-Autonomie' -ErrorAction Stop | Out-Null } catch {}
     exit 0
   }
@@ -350,7 +354,7 @@ Tu es lance AUTOMATIQUEMENT (tache planifiee Windows) sur le projet Syntaxe, dos
 2) CORRIGE uniquement ce qui est simple et sur (index, durees, compteurs, liens). Si une correction est lourde ou douteuse, NE LA FAIS PAS : signale-la dans le rapport.
 ULTRACODE : le mot-cle ultracode present dans ce prompt t'ouvre l'outil Workflow. Cette passe est precisement son cas d'usage : lance les controles EN PARALLELE, un agent par dimension, puis fais REFUTER chaque probleme trouve par un second agent dont la consigne est de le demolir. Un constat qui n'a pas ete reproduit n'entre pas dans le rapport. Moins de 15 agents. Les agents LISENT et MESURENT ; les corrections et les commits, c'est toi.
 
-3) ECRIS le rapport dans d:\test-claude\VERIF-FINALE.md. Sa toute PREMIERE ligne doit etre exactement VERDICT: VERT si tous les controles sont bons apres tes corrections, sinon exactement VERDICT: ROUGE. Ensuite le detail controle par controle avec les chiffres, puis la liste des problemes restants.
+3) ECRIS le rapport dans d:\test-claude\docs\audits\VERIF-FINALE.md. Sa toute PREMIERE ligne doit etre exactement VERDICT: VERT si tous les controles sont bons apres tes corrections, sinon exactement VERDICT: ROUGE. Ensuite le detail controle par controle avec les chiffres, puis la liste des problemes restants.
 4) Mets a jour la memoire du chantier (fichier enrichissement-cron-3.md) avec le resultat. Messages BREFS.
 '@
 
@@ -518,7 +522,7 @@ try {
       if (Test-Path $cptFile) { $n = [int](Get-Content $cptFile -TotalCount 1) }
       $n = $n + 1
       Set-Content -Path $cptFile -Value $n -Encoding ascii
-      Log "[$(Stamp)] VERIFICATION FINALE : $verdict (tentative $n/3) -- voir VERIF-FINALE.md, un nouveau reveil va corriger."
+      Log "[$(Stamp)] VERIFICATION FINALE : $verdict (tentative $n/3) -- voir docs\audits\VERIF-FINALE.md, un nouveau reveil va corriger."
     }
   }
 } catch {

@@ -506,7 +506,7 @@
     if (!$('link[rel="manifest"]')) {
       var link = document.createElement("link");
       link.rel = "manifest";
-      link.href = prefix + "manifest.webmanifest";
+      link.href = prefix + "assets/manifest.webmanifest";
       document.head.appendChild(link);
     }
     if ("serviceWorker" in navigator) {

@@ -75,7 +75,7 @@ variables (`--accent`, `--bg`, `--ink`, polices…) sans toucher au reste.
 
 ## Pour aller plus loin
 
-Le document **`paramettre.md`** (à la racine du projet Syntaxe) détaille **tout** : structure des
+Le document **`paramettre.md`** (dans `docs/reference/` du projet Syntaxe) détaille **tout** : structure des
 données, format exact des blocs, mécanisme du thème/palette/langue/progression, liste des variables
 CSS et des clés `localStorage`.
 

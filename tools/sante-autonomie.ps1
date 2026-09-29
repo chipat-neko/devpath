@@ -6,7 +6,7 @@
 # journal affirme et ce que les plans contiennent. Un arret silencieux ressemble
 # exactement a un travail en cours.
 #
-#   powershell -File tools/sante-autonomie.ps1            diagnostic + ETAT-AUTONOMIE.md
+#   powershell -File tools/sante-autonomie.ps1            diagnostic + en-cours/ETAT-AUTONOMIE.md
 #   powershell -File tools/sante-autonomie.ps1 -Reparer   idem, et reactive si anormal
 #
 # Un arret VOLONTAIRE (arret.ps1, ou .autonomie/arret-volontaire.txt) n'est jamais repare.
@@ -17,7 +17,9 @@ $ErrorActionPreference = 'Continue'
 $proj  = 'd:\test-claude'
 $dir   = Join-Path $proj '.autonomie'
 $log   = Join-Path $dir 'journal.log'
-$etat  = Join-Path $proj 'ETAT-AUTONOMIE.md'
+# Range dans en-cours\ depuis le 2026-09-26 (la racine ne garde que README.md,
+# index.html, sw.js et le dossier en-cours\).
+$etat  = Join-Path $proj 'en-cours\ETAT-AUTONOMIE.md'
 $vol   = Join-Path $dir 'arret-volontaire.txt'
 $tache = 'Syntaxe-Autonomie'
 
@@ -60,9 +62,11 @@ try {
 if ($plans.Count -eq 0) {
   # Le wrapper est illisible : c'est une anomalie en soi, on le dira plus bas.
   $chaineIllisible = $true
-  $plans = @(Get-ChildItem -Path $proj -Filter 'CHANTIER-V*.md' -File -ErrorAction SilentlyContinue |
+  # Les plans sont dans docs\chantiers\ depuis le 2026-09-26 ; on rend le chemin RELATIF
+  # a $proj, comme les entrees de $CHAINE, pour que Join-Path $proj $p ci-dessous tienne.
+  $plans = @(Get-ChildItem -Path (Join-Path $proj 'docs\chantiers') -Filter 'CHANTIER-V*.md' -File -ErrorAction SilentlyContinue |
              Sort-Object { [int]([regex]::Match($_.Name, 'V(\d+)').Groups[1].Value) } |
-             Select-Object -ExpandProperty Name | Select-Object -Last 1)
+             ForEach-Object { 'docs\chantiers\' + $_.Name } | Select-Object -Last 1)
 } else { $chaineIllisible = $false }
 
 $restant = 0; $detail = @(); $courant = $null

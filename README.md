@@ -1,5 +1,16 @@
 # Syntaxe — site de cours de programmation
 
+> **Vous reprenez le travail ? Commencez par [`en-cours/EN-COURS.md`](en-cours/EN-COURS.md).**
+> Il dit où en est le chantier, ce qui reste à faire, les règles à respecter et comment travailler.
+> Les chiffres de cette page (65 cours, 832 leçons) datent de juin 2026 : le site compte aujourd'hui
+> 90 cours et 1 540 leçons. La mesure à jour est dans `en-cours/`.
+>
+> **Plan du dépôt (rangé le 2026-09-26)** : `en-cours/` (état et passation) · `docs/` (chantiers,
+> audits, enrichissements, référence — chaque dossier a son `EXPLICATION.md`) · `assets/ css/ js/
+> pages/` (le site) · `starter/` (kit de démarrage) · `tools/` (outils de vérification et de
+> génération) · `.autonomie/` (l'autonomie Windows). À la racine ne restent que ce README,
+> `index.html` et `sw.js` (un service worker ne peut servir que son propre dossier).
+
 **Syntaxe** est un site de cours de développement informatique, écrit en **HTML, CSS et
 JavaScript « vanilla »**, multi-pages, **sans framework et sans étape de build**. Il se lance
 en ouvrant simplement `index.html` (double-clic), sans serveur.
@@ -26,10 +37,10 @@ Design patterns, Formats de données, CI/CD, NoSQL, Markdown, VS Code, Sass/SCSS
    navigateur par défaut.
 2. Aucune installation, aucun serveur, aucune compilation.
 
-> Le site fonctionne hors ligne. Deux ressources sont chargées depuis un CDN quand Internet
-> est disponible : les **polices** Google Fonts et la **coloration syntaxique** Prism.js. En
-> cas d'absence de réseau, le site se rabat proprement sur les polices système et le code
-> reste lisible (simplement non colorisé).
+> Le site fonctionne **entièrement hors ligne** depuis le 2026-07-31 : la coloration syntaxique
+> Prism est servie depuis `assets/vendor/prism/` et les polices depuis `assets/fonts/` (via
+> `css/fonts.css`). **Aucune ressource n'est chargée depuis un CDN**, et il est interdit d'en
+> réintroduire une (`cdnjs.cloudflare.com`, `fonts.googleapis.com`, `fonts.gstatic.com`).
 
 Astuce : on peut prévisualiser un thème via l'URL, par ex. `index.html?theme=dark`.
 
@@ -44,8 +55,13 @@ JavaScript dans `js/`, aucun style inline ni script inline dans le HTML.
 test-claude/
 ├── index.html                  Accueil (hero, présentation, mise en avant du cours complet)
 ├── README.md                   Ce fichier
-├── DESIGN_SYSTEM.md            Direction artistique + tokens
-├── PROGRESSION.md              Suivi de production du cours complet (statut par leçon)
+├── sw.js                       Service worker (hors ligne en HTTP) — doit rester à la racine
+├── en-cours/                   ÉTAT DU CHANTIER EN COURS ET PASSATION (commencer par EN-COURS.md)
+├── docs/                       Documents du projet (chaque dossier a son EXPLICATION.md)
+│   ├── chantiers/              Plans de travail de l'autonomie, CHANTIER-V4 à V17
+│   ├── audits/                 Audits, inventaire, rapport de la passe de sécurité
+│   ├── enrichissements/        Chantiers d'ajout de contenu (méthode d'ajout de cours, etc.)
+│   └── reference/              DESIGN_SYSTEM.md, paramettre.md, rap_peda.md
 │
 ├── css/                        TOUT le style
 │   ├── variables.css           Tokens : couleurs, typo, espacements, rayons, ombres (+ thème sombre)

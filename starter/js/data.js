@@ -1,7 +1,7 @@
 /* =============================================================================
    data.js — Données du site (kit de démarrage). TOUT le catalogue est ici, en
    global (aucun fetch). Duplique le cours « mon-cours » et remplis-le.
-   Voir paramettre.md (§1) pour le détail de chaque champ.
+   Voir docs/reference/paramettre.md (§1) pour le détail de chaque champ.
    ============================================================================= */
 window.SITE_DATA = (function () {
   "use strict";

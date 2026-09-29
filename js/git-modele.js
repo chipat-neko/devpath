@@ -20,7 +20,7 @@
    numéros de commit (« c1 », « c2 ») enseignerait un Git imaginaire.
    `tools/verif-git-modele.js` confronte chaque empreinte au vrai `git`.
 
-   CE QUI N'EST PAS SIMULÉ, ET QUI EST ASSUMÉ (voir CHANTIER-V14.md, point D1)
+   CE QUI N'EST PAS SIMULÉ, ET QUI EST ASSUMÉ (voir docs/chantiers/CHANTIER-V14.md, point D1)
    - la détection des renommages (`git status` affiche `R`, ici c'est un ajout
      plus une suppression — comme `git status --no-renames`) ;
    - le repli des dossiers non suivis (`?? sous/` chez git, ici un chemin par
