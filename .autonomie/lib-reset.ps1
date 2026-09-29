@@ -37,8 +37,14 @@
 #   - forme sans date: << resets 2:30pm >>      -> aujourd'hui, ou demain si l'heure
 #                                                est deja passee
 # Rend un DateTime local, ou $null si le texte ne dit rien de lisible.
-function Get-HeureReset($texte) {
+# $maintenant : l'instant de reference, Get-Date par defaut. La production n'en passe
+# jamais ; l'epreuve en passe un FIXE (2026-09-29). Sans lui, l'epreuve attendait
+# << l'annee courante >> pour << Aug 11 >> et virait au rouge des que le 11 aout avait
+# plus d'un mois -- la fonction avait raison (annee suivante), c'est le test qui
+# dependait du jour ou on le lancait.
+function Get-HeureReset($texte, $maintenant = $null) {
   if (-not $texte) { return $null }
+  if (-not $maintenant) { $maintenant = Get-Date }
 
   # 1. La forme DATEE, d'abord : elle est plus precise, et elle contient une heure
   #    qui ferait aussi matcher la forme courte (<< Aug 11, 1am >> contient << 1am >>).
@@ -52,13 +58,13 @@ function Get-HeureReset($texte) {
       $h = Convert-Heure12 ([int]$m.Groups[3].Value) $m.Groups[5].Value
       $min = 0
       if ($m.Groups[4].Success) { $min = [int]$m.Groups[4].Value }
-      $an = (Get-Date).Year
+      $an = $maintenant.Year
       try { $d = Get-Date -Year $an -Month $mois -Day $jour -Hour $h -Minute $min -Second 0 -Millisecond 0 }
       catch { return $null }   # 31 fevrier et autres impossibilites
       # Pas d'annee dans le message : une date deja passee de plus d'un mois designe
       # l'annee suivante (un << Jan 2 >> lu un 28 decembre). Quelques jours de retard,
       # eux, restent du passe : c'est a l'appelant de refuser une reprise passee.
-      if ($d -lt (Get-Date).AddMonths(-1)) { $d = $d.AddYears(1) }
+      if ($d -lt $maintenant.AddMonths(-1)) { $d = $d.AddYears(1) }
       return $d
     }
   }
@@ -69,8 +75,8 @@ function Get-HeureReset($texte) {
   $h = Convert-Heure12 ([int]$m.Groups[1].Value) $m.Groups[3].Value
   $min = 0
   if ($m.Groups[2].Success) { $min = [int]$m.Groups[2].Value }
-  $d = (Get-Date).Date.AddHours($h).AddMinutes($min)
-  if ($d -le (Get-Date)) { $d = $d.AddDays(1) }
+  $d = $maintenant.Date.AddHours($h).AddMinutes($min)
+  if ($d -le $maintenant) { $d = $d.AddDays(1) }
   return $d
 }
 

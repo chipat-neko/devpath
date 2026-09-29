@@ -13,12 +13,21 @@
 $ErrorActionPreference = 'Continue'
 . (Join-Path $PSScriptRoot 'lib-reset.ps1')
 
-$maintenant = Get-Date
 $ok = 0; $ko = 0
 
-function Cas($titre, $texte, $attendu) {
+# L'INSTANT DE REFERENCE EST FIXE (correctif du 2026-09-29). Les attendus etaient
+# calcules a partir de << maintenant >> avec la regle << annee courante >>, qui n'est
+# PAS celle de la fonction : elle bascule a l'annee suivante une date passee de plus
+# d'un mois. Resultat : << Aug 11 >> est devenu rouge des le 12 septembre, << Sep 1 >>
+# l'aurait ete des le 2 octobre -- une epreuve qui depend du jour ou on la lance ne
+# prouve rien. Chaque cas passe desormais une reference fixe, et ses attendus sont
+# ecrits EN CLAIR : l'epreuve ne recopie plus la regle, elle la confronte.
+$reference = Get-Date -Year 2026 -Month 9 -Day 29 -Hour 10 -Minute 0 -Second 0 -Millisecond 0
+
+function Cas($titre, $texte, $attendu, $ref = $null) {
   $script:total++
-  $d = Get-HeureReset $texte
+  if (-not $ref) { $ref = $script:reference }
+  $d = Get-HeureReset $texte $ref
   $vu = 'null'
   if ($d) { $vu = $d.ToString('yyyy-MM-dd HH:mm') }
   if ($vu -eq $attendu) {
@@ -31,43 +40,41 @@ function Cas($titre, $texte, $attendu) {
 }
 
 Write-Host "epreuve-reset.ps1 - les 4 formes reelles du journal, et les cas limites"
-Write-Host ("reference : " + $maintenant.ToString('yyyy-MM-dd HH:mm') + "`n")
+Write-Host ("reference fixe : " + $reference.ToString('yyyy-MM-dd HH:mm') + " (sauf mention contraire)`n")
 
 # --- 1. Les quatre formes REELLES, relevees dans journal.log ------------------
-$anneeCourante = $maintenant.Year
+# << Aug 11 >> lu le 29 septembre : passe de plus d'un mois, donc l'an prochain.
 Cas "hebdo date  << resets Aug 11, 1am >>" `
     "You've hit your weekly limit . resets Aug 11, 1am (Europe/Paris)" `
-    ((Get-Date -Year $anneeCourante -Month 8 -Day 11 -Hour 1 -Minute 0).ToString('yyyy-MM-dd HH:mm'))
-
-$attendu1am = (Get-Date).Date.AddHours(1)
-if ($attendu1am -le $maintenant) { $attendu1am = $attendu1am.AddDays(1) }
+    '2027-08-11 01:00'
+# Heure seule deja passee a 10 h : demain.
 Cas "hebdo heure << resets 1am >>" `
     "You've hit your weekly limit . resets 1am (Europe/Paris)" `
-    $attendu1am.ToString('yyyy-MM-dd HH:mm')
-
-$attendu1430 = (Get-Date).Date.AddHours(14).AddMinutes(30)
-if ($attendu1430 -le $maintenant) { $attendu1430 = $attendu1430.AddDays(1) }
+    '2026-09-30 01:00'
+# Heure seule encore a venir : aujourd'hui.
 Cas "session      << resets 2:30pm >>" `
     "You've hit your session limit . resets 2:30pm (Europe/Paris)" `
-    $attendu1430.ToString('yyyy-MM-dd HH:mm')
-
-$attendu5am = (Get-Date).Date.AddHours(5)
-if ($attendu5am -le $maintenant) { $attendu5am = $attendu5am.AddDays(1) }
+    '2026-09-29 14:30'
 Cas "session      << resets 5am >>" `
     "You've hit your session limit . resets 5am (Europe/Paris)" `
-    $attendu5am.ToString('yyyy-MM-dd HH:mm')
+    '2026-09-30 05:00'
 
 # --- 2. Les cas limites de la conversion 12 h --------------------------------
-Cas "minuit       << resets 12am >>" "resets 12am (Europe/Paris)" `
-    $(if ((Get-Date).Date -le $maintenant) { (Get-Date).Date.AddDays(1).ToString('yyyy-MM-dd HH:mm') } else { (Get-Date).Date.ToString('yyyy-MM-dd HH:mm') })
-Cas "midi date    << resets Dec 3, 12pm >>" "resets Dec 3, 12pm (Europe/Paris)" `
-    ((Get-Date -Year $anneeCourante -Month 12 -Day 3 -Hour 12 -Minute 0).ToString('yyyy-MM-dd HH:mm'))
-Cas "date+minutes << resets Sep 1, 11:50pm >>" "resets Sep 1, 11:50pm (Europe/Paris)" `
-    ((Get-Date -Year $anneeCourante -Month 9 -Day 1 -Hour 23 -Minute 50).ToString('yyyy-MM-dd HH:mm'))
-Cas "mois entier  << resets August 11, 1am >>" "resets August 11, 1am" `
-    ((Get-Date -Year $anneeCourante -Month 8 -Day 11 -Hour 1 -Minute 0).ToString('yyyy-MM-dd HH:mm'))
+Cas "minuit       << resets 12am >>" "resets 12am (Europe/Paris)" '2026-09-30 00:00'
+Cas "midi date    << resets Dec 3, 12pm >>" "resets Dec 3, 12pm (Europe/Paris)" '2026-12-03 12:00'
+# Quatre semaines de retard seulement : reste dans le passe (a l'appelant de refuser).
+Cas "date+minutes << resets Sep 1, 11:50pm >>" "resets Sep 1, 11:50pm (Europe/Paris)" '2026-09-01 23:50'
+Cas "mois entier  << resets August 11, 1am >>" "resets August 11, 1am" '2027-08-11 01:00'
 Cas "rien a lire  (message sans heure)" "You've hit your weekly limit" "null"
 Cas "texte vide" "" "null"
+
+# --- 2 bis. La bascule d'annee, EPROUVEE EXPLICITEMENT ------------------------
+# C'est elle que les anciens attendus ignoraient : on la met a l'epreuve des deux cotes.
+Cas "annee suivante << Jan 2 >> lu un 28 decembre" "resets Jan 2, 1am" '2027-01-02 01:00' `
+    (Get-Date -Year 2026 -Month 12 -Day 28 -Hour 10 -Minute 0 -Second 0 -Millisecond 0)
+Cas "meme annee    << Aug 11 >> lu un 1er aout" "resets Aug 11, 1am" '2026-08-11 01:00' `
+    (Get-Date -Year 2026 -Month 8 -Day 1 -Hour 10 -Minute 0 -Second 0 -Millisecond 0)
+Cas "retard court  << Sep 25 >> lu un 29 septembre" "resets Sep 25, 1am" '2026-09-25 01:00'
 
 # --- 3. LE DEFAUT DU POINT D1, mesure : le texte ne peut pas dire le JOUR ------
 Write-Host "`n--- la decision hebdomadaire : l'API d'abord, le texte en repli ---"

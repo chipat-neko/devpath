@@ -131,9 +131,10 @@ Outils à lancer : `node tools/verif.js --rapide` (≈ 4 min, 53 étapes), `node
 
 ## 6. Points connus, non bloquants
 
-- `.autonomie/epreuve-reset.ps1` : **2 cas sur 79 en échec**, tous deux des tests de dates figés sur
-  « Aug 11 » (écrits le 2026-09-10) qui se résolvent désormais en 2027. Ils ne touchent ni au
-  rangement ni à la relance ; à réécrire avec une date de référence fixe.
+- ~~`.autonomie/epreuve-reset.ps1` : 2 cas en échec~~ **réglé le 2026-09-29** : les tests de dates
+  attendaient « l'année courante » alors que la fonction bascule (à raison) à l'année suivante une
+  date passée de plus d'un mois. `Get-HeureReset` accepte maintenant un instant de référence, que
+  l'épreuve fixe au 2026-09-29 : **82 cas conformes, 0 en échec**, et trois cas éprouvent la bascule.
 - `verif.js --rapide` signale **5 étapes** attendues tant que `vue` n'est pas clos (cliquets de biais
   et de lexique non refigés, `doc/lecon-03`, études à réassembler).
 
