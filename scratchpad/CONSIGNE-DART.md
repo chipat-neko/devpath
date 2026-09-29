@@ -48,17 +48,22 @@ Test de recevabilité, pour **CHAQUE** distracteur :
 
 **PRÉFÈRE UNE ERREUR CLASSIQUE ET NETTE À UNE ÉLÉGANCE MESURÉE.**
 
-## 🔴 CE COURS NE S'EXÉCUTE PAS
+## 🟢 LE DART DE CE COURS S'EXÉCUTE — FLUTTER, NON
 
-**Dart n'est pas installé** (`which dart` : absent, relevé du 2026-09-29). Même régime que `vue` et
-`nosql` : tu juges sur le CORPS de la leçon et sur la documentation que tu connais. **Ne fonde une
-fausseté sur un point de version que si TA page le date** (Dart 3 : null safety obligatoire, records,
-patterns, `sealed` ; Dart 2.12 : null safety en option). Si une bonne réponse te semble fausse, tu ne
-la touches pas : tu la remontes avec ta source.
+**Mis à jour au réveil de la vague (2026-09-29)** : un SDK Dart **3.13.5** portable a été déposé dans
+`scratchpad/dart-sdk/` (hors git, aucune installation système). Lancer un programme :
+`scratchpad/dart-sdk/dart-sdk/bin/dart run <fichier.dart>` (≈ 1,2 s), analyse statique :
+`scratchpad/dart-sdk/dart-sdk/bin/dart analyze <fichier.dart>`. **Tout distracteur qui parle d'un
+résultat, d'une erreur de compilation ou d'une exception se PROUVE faux par exécution avant d'être
+écrit**, et la bonne réponse se prouve vraie. Tes scripts vont dans `scratchpad/dart-<ton lot>/`.
+**Flutter n'est pas disponible** (leçons 10 à 14 et 16 en partie) : pour un widget, tu juges sur le
+CORPS de la leçon et la documentation ; seul le Dart pur qui y figure peut tourner. **Ne fonde une
+fausseté sur un point de version que si TA page le date.** Si une bonne réponse te semble fausse, tu ne
+la touches pas : tu la remontes avec la preuve.
 
 **Erreurs classiques de débutant en Dart** (n'utilise que celles que TA leçon établit) :
-⚠️ Cette table est écrite de mémoire, **sans exécution possible** (Dart absent) : vérifie chaque ligne
-contre le corps de TA leçon avant de t'en servir. Sa première version portait une ligne fausse.
+⚠️ Cette table a été écrite de mémoire, avant que Dart soit disponible : **fais tourner chaque ligne
+que tu utilises**. Sa première version portait une ligne fausse.
 
 | croyance fausse | ce qui est vrai |
 |---|---|
