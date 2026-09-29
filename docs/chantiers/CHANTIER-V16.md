@@ -8046,6 +8046,93 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       14 leçons d'un coup, silencieusement. `pose.js` reparse maintenant chaque bloc avant d'écrire,
       et refuse si un seul est invalide.
 
+      ---
+
+      **51ᵉ COURS CLOS le 2026-09-29 — `vue`, 90,3 % → 25,8 %.** Troisième réveil sur ce cours.
+
+      | | départ | 25/09 | **clôture** |
+      |---|---:|---:|---:|
+      | « la plus longue » | 90,3 % | 25,8 % | **25,8 %** (rangs 16/16/15/15) |
+      | pire des 44 stratégies | 90,3 % | 28,6 % | **27,4 %** (COMBINE tiret puis longueur) |
+      | lexique : exploitables / à mettre en forme | — | 3 / 5 | **0 / 0** |
+      | mot fétiche « chaque » (ÉCARTER) | — | 30,6 % | **27,8 %**, 0 alerte |
+      | tics de lot | 9 | 0 | **0** |
+      | distracteurs réécrits depuis `c1c3b1f` (`mesure-qcm-intouchable`) | — | 183 / 186 | **183 / 186** ; **6 atteintes**, toutes délibérées : les 6 du point 1 (`lecon-09` q2 bonne réponse + `explain`, `lecon-11` q1 `explain`, q2 énoncé + bonne réponse + `explain`) |
+
+      **1. DEUX BONNES RÉPONSES FAUSSES, vérifiées sur la documentation officielle puis corrigées
+      (décision d'orchestrateur, puisque c'est l'intouchable).**
+      - `lecon-09` q2 : la bonne réponse enseignait la priorité de **Vue 2** (`v-for` évalué pour
+        chaque élément masqué). Doc de Vue 3 (`vuejs.org/guide/essentials/list.html`) : *« When they
+        exist on the same node, v-if has a higher priority than v-for »* — la condition ne voit pas la
+        variable de boucle. Bonne réponse, `explain` et corps corrigés ; le distracteur qui annonçait
+        « v-for puis v-if, rendu optimal » porte maintenant l'idée fausse de Vue 2.
+      - `lecon-11` : la leçon affirmait qu'un champ rend **toujours une chaîne, même en
+        `type="number"`**. Doc de Vue 3 (`vuejs.org/guide/essentials/forms.html`) : *« The number
+        modifier is applied automatically if the input has type="number" »*. Corrigés : puce du corps,
+        exemple de code, encadré, question de révision, deux QCM (énoncé, bonne réponse, `explain`),
+        indice d'exercice, solution. **Trouvé par la relecture, par aucun des 46 outils** : ce défaut
+        vivait dans le CORPS, l'`explain` et la bonne réponse à la fois — l'intouchable.
+      - Conséquence mesurée : l'ancien énoncé survivait dans `quiz-index.js` par le **filet de
+        reprise** de `build-index.js` (« 1 question reprise de l'ancien index », 6 152 entrées au lieu
+        de 6 151). Régénéré avec **`--fresh`**, comme l'en-tête de l'outil le prescrit ; `--strict` OK.
+
+      **2. LE LEXIQUE ET LE MOT FÉTICHE FERMÉS À LA MAIN, et chaque fermeture a d'abord rouvert autre
+      chose** — la loi du chantier, vérifiée trois fois dans la même heure :
+      - égaliser `w` en ajoutant des mots longs, j'ai pris `jamais`/`toujours` : **« écarter les
+        absolus » 27,0 % → 28,4 %**. Remplacés par des mots longs non absolus : retour à 27,0 %.
+      - retirer `chaque` en le remplaçant par `tout` (4 lettres) : un distracteur est devenu MOINS
+        dense que la bonne réponse, **« la plus dense » 27,0 % → 28,6 %**. Réparé par une variante
+        plus dense.
+      - dosage calculé pour « chaque » : 19,53 points sur 62, il fallait en retirer ~2,2 ; retirer le
+        mot d'une question où TROIS distracteurs le portent rapporte **0,5 point**, d'une question où
+        il n'en porte qu'un, **0,08**. Onze retouches au lieu de trente-six.
+
+      **3. LA RELECTURE PAR CONTRADICTION, lancée APRÈS que toutes les mesures furent au vert — et
+      c'est elle qui a trouvé l'essentiel.** 5 agents, lecture seule, 62 questions : **63 fautes** —
+      32 distracteurs inintelligibles, 14 fautes de français, **8 « seule option sensée »** (dont les
+      **trois** distracteurs de `lecon-01` « les trois blocs d'un composant monofichier », qui
+      s'accusaient eux-mêmes d'absurdité : `<html>` pour la logique, `<js>` pour le contenu), 3
+      distracteurs accidentellement VRAIS, 4 « deux réponses défendables », 2 bonnes réponses
+      fausses (point 1), et une faute de français dans MA correction du jour (« n'accède pas **à** »).
+      Rapport : `scratchpad/vue-relecture-2/`.
+      **Les 60 fautes de distracteurs réécrites par 5 écrivains sur fichiers disjoints, 0 refus, sous
+      garde de `controle.js` v2** (44 stratégies + `w`/`k`, comparées à HEAD question par question).
+      Résultat : **sur 60 réécritures, AUCUNE des 44 stratégies n'a changé de désignation, sur aucune
+      question** ; seuls 7 `w` ont bougé, sur des questions à `k = 0` où ils ne tranchent pas. C'est la
+      première vague de réécriture de B4 qui ne rouvre RIEN — et la différence avec le 25/09 tient à
+      l'outil de garde : il surveille l'ensemble des stratégies, pas une liste écrite à la main.
+
+      ⚠️ **Deux pièges de passe, à retenir** : (a) l'outil d'édition des agents a réécrit les
+      **14 fichiers en CRLF** (déjà vu au 9ᵉ cours) — repassés en LF avant le commit, le diff ne
+      porte que sur 42 lignes de QCM ; (b) les relecteurs ont rendu les balises échappées (`&lt;`)
+      alors que le JSON des pages porte des `<` bruts : les 60 textes ont été désechappés et
+      **retrouvés à l'identique (60/60)** avant de lancer les écrivains.
+
+      **Contrôles de clôture** : `verif.js --rapide` **53 étapes tout vert (255,2 s)** ; `verif-html`
+      **0 sur 1 629 pages** ; `verif-donnees` **0 erreur** (3 avertissements pré-existants) ;
+      épreuves par injection **10/10** et **6/6** ; les **deux cliquets refigés**, `vue` marqué
+      `traite` (**50 cours**) ; `doc/lecon-03` repérimée et réassemblée par `tools/doc/gen.js`
+      (`verif-normatif` **66 OK / 9 échecs → 75 OK / 0 échec**) ; `etude-inconnu` et
+      `etude-recherche` réassemblées, cycle étude ↔ index au **point fixe au 3ᵉ tour**, stabilité
+      vérifiée à vide ; `quiz-index` régénéré `--fresh` (**6 151 entrées**) ; JSON valide, **0 BOM,
+      0 CRLF, 0 chargement externe**.
+
+      ---
+
+      **LE 52ᵉ COURS EST DÉSIGNÉ — `perl`.** Classement par nocivité réelle (questions × « la plus
+      longue ») sur les **40 cours restants**, `stats` exclu (cours-témoin) : `perl` **55,8
+      devinables** (60 questions, **92,9 %**), `dart` 55,5, `perf-web` 54,5, `docker` 54,0,
+      `observabilite` 54,0, `lisp` 54,0, `r` 54,0, `bash` 53,5, `tests` 53,5, `pascal` 53,3.
+      **Site : 6 167 questions, 2 762 devinables à la longueur (44,8 %), 50 cours traités.**
+      ⚠️ **`perl` porte DIX tics de lot**, dont le point-virgule médian (**18 bonnes / 2 distracteurs**,
+      rendement 100 %, gain 45,0 %), la glose finale entre parenthèses (15/2, gain 42,9 %) et le
+      deux-points médian (11/1, gain 37,5 %). Point interne : 2 questions tranchées sur 60.
+      ⚠️⚠️ **`pages/perl/lecon-13.html` porte un MOJIBAKE VOLONTAIRE** (leçon sur l'encodage) : les
+      écrivains ne touchent QU'AUX distracteurs de ses QCM, et le corps ne doit pas être « réparé ».
+      **Méthode qui a fait ses preuves sur `vue`, à reprendre dès le premier lot** : écrire sous garde
+      de `controle.js` v2 (à copier dans `scratchpad/perl-sonde/` en changeant le cours), puis relire
+      par contradiction AVANT de déclarer le cours clos, même quand les 46 mesures sont vertes.
+
 
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
