@@ -8267,6 +8267,22 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       que `vue` et `nosql`, relecture sans exécution — sauf à installer le SDK, décision à prendre
       avant la vague.
 
+      **PRÉPARATION FAITE le 2026-09-29, pour que le réveil suivant lance l'écriture sans délai** :
+      - `scratchpad/CONSIGNE-DART.md` (suivie par git) : la consigne de `perl` refaite sur les mesures de
+        `dart` — 92,5 % à la longueur (couverture 100 %), rangs **56/1/3/0**, **13 773 caractères** à
+        écrire sur 56 questions, rapport bonne/distracteur **4,77** (115,4 contre 24,2 caractères : **le
+        pire de B4**), PONCTUATION FORTE **72,1 %**, mot technique exclusif **71,4 %**, lexique
+        **52 exploitables / 26 retournées / 58 à mettre en forme**, **5 alertes** de biais inverse,
+        **sept tics de lot** dont le point-virgule médian (**26 bonnes / 0 distracteur**, gain 57,5 %).
+      - ⚠️ **Premier cours où `mesure-mot-fetiche` alerte AVANT l'écriture** — 4 alertes, toutes dans le
+        sens des BONNES réponses : `valeur` 33,3 %, `exécution` 33,3 %, `parce` 30,6 %, `flutter` 29,6 %.
+      - Les leçons du 52ᵉ cours y sont reportées : écriture par fichier de patchs, `k` en occurrences,
+        relecture qui lit les CORPS, mot fétiche remesuré APRÈS la relecture, `build-index --only=…`.
+      - Sondes (locales) : `scratchpad/dart-sonde/` ; sorties brutes de départ : `scratchpad/dart-depart/`.
+      - 🔴 Dart n'est pas installé : la table des erreurs de débutant de la consigne est écrite de
+        mémoire. Sa première version portait **une ligne fausse** (`var x;` sans valeur accepte bien
+        `"a"` puis `3`), corrigée à la relecture — exactement le risque qu'un cours non exécutable fait courir.
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
