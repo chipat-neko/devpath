@@ -8283,6 +8283,82 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
         mémoire. Sa première version portait **une ligne fausse** (`var x;` sans valeur accepte bien
         `"a"` puis `3`), corrigée à la relecture — exactement le risque qu'un cours non exécutable fait courir.
 
+      ---
+
+      **53ᵉ COURS CLOS le 2026-09-29 — `dart`, 92,5 % → 25,0 %.** Deux réveils. La décision laissée
+      ouverte (« installer le SDK ? ») a été prise au premier : **SDK Dart 3.13.5 portable** dans
+      `scratchpad/dart-sdk/` (hors git, rien d'installé sur la machine). Le cours est passé du régime
+      « relecture sans exécution » (`vue`, `nosql`) au régime `perl` — et la relecture l'a payé cher.
+
+      | | départ | après la vague | **clôture** |
+      |---|---:|---:|---:|
+      | « la plus longue » | 92,5 % | 25,0 % | **25,0 %** |
+      | pire des 44 stratégies | 92,5 % | 25,8 % | **25,8 %** (écarter les deux extrêmes) |
+      | lexique : exploitables / retournées / à mettre en forme | 52 / 26 / 58 | 0 / 0 / 0 | **0 / 0 / 0** |
+      | tics de lot | 7 | 0 | **0** |
+      | mot fétiche (alertes) | 4 | 0 | **0** (« compilateur » le plus haut, 25,8 %) |
+
+      **1. LA VAGUE (6 écrivains, patchs posés par `pose.js`) : 176 distracteurs sur 180 réécrits,
+      139 programmes Dart exécutés, aucune alerte de rang, aucun tic de lot.** Le rapport
+      bonne/distracteur de départ (**4,77**, le pire de B4) n'a demandé aucune seconde vague : la
+      consigne sur mesures suffit, cinquième cours de suite.
+
+      **2. LA RELECTURE PAR CONTRADICTION (6 relecteurs, lecture seule, 120 programmes Dart) :
+      92 FAUTES — le record de B4, et 56 hors des QCM.** 51 dans les CORPS, 5 dans les exercices,
+      28 dans les distracteurs, 7 dans les `explain`, 1 dans une bonne réponse. Par nature : 30 faux,
+      20 inintelligibles, 13 trompeurs, **13 sorties annoncées fausses**, 7 de français,
+      **5 qui ne compilent pas**, 3 distracteurs vrais, 1 dangereux. Par gravité : 7 hautes,
+      33 moyennes, 52 basses. Les plus graves, toutes prouvées par `dart run` ou `dart analyze` :
+      - **un programme qui enseigne le CONTRAIRE du compilateur** (`lecon-02`) : après
+        `peutEtreNull = 'finalement une valeur';`, la promotion par affectation rend `.length`
+        légal (sortie **21**) — la ligne présentée comme une erreur compilait. Corrigé par une valeur
+        que le compilateur ne connaît pas (`lireSaisie()`), et l'erreur annoncée est désormais celle
+        que Dart rend : *« Property 'length' cannot be accessed on 'String?' because it is
+        potentially null »* (rejoué à la clôture) ;
+      - **une `late` locale jamais affectée** annoncée comme `LateInitializationError` à l'exécution :
+        elle ne compile pas (*« definitely unassigned »*) ;
+      - **`onPressed: maMethode()`** présenté comme « passe null et désactive le bouton » : pour une
+        méthode `void`, le programme ne compile pas (`lecon-04`) ;
+      - **trois widgets qui ne compilent pas** : `const EcranDetail()` sans le `produit` requis, deux
+        fois (`lecon-14`), un `Container` sous un `const` (`lecon-10`, `Container` n'a pas de
+        constructeur `const`) ;
+      - **treize messages d'erreur recopiés de mémoire**, faux mot pour mot (« for the class » au
+        lieu de « for the type », `Invalid argument(s)` au lieu du singulier, `RangeError` sans
+        « inclusive range 0..2 », « (at character 1) » attribué à `e.message`…) ;
+      - des règles fausses : seuls les champs `final` PRIVÉS sont promus (Dart 3.2+), pas les
+        publics ; « liste d'initialisation obligatoire » pour un `final` (la leçon fait elle-même
+        `Point(this.x, this.y)`) ; `assert` actif « en mode debug » alors que `dart run` l'ignore
+        sans `--enable-asserts` ; `base` et `interface` présentés comme absolus hors de leur
+        bibliothèque ; l'étape 5 du mini-projet (`fold(0, …)` sans type attendu déduit `int`, ne
+        compile pas).
+
+      **3. LES CORRECTIONS (5 correcteurs, leçons disjointes, 106 programmes) : 91 fautes sur 92
+      corrigées, 0 indicateur déplacé** (`controle.js --ref=00fbc99` : **0 question sur 60**),
+      8 atteintes à l'intouchable, **toutes des fautes prouvées** (7 `explain`, 1 bonne réponse :
+      `lecon-08` q2, « il bloque » → « en attente » : le corps dit « sans bloquer le thread », et un `Timer.periodic` continue de tourner pendant l'`await for` — prouvé). **Aucune bonne
+      réponse fausse sur 60.**
+
+      **RELIQUAT ASSUMÉ (1 faute basse)** : `lecon-16` q1 du bilan, le distracteur
+      « Optional<String> (null) » a une parenthèse qui n'énonce rien. **Huit reformulations essayées
+      sous `controle.js`, toutes déplacent un indicateur** : « null » est l'écho de la question (le
+      retirer ouvre « l'écho » à 1 option), un mot de 6+ lettres ABSENT de la page ouvre `k`, un mot
+      présent mais plus long casse le rang de longueur. Laissé en l'état : le défaut est de style,
+      pas de fond.
+
+      **Contrôles de clôture** : `verif.js --rapide` **53 étapes tout vert (197,7 s)** ; `verif-html` **0 sur 1 629 pages** ;
+      `controle.js` **0 indicateur déplacé** ; cliquets refigés, `dart` marqué `traite`
+      (**52 cours**) ; index identiques à leur régénération (`build-index`, 6 151 questions,
+      11 586 cartes, 1 577 fiches, 1 614 pages indexées) ; 0 CRLF, 0 BOM, JSON valide, 0 chargement
+      externe ajouté.
+
+      **LE 54ᵉ COURS EST DÉSIGNÉ — `perf-web`.** Classement par nocivité réelle sur les **38 cours
+      restants** (`stats` exclu, cours-témoin) : `perf-web` **54,5 devinables** (57 questions,
+      **95,6 %**), `lisp` 54,0, `observabilite` 54,0, `docker` 54,0, `r` 54,0, `bash` 53,5, `tests`
+      53,5, `pascal` 53,3, `fsharp` 52,3, `prolog` 52,0. **Site : 6 167 questions, 2 681 devinables
+      à la longueur (43,5 %), 52 cours traités.** Méthode inchangée : consigne sur mesures, écrivains
+      en fichiers de patchs, relecture par contradiction qui lit les corps, **exécution partout où
+      c'est possible** (pour `perf-web` : JavaScript et Node, donc tout ce qui se mesure se mesure).
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.

@@ -97,7 +97,7 @@
             </details>
 
             <article class="prose">
-<p>Dans la leçon précédente, tu as écrit et exécuté ton premier programme Dart. Place maintenant aux fondations du langage&nbsp;: son <strong>système de types</strong>. Dart est typé statiquement, mais sa vraie signature, ce qui le distingue de JavaScript ou même de versions plus anciennes de Java, c'est la <strong>sound null safety</strong>&nbsp;: le type d'une variable t'indique, à la lecture, si elle peut valoir <code>null</code> ou non. Le compilateur s'en sert pour t'empêcher d'écrire le bug le plus courant de toute l'histoire du logiciel&nbsp;: déréférencer une valeur nulle.</p>
+<p>Dans la leçon précédente, tu as écrit et exécuté ton premier programme Dart. Place maintenant aux fondations du langage&nbsp;: son <strong>système de types</strong>. Dart est typé statiquement, mais sa vraie signature, ce qui le distingue de JavaScript ou de Java, c'est la <strong>sound null safety</strong>&nbsp;: le type d'une variable t'indique, à la lecture, si elle peut valoir <code>null</code> ou non. Le compilateur s'en sert pour t'empêcher d'écrire le bug le plus courant de toute l'histoire du logiciel&nbsp;: déréférencer une valeur nulle.</p>
 <p>Dans cette leçon, on parcourt les types de base, on apprend à composer des chaînes proprement, puis on plonge au cœur de Dart 3&nbsp;: la null safety, et un premier regard sur les <em>records</em>. À la fin, tu sauras lire un type Dart comme une phrase qui te dit exactement à quoi t'attendre.</p>
 
 <h2>Les types de base</h2>
@@ -208,7 +208,7 @@ ton score est de $score.
   //             // can't be assigned to a variable of type 'String'.
 
   String? peutEtreNull = null;  // autorisé : le ? l'annonce
-  peutEtreNull = 'finalement une valeur';
+  peutEtreNull = lireSaisie();
   print(peutEtreNull);  // finalement une valeur
 
   print(sur.length);  // 11 : aucun risque, sur n'est jamais null
@@ -216,6 +216,8 @@ ton score est de $score.
   // print(peutEtreNull.length); // ERREUR : peutEtreNull peut être null,
   // le compilateur refuse l'accès direct à .length
 }
+
+String? lireSaisie() =&gt; 'finalement une valeur';
 </code></pre></figure>
 <p>«&nbsp;Sound&nbsp;» (sain) signifie que la garantie tient à la fois <strong>à la compilation</strong> (le compilateur refuse le code douteux) <strong>et à l'exécution</strong>&nbsp;: il n'existe aucun moyen de glisser un <code>null</code> dans un type non-nullable par une porte dérobée. Tu peux donc faire confiance au type sans relire tout le code qui a produit la valeur.</p>
 
@@ -239,12 +241,14 @@ ton score est de $score.
   print(pseudo);        // Invité
 
   // Promotion de type : après un test, Dart "promeut" String? en String
-  String? saisie = 'Bonjour';
+  String? saisie = lireSaisie();
   if (saisie != null) {
     // dans ce bloc, saisie est vue comme une String (non-nullable)
     print(saisie.toUpperCase());  // BONJOUR
   }
 }
+
+String? lireSaisie() =&gt; 'Bonjour';
 </code></pre></figure>
 <p>La <strong>promotion de type</strong> est la voie idiomatique&nbsp;: un simple <code>if (x != null)</code> et, dans le bloc, Dart sait que <code>x</code> n'est plus nul. Tu accèdes alors à ses membres sans cérémonie.</p>
 
@@ -285,8 +289,10 @@ String? recupererConfig() =&gt; 'debug';
   print(resultat);       // 84
 
   late int oubli;
-  // print(oubli); // Unhandled exception: LateInitializationError:
-  // Field 'oubli' has not been initialized.
+  // print(oubli); // Erreur de compilation : Late variable 'oubli'
+  // without initializer is definitely unassigned.
+  // (Sur un champ late jamais initialisé, l'erreur n'arrive qu'à l'exécution :
+  // LateInitializationError: Field 'oubli' has not been initialized.)
 }
 
 String calcul() =&gt; (42 * 2).toString();
@@ -317,8 +323,8 @@ void main() {
 <p>Deux types semblent «&nbsp;accepter n'importe quoi&nbsp;», mais ils sont très différents. <code>Object?</code> est le sommet de la hiérarchie&nbsp;: tout est un <code>Object?</code>, y compris <code>null</code>. Mais le compilateur t'oblige à vérifier le type réel avant d'appeler une méthode. <code>dynamic</code>, lui, <strong>désactive</strong> toute vérification statique&nbsp;: tu retrouves le comportement de JavaScript, et les erreurs n'apparaissent qu'à l'exécution.</p>
 <figure class="code-block" data-file="main.dart"><pre><code class="language-dart">void main() {
   Object? sur = 'texte';
-  // print(sur.length); // ERREUR de compilation : le membre 'length'
-  // n'est pas défini sur Object?. Le compilateur te protège.
+  // print(sur.length); // ERREUR de compilation : The getter 'length'
+  // isn't defined for the type 'Object'. Le compilateur te protège.
   if (sur is String) {
     print(sur.length);  // 5 : promu en String après le test 'is'
   }
@@ -333,7 +339,7 @@ void main() {
 
 <h2>Pièges fréquents</h2>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Abuser de l'opérateur <code>!</code> pour «&nbsp;faire taire&nbsp;» le compilateur transforme une erreur de compilation (que tu vois) en plantage à l'exécution (que ton utilisateur voit). Chaque <code>!</code> est une dette&nbsp;: préfère <code>if (x != null)</code>, <code>??</code> ou <code>?.</code>.</p></div></div>
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>La promotion de type ne fonctionne <strong>pas</strong> sur les champs d'instance non-<code>final</code> (un autre code pourrait les modifier entre le test et l'usage). Copie alors la valeur dans une variable locale&nbsp;: <code>final v = monChamp; if (v != null) { ... }</code>.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>La promotion de type ne fonctionne <strong>pas</strong> sur les champs d'instance non-<code>final</code> (un autre code pourrait les modifier entre le test et l'usage), ni sur les champs publics, même <code>final</code> (une sous-classe pourrait les redéfinir par un getter)&nbsp;: seuls les champs <code>final</code> privés, préfixés par <code>_</code>, sont promus. Copie alors la valeur dans une variable locale&nbsp;: <code>final v = monChamp; if (v != null) { ... }</code>.</p></div></div>
 
 <h2>Pour aller plus loin</h2>
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le guide officiel <em>Sound null safety</em> et la page <em>Understanding null safety</em> sur dart.dev détaillent la mécanique de flux qui rend la promotion possible. Côté records, la page <em>Patterns</em> montre la destructuration complète, que l'on abordera dans le module sur les collections et le pattern matching.</p></div></div>
@@ -387,9 +393,9 @@ void main() {
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Quelle est la différence entre String et String?, et qui en fait respecter la distinction ?","a":["String ne peut jamais être null ; String? peut l'être. C'est le compilateur (null safety sound) qui fait respecter la distinction","String ne peut jamais être null ; String? peut l'être. C'est le programme lancé (pas avant) qui fait respecter la distinction, par un plantage sur le null","String n'est jamais vide ; String? peut l'être. C'est la vérification (pas de chaîne '') qui fait respecter la distinction","String ne peut jamais être null ; String? peut l'être. C'est le développeur (lecture du code) qui fait respecter la distinction"],"correct":0,"explain":"Le ? marque un type nullable. Une String garantit une valeur ; une String? autorise null. Le vérificateur de null safety impose, à la compilation, de traiter le cas null avant d'utiliser une valeur nullable."},
-  {"q":"Pourquoi pseudo ?? 'Anonyme' est-il plus sûr que pseudo! ?","a":["?? fournit une valeur de repli si pseudo est null (jamais d'erreur) ; pseudo! affirme la non-nullité et lève une exception si pseudo vaut null","?? fournit une valeur de repli si pseudo est '' ou null (comme ||) ; pseudo! garantit la non-nullité et ne voit pas l'erreur possible quand pseudo contient ''","?? fournit une valeur de repli si pseudo est null (jamais d'erreur) ; pseudo! change sans bruit un null en chaîne vide et pseudo s'affiche vide","?? fournit une valeur de repli si pseudo est null (pas d'erreur) ; pseudo! lève une exception d'office, même quand pseudo contient déjà une valeur comme 'Noah'"],"correct":0,"explain":"L'opérateur ?? gère proprement l'absence de valeur en substituant un défaut. L'opérateur ! force le déballage : si la valeur est null, il provoque une erreur à l'exécution. ?? est donc défensif, ! est risqué."},
-  {"q":"Que fait ??= et en quoi diffère-t-il d'une simple affectation = ?","a":["??= n'affecte la variable que si elle vaut actuellement null ; = affecte toujours, quelle que soit la valeur courante","??= réaffecte la variable qui contient null, zéro ou false ; = affecte toujours, quelle que soit la valeur présente","??= affecte la variable et la verrouille ; = sur elle ne compile toujours pas, quelle que soit la valeur courante","??= confronte la variable à null et ne renvoie qu'un booléen ; = affecte toujours, quelle que soit la valeur"],"correct":0,"explain":"L'affectation conditionnelle ??= ne pose la nouvelle valeur que lorsque la variable est null, préservant une valeur déjà présente. Une affectation = écrase systématiquement le contenu existant."}
+  {"q":"Quelle est la différence entre String et String?, et qui en fait respecter la distinction ?","a":["String ne peut jamais être null ; String? peut l'être. C'est le compilateur (null safety sound) qui fait respecter la distinction","String ne peut jamais être null ; String? peut l'être. C'est le programme lancé (pas avant) qui fait respecter la distinction, par un plantage sur le null","String n'est jamais vide ; String? peut l'être. C'est la vérification statique (refus de '') qui fait respecter la distinction","String ne peut jamais être null ; String? peut l'être. C'est le développeur (lecture du code) qui fait respecter la distinction"],"correct":0,"explain":"Le ? marque un type nullable. Une String garantit une valeur ; une String? autorise null. Le vérificateur de null safety impose, à la compilation, de traiter le cas null avant d'utiliser une valeur nullable."},
+  {"q":"Pourquoi pseudo ?? 'Anonyme' est-il plus sûr que pseudo! ?","a":["?? fournit une valeur de repli si pseudo est null (jamais d'erreur) ; pseudo! affirme la non-nullité et lève une exception si pseudo vaut null","?? fournit une valeur de repli si pseudo est '' ou null (comme ||) ; pseudo! affirme la non-nullité et lève l'exception si pseudo contient '' ou encore null","?? fournit une valeur de repli si pseudo est null (jamais d'erreur) ; pseudo! change sans bruit un null en chaîne vide et pseudo s'affiche vide","?? fournit une valeur de repli si pseudo est null (pas d'erreur) ; pseudo! lève une exception d'office, même quand pseudo contient déjà une valeur comme 'Noah'"],"correct":0,"explain":"L'opérateur ?? gère proprement l'absence de valeur en substituant un défaut. L'opérateur ! force le déballage : si la valeur est null, il provoque une erreur à l'exécution. ?? est donc défensif, ! est risqué."},
+  {"q":"Que fait ??= et en quoi diffère-t-il d'une simple affectation = ?","a":["??= n'affecte la variable que si elle vaut actuellement null ; = affecte toujours, quelle que soit la valeur courante","??= réaffecte la variable qui contient null, zéro ou false ; = affecte toujours, quelle que soit la valeur présente","??= affecte la variable et la verrouille ; = sur elle ne compile plus jamais, quelle que soit la valeur courante","??= confronte la variable à null et ne renvoie qu'un booléen ; = affecte toujours, quelle que soit la valeur"],"correct":0,"explain":"L'affectation conditionnelle ??= ne pose la nouvelle valeur que lorsque la variable est null, préservant une valeur déjà présente. Une affectation = écrase systématiquement le contenu existant."}
 ]
 </script>
 
