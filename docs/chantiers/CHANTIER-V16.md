@@ -8149,6 +8149,20 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       - Sondes (locales, ignorées par git) : `scratchpad/perl-sonde/` (`controle.js` v2, `simule.js`,
         `essai.js`, `rempl.js`, `dosage.js`, `chaque.js`…) ; sorties brutes des outils au départ :
         `scratchpad/perl-depart/`.
+      - 🟢 **LES BONNES RÉPONSES PROUVÉES AVANT D'ÉCRIRE AUTOUR** : `perl scratchpad/perl-depart/bonnes.pl`
+        rend **41 vérifications OK, 0 KO, couvrant 33 questions sur 60** — tri par défaut alphabétique
+        (`10 100 9`) contre `<=>` (`9 10 100`), `my $n = @t` → 3, `@f[0]` = tranche avec
+        l'avertissement *« better written as $f[0] »*, `say` refusé sans `use feature`, `.+` → `a><b`
+        contre `.+?` → `a`, `'>'` qui tronque et `'>>'` qui ajoute, aplatissement de `@_` (5 éléments
+        contre 2 références), `ref` d'un non-référence = chaîne vide, module finissant par `0;` →
+        *« did not return a true value »*, `-n`/`-p`, `$+{annee}`, `(?=…)`, `tr/a//` qui compte sans
+        modifier, `split /,/` qui coupe un CSV en 4 champs au lieu de 3, `decode_json` → `HASH`,
+        `canonical` qui trie les clés, `eval { …; 1 }`, `croak` qui pointe *« -e line 2 »* (l'appelant)
+        quand `die` pointe *« Crk.pm line 1 »*, tri décroissant par valeur d'un hachage compteur.
+        **Aucune bonne réponse fausse sur les 33.** Le seul KO du premier jet était **dans mon test**
+        (sur `aXbXc`, `.+?` doit consommer au moins un caractère : `a.+?X` ne peut pas rendre `aX`) —
+        corrigé en reprenant l'exemple déjà prouvé. Les **27 autres** sont conceptuelles (clarté,
+        CPAN, DBI/DBD, Moo) : elles relèvent de la relecture par contradiction, pas de l'exécution.
 
 
 
