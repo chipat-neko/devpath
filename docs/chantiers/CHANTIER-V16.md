@@ -8165,6 +8165,108 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
         CPAN, DBI/DBD, Moo) : elles relèvent de la relecture par contradiction, pas de l'exécution.
 
 
+      ---
+
+      **52ᵉ COURS CLOS le 2026-09-29 — `perl`, 92,9 % → 25,4 %.** Un seul réveil : c'est le premier
+      cours de B4 qui s'EXÉCUTE (Perl 5.42 dans Git Bash), et la différence se voit partout.
+
+      | | départ | après la vague | **clôture** |
+      |---|---:|---:|---:|
+      | « la plus longue » | 92,9 % | 23,8 % | **25,4 %** (rangs 15/15/15/15) |
+      | pire des 44 stratégies | 92,9 % | 30,7 % (la moins bavarde) | **26,3 %** (la moins bavarde) |
+      | lexique : exploitables / retournées / à mettre en forme | 46 / 28 / 50 | 0 / 0 / 0 | **0 / 0 / 0** |
+      | tics de lot | 10 | 0 | **0** |
+      | intrus lexical EXCÈS | 28,9 % | 27,2 % | **26,8 %** |
+      | mot fétiche, biais inverse | 0 / 4 alertes | 0 / 0 | **0 / 0** (« chaîne » rouvert à 28,2 % par la relecture, redescendu à 26,7 %) |
+
+      **1. LA VAGUE (5 écrivains, leçons disjointes, patchs posés par `pose.js`) : 166 distracteurs
+      sur 180 réécrits, 24 scripts Perl exécutés, et AUCUNE bonne réponse fausse sur 60.** Chaque
+      distracteur qui parle d'un résultat de code a été prouvé faux AVANT d'être écrit. Consigne tenue
+      telle quelle depuis `scratchpad/CONSIGNE-PERL.md` : **aucun tic de lot, aucun mot fétiche, aucune
+      alerte de rang** après la vague. Leçon de méthode : faire écrire les agents dans un fichier de
+      patchs, jamais avec l'outil d'édition, a supprimé le piège du CRLF (0 fichier touché, contre 14 au
+      51ᵉ cours) et celui du JSON cassé.
+
+      **2. LE DOSAGE, CALCULÉ : 8 options retouchées, pas 13.** « la moins bavarde » 30,7 % (3,42 points
+      à retirer), 3ᵉ et 4ᵉ plus longue 27,1 % (1,25 point chacune, dus aux questions à options d'un
+      seul caractère — les sigils du bilan). Deux changements de rang ciblés (`lecon-14` q2 : 3 → 1 ;
+      `lecon-16` q3 : 2 → 1) et six égalités de mots rompues. Résultat : **30,7 % → 26,3 %**, les rangs
+      à **25,4 %**. Le premier jet a fait monter « ECARTER la plus dense » de 25,8 % à 26,9 % : raccourcir
+      un distracteur en ôtant des mots courts le rend PLUS DENSE que la bonne réponse. Corrigé en
+      remplaçant les mots au lieu de les retirer.
+
+      **3. LA RELECTURE PAR CONTRADICTION (5 agents, lecture seule, Perl exécuté) : 53 FAUTES, et plus de
+      la moitié hors des QCM.** 26 dans les distracteurs (11 inintelligibles, 10 de français, 1 vrai,
+      1 défendable, 1 miroir, 1 qui frôlait une vraie commande d'installation), **22 dans les CORPS de
+      leçon**, 5 dans une bonne réponse ou un `explain`. **Aucun des 46 outils ne voit un corps faux** —
+      et c'est exactement le défaut qui a fondé la chaîne V12–V17. Les corps faux, chacun PROUVÉ par
+      exécution (`scratchpad/perl-sonde/corps.pl`, `open2.pl`, `run/`) puis corrigé :
+      - **trois exemples qui ne tournaient pas** : la regex `/x` de `lecon-04` ne COMPILAIT PAS (un « / »
+        dans un commentaire ferme le `qr/…/`) ; trois programmes « complets » sans `use feature 'say'`
+        (`lecon-09` → `25 27`, `lecon-10` → `150`, qui manquait aussi de `use lib '.'`, `lecon-15` →
+        « Refusé : division par zéro ») ;
+      - **un mode d'emploi destructeur** : le « cas réel » de `lecon-11`, `perl -i.bak -pe 's/\s+//g'`,
+        recollait TOUT le fichier sur une seule ligne (`\s` avale le saut de ligne) → `[ \t]+`, 2 lignes ;
+      - **six sorties annoncées fausses** : `(?<!A)\d+` sur `A42 B7` capte **2**, pas 7 ;
+        `\w+(?!\.tmp)` accepte `fichier.tmp` ; voyelles **3 → 4** et **6 → 4** ; lettres e **4 → 5** ;
+        `19,50 €` → `19.50 €` ;
+      - **des règles fausses** : l'interpolation présentée comme un contexte scalaire (`"@t"` rend les
+        éléments) ; le look-behind « de longueur fixe » (il est BORNÉ : `(?<=\d{1,3} )` passe,
+        `(?<=\d+ )` échoue avec *« Lookbehind longer than 255 »*) ; l'`open` à deux arguments dont le
+        danger est l'open SANS mode (`">x"` vide le fichier, `"cmd|"` lance la commande — prouvé) ;
+        `$@` écrasé « par un simple print » (faux : par un autre `eval`, prouvé) ; le `1;` « obligatoire »
+        (il ne manque que si la dernière instruction vaut faux) ; `$self` « sauf avec Moo » ; `new`
+        « mot-clé de Python » ; le déréférencement postfixé « 5.20+ » (stable en 5.24) ; `prove` sans
+        `-v` ; `Text::CSV` et `combine` ; « des dizaines de milliers » contre « 200 000 » ;
+        `my ($a, $b) = @_` enseigné comme idiome (réservés à `sort` : *« "my $a" used in sort
+        comparison »*, tri faux) → `$x, $y` dans le corps, l'exercice, l'indice et l'`explain`.
+      - **Une bonne réponse trompeuse** (décision d'orchestrateur) : `lecon-01` q2 disait que `say`
+        exige `use feature 'say'` « ou une version récente » — or un Perl récent ne suffit pas (*syntax
+        error* sur 5.42). Devenue « ou use v5.10 placés en entête », à `w`, `k` et virgules égaux.
+      **25 distracteurs réécrits par 3 écrivains sous `controle.js`, 0 indicateur déplacé.**
+
+      ⚠️ **ANGLE MORT DE `controle.js`, trouvé cette passe** : il compare le `k` en mots DISTINCTS,
+      `mesure-lexique-qcm` en OCCURRENCES. Un écrivain a répété « taille » deux fois : `controle.js`
+      vert, lexique **1 exploitable**. Refermé par une retouche ; à corriger dans l'outil (lui faire
+      charger la fonction du lexique au lieu de la recopier — la leçon du 51ᵉ cours, encore).
+      ⚠️ **Les réécritures de la relecture ont FABRIQUÉ un mot fétiche**, invisible à `controle.js`
+      (qui ne mesure que des stratégies par question) : « chaîne », 1 bonne réponse / 17 distracteurs,
+      ÉCARTER **28,2 %** — alerte. Dosage calculé : la question où TROIS distracteurs le portent rapporte
+      0,75 point à elle seule ; 4 options retouchées (« portion », « valeur », mots de la page, `w`
+      et `k` égaux) → **26,7 %, 0 alerte**, 0 indicateur déplacé. Troisième cours sur trois où la
+      correction fabrique son propre mot fétiche : **relancer `mesure-mot-fetiche` APRÈS la relecture**.
+      ⚠️ **Une correction de CORPS peut rouvrir le lexique** : le mot « garantit » ajouté à une légende
+      de `lecon-09` a fait tomber le `k` de deux options d'une question. Vu par `controle.js`, reformulé.
+
+      **RELIQUAT ASSUMÉ** : deux bonnes réponses que la relecture juge inexactes sans les dire fausses,
+      laissées en l'état (elles restent la meilleure des quatre) : `lecon-08` q2 attribue à la référence
+      « évite la copie et permet de modifier l'original », ce que `@_` (alias) offre déjà ; `lecon-07` q2
+      dit `my` « indispensable sous use strict » (`our` et les noms complets passent aussi). Le titre
+      du commit `c023069` annonce « 32 fautes de corps » : **le bon compte est 23** (22 corps faux,
+      dont 1 corrigé plus tôt sur signalement d'un écrivain, plus l'idiome `$a/$b`).
+
+      **Contrôles de clôture** : `verif.js --rapide` **53 étapes tout vert (343,6 s, puis 288,3 s après le dosage de « chaîne »)** — entre les deux, UN passage où `etude-inconnu` a vu **20 lignes au lieu de 10** : seule, l'épreuve passe 2 fois sur 2 et la chaîne suivante est verte ; **aléa intermittent du banc dans la chaîne, à surveiller** ; `verif-html`
+      **0 sur 1 629 pages** ; `verif-donnees` **0 erreur** (3 avertissements pré-existants) ; épreuves
+      par injection **10/10** et **6/6** ; les **deux cliquets refigés**, `perl` marqué `traite`
+      (**51 cours**) ; `doc/lecon-03` réassemblée (`verif-normatif` **75 OK / 0 échec**) ;
+      `etude-inconnu` et `etude-recherche` réassemblées, cycle études ↔ index au **point fixe**
+      vérifié par empreinte ; index régénérés `--fresh` sur les six cibles (`--strict` OK) ;
+      `mesure-qcm-intouchable perl edf10d8` : **166/180 distracteurs réécrits, 4 atteintes, toutes délibérées** (la bonne réponse de `lecon-01` q2, les `explain` de `lecon-06`, `07`, `15`) ; 0 CRLF, 0 BOM, JSON valide,
+      **mojibake de `lecon-13` intact**, 0 chargement externe.
+
+      ---
+
+      **LE 53ᵉ COURS EST DÉSIGNÉ — `dart`.** Classement par nocivité réelle sur les **39 cours
+      restants** (`stats` exclu, cours-témoin) : `dart` **55,5 devinables** (60 questions, **92,5 %**),
+      `perf-web` 54,5, `r` 54,0, `lisp` 54,0, `docker` 54,0, `observabilite` 54,0, `bash` 53,5,
+      `tests` 53,5, `pascal` 53,3, `fsharp` 52,3. **Site : 6 167 questions, 2 722 devinables à la
+      longueur (44,1 %), 51 cours traités.** Méthode à reprendre telle quelle : consigne sur mesures
+      AVANT d'écrire (tics de lot connus d'avance), écrivains en fichiers de patchs, dosage calculé,
+      relecture par contradiction qui lit AUSSI les corps, preuve par exécution partout où le langage
+      tourne. ⚠️ **Dart n'est PAS installé** (`which dart` : absent, relevé du 2026-09-29) : même régime
+      que `vue` et `nosql`, relecture sans exécution — sauf à installer le SDK, décision à prendre
+      avant la vague.
+
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
