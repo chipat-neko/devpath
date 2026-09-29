@@ -8360,6 +8360,40 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       c'est possible** (pour `perf-web` : JavaScript et Node, donc tout ce qui se mesure se mesure).
 
 
+      **PRÉPARATION FAITE le 2026-09-30** : `scratchpad/CONSIGNE-PERF-WEB.md` (suivie par git) — 95,6 % à
+      la longueur (couverture 98,2 %), rangs **55/1/1/0**, **10 126 caractères** à écrire sur 55
+      questions, rapport bonne/distracteur **3,36** (102,4 contre 30,5 caractères), lexique
+      **54 exploitables / 32 retournées / 55 à mettre en forme**, **4 alertes** de biais inverse,
+      **dix tics de lot** (deux-points médian 15/2, glose finale 12/1, point-virgule médian 9/0…),
+      **3 mots fétiches dès le départ** (`contenu` 33,8 %, `navigateur` 30,3 %, `image` 28,9 %).
+      Sondes : `scratchpad/perf-web-sonde/` ; sorties brutes : `scratchpad/perf-web-depart/`.
+
+      **LA VAGUE (6 écrivains, patchs posés par `pose.js`) : 169 distracteurs sur 171 réécrits,
+      107 scripts Node exécutés**, aucune bonne réponse contestée, `mesure-qcm-intouchable` **0 atteinte**.
+      « La plus longue » **95,6 % → 26,3 %** (rangs **15/14/14/14**, exactement la cible), lexique
+      **0/0/0**, tics **0**, mot fétiche **0 alerte**, intrus **25,0 % / 25,1 %**. Une alerte restante :
+      « la moins bavarde » en sens INVERSE, **31,4 %** (la consigne demande qu'un distracteur égale la
+      bonne en mots quand elle est la plus courte : les écrivains ont fait l'égalité, et l'égalité
+      ne suffit pas).
+
+      **LE DOSAGE, CALCULÉ : 7 options retouchées.** Trois bascules franches (la bonne devient seule la
+      moins bavarde : `lecon-01` q3, `lecon-05` q3, `lecon-09` q3), trois égalités (`lecon-04` q3,
+      `lecon-07` q3, `lecon-15` q11) et une égalité à trois (`lecon-02` q1), chacune en ajoutant des
+      mots courts à un distracteur SANS changer son rang de longueur, son `w` ni son `k`. Premier jet
+      refusé par `controle.js` : « aucun » et « rien » ajoutés pour allonger ont ouvert « écarter les
+      absolus » (un seul porteur) — remplacés par « et cela » et « lire et ». Résultat : alerte levée
+      (**27,8 %** en sens inverse, 0 alerte), et la retouche de `lecon-07` rend en prime la bonne
+      réponse la plus DENSE : « ECARTER la plus dense » **26,9 % → 26,3 %**. **Pire des 44 stratégies :
+      26,3 %** (la plus longue, soit 15 rangs 0 sur 57 — le plancher de la répartition).
+
+      **14 défauts de CORPS signalés par les écrivains** (sans y toucher) : un schéma de budget pas à
+      l'échelle (`lecon-06` : une barre de 285 px pour 190 Ko sur une échelle de 1 px par Ko, calculé),
+      « trois quarts » d'octets gâchés en passant de 2000 à 400 px (`lecon-08` : 80 % à la largeur,
+      96 % à la surface, calculé), le glossaire qui limite le CLS au chargement quand l'encadré dit
+      l'inverse, `Disallow` présenté comme interdisant l'INDEXATION (`lecon-04`), « débattre » pour
+      *debounce*, le p75 décrit à l'envers… → transmis à la relecture par contradiction, qui les
+      confirme ou les infirme avant toute correction.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
