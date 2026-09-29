@@ -8394,6 +8394,54 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       *debounce*, le p75 décrit à l'envers… → transmis à la relecture par contradiction, qui les
       confirme ou les infirme avant toute correction.
 
+
+      **LA RELECTURE PAR CONTRADICTION (6 relecteurs, lecture seule, CORPS compris) : 179 FAUTES —
+      presque le double de `dart` (92), et 99 dans les CORPS.** 99 corps, 29 exercices, 37 distracteurs,
+      12 `explain`, 2 bonnes réponses. Par nature : 66 trompeuses, 44 fausses, 24 inintelligibles,
+      17 de français, 10 périmées, 7 qui ne fonctionnent pas, 6 calculs faux, 3 distracteurs vrais,
+      2 miroirs. Par gravité : 7 hautes, 53 moyennes, 119 basses. **Aucun des 46 outils n'en voit une
+      seule dans un corps** — le défaut fondateur de la chaîne, une fois de plus.
+
+      **19 CORRIGÉES CETTE PASSE — les 9 hautes et ce qui touche au même passage**, 0 indicateur déplacé
+      hors un échange de « la plus dense » entre deux distracteurs (`lecon-04` q3, taux inchangé) :
+      - `robots.txt` : `Disallow: /` présenté trois fois comme bloquant l'INDEXATION (`lecon-04`) — il
+        interdit l'EXPLORATION ; c'est `noindex` qui retire de l'index, et le doublé `Disallow` +
+        `noindex` du cas réel est bancal (le robot interdit d'exploration ne lit jamais le `noindex`) ;
+      - **WebPageTest rangé côté TERRAIN** dans le titre, le corps, l'encadré, l'objectif et le récap de
+        `lecon-13` (et contredit par `lecon-10`, qui le dit « labo ») — c'est un test synthétique ;
+      - « un site bon tient les trois seuils sur mobile bridé » (`lecon-06`) — l'INP ne se mesure pas
+        en labo, et « bon » se juge au p75 des visites réelles ;
+      - **une solution d'exercice fausse À LA BORNE** (`lecon-09`, `etatCache`) : `age <= maxAge`
+        rendait « frais » une ressource pile à `max-age`, que la RFC 9111 §4.2 dit périmée
+        (`freshness_lifetime > current_age`, inégalité stricte), et un indice l'enseignait. Corrigé en
+        `age < maxAge` ; **rejoué** : `etatCache(500, 300, 600)` rend toujours « périmé mais servable »
+        (la sortie attendue de l'exercice), `etatCache(300, 300, 600)` rend désormais « périmé mais
+        servable » au lieu de « frais » ;
+      - **une explication de lenteur contredite par la mesure** (`lecon-12`, exercice 3) : la solution
+        accusait le coût de chaque message ; **mesuré** (`worker_threads` de Node, à titre indicatif) :
+        création d'un worker **19 à 43 ms**, aller-retour de message **0,016 ms** — la lenteur vient d'un
+        coût payé à chaque frappe (worker recréé, grosses données copiées), pas du message ;
+      - le résultat enrichi FAQ présenté comme ordinaire (`lecon-05`, 4 endroits) ; « débattre » pour
+        *debounce* (`lecon-11`, `lecon-12`) → « temporiser, anti-rebond » ;
+      - **3 distracteurs VRAIS** réécrits en thèses fausses (le cache « dès la 1re visite », la canonique
+        comme un `Disallow`, `sessionStorage` — absent des workers) ; **une bonne réponse** précisée
+        (`lecon-10` q2 : c'est un p75 SOUS LE SEUIL qui garantit 3 visites sur 4, pas le p75 seul — le
+        distracteur concurrent allongé de 11 caractères pour garder les rangs).
+
+      ⚠️ **Une correction de CORPS a rouvert `k`** (déjà vu au 52ᵉ cours) : « désérialiser », retiré de
+      la solution de `lecon-12`, était employé par un distracteur de la même page — vu par `controle.js`
+      et par le lexique (1 exploitable), refermé en remettant le mot dans le corps corrigé.
+
+      **RESTE À FAIRE (prochain réveil) : 160 fautes, 43 moyennes et 117 basses**, dont 90 dans les
+      corps. Consigne prête : `scratchpad/CONSIGNE-PERF-WEB-CORRECTION.md` (suivie par git), six
+      groupes disjoints (26 / 21 / 29 / 36 / 25 / 23 fautes), garde-fou `controle.js --ref=b476e55`.
+      Fautes : `scratchpad/perf-web-relecture/fautes.json` (local), champ `traitee`.
+      Mesures à la sortie de cette passe : « la plus longue » **26,3 %** (pire des 44), lexique
+      **0/0/0**, tics **0**, mot fétiche **0 alerte**, biais inverse **0 alerte** (27,8 %),
+      `mesure-qcm-intouchable` : **2 atteintes, toutes délibérées** (la bonne réponse de `lecon-10` q2, l'`explain` FAQ de
+      `lecon-05` q2).
+      Contrôles : `verif-html` **0** ; `verif-donnees` **0 erreur** ; index régénérés (`build-index --write --fresh` : 6 151 questions, 11 586 cartes) ; `controle.js --ref=b476e55` : **1 question** où un indicateur bouge (`lecon-04` q3, l'échange de « la plus dense » entre deux distracteurs, taux inchangé).
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
