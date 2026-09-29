@@ -8133,6 +8133,23 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       de `controle.js` v2 (à copier dans `scratchpad/perl-sonde/` en changeant le cours), puis relire
       par contradiction AVANT de déclarer le cours clos, même quand les 46 mesures sont vertes.
 
+      **PRÉPARATION FAITE le 2026-09-29, pour que le réveil suivant lance l'écriture sans délai** :
+      - `scratchpad/CONSIGNE-PERL.md` (suivie par git) : la consigne de `vue` refaite sur les mesures
+        de `perl` — 92,9 % à la longueur (couverture 95,0 %, rendement 96,5 %), rangs **58/1/1/0**,
+        **10 509 caractères** à écrire sur 57 questions, rapport bonne/distracteur **4,01**
+        (90,4 contre 22,5 caractères), lexique **46 exploitables / 28 retournées / 50 à mettre en
+        forme**, intrus lexical EXCÈS **28,9 %** (2 questions sûres), 4 alertes de rang à DIRECTE
+        0,0 %, les dix tics de lot, 0 mot fétiche.
+      - 🟢 **Ce cours S'EXÉCUTE** : Perl **5.42** est dans Git Bash (`/usr/bin/perl`). Les dix
+        « erreurs classiques de débutant » de la consigne ont été **vérifiées par exécution** avant
+        d'être écrites (`my $n = @t` → 3 ; `"0.0"`, `"00"`, `" "`, `"0E0"` vrais ; `chomp` contre
+        `chop` ; `<(.*)>` sur `<a><b>` → `a><b`, `.*?` → `a` ; `$_[0] = …` modifie l'appelant ;
+        `"10" eq "10.0"` faux…). **Les bonnes réponses de ce cours pourront être prouvées, pas
+        seulement relues** : c'est le premier usage à donner au fan-out du prochain réveil.
+      - Sondes (locales, ignorées par git) : `scratchpad/perl-sonde/` (`controle.js` v2, `simule.js`,
+        `essai.js`, `rempl.js`, `dosage.js`, `chaque.js`…) ; sorties brutes des outils au départ :
+        `scratchpad/perl-depart/`.
+
 
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
