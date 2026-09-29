@@ -8442,6 +8442,80 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       `lecon-05` q2).
       Contrôles : `verif-html` **0** ; `verif-donnees` **0 erreur** ; index régénérés (`build-index --write --fresh` : 6 151 questions, 11 586 cartes) ; `controle.js --ref=b476e55` : **1 question** où un indicateur bouge (`lecon-04` q3, l'échange de « la plus dense » entre deux distracteurs, taux inchangé).
 
+      **LA CORRECTION (6 correcteurs, groupes disjoints, un seul écrivain par fichier) : 153 fautes
+      corrigées sur les 160 restantes, 7 laissées avec leur raison** — les **43 moyennes toutes
+      corrigées**, 110 basses ; par zone : 86 corps, 33 distracteurs, 23 exercices, 10 `explain`,
+      et la bonne réponse contestée de `lecon-08` q3 laissée intacte (c'est l'ÉNONCÉ qui a été
+      précisé). Laissées : 3 fautes « de mémoire » que la source infirme ou que le cours établit
+      lui-même, 1 fausse faute de grammaire (« ces quatre-là sont chacune typées » est correct),
+      1 prérequis conforme à la convention du site, 1 distracteur sans formulation qui tienne les
+      rangs, et la n° 76 de `lecon-07` — **laissée À TORT, voir plus bas**. Défauts de fond
+      prouvés par exécution : le **schéma `srcset`** (un mobile de densité 3 télécharge la 1600, un
+      ordinateur de densité 1 se contente de la 800), le **CLS** qui ne « s'accumule » pas mais
+      retient la pire rafale (exercice rejoué : **0.06**), « WebP **5 à 10×** plus léger » contre
+      **25 à 34 %** selon Google (facteur **1,33 à 1,52**), le **schéma du p75** qui plaçait
+      **95,5 %** des visites à gauche du curseur (redessiné à **74,9 %**), la barre de budget JS
+      qui dessinait **285 Ko pour 190 Ko** (un dépassement de 90 % au lieu de **26,7 %**), le
+      schéma HTTP/1.1 ↔ HTTP/2 hors d'échelle (rapport **3,03**), et deux fautes « de mémoire »
+      **confirmées** par les notes de version de Lighthouse (PWA retirée en **12.0.0**, audits
+      remplacés par des *Insights* en **13.0.0**).
+
+      **LA CONTRE-RELECTURE (6 relecteurs chargés de DÉMOLIR les corrections, lecture seule) :
+      176 corrections examinées, 32 prises, dont 11 moyennes — soit une correction sur cinq et
+      demie (18,2 %) qui fabriquait sa propre faute.** 29 corrigées, 3 laissées. Les prises qui
+      comptent :
+      - **une correction qui remplace une erreur par une autre** : les boîtes du schéma `srcset`
+        rangeaient « haute densité (×2, ×3) » sous la 1600, alors que le script du correcteur
+        lui-même rendait **390 px × 2 → 800w** — boîtes réétiquetées par le BESOIN réel
+        (« besoin ≤ 400 / ≤ 800 / > 800 px réels ») ;
+      - **un distracteur rendu VRAI par sa correction** : « (souvent un logo), à charger
+        immédiatement » — un logo est dans le premier écran, où web.dev interdit justement le
+        *lazy-loading* ; remplacé par « (souvent en bas) », simulé contre les 44 stratégies : 0 écart ;
+      - **une faute laissée à tort sur une source mal lue** : « rien ne s'affiche tant que le DOM
+        ET le CSSOM ne sont pas prêts » — web.dev (*Understand the critical path*) : « for the
+        initial render, the browser will not typically wait for: All of the HTML ». Corrigé au
+        schéma, à la légende et à l'`explain` ;
+      - **une correction qui inversait TCP et QUIC** (« TCP : un paquet perdu ne retient plus que
+        son propre fichier ») ;
+      - **MA propre harmonisation** des seuils Web Vitals sur « ≤ » avait posé le seuil officiel
+        dans une solution qui le rattachait au « mobile bridé » — la confusion labo/terrain que la
+        correction haute de `lecon-06` venait de retirer ; réécrit « au 75ᵉ centile des visites
+        réelles » ;
+      - des chiffres justes dans une phrase qui les contredisait : « un peu de débit » pour
+        **194 lots bridés à 4 ms = 776 ms** ajoutées (exécuté, règle de la norme HTML sur
+        l'imbrication des `setTimeout`) ; « un aller-retour de message coûte une fraction de
+        milliseconde » alors que **5 millions de nombres copiés coûtent ~78 ms** l'aller-retour
+        (mesuré, `worker_threads`), contre **0,02 ms** pour un petit message ; 96 % de pixels
+        gâchés vrais en densité 1 seulement (**84,0 %** en densité 2, calculé).
+      Laissées : un distracteur de `lecon-15` (« reproduire les impacts ») et la bonne réponse de
+      `lecon-10` q2 (« visiteurs » pour « visites ») — **onze formulations simulées, toutes
+      déplacent un indicateur**, défauts de style ; le fil d'Ariane de `lecon-05`, qui n'est pas une
+      contradiction (Google affiche le chemin d'URL dans tout résultat, `BreadcrumbList` est un
+      résultat enrichi documenté).
+
+      **Mesures finales** : « la plus longue » **26,3 %** (pire des 44, inchangé), lexique
+      **0/0/0**, mot fétiche **0 alerte**, `controle.js --ref=b476e55` : **2 questions** où un
+      indicateur bouge, les deux par un échange de rang ENTRE DISTRACTEURS (`lecon-04` q3, `lecon-05`
+      q1), taux inchangé ; `mesure-qcm-intouchable perf-web a8df2bc~1` : **16 atteintes, toutes
+      délibérées** (2 bonnes réponses — le « ≤ 2,5 s » de `lecon-01` q1, le p75 « sous le seuil »
+      de `lecon-10` q2 —, 13 `explain`, 1 énoncé), chacune adossée à une faute prouvée.
+
+      **Contrôles de clôture** : `verif.js --rapide` **53 étapes tout vert (228,9 s)** ;
+      `verif-html` **0** ; `verif-donnees` **0 erreur** ; épreuves par injection **10/10** et
+      **6/6** ; les **deux cliquets refigés**, `perf-web` marqué `traite` (**53 cours**) ;
+      `doc/lecon-03` réassemblée (`verif-normatif` **66 OK / 9 échecs → 75 OK / 0 échec**) ;
+      `etude-inconnu` et `etude-recherche` réassemblées, cycle études ↔ index au **point fixe au
+      3ᵉ tour** (4 écritures, 1, puis 0), `verif-etudes` **0 périmée** ; index régénérés `--fresh`
+      sur les six cibles ; 0 CRLF, 0 BOM, JSON valide, 0 chargement externe.
+
+      **LE 55ᵉ COURS EST DÉSIGNÉ — `lisp`.** Classement par nocivité réelle (questions × « la plus
+      longue ») sur les **37 cours restants**, `stats` exclu (cours-témoin) : quatre ex aequo à
+      **54,0 devinables** — `lisp` (55 questions, **98,2 %**), `observabilite` (96,4 %), `docker`
+      (94,7 %), `r` (85,7 %) — départagés par le taux, puis `bash` 53,5, `tests` 53,5, `pascal`
+      53,3, `fsharp` 52,3, `prolog` 52,0, `linux` 52,0. **Site : 6 167 questions, 2 642 devinables
+      à la longueur (42,8 %), 53 cours traités.** Méthode inchangée, et une étape de plus, qui a
+      payé ici : **la contre-relecture des corrections**, avant de clore.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
