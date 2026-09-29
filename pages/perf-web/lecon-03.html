@@ -137,7 +137,7 @@
     <rect class="d-box" x="210" y="136" width="212" height="16" rx="4" stroke-dasharray="4 3" />
     <text class="d-mut" x="316" y="148" text-anchor="middle" font-size="9">téléchargement du JS en parallèle</text>
   </svg>
-  <figcaption>Les deux téléchargent sans bloquer le réseau&nbsp;; la différence est l'<strong>exécution</strong>. <code>defer</code> attend la fin du HTML et respecte l'ordre des scripts (bon choix par défaut)&nbsp;; <code>async</code> exécute dès que le script est prêt, sans garantie d'ordre — pour l'indépendant (analytics).</figcaption>
+  <figcaption><code>defer</code> et <code>async</code> téléchargent tous deux sur le réseau sans interrompre l'analyse du HTML&nbsp;; la différence est l'<strong>exécution</strong>. <code>defer</code> attend la fin du HTML et respecte l'ordre des scripts (bon choix par défaut)&nbsp;; <code>async</code> exécute dès que le script est prêt, sans garantie d'ordre — pour l'indépendant (analytics).</figcaption>
 </figure>
 
 <h2>Le chemin critique de rendu</h2>
@@ -146,7 +146,7 @@
    Le reste (sections plus bas, composants rares) peut être
    chargé plus tard, sans bloquer l'affichage initial. */</code></pre></figure>
 <figure class="diagram">
-  <svg viewBox="0 0 640 186" role="img" aria-label="Le chemin critique de rendu. Le HTML et le CSS sont tous deux nécessaires au premier rendu, et le CSS est bloquant : rien ne s'affiche tant qu'il n'est pas chargé. Le JavaScript en defer arrive après le premier rendu et apporte l'interactivité.">
+  <svg viewBox="0 0 640 186" role="img" aria-label="Le chemin critique de rendu. Le HTML et le CSS sont tous deux nécessaires au premier rendu, et le CSS est bloquant : rien ne s'affiche tant qu'il n'est pas chargé. Le JavaScript en defer s'exécute à la fin de l'analyse du HTML, souvent après le premier rendu sans que ce soit garanti, et apporte l'interactivité.">
     <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Pour afficher : HTML + CSS (bloquant) ; le JS defer vient après</text>
     <rect class="d-accent" x="40" y="44" width="170" height="40" rx="6" />
     <text class="d-text" x="125" y="69" text-anchor="middle" font-size="11">HTML</text>
@@ -163,10 +163,10 @@
     <text class="d-text" x="542" y="88" text-anchor="middle" font-size="11">interactivité</text>
     <text class="d-mut" x="542" y="104" text-anchor="middle" font-size="9">clics, saisie…</text>
     <rect class="d-box" x="264" y="132" width="150" height="34" rx="6" stroke-dasharray="4 3" />
-    <text class="d-mut" x="339" y="153" text-anchor="middle" font-size="9">JS (defer) — après le rendu</text>
+    <text class="d-mut" x="339" y="153" text-anchor="middle" font-size="9">JS (defer) — non bloquant</text>
     <path class="d-line" d="M414 149 L500 149 L520 118" fill="none" stroke-width="1.2" stroke-dasharray="4 3" />
   </svg>
-  <figcaption>Le CSS est sur le chemin critique&nbsp;: on le garde <strong>léger</strong> pour le premier écran et on diffère le reste. Le JS en <code>defer</code> n'y est pas — il apporte l'interactivité une fois la page affichée.</figcaption>
+  <figcaption>Le CSS est sur le chemin critique&nbsp;: on le garde <strong>léger</strong> pour le premier écran et on diffère le reste. Le JS en <code>defer</code> n'y est pas — il apporte l'interactivité, le plus souvent une fois la page affichée.</figcaption>
 </figure>
 
 <h2>Les polices web</h2>
@@ -207,7 +207,7 @@
 <ul>
 <li><strong>Script bloquant dans le <code>&lt;head&gt;</code> sans defer.</strong> Retarde tout l'affichage.</li>
 <li><strong>Trop de JS d'un coup.</strong> Découpe (code splitting) et n'envoie que l'utile.</li>
-<li><strong>Polices sans <code>font-display</code>.</strong> Texte invisible ou saut à l'arrivée de la police.</li>
+<li><strong>Polices sans <code>font-display</code>.</strong> Le navigateur choisit, souvent un texte invisible jusqu'à 3&nbsp;s. Et même avec <code>swap</code>, un saut reste possible à l'arrivée de la police&nbsp;: choisis une police de repli aux mesures proches.</li>
 <li><strong>Grosse librairie pour un détail.</strong> Pèse le coût ; parfois le natif suffit.</li>
 </ul>
 
@@ -235,8 +235,8 @@
   <dt>Thread principal</dt><dd>Le fil d'exécution unique où le navigateur analyse le JS, met en page et répond aux interactions&nbsp;; le saturer rend la page lente à afficher et à réagir.</dd>
   <dt>defer</dt><dd>Attribut de <code>&lt;script&gt;</code>&nbsp;: télécharge en parallèle, exécute après l'analyse du HTML, dans l'ordre. Le bon choix par défaut.</dd>
   <dt>async</dt><dd>Attribut de <code>&lt;script&gt;</code>&nbsp;: télécharge en parallèle et exécute dès qu'il est prêt, sans garantie d'ordre. Pour les scripts indépendants.</dd>
-  <dt>Chemin critique de rendu</dt><dd>L'ensemble des ressources (HTML + CSS) nécessaires au premier affichage&nbsp;; le CSS y est bloquant. On le raccourcit en allégeant le CSS initial.</dd>
-  <dt>font-display: swap</dt><dd>Règle CSS qui affiche d'abord une police système puis bascule sur la police web à son arrivée&nbsp;: pas de « texte invisible ».</dd>
+  <dt>Chemin critique de rendu</dt><dd>L'ensemble des ressources nécessaires au premier affichage (HTML, CSS, et les scripts du <code>&lt;head&gt;</code> sans <code>defer</code>/<code>async</code>)&nbsp;; le CSS y est bloquant. On le raccourcit en allégeant le CSS initial.</dd>
+  <dt>font-display: swap</dt><dd>Descripteur de <code>@font-face</code> qui affiche d'abord la police de repli puis bascule sur la police web à son arrivée&nbsp;: pas de « texte invisible ».</dd>
   <dt>Code splitting</dt><dd>Découper le JavaScript en morceaux chargés à la demande (par page / route) au lieu d'un seul gros paquet.</dd>
   <dt>Tree shaking</dt><dd>Élimination automatique du code mort (fonctions jamais utilisées) par l'outil de build.</dd>
   <dt>INP</dt><dd><em>Interaction to Next Paint</em>&nbsp;: mesure la réactivité de la page aux interactions&nbsp;; le JS lourd sur le thread principal le dégrade.</dd>
@@ -276,7 +276,7 @@
   font-display: swap;
 }</code></pre></figure><p><code>swap</code> affiche d'abord une police système, puis remplace : plus de « texte invisible ».</p></details></div>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Une page importe une grosse bibliothèque de 90&nbsp;Ko juste pour formater une date. Lighthouse signale un INP élevé. Comment raisonnes-tu ?</p><details><summary>Voir une solution</summary><p>Le problème : on paie le coût (téléchargement + <strong>exécution</strong> sur le thread principal) d'une grosse dépendance pour une fonction minime, ce qui pèse sur la réactivité (INP). Pistes, par ordre : (1) vérifier si une <strong>API native</strong> suffit (<code>Intl.DateTimeFormat</code> formate les dates sans dépendance) ; (2) sinon, importer seulement la <strong>partie utile</strong> (import ciblé + tree shaking) au lieu de toute la librairie ; (3) en dernier recours, <strong>différer</strong> ou charger à la demande ce code s'il n'est pas nécessaire au premier rendu. La règle : le meilleur JS est celui qu'on n'envoie pas.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Une page importe une grosse bibliothèque de 90&nbsp;Ko juste pour formater une date. Les mesures de terrain signalent un INP élevé. Comment raisonnes-tu ?</p><details><summary>Voir une solution</summary><p>Le problème : on paie le coût (téléchargement + <strong>exécution</strong> sur le thread principal) d'une grosse dépendance pour une fonction minime, ce qui pèse sur la réactivité (INP). Pistes, par ordre : (1) vérifier si une <strong>API native</strong> suffit (<code>Intl.DateTimeFormat</code> formate les dates sans dépendance) ; (2) sinon, importer seulement la <strong>partie utile</strong> (import ciblé + tree shaking) au lieu de toute la librairie ; (3) en dernier recours, <strong>différer</strong> ou charger à la demande ce code s'il n'est pas nécessaire au premier rendu. La règle : le meilleur JS est celui qu'on n'envoie pas.</p></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>
