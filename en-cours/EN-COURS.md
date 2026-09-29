@@ -71,9 +71,9 @@ Soit **1 013 questions** dans les 18 cours restants.
   majuscule d'emphase 26,6 % ;
 - lexique : 3 exploitables, 5 à mettre en forme (`node tools/mesure-lexique-qcm.js --liste=vue`) ;
 - mot fétiche : 1 alerte (« chaque ») ;
-- **une décision d'orchestrateur** : la bonne réponse de `vue/lecon-09` q2 enseigne la priorité
-  `v-for`/`v-if` de **Vue 2** dans un cours Vue 3. Toucher à une bonne réponse, c'est sortir de la
-  règle « intouchable » : à trancher, pas à laisser faire par un agent d'écriture.
+- ~~une décision d'orchestrateur~~ **réglée le 2026-09-29 à 19:05** (commit `0cf006c`) : la bonne
+  réponse de `vue/lecon-09` q2 enseignait la priorité `v-for`/`v-if` de **Vue 2** dans un cours
+  Vue 3 ; l'autonomie l'a corrigée elle-même, en tant qu'orchestrateur.
 - Les deux cliquets (`verif-qcm-biais`, `verif-qcm-lexique`) ne sont **pas encore refigés** : ils
   le seront à la clôture du cours. C'est pour cela que `verif.js --rapide` signale 5 étapes.
 
