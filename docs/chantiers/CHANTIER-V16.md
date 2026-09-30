@@ -9157,6 +9157,31 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       taux ; puis `pascal` 53,3, `fsharp` 52,3, `linux` 52,0, `prolog` 52,0, `vb` 52,0, `objc` 51,7.
       Bash est dans Git Bash : les exemples s'exécutent sans rien installer. Méthode inchangée.
 
+      ### 59ᵉ cours — `bash` (2026-09-30) : PRÉPARÉ, vague non commencée
+
+      **PRÉPARATION FAITE le 2026-09-30** : `scratchpad/CONSIGNE-BASH.md` — **95,5 %** à la longueur
+      (couverture 96,4 %, rendement 98,1 %), rangs **55/1/0/0** (cible 14/14/14/14), **12 252
+      caractères** à écrire sur 53 questions sur 56, rapport bonne/distracteur **4,36** (111,4 contre
+      25,6 caractères), lexique **44 exploitables / 28 retournées / 47 à mettre en forme**, intrus
+      lexical **140 mots sur 27 questions**, **5 alertes** de biais inverse, **douze tics de lot**
+      (point-virgule médian **25/8**, glose finale entre parenthèses **16/1**, deux-points médian
+      **13/0**), **3 mots fétiches** (`commande` 37,5 %, `chaque` 37,1 %, `sortie` 33,9 %),
+      `inverse` dans **10 distracteurs et 0 bonne réponse**, **42 questions sur 56** (75,0 %)
+      trahies par 5 indices ou plus. Sondes copiées et repointées (`scratchpad/bash-sonde/`,
+      `bash-corr/` ; `controle.js` à vide : 0 indicateur déplacé sur 56 questions). **Bash
+      s'exécute** : GNU bash **5.3.9**, sed 4.9, awk 5.4.0, grep 3.0. Table de **34 erreurs
+      classiques EXÉCUTÉE** avant d'être donnée (`scratchpad/bash-depart/classiques.out`) :
+      `[[ 10 < 9 ]]` → code **0** (ordre lexicographique) ; `false | true` → **0**, **1** sous
+      `pipefail` ; `2>&1 > f` laisse le fichier **vide** ; `$((08))` → « value too great for base » ;
+      `${#t}` → **1** (longueur du premier élément) ; une variable incrémentée dans `… | while read`
+      vaut encore **0** après la boucle ; `grep -c` compte les lignes (`aa aa` → **1**) ; un
+      processus tué par SIGTERM rend **143**. ⚠️ **Ce qui ne s'exécute PAS fidèlement sous Git
+      Bash, mesuré** : les permissions (un fichier sans bit `x` s'exécute, `ls -l` ne montre pas le
+      bit), les liens symboliques (`ln -s` fait une copie : `[ -L l ]` faux), et `cron`, `rsync`,
+      `jq`, ShellCheck sont absents — pour ceux-là, la source, pas l'exécution.
+      **Prochain réveil : la vague d'écriture (workflow 1, six lots disjoints donnés dans la
+      consigne), puis la relecture par contradiction (workflow 2).**
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
