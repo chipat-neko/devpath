@@ -8680,6 +8680,66 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       **245 ms**) ; l'exporteur `loki` pointé sur l'endpoint `/otlp` (`lecon-11`) ; la bonne réponse
       du bilan q2 de `lecon-11` (« logs = le quoi ») contre le corps (« journaux = le pourquoi »).
 
+      **LA RELECTURE PAR CONTRADICTION (6 relecteurs, lecture seule, CORPS compris) : 69 FAUTES,
+      112 vérifications exécutées (promtool, Node, `normExo` rejoué) ou sourcées, 183 affirmations
+      confirmées justes.** 20 corps, 20 exercices, 11 schémas, 6 distracteurs, 5 glossaires,
+      3 bonnes réponses, 2 antisèches, 1 énoncé, 1 `js/data.js`. Par nature : 17 fausses,
+      16 incohérences internes, 14 qui ne fonctionnent pas (surtout des `accept` d'exercice qui
+      refusent la réponse que la leçon enseigne — « gravité », « severity », « trace-id »…),
+      10 trompeuses, 5 de français, 3 calculs faux, 3 inintelligibles, **1 distracteur VRAI**. Par
+      gravité : 3 hautes, 24 moyennes, 42 basses. Des 12 signalements des écrivains : **10 confirmés,
+      1 partiel, 1 infirmé** (le glossaire « monitoring, sous-ensemble de l'observabilité » ne
+      contredit pas le corps, qui dit « l'observabilité est plus large »). Deuxième trait du cours
+      après ses calculs : **ses configurations ne démarreraient pas** — l'exporteur `loki` du
+      Collector a été retiré de *collector-contrib* en v0.131.0 (CHANGELOG) et l'endpoint `/otlp` de
+      Loki se nourrit avec `otlphttp` (documentation Grafana) ; l'exporteur OTLP gRPC exige TLS par
+      défaut, donc `tempo:4317` et `jaeger:4317` en clair ne recevaient rien.
+
+      **18 CORRIGÉES CETTE PASSE — les 3 hautes et ce qui touche au même passage** (commit `13a01d4`
+      et suivant), `controle.js --ref=753bc60` : **0 indicateur déplacé**, lexique **0/0/0**, fétiche
+      **0 alerte**, `verif-html` **0**, `verif-donnees` **0 erreur** (index régénérés `--fresh`) :
+      - **l'encadré multi-fenêtres de `lecon-10`** (+ antisèche, glossaire) : la fenêtre courte ne fait
+        pas « réagir vite ». **Rejoué sous promtool** (20 % d'erreurs à partir de 60 min, seuil
+        0,0144) : à 63 min la fenêtre de 5 min seule sonne (**0,12**) mais la combinaison non ; la
+        fenêtre d'1 h et la combinaison sonnent **à la même minute, 66** (0,02) ; à 100 min la
+        fenêtre longue seule sonne encore (**0,1**), la combinaison non. Réécrit selon le *SRE
+        Workbook* (« Alerting on SLOs ») : la longue garantit qu'une part réelle du budget a brûlé
+        (**2 %** pour 14,4 — calculé), la courte fait retomber l'alerte cinq minutes après
+        l'incident ; la recette n'est pas celle du premier livre *SRE*. ⚠️ La correction a rouvert
+        `k` sur q1 (« exiger » avait quitté le corps) : remis dans la phrase, 0 écart ;
+      - **le `trace_id` qui « relie logs, métriques et traces »** (`lecon-06` : glossaire, récap,
+        description, deux schémas, cas réel, exercice ; `lecon-11` : astuce, glossaire, récap,
+        schéma) : une métrique agrège de nombreuses requêtes et ne porte pas de `trace_id` (promtool :
+        `sum by (le)(rate(…_bucket[5m]))` ne rend que l'étiquette `le`) ; le saut métrique → trace
+        passe par un **exemplar** (spécification OpenTelemetry *Metrics*, drapeau de Prometheus),
+        terme introduit dans les deux leçons. Le schéma des trois piliers est redessiné (trait plein
+        trace ↔ logs, pointillé « exemplar » métrique → trace) ; l'exporteur `prometheus` de
+        `lecon-11` reçoit `enable_open_metrics: true` pour exposer les exemplars. **La bonne réponse
+        de `lecon-06` q3** (« trace (le où, via le trace id) ») est réécrite après **9 candidats
+        simulés** contre les 44 stratégies + `w` + `k` : le seul retenu (« via un exemplar … ceux qui
+        ont le même trace id ») donne **0 écart** — « exemplar » compte comme mot long, il fallait en
+        retirer un autre (« filtrés ») ;
+      - **les exporteurs du Collector** (`lecon-07`, `lecon-11`, et la solution de l'exercice 1) :
+        `otlphttp/loki`, `tls: { insecure: true }` annoncé « labo local », receivers OTLP sur
+        `0.0.0.0` (un Collector séparé n'est pas joignable sur `localhost`) ; les deux blocs
+        **reparsés par PyYAML 6.0.3** ;
+      - **le distracteur VRAI** (`lecon-06` q4, « Latence moyenne > 300 ms », un symptôme ressenti
+        que l'`explain` ne permettait pas d'écarter) : l'`explain` dit désormais pourquoi — une
+        latence MOYENNE masque la traîne (*SRE Book*, chap. 6) ;
+      - l'`accept` de l'exercice `trace id` (`lecon-06`) : « trace-id », nom du champ W3C, et
+        « traceId » refusés — **`normExo` rejoué** : acceptés, « span id » toujours refusé.
+      `mesure-qcm-intouchable observabilite 753bc60` : **3 atteintes, toutes délibérées** (bonne
+      réponse et `explain` de `lecon-06` q3, `explain` de `lecon-06` q4).
+
+      **RESTE À FAIRE (prochain réveil) : 51 fautes, 14 moyennes et 37 basses.** Consigne prête :
+      `scratchpad/CONSIGNE-OBSERVABILITE-CORRECTION.md` (suivie par git), six groupes disjoints
+      (12 / 9 / 6 / 4 / 11 / 9), garde-fou `controle.js --ref=753bc60`, outil de pose
+      `scratchpad/observabilite-corr/remplace.js`. Fautes : `scratchpad/observabilite-relecture/
+      fautes.json` (local), champ `traitee`. Points durs : la règle sur les données personnelles,
+      incohérente entre `lecon-02` et `lecon-09` (elle interdit « les données personnelles » et
+      journalise `user_id` — une bonne réponse en dépend) ; la bonne réponse du bilan q2 de
+      `lecon-11`. Puis contre-relecture des corrections, et clôture.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
