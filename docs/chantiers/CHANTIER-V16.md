@@ -8576,7 +8576,7 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       - **la bonne réponse de `lecon-06` q2** enseignait que la fermeture « se souvient des valeurs…
         au moment de sa définition » — la thèse même de son distracteur ; exécuté : **1 puis 5** après
         `set!`. Réécrite (« des variables locales vivantes et présentes à sa définition ») après
-        **six candidats simulés** contre les 44 stratégies : le seul retenu donne **0 écart** ; le
+        **dix candidats simulés** contre les 44 stratégies : le seul retenu donne **0 écart** ; le
         schéma ne dit plus « n figé ». `mesure-qcm-intouchable` : **1 atteinte, délibérée**.
 
       **RESTE À FAIRE (prochain réveil) : 91 fautes, 24 moyennes et 67 basses**, dont 42 dans les

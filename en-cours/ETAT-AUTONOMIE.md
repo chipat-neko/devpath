@@ -1,18 +1,18 @@
 ﻿# Etat de l'autonomie
 
-Releve du **2026-09-29 18:52**. Ce fichier est reecrit a chaque controle : s'il est vieux, c'est que le controle ne tourne plus.
+Releve du **2026-09-30 02:44**. Ce fichier est reecrit a chaque controle : s'il est vieux, c'est que le controle ne tourne plus.
 
 ## SAIN
 
-- arret VOLONTAIRE en place (.autonomie/arret-volontaire.txt) : aucune reparation.
+Rien a signaler.
 
 | | |
 |---|---|
-| tache | DESACTIVEE |
-| passe en cours | non |
-| prochain reveil | 09/29/2026 18:53:02 |
-| derniere trace | 2026-09-25 12:48  (il y a 102.1 h) |
-| usage hebdomadaire | 18 % |
+| tache | active |
+| passe en cours | oui |
+| prochain reveil | 09/30/2026 03:48:48 |
+| derniere trace | 2026-09-30 01:48  (il y a 0.9 h) |
+| usage hebdomadaire | 51 % |
 | pause decidee | aucune |
 | cases restantes | **14** |
 | plan courant | docs\chantiers\CHANTIER-V16.md |
@@ -26,4 +26,4 @@ Releve du **2026-09-29 18:52**. Ce fichier est reecrit a chaque controle : s'il 
 | docs\chantiers\CHANTIER-V17.md | 80/80 | termine |
 | docs\chantiers\CHANTIER-V16.md | 8/22 | 14 |
 
-Derniere ligne du journal : `[2026-09-25 12:48:03] ATTENTION : declencheur pose a 12:53 mais la tache est DESACTIVEE avec un arret volontaire -- AUCUN REVEIL N AURA LIEU. Retirer .autonomie/arret-volontaire.txt puis reactiver la tache.`
+Derniere ligne du journal : `[2026-09-30 01:48:51] prompt : 8321 caracteres, plan courant docs\chantiers\CHANTIER-V16.md, 6 chantiers decrits, 90 cours / 1540 lecons mesures, 0 alerte(s).`
