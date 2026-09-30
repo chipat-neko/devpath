@@ -134,21 +134,21 @@
 
 <figure class="code-block" data-file="otel-collector.yaml"><pre><code>receivers:
   otlp:                       # reçoit tout du SDK (métriques, traces, logs)
-    protocols: { grpc: {}, http: {} }
+    protocols: { grpc: { endpoint: "0.0.0.0:4317" }, http: { endpoint: "0.0.0.0:4318" } }
 processors:
   batch: {}                   # regroupe pour l'efficacité
 exporters:
-  prometheus: { endpoint: "0.0.0.0:8889" }   # métriques
-  otlp/tempo:  { endpoint: "tempo:4317" }     # traces
-  loki:        { endpoint: "http://loki:3100/otlp" }  # journaux
+  prometheus: { endpoint: "0.0.0.0:8889", enable_open_metrics: true }  # métriques (+ exemplars)
+  otlp/tempo:  { endpoint: "tempo:4317", tls: { insecure: true } }  # traces (en clair : labo local)
+  otlphttp/loki: { endpoint: "http://loki:3100/otlp" }  # journaux (Loki reçoit l'OTLP)
 service:
   pipelines:
     metrics: { receivers: [otlp], processors: [batch], exporters: [prometheus] }
     traces:  { receivers: [otlp], processors: [batch], exporters: [otlp/tempo] }
-    logs:    { receivers: [otlp], processors: [batch], exporters: [loki] }
+    logs:    { receivers: [otlp], processors: [batch], exporters: [otlphttp/loki] }
 </code></pre></figure>
 
-<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — le trace_id, fil rouge de tout le projet</p><p>La clé qui rend le projet <strong>diagnosticable</strong>, c'est le <code>trace_id</code> propagé partout et inscrit dans les <strong>logs structurés</strong> (leçon 9). C'est lui qui, depuis une métrique en alerte, te mène à <em>la</em> trace lente, puis aux <em>logs exacts</em> de cette requête. Sans lui, tu as trois silos&nbsp;; avec lui, tu as une enquête.</p></div></div>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — le trace_id, fil rouge de tout le projet</p><p>La clé qui rend le projet <strong>diagnosticable</strong>, c'est le <code>trace_id</code> propagé partout et inscrit dans les <strong>logs structurés</strong> (leçon 9). Depuis une métrique en alerte, un <em>exemplar</em> (une requête d'exemple attachée à la mesure, à activer) ou une recherche sur la même fenêtre te mène à une trace lente&nbsp;; c'est ensuite son <code>trace_id</code> qui te mène aux <em>logs exacts</em> de cette requête. La métrique, elle, agrège de nombreuses requêtes&nbsp;: elle ne porte pas de <code>trace_id</code>. Sans lui, tu as trois silos&nbsp;; avec lui, tu as une enquête.</p></div></div>
 
 <h2>Étape 2 — Visualiser et définir des objectifs</h2>
 <p>On instrumente pour <strong>décider</strong>. On construit un <a href="lecon-03.html">tableau de bord</a> des quatre signaux dorés, on formule les SLI en <a href="lecon-08.html">PromQL</a>, puis on en fait des <a href="lecon-05.html">SLO</a>. Deux SLI suffisent souvent pour une API&nbsp;: le <strong>taux de réussite</strong> et la <strong>latence</strong>.</p>
@@ -202,7 +202,7 @@ histogram_quantile(0.99,
 <p>Pour valider le projet, on déroule un <strong>incident réel</strong> à travers la chaîne construite. Si les signaux mènent du symptôme à la cause, le service est vraiment observable.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 170" role="img" aria-label="Le parcours d'un incident de bout en bout dans le système construit, en cinq étapes. Étape 1, une alerte burn rate se déclenche. Étape 2, le tableau de bord montre le quoi : les erreurs montent sur l'API réservation. Étape 3, une trace montre le où : le span paiement est lent. Étape 4, les journaux filtrés par le même trace id donnent le pourquoi : la banque renvoie un timeout. Étape 5, en accent, le runbook déclenche l'action : bascule en mode dégradé. Une légende rappelle que le trace id relie le tableau de bord, la trace et les journaux.">
+  <svg viewBox="0 0 640 170" role="img" aria-label="Le parcours d'un incident de bout en bout dans le système construit, en cinq étapes. Étape 1, une alerte burn rate se déclenche. Étape 2, le tableau de bord montre le quoi : les erreurs montent sur l'API réservation. Étape 3, une trace montre le où : le span paiement est lent. Étape 4, les journaux filtrés par le même trace id donnent le pourquoi : la banque renvoie un timeout. Étape 5, en accent, le runbook déclenche l'action : bascule en mode dégradé. Une légende rappelle que le trace id relie la trace et les journaux ; du tableau de bord à la trace, on passe par un exemplar ou une recherche sur la même fenêtre.">
     <rect class="d-frame" x="8" y="46" width="112" height="58" rx="8" />
     <text class="d-label" x="64" y="70" text-anchor="middle" font-size="10">1 · Alerte</text>
     <text class="d-mut" x="64" y="88" text-anchor="middle" font-size="8">burn rate</text>
@@ -222,7 +222,7 @@ histogram_quantile(0.99,
     <path class="d-line" d="M244 75 L256 75" fill="none" />
     <path class="d-line" d="M368 75 L380 75" fill="none" />
     <path class="d-line" d="M492 75 L504 75" fill="none" />
-    <text class="d-tag" x="312" y="134" text-anchor="middle" font-size="10">le trace_id relie dashboard → trace → journaux</text>
+    <text class="d-tag" x="312" y="134" text-anchor="middle" font-size="10">dashboard → trace (exemplar) → journaux (trace_id)</text>
   </svg>
   <figcaption>Le <strong>fil de diagnostic</strong>, validé de bout en bout&nbsp;: une <strong>alerte</strong> burn rate, le <strong>dashboard</strong> (le quoi), la <strong>trace</strong> (le où), les <strong>journaux</strong> du même <code>trace_id</code> (le pourquoi), puis l'<strong>action</strong> du runbook. Si tu peux dérouler ça, ton projet tient.</figcaption>
 </figure>
@@ -311,7 +311,7 @@ SCÉNARIO RÉSOLU :
   <dt>Plan d'observabilité</dt><dd>Démarche cohérente et documentée&nbsp;: cadrage (SLI) → instrumentation → logs → métriques → traces → dashboard → SLO/alertes → réponse.</dd>
   <dt>OpenTelemetry (OTel)</dt><dd>Standard ouvert pour produire les trois piliers de façon cohérente et portable&nbsp;; SDK + Collector + protocole <code>OTLP</code>.</dd>
   <dt>Collector</dt><dd>Composant qui reçoit les signaux (OTLP), les traite (lot, filtrage) et les exporte vers les backends&nbsp;; découple le code des outils.</dd>
-  <dt>Trace id</dt><dd>Identifiant partagé qui relie logs, métriques et traces d'une même requête&nbsp;; le fil du diagnostic de bout en bout.</dd>
+  <dt>Trace id</dt><dd>Identifiant partagé qui relie les spans et les logs d'une même requête&nbsp;; côté métriques, le saut vers une trace passe par les exemplars.</dd>
   <dt>SLI / SLO</dt><dd>La mesure (ex. % de réussite) et la cible visée pour cette mesure (ex. 99,9&nbsp;%)&nbsp;; le complément du SLO est le budget d'erreur.</dd>
   <dt>Burn rate</dt><dd>Vitesse de consommation du budget d'erreur&nbsp;; base des alertes multi-fenêtres (rapide → réveille, lent → ticket).</dd>
   <dt>Runbook</dt><dd>Procédure écrite «&nbsp;si ceci, fais cela&nbsp;» vers laquelle pointe une alerte&nbsp;: étapes de diagnostic et d'action.</dd>
@@ -321,7 +321,7 @@ SCÉNARIO RÉSOLU :
 <h2>Récap et vérification</h2>
 <ul>
 <li>Un projet d'observabilité <strong>assemble</strong>&nbsp;: cadrage → instrumentation (OTel) → logs → métriques → traces → dashboard → SLO/alertes → réponse.</li>
-<li><strong>OpenTelemetry</strong> découple le code des outils&nbsp;; le <strong>trace_id</strong> relie les trois piliers.</li>
+<li><strong>OpenTelemetry</strong> découple le code des outils&nbsp;; le <strong>trace_id</strong> relie traces et logs, un exemplar relie une métrique à une trace.</li>
 <li>On pilote par des <strong>SLO</strong> (PromQL) et on alerte sur le <strong>burn rate</strong>, pas sur chaque erreur.</li>
 <li>Le test ultime&nbsp;: «&nbsp;saurais-je <strong>diagnostiquer</strong> cet incident&nbsp;?&nbsp;» — et chaque post-mortem renvoie instrumenter mieux.</li>
 </ul>
@@ -346,7 +346,7 @@ SCÉNARIO RÉSOLU :
 ]
 </script>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Reprends le <code>otel-collector.yaml</code> du projet. Pour chacun des trois piliers, dis vers quel dépôt il part et par quel exporteur. Puis réponds en une phrase&nbsp;: dans tout ça, que connaît le code de l'application&nbsp;?</p><details><summary>Voir une solution</summary><p><strong>Métriques</strong> → exporteur <code>prometheus</code> → Prometheus. <strong>Traces</strong> → exporteur <code>otlp/tempo</code> → Tempo (ou Jaeger). <strong>Journaux</strong> → exporteur <code>loki</code> → Loki. Chaque pilier a sa propre <em>pipeline</em> dans la section <code>service:</code>, mais les trois entrent par le <strong>même</strong> receveur <code>otlp</code>&nbsp;: une seule porte d'entrée, trois sorties.</p><p>Et le code de l'application&nbsp;? Il ne connaît <strong>aucun</strong> de ces trois noms. Il parle <code>OTLP</code> au Collector, un point c'est tout. C'est toute la valeur du montage&nbsp;: remplacer Loki par un autre stockage de journaux, c'est modifier trois lignes de configuration et redémarrer le Collector — pas recompiler le service, pas retoucher une seule ligne d'instrumentation. Le jour où l'entreprise change de fournisseur, l'équipe qui a fait ce choix ne s'en aperçoit presque pas.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Reprends le <code>otel-collector.yaml</code> du projet. Pour chacun des trois piliers, dis vers quel dépôt il part et par quel exporteur. Puis réponds en une phrase&nbsp;: dans tout ça, que connaît le code de l'application&nbsp;?</p><details><summary>Voir une solution</summary><p><strong>Métriques</strong> → exporteur <code>prometheus</code> → Prometheus. <strong>Traces</strong> → exporteur <code>otlp/tempo</code> → Tempo (ou Jaeger). <strong>Journaux</strong> → exporteur <code>otlphttp/loki</code> → Loki (endpoint <code>/otlp</code>). Chaque pilier a sa propre <em>pipeline</em> dans la section <code>service:</code>, mais les trois entrent par le <strong>même</strong> receveur <code>otlp</code>&nbsp;: une seule porte d'entrée, trois sorties.</p><p>Et le code de l'application&nbsp;? Il ne connaît <strong>aucun</strong> de ces trois noms. Il parle <code>OTLP</code> au Collector, un point c'est tout. C'est toute la valeur du montage&nbsp;: remplacer Loki par un autre stockage de journaux, c'est modifier trois lignes de configuration et redémarrer le Collector — pas recompiler le service, pas retoucher une seule ligne d'instrumentation. Le jour où l'entreprise change de fournisseur, l'équipe qui a fait ce choix ne s'en aperçoit presque pas.</p></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Ton SLO est «&nbsp;99,9&nbsp;% de requêtes réussies sur 30&nbsp;jours&nbsp;». Écris les <strong>deux</strong> règles d'alerte <em>burn rate</em> que tu poses dessus (fenêtres, seuil, destinataire), puis les <strong>trois</strong> sections minimales du runbook vers lequel la plus urgente doit pointer.</p><details><summary>Voir une solution</summary><p><strong>Le budget d'abord.</strong> 1&nbsp;−&nbsp;99,9&nbsp;%&nbsp;=&nbsp;<strong>0,1&nbsp;%</strong> de requêtes ratées autorisées sur 30&nbsp;jours. Un <em>burn rate</em> de 1 consomme exactement ce budget en 30&nbsp;jours&nbsp;; un burn rate de 14,4 le brûle en 2&nbsp;jours. C'est cette vitesse qu'on surveille, pas le nombre brut d'erreurs.</p><p><strong>Règle 1 — urgente, réveille l'astreinte.</strong> Burn rate <strong>&gt; 14,4</strong>, mesuré à la fois sur une fenêtre <strong>longue de 1&nbsp;h</strong> <em>et</em> une fenêtre <strong>courte de 5&nbsp;min</strong>. La longue prouve que ce n'est pas un hoquet de trente secondes&nbsp;; la courte évite de réveiller quelqu'un pour un incident déjà terminé. À ce rythme, environ 2&nbsp;% du budget mensuel part chaque heure&nbsp;: ça ne peut pas attendre demain.</p><p><strong>Règle 2 — lente, crée un ticket.</strong> Burn rate <strong>&gt; 3</strong> sur <strong>6&nbsp;h</strong> (confirmé sur 30&nbsp;min). Personne n'est réveillé, mais la dérive est tracée&nbsp;: à ce rythme, le budget serait épuisé avant la fin du mois. C'est le genre de fuite lente qu'aucune alerte «&nbsp;par erreur&nbsp;» ne verrait jamais.</p><p><strong>Le runbook de la règle 1</strong>, trois sections minimales&nbsp;: <strong>1)&nbsp;Constater</strong> — le lien direct vers le tableau de bord déjà filtré sur le service, et les questions à se poser (quelles routes&nbsp;? depuis quand&nbsp;? un déploiement juste avant&nbsp;?). <strong>2)&nbsp;Atténuer avant de comprendre</strong> — les gestes qui rendent le service aux utilisateurs sans attendre la cause racine&nbsp;: rollback du dernier déploiement, bascule en mode dégradé, coupure d'une fonctionnalité secondaire. <strong>3)&nbsp;Escalader et communiquer</strong> — qui prévenir au bout de 15&nbsp;minutes, sur quel canal, et quoi annoncer aux utilisateurs. Un runbook se juge à une seule chose&nbsp;: une personne réveillée à 3&nbsp;h du matin, qui ne connaît pas ce service, doit pouvoir l'exécuter sans appeler personne.</p></details></div>
 
