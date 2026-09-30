@@ -8546,6 +8546,46 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       fermeture qui « se souvient des valeurs » quand elle capture la LIAISON (exécuté : 1 puis 5
       après `set!`) → transmis à la relecture par contradiction, qui les confirme ou les infirme.
 
+      **LA RELECTURE PAR CONTRADICTION (6 relecteurs, lecture seule, CORPS compris) : 113 FAUTES,
+      119 blocs exécutés, 193 sorties annoncées confirmées.** 56 corps, 28 exercices, 25 distracteurs,
+      2 `explain`, 1 bonne réponse, 1 énoncé. Par nature : 38 trompeuses, 26 fausses, **19 de
+      DIALECTE**, 16 inintelligibles, 8 de français, 5 qui ne fonctionnent pas, 1 calcul faux. Par
+      gravité : 6 hautes, 33 moyennes, 74 basses. Le trait du cours : **ses CALCULS sont justes**
+      (193 sorties confirmées), **ses DIALECTES sont mêlés** — une famille de fautes qu'aucun cours
+      mono-langage n'avait montrée.
+
+      **22 CORRIGÉES CETTE PASSE — les 6 hautes et ce qui touche au même passage** (commit `c132afc`),
+      `controle.js --ref=df426ac` : **0 indicateur déplacé**, lexique **0/0/0**, fétiche **0 alerte** :
+      - **`lecon-13` ne tournait sous AUCUN des deux interprètes** : `defmacro` (Common Lisp) produisant
+        `#f`, `begin`, `set!`, un `let` nommé (Scheme). Réécrite en Common Lisp ANNONCÉ (la quasiquote,
+        elle, s'écrit pareil dans les deux), **exécutée sous SBCL** : `mon-unless` affiche
+        « différents », `while` compte `012`, `swap!` rend **`(2 1)`** (y compris avec une variable
+        nommée `tmp`), `balise` rend **`"<p>Bonjour Lisp</p>"**, `inc!` rend **11**. Au passage : la
+        macro `while` n'introduit plus de nom en dur, `loop` ne « compile » pas vers `do` (expansion
+        SBCL : `block`/`let`/`tagbody`), l'expansion n'a pas lieu « pendant la lecture »,
+        « Trois classiques » pour deux, l'exercice qui acceptait « macro » ;
+      - **`fold-left` présenté comme de base** (`lecon-06`) : il vient de R6RS, absent de R7RS et de
+        Racket — annoncé, et `foldl` de Racket montré avec son ordre d'arguments (**10** et
+        **`(3 2 1)`**, exécutés) ; l'exercice accepte aussi `fold` (SRFI 1) ;
+      - **`make-hash-table` de Guile** (`lecon-12`) → `make-hash` de Racket, annoncé ; et le `or` qui
+        ne mettait jamais en cache un résultat `#f` → `hash-has-key?` (**exécuté** : `fib-rapide 25`
+        = **75025 en 26 calculs**, une fonction qui rend `#f` appelée trois fois n'est calculée
+        qu'**une** fois) ;
+      - **l'exercice de `lecon-01` refusait `display`**, la seule fonction d'affichage de la leçon, et
+        acceptait `terpri` (qui lève une erreur sur `"Bonjour"` sous SBCL) ;
+      - **la bonne réponse de `lecon-06` q2** enseignait que la fermeture « se souvient des valeurs…
+        au moment de sa définition » — la thèse même de son distracteur ; exécuté : **1 puis 5** après
+        `set!`. Réécrite (« des variables locales vivantes et présentes à sa définition ») après
+        **six candidats simulés** contre les 44 stratégies : le seul retenu donne **0 écart** ; le
+        schéma ne dit plus « n figé ». `mesure-qcm-intouchable` : **1 atteinte, délibérée**.
+
+      **RESTE À FAIRE (prochain réveil) : 91 fautes, 24 moyennes et 67 basses**, dont 42 dans les
+      corps. Consigne prête : `scratchpad/CONSIGNE-LISP-CORRECTION.md` (suivie par git), six groupes
+      disjoints (12 / 12 / 26 / 18 / 9 / 14), garde-fou `controle.js --ref=df426ac`, puis
+      **contre-relecture des corrections** avant de clore. Fautes : `scratchpad/lisp-relecture/fautes.json`
+      (local), champ `traitee`. Contrôles de sortie : `verif-html` **0** ; `verif-donnees` **0 erreur**
+      (après `build-index --write --fresh`) ; 0 CRLF, 0 BOM, JSON valide, 0 chargement externe.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
