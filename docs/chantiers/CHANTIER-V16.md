@@ -9325,6 +9325,153 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       morceaux d'indice entre guillemets ou parenthèses (`scratchpad/bash-contre/moi/exos-tous.js`) ;
       (2) `verif-rendu` se lance sur TOUTES les pages du cours à la clôture, pas sur six.
 
+      **LE 60ᵉ COURS — `tests` (« Tests & qualité »), 93,9 % → 24,6 %, clos le 2026-09-30.**
+      57 questions dont 15 de bilan, 14 leçons. Consignes versionnées : `scratchpad/CONSIGNE-TESTS.md`
+      (écriture), `-RELECTURE`, `-CORRECTION`, `-CONTRE`. Commits `66f8c9b` (vague), `ab9c502`
+      (dosage), `5c5d64a` (relecture), `f7e2018` (corrections), `ddce902` (contre-relecture), puis
+      la clôture.
+
+      **LA PRÉPARATION.** Mesures de départ relevées par l'orchestrateur
+      (`scratchpad/tests-depart/`) : « la plus longue » **93,9 %** (couverture 98,2 %, rendement
+      94,6 %), la plus détaillée 73,8 %, la ponctuation forte 60,5 %, le mot technique exclusif
+      57,2 % ; **41 questions sur 57 (71,9 %)** trahies par 5 indices ou plus ; bonne réponse
+      **105,5 caractères** en moyenne contre **32,6** pour un distracteur (rapport **3,24**) ; rangs
+      54 / 1 / 0 / 2 ; 12 tics de lot, 3 mots fétiches en alerte, 4 alertes de biais inverse,
+      lexique 49 exploitables. **Le cours s'exécute** : Jest 29.7.0 et fast-check installés dans
+      un dossier jetable hors git (`scratchpad/tests-env/`, 269 paquets, Node 24.16, npm 11.13) ;
+      la table des erreurs classiques de la consigne a été **exécutée** avant d'être écrite
+      (28 tests, dont 10 qui échouent exprès). ⚠️ **Elle a rendu la première faute du cours
+      avant toute écriture** : la leçon 8 enseigne qu'un `await` oublié devant
+      `expect(...).rejects` laisse le test « vert quoi qu'il arrive » — sous Node 24 + Jest 29.7,
+      quand la promesse résout, **le processus Jest tombe (code 1, aucun rapport de test)**.
+
+      **LA VAGUE (commit `66f8c9b`)** — six écrivains en lots disjoints, **166 distracteurs
+      réécrits sur 171, 5 gardés** (bilan de `lecon-14`), **21 fichiers de test exécutés**.
+      Mesures relancées par l'orchestrateur sur le cours entier :
+
+      | | avant | après la vague | après le dosage |
+      |---|---:|---:|---:|
+      | « la plus longue » | 93,9 % | 26,3 % | **24,6 %** |
+      | « la plus dense » | 26,3 % | **36,8 %** | **26,3 %** |
+      | questions trahies par 5 indices ou plus | 41 | **0** | **0** (51 à 0–2, 6 à 3–4) |
+      | rangs de la bonne réponse | 54 / 1 / 0 / 2 | 15 / 14 / 14 / 14 | |
+      | tics de lot | 12 | 2 | 2 |
+      | mots fétiches (alertes) | 3 | **0** | **0** |
+      | biais inverse (alertes) | 4 | **0** | **0** |
+      | lexique (exploitables) | 49 | 3 | 3 |
+
+      ⚠️ **La vague avait fabriqué un indice neuf : « la plus dense » à 36,8 %, couverture
+      100 %.** Dans un cours de MÉTHODE, la bonne réponse porte le vocabulaire technique
+      (« persistance », « injectable », « spéculative ») et les distracteurs allongés sont faits de
+      mots courts : la bonne réponse était la plus dense **21 fois sur 57**. **Dosage calculé**
+      (`dosage.js` : 6,75 points à retirer ; `densbesoin.js` : lettres à ajouter et marge de
+      caractères par distracteur) : **7 retouches simulées puis posées (5 bascules, 2 égalités)**
+      — commit `ab9c502`. Trois candidats écartés en simulation pour un mot étranger à la page
+      (« retient », « réussir », « propre »), un pour un absolu (« toujours »), un parce que
+      « n'aura » compte pour UN jeton de six caractères (l'apostrophe colle).
+
+      **LA RELECTURE PAR CONTRADICTION (commit `5c5d64a`)** — six relecteurs en lecture seule,
+      **239 tests Jest exécutés, environ 1 260 essais `normExo`, environ 340 affirmations
+      confirmées justes, 162 FAUTES** : **3 hautes, 67 moyennes, 92 basses** ; 52 dans les corps,
+      48 dans les exercices, 23 dans les blocs de code, 17 dans les QCM, 13 dans les schémas,
+      5 dans les explain, 4 dans le bilan. ⚠️ Le message du commit annonce « environ 210 tests
+      et 1 400 essais » : chiffres écrits trop vite, les bons sont ceux-ci. Les trois hautes,
+      **rejouées par l'orchestrateur avant d'être corrigées** (`scratchpad/tests-env/moi/`) :
+      - **l'`await` oublié** (`lecon-08` : encadré, introduction, bonne réponse et explain de
+        q1) — rejette comme prévu : 2 tests verts, code 0 ; ne se règle jamais : vert, code 0 ;
+        résout : chute du processus, code 1, aucun rapport ;
+      - **la propriété d'aller-retour donnée en modèle** (`lecon-10`) : `fc.object()` +
+        `toEqual` **échoue 20 fois sur 20** (contre-exemple `{"":[undefined]}`, que JSON rend
+        `[null]`) ; remplacée par `fc.json()` + comparaison du texte, **5 000 cas verts** ;
+      - **le p95 « ce que vivent les 5 % les moins bien servis »** (`lecon-11`, bilan de
+        `lecon-14`) : deux services au même p95 de 100 ms ont des moyennes de **100,05** et de
+        **295**, et leurs 5 % les plus lents vivent 101 ms ou 4 000 ms.
+      Trois bonnes réponses corrigées après simulation (0 écart) ; un rattrapage (« l'échec »,
+      entré dans le corps, faisait tomber le `k` de la bonne réponse de `lecon-08` q1).
+
+      **LA CORRECTION (commit `f7e2018`)** — six correcteurs en lots disjoints, **150 fautes
+      corrigées sur 153, 3 laissées** (2 liens vers une documentation, 1 déjà corrigée).
+      Preuves rejouées sous Jest 29.7, sous **Pact 17.1.4** et `npm audit` 11.13 dans des projets
+      jetables hors dépôt : le bloc Pact de `lecon-12` n'écrivait **aucun contrat** (il manquait
+      `provider.executeTest`) et un contrat sans matcher exigeait les valeurs exactes (« Expected
+      75 (Integer) to be equal to 50 (Integer) ») ; la sortie `npm audit` affichée n'était pas
+      celle de npm 11.13 ; dans `lecon-14`, `ouverture.js` déclarait deux fois `estOuvert`
+      (`SyntaxError`, 0 test) et la solution du mini-projet importait un module absent de la
+      page ; le schéma des mutants de `lecon-10` opposait `age > 18` et `age >= 19`, **la même
+      fonction sur des entiers** ; « un test sur soixante est flaky » (la source dit 1,5 % des
+      exécutions et près de 16 % des tests) ; `moyenne([])` « plante » (elle rend `NaN`).
+      Fuites d'indice **12 → 5** (les cinq restantes sont des traductions délibérées placées
+      après le masque). 7 rattrapages de `k` après `kdiff.js`. Lexique **3 exploitables → 0**.
+
+      **LA CONTRE-RELECTURE (commit `ddce902`)** — six contradicteurs en lecture seule sur le
+      diff `ab9c502..f7e2018`, **231 tests Jest (dont 10 sous Pact) et environ 4 750 essais
+      `normExo`**. **67 prises : 0 haute, 22 moyennes, 45 basses** — **61 dues aux corrections
+      (44 corrections distinctes sur 159, soit 27,7 %** ; cours précédents 18,2 / 25,0 / 29,0 /
+      23,8 / 12,8 / 14,8 %) et 6 anciennes. Les plus nettes :
+      - **MA PROPRE correction du p95 était fausse** : « le mieux que vivent les 5 % les moins
+        bien servis » n'est vrai pour aucune des deux définitions usuelles dès que les mesures
+        ne sont pas continues (95 requêtes à 100 ms et 5 à 5 000 ms : p95 = **100** au rang le
+        plus proche, **345** interpolé ; le mieux des 5 % vaut 5 000). Le p95 est un **plancher** :
+        « ce que vivent au moins les 5 % les moins bien servis ». Et le bilan comptait en
+        utilisateurs ce qu'un centile compte en requêtes ;
+      - **l'absolu déplacé de l'`await` oublié, par l'orchestrateur aussi** : « Jest s'arrête
+        net » n'est vrai que si aucun test n'attend ; quand un test asynchrone suit, Jest rend un
+        rapport complet où **le test sans `await` est vert et le suivant, innocent, est rouge** ;
+      - **la correction posée à un endroit sur quatre** : mock / espion corrigé dans le corps de
+        `lecon-05` et survivant dans la bonne réponse, l'explain et l'`aria-label` ; « bloque la
+        fusion » conditionné à huit endroits de `lecon-06` et affirmé sans condition par la bonne
+        réponse ; « testable » à quatre endroits de `lecon-14` ;
+      - **`fc.json()` annoncé comme universel** : il ne génère que des sorties de
+        `JSON.stringify` (neuf textes JSON valides sur neuf ressortent différents) ;
+      - **quatre listes `accept` élargies qui acceptaient un mot de l'énoncé** (« avant chaque
+        test », « motif AAA », « un test qui échoue », « couture ») : `exos-tous.js` ne compare
+        que le texte entier et les morceaux entre guillemets ou parenthèses.
+      **Les 67 corrigées par l'orchestrateur**, dont **8 options de QCM après simulation**
+      (`sim.js`, 0 écart : 5 bonnes réponses, 3 distracteurs), 5 rattrapages de `k`, et **une
+      fuite que ma correction venait de créer** (« page » accepté, et le placeholder disait
+      « d'une page ») trouvée par un contrôle écrit pour l'occasion
+      (`scratchpad/tests-contre/moi/fuites-larges.js`). Tic « que le code » fermé (1 retouche).
+      ⚠️ **Laissé, et dit** : `fuites-enonces.js` montre que dans **4 exercices** la réponse se
+      lit dans l'énoncé visible au-dessus du champ (`lecon-07` exo 3 « factory », `lecon-09`
+      exo 3 « Page Object », `lecon-10` exo 3 « mutant », `lecon-12` exo 2 « producteur ») : le
+      champ placé sous un exercice interroge le mot que l'énoncé emploie, convention du site
+      entier, à trancher hors B4 (même nature que les libellés « Revoir … » de `bash`). Et le
+      mini-projet de `lecon-14` n'ouvre toujours aucune couture : sa promesse a été ramenée à ce
+      qu'il livre, la réécriture reste à décider.
+
+      **CLÔTURE** : cliquets refigés — `verif-qcm-biais.js --ecrire`, `tests` marqué `traite`
+      (**59 cours**), longueur **24,6 %**, pire indice du cours **26,3 %** (« la DEUXIÈME plus
+      longue » ; dans la table brute, « ÉCARTER la plus courte » est à 26,6 %) ;
+      `verif-qcm-lexique.js --ecrire` ; épreuve `verif-qcm-biais-mutations` **10/10**.
+      `controle.js --ref=f7e2018` : **0 indicateur déplacé** sur 57 questions ; fétiche **0
+      alerte**, tics **0**, biais inverse **0 alerte** (pire : la moins bavarde, 27,8 %), lexique
+      **0 exploitable, 1 question à mettre en forme** (`lecon-14` q12). `mesure-qcm-intouchable
+      tests ab9c502` : **26 atteintes, toutes délibérées** (bonnes réponses, explain et énoncés
+      corrigés pour une faute prouvée). **`verif-rendu` sur les 15 pages du cours : 4 erreurs,
+      2 débordements** — `lecon-09`, **+255 px à 1280 px, ANCIEN** (un `<code>` en ligne de
+      quatre instructions, découpé en quatre) et `lecon-07`, +3 px, créé par une correction
+      (découpé en deux) ; relancé : **0 erreur**. `tools/doc/gen.js`, assembleurs
+      `etude-inconnu` / `etude-recherche` et `build-index --write --fresh` (quiz, flashcards,
+      search, searchlite, antisèches, pièges) : **point fixe au 2ᵉ tour**, deux fois.
+      `verif-donnees` **0 erreur** ; `verif-html` **0** ; `verif.js --rapide` **53 étapes vertes
+      (178,8 s)**, sortie conservée dans `scratchpad/tests-depart/verif-rapide.txt` — vert au
+      premier passage cette fois (le renvoi inexpliqué vers `verif-erreurs.js` de la clôture de
+      `bash` ne s'est pas reproduit). 0 CR, 0 BOM, JSON valide, 0 chargement externe.
+      **Site : 6 167 questions, réussite « la plus longue » 39,0 % (`mesure-biais-qcm`), 59 cours
+      traités, 31 restants.**
+
+      **LE 61ᵉ COURS EST DÉSIGNÉ — `pascal`.** Classement par nocivité réelle sur les **31 cours
+      restants** (`qcm-biais-reference.json`) : `pascal` (59 questions, 90,4 %) **53,3
+      devinables** ; puis `fsharp` 52,3 (54 questions, 96,8 %), `vb` 52,0, `linux` 52,0, `prolog`
+      52,0, `objc` 51,7, `api` 51,2, `asm` 50,0, `cobol` 49,3. Méthode inchangée, avec trois
+      ajouts tirés de `tests` : (1) **mesurer « la plus dense » dès la fin de la vague**, et dire
+      aux écrivains de porter le vocabulaire technique de la bonne réponse dans les distracteurs ;
+      (2) le contrôle des fuites couvre les SUITES DE MOTS du placeholder et des indices
+      (`fuites-larges.js`) et l'énoncé visible (`fuites-enonces.js`) ; (3) **les corrections de
+      l'orchestrateur passent la contre-relecture comme les autres** — trois de ses neuf étaient
+      fautives. ⚠️ Pascal ne s'exécute pas sur cette machine à ce jour (aucun `fpc` installé) :
+      chercher un compilateur portable hors git avant d'écrire la consigne, comme pour `dart`.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
