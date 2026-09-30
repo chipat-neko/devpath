@@ -8809,7 +8809,7 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       inchangée : préparation (consigne mesurée), vague d'écriture, relecture par contradiction,
       correction en groupes disjoints, contre-relecture des corrections, clôture.
 
-      ### 57ᵉ cours — `docker` (2026-09-30) : **94,7 % → 26,3 %** après la vague, EN COURS (relecture)
+      ### 57ᵉ cours — `docker` (2026-09-30) : **94,7 % → 26,3 %**, CLOS
 
       **PRÉPARATION FAITE le 2026-09-30** : `scratchpad/CONSIGNE-DOCKER.md` (commit `458515e`) —
       94,7 % à la longueur, rangs **55/1/1/0**, **10 327 caractères** à écrire sur 55 questions sur 57,
@@ -8891,10 +8891,93 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       **3 atteintes, toutes délibérées** (bonne réponse et explain de `lecon-14` q3, explain de
       `lecon-15` q12).
 
-      **RESTE 110 FAUTES (37 moyennes, 73 basses)**, réparties en six groupes disjoints dans
-      `scratchpad/CONSIGNE-DOCKER-CORRECTION.md` (liste `scratchpad/docker-relecture/fautes.json`, champ
-      `traitee`). **Prochain réveil** : correction des 110 (6 correcteurs), contre-relecture des
-      corrections, clôture.
+      **LA CORRECTION DES 110 RESTANTES (6 correcteurs, groupes disjoints, consigne
+      `scratchpad/CONSIGNE-DOCKER-CORRECTION.md`) : 110 corrigées sur 110** (37 moyennes, 73 basses),
+      commit `4a01976` — **58 prouvées par exécution** (Compose `config`, hadolint, bash, `normExo`
+      rejoué), **52 par la source** relue (docs.docker.com, référence Dockerfile, dépôts officiels).
+      `controle.js --ref=15a65ba` **0 indicateur déplacé**, 0 bloc JSON cassé ; lexique **0/0/0** ;
+      fétiche **0 alerte** ; `verif-html` **0** ; 0 CRLF, 0 BOM. Deux correcteurs ont rouvert `k` en
+      route par une correction de corps (`lecon-07` q3, `lecon-14` q2) et l'ont refermé eux-mêmes.
+      Ce qui pesait :
+      - **les profils Compose de `lecon-13`** : la page disait qu'un service sans profil qui dépend
+        d'un service à profil démarre quand même ; rejoué, Compose v5.5.1 refuse le projet (« depends
+        on undefined service "adminer" », rc=1) tant que le profil n'est pas activé — texte réécrit ; la bonne
+        réponse de q3 cesse de dire « qu'avec `--profile dev` » (`COMPOSE_PROFILES=dev … config
+        --services` liste `adminer` sans `--profile`) ;
+      - **`-v ./src:/app`** (`lecon-08`, huit endroits dont la bonne réponse de q1) montait `src` sur
+        `/app` alors que les schémas le dessinaient dans `/app/src` ; et **l'ordre des deux montages
+        ne compte pas** : rejoué, les deux ordres de déclaration donnent `/app` puis
+        `/app/node_modules` (moby trie par profondeur du chemin) ;
+      - **`lecon-11` q3** : l'image officielle `node` définit elle-même `ENV NODE_VERSION`
+        (Dockerfile de `docker-node` relu) — l'énoncé passe à `APP_VERSION` ; **`lecon-15`** : deux
+        solutions Compose sans `POSTGRES_PASSWORD` ni `service_healthy`, repassées à `config` ;
+      - **deux schémas de `lecon-03`** qui dessinaient 6 couches pour un Dockerfile de 7 instructions ;
+        les tailles d'images de `lecon-06` remesurées sur le registre (`node:20-alpine` **138,2 Mo**
+        décompressée, et non « quelques Mo ») ; « près de 200 images officielles » (API Docker Hub :
+        **181**).
+
+      **LA CONTRE-RELECTURE (6 agents en lecture seule, chargés de démolir le diff `15a65ba..4a01976`) :
+      49 PRISES, 104 blocs exécutés, 174 passages examinés dont 145 confirmés justes (83,3 %).**
+      **30 prises portent sur les 126 corrections, soit 23,8 %** (54ᵉ cours 18,2 %, 55ᵉ 25,0 %, 56ᵉ
+      29,0 % : la part ne monte plus, elle reste d'une correction sur quatre) ; s'y ajoutent **19 défauts
+      hors liste**, dont la plupart avaient été vus par les correcteurs sans y toucher. 2 moyennes,
+      47 basses ; 19 prouvées par exécution, 28 par la source, 2 annoncées incertaines. Ce qui compte :
+      - **un schéma que sa propre correction a rendu faux** (`lecon-10`) : le bloc corrigé signe
+        l'image « après le push, par son digest », le schéma juste en dessous la signait AVANT de la
+        pousser — impossible avec cosign, qui dépose la signature dans le registre à côté de l'image
+        (README de cosign). Schéma, titre et `aria-label` remis dans l'ordre build → push → sign →
+        verify → run ;
+      - **un absolu déplacé plutôt que retiré** (`lecon-15` q9) : pour ne pas bouger les mesures, la
+        correction avait fait passer « toujours » du programme aux arguments (« toujours
+        remplaçables »), ce qui est faux aussi — un `ENTRYPOINT` en forme shell ignore `CMD` et les
+        arguments de `docker run` (référence Dockerfile). **10 candidats simulés** : retirer
+        « toujours » déplace `ecarter les absolus`, le remplacer par « seulement » crée un mot
+        technique exclusif ; le seul à **0 écart** garde les mêmes mots dans un autre ordre
+        (« ses arguments toujours par défaut, remplaçables au docker run ») ;
+      - **la règle des profils, appliquée à moitié** (`lecon-13`) : la bonne réponse, le glossaire, un
+        commentaire, une légende et un placeholder disaient encore « ne démarre que si le profil est
+        activé », ce que l'encadré corrigé de la même page dément (un service visé par son nom démarre
+        sans son profil — `config adminer` le rend, rc=0) ;
+      - **13 listes `accept` élargies à moitié** : la forme que la page enseigne restait refusée
+        (`-v "$(pwd):/app"`, `docker logs -f mon-conteneur`, `--push` avec `--platform=`, `docker
+        compose up --watch`, « le noyau du système hôte »), une réponse fausse était acceptée
+        (`condition: healthy`, que Compose rejette ; « up » seul ; « system prune » sans `docker`) et
+        **un indice était lui-même une réponse acceptée** (`--scale api=3`) ;
+      - des termes employés avant d'être définis par les corrections (OCI, digest, image orpheline,
+        `ARG`), `registry:2` (l'API Docker Hub donne la version **3.1.2**, mise à jour la veille), et
+        un « seul `docker volume prune -a` les efface » que `docker compose down -v`, enseigné en
+        `lecon-13`, dément.
+
+      **48 corrigées sur 49** (règles `scratchpad/docker-contre/r-corps.js`, `r-l01b.js`, `r-qcm.js`,
+      commit `7f92e5d`) ; **37 candidats simulés** pour cinq options de QCM, quatre posées à 0 écart.
+      **1 laissée** : le distracteur de `lecon-15` q3 (« La tenue des pics… des renforts ») — 8 candidats,
+      aucun à 0 écart (tout mot plus clair change `w`, `k` ou le rang de longueur) : il faudrait
+      retoucher les trois options sœurs, pour un défaut de style. ⚠️ Une correction de corps a rouvert
+      `k` (« tourner » entré dans `lecon-01`) : retiré, 0 écart. `controle.js --ref=15a65ba`
+      **0 indicateur déplacé**, lexique **0/0/0**, fétiche **0 alerte**, tics **0**, `verif-html` **0**,
+      `normExo` rejoué sur les **45 exercices** du cours : **0 placeholder ni indice accepté**,
+      63 réponses attendues rejouées **0 anomalie** ; hadolint exit 0 sur le Dockerfile renommé
+      (`ARG VERSION_NODE`) ; `verif-rendu` sur six pages **0 erreur** (36 mesures).
+      `mesure-qcm-intouchable docker 15a65ba` à la clôture : **18 atteintes, toutes délibérées**
+      (6 bonnes réponses, 10 explain, 2 énoncés).
+
+      **CLÔTURE** : cliquets refigés — `verif-qcm-biais.js --ecrire`, `docker` marqué `traite`
+      (**56 cours**), longueur **26,3 %**, pire indice du cours **27,2 %** (« écarter les deux
+      extrêmes ») ; `verif-qcm-lexique.js --ecrire`. `tools/doc/gen.js`, assembleurs `etude-inconnu` /
+      `etude-recherche` et `build-index --write --fresh` (quiz, flashcards, search, searchlite,
+      antisèches, pièges) : **point fixe au 3ᵉ tour**, vérifié au contenu (empreinte du diff identique
+      au tour suivant, 0 fichier écrit). `verif-donnees` **0 erreur** ; `verif.js --rapide` **53 étapes
+      vertes (217,6 s)** ; 0 CRLF, 0 BOM, JSON valide, 0 chargement externe.
+      **Site : 6 167 questions, réussite « la plus longue » 40,9 % (`mesure-biais-qcm`), 56 cours
+      traités.**
+
+      **LE 58ᵉ COURS EST DÉSIGNÉ — `r`.** Classement par nocivité réelle sur les **34 cours restants**
+      (`qcm-biais-reference.json`), `stats` exclu (cours-témoin) : `r` (63 questions, 85,7 %)
+      **54,0 devinables** ; puis `bash` 53,5 (95,5 %), `tests` 53,5 (93,9 %), `pascal` 53,3, `fsharp`
+      52,3, `vb` 52,0, `linux` 52,0, `prolog` 52,0. ⚠️ `pages/r/lecon-06.html` porte un mojibake
+      VOLONTAIRE (leçon sur l'encodage) : à exclure de toute normalisation. Méthode inchangée :
+      préparation (consigne mesurée), vague d'écriture, relecture par contradiction, correction en
+      groupes disjoints, contre-relecture des corrections, clôture.
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
