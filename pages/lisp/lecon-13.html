@@ -100,7 +100,7 @@
 <p>La leçon 8 a posé l'idée fondatrice&nbsp;: en Lisp, le <strong>code est une donnée</strong>, et une macro transforme du code <em>avant</em> son exécution. Cette leçon te donne les outils pour écrire des macros <strong>lisibles</strong> et <strong>sûres</strong>&nbsp;: la quasiquote pour fabriquer du code comme un gabarit, le <code>splicing</code> pour insérer des listes, et <code>gensym</code> pour éviter les collisions de noms. Au bout&nbsp;: la capacité d'<strong>étendre le langage</strong> lui-même.</p>
 
 <h2>Rappel&nbsp;: deux temps distincts</h2>
-<p>Une macro s'exécute au <strong>temps d'expansion</strong> (pendant la lecture du code), et produit une nouvelle expression qui, elle, s'exécutera au <strong>temps d'exécution</strong>. Bien distinguer ces deux moments est la clé des macros.</p>
+<p>Une macro s'exécute au <strong>temps d'expansion</strong> (après la lecture du code, avant son exécution), et produit une nouvelle expression qui, elle, s'exécutera au <strong>temps d'exécution</strong>. Bien distinguer ces deux moments est la clé des macros.</p>
 <figure class="diagram">
   <svg viewBox="0 0 640 150" role="img" aria-label="Les deux temps d'une macro. À gauche, le code source swap! a b. Une première flèche, l'expansion de macro, qui a lieu avant l'exécution, le transforme en un bloc let avec une variable temporaire tmp qui échange a et b. Une seconde flèche, l'exécution, produit alors l'effet : a et b sont échangés. Message : la macro réécrit le code au temps d'expansion, puis le code réécrit s'exécute normalement.">
     <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Une macro agit AVANT l'exécution</text>
@@ -148,32 +148,30 @@
 </figure>
 
 <h2>Écrire des macros utiles</h2>
-<p>Avec la quasiquote, on écrit des macros presque aussi simplement qu'on écrit le code voulu. Trois classiques&nbsp;:</p>
-<figure class="code-block" data-file="macros.lisp"><pre><code class="language-lisp">; unless : un « si… négatif »
-(defmacro unless (test . corps)
-  `(if ,test #f (begin ,@corps)))
+<p>Avec la quasiquote, on écrit des macros presque aussi simplement qu'on écrit le code voulu. Les macros de cette leçon sont écrites en <strong>Common Lisp</strong>, avec <code>defmacro</code>, le modèle historique (en Scheme, l'équivalent hygiénique est <code>define-syntax</code>, vu à la leçon 8)&nbsp;; la quasiquote, elle, s'écrit de la même façon dans les deux dialectes. Deux classiques&nbsp;:</p>
+<figure class="code-block" data-file="macros.lisp"><pre><code class="language-lisp">; mon-unless : un « si… négatif » (unless existe déjà en Common Lisp)
+(defmacro mon-unless (test . corps)
+  `(if ,test nil (progn ,@corps)))
 
 ; while : une boucle tant que
 (defmacro while (test . corps)
-  `(let boucle ()
-     (when ,test
-       ,@corps
-       (boucle))))
+  `(do () ((not ,test))
+     ,@corps))
 
-(unless (= 1 2) (display "différents"))   ; affiche : différents</code></pre></figure>
-<p>Ces formes <em>n'existent pas</em> comme fonctions&nbsp;: une fonction évaluerait ses arguments trop tôt. Seule une macro peut décider de <strong>ne pas évaluer</strong> le corps quand le test est faux, ou de le répéter.</p>
+(mon-unless (= 1 2) (princ "différents"))   ; affiche : différents</code></pre></figure>
+<p>Ces formes <em>n'existent pas</em> comme fonctions&nbsp;: une fonction évaluerait ses arguments trop tôt. Seule une macro peut décider de <strong>ne pas évaluer</strong> le corps (quand le test est vrai, pour <code>mon-unless</code>), ou de le répéter (pour <code>while</code>).</p>
 
 <h2>La capture de variable et <code>gensym</code></h2>
 <p>Voici <code>swap!</code>, qui échange deux variables. Elle a besoin d'un temporaire. Si on le nomme <code>tmp</code> en dur, un utilisateur qui passe une variable nommée… <code>tmp</code> casse tout&nbsp;: c'est la <strong>capture de variable</strong>. La parade&nbsp;: <code>gensym</code>, qui fabrique un nom unique garanti.</p>
 <figure class="code-block" data-file="swap.lisp"><pre><code class="language-lisp">(defmacro swap! (a b)
-  (let ((tmp (gensym)))          ; un nom unique, ex. g4712
+  (let ((tmp (gensym)))          ; un symbole unique, ex. #:G4712
     `(let ((,tmp ,a))
-       (set! ,a ,b)
-       (set! ,b ,tmp))))
+       (setf ,a ,b)
+       (setf ,b ,tmp))))
 
-(define x 1) (define y 2)
-(swap! x y)
-(list x y)   ; (2 1)</code></pre></figure>
+(let ((x 1) (y 2))
+  (swap! x y)
+  (list x y))   ; (2 1)</code></pre></figure>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 190" role="img" aria-label="La capture de variable et sa parade. À gauche, une macro qui nomme son temporaire tmp en dur : si le code appelant possède aussi une variable tmp, les deux se heurtent et le résultat est faux. À droite, la même macro qui obtient son temporaire par gensym : le nom produit est unique, par exemple g4712, et ne peut heurter aucun nom de l'appelant ; le résultat est correct.">
@@ -184,20 +182,21 @@
   <figcaption>Un temporaire nommé «&nbsp;en dur&nbsp;» peut <strong>capturer</strong> une variable de l'appelant. <code>gensym</code> fabrique un nom unique (<code>g4712</code>) et supprime le risque&nbsp;; les macros hygiéniques de Scheme le font d'office.</figcaption>
 </figure>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Attention — la capture de variable</p><p>Un nom introduit «&nbsp;en dur&nbsp;» par une macro peut <strong>masquer</strong> ou <strong>être masqué par</strong> un nom du code appelant. C'est le bug le plus classique des macros. Règle&nbsp;: tout symbole que <em>toi</em> tu introduis (temporaires, compteurs) doit venir d'un <code>gensym</code>.</p></div></div>
-<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — quand le langage est écrit dans le langage</p><p>La macro <code>loop</code> de Common Lisp, si lisible (<code>loop for i from 1 to 10 …</code>), est… une gigantesque macro écrite en Lisp&nbsp;: elle compile son mini-langage vers des <code>do</code>. Chez Scheme, <code>define-syntax</code> et <code>syntax-rules</code> offrent des macros <strong>hygiéniques</strong> (sans capture, sans <code>gensym</code> à écrire). Et toute la bibliothèque <strong>Racket</strong> — jusqu'à des langages entiers comme Typed Racket — est bâtie sur ce pouvoir&nbsp;: étendre le langage depuis le langage lui-même.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — quand le langage est écrit dans le langage</p><p>La macro <code>loop</code> de Common Lisp, si lisible (<code>loop for i from 1 to 10 …</code>), est… une gigantesque macro écrite en Lisp&nbsp;: elle compile son mini-langage vers des formes plus simples (<code>block</code>, <code>let</code>, <code>tagbody</code>, <code>go</code>). En Scheme, <code>define-syntax</code> et <code>syntax-rules</code> offrent des macros <strong>hygiéniques</strong> (sans capture, sans <code>gensym</code> à écrire). Et toute la bibliothèque <strong>Racket</strong> — jusqu'à des langages entiers comme Typed Racket — est bâtie sur ce pouvoir&nbsp;: étendre le langage depuis le langage lui-même.</p></div></div>
 
 <h2>Vers un langage dédié (DSL)</h2>
 <p>Puisqu'on fabrique de la syntaxe, on peut créer un <strong>petit langage</strong> adapté à un domaine. Exemple&nbsp;: une macro qui décrit du HTML.</p>
 <figure class="code-block" data-file="dsl.lisp"><pre><code class="language-lisp">(defmacro balise (nom . contenu)
-  `(string-append "&lt;" ,(symbol-&gt;string nom) "&gt;"
-                  (string-append ,@contenu)
-                  "&lt;/" ,(symbol-&gt;string nom) "&gt;"))
+  `(concatenate 'string
+                "&lt;" ,(string-downcase (symbol-name nom)) "&gt;"
+                ,@contenu
+                "&lt;/" ,(string-downcase (symbol-name nom)) "&gt;"))
 
 (balise p "Bonjour " "Lisp")   ; "&lt;p&gt;Bonjour Lisp&lt;/p&gt;"</code></pre></figure>
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">D'abord une fonction, une macro seulement si nécessaire</p><p>Une macro complique le débogage et ne se passe pas en argument. Ne l'emploie que pour ce qu'une fonction <em>ne peut pas</em> faire&nbsp;: contrôler l'évaluation (retarder, répéter, réécrire la syntaxe). Pour tout le reste, une fonction suffit.</p></div></div>
 
 <h2>Pour aller plus loin</h2>
-<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les macros <strong>hygiéniques</strong> de Scheme (<code>syntax-rules</code>, <code>syntax-case</code>) gèrent la capture <em>automatiquement</em>&nbsp;: plus besoin de <code>gensym</code>. À l'autre bout, la programmation par macros a inspiré la <strong>métaprogrammation</strong> de langages modernes&nbsp;: les macros de Rust (<code>macro_rules!</code>), les <em>template haskell</em>, ou encore les décorateurs et l'AST de Python en descendent, de près ou de loin.</p></div></div>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Les macros <strong>hygiéniques</strong> de Scheme (<code>syntax-rules</code>, <code>syntax-case</code>) gèrent la capture <em>automatiquement</em>&nbsp;: plus besoin de <code>gensym</code>. À l'autre bout, la programmation par macros a inspiré la <strong>métaprogrammation</strong> de langages modernes&nbsp;: les macros de Rust (<code>macro_rules!</code>), le <em>Template Haskell</em>, ou encore les décorateurs et l'AST de Python en descendent, de près ou de loin.</p></div></div>
 
 <h2>Antisèche</h2>
 <figure class="cheat-table">
@@ -209,7 +208,7 @@
       <tr><td><code>,</code> (unquote)</td><td>insère une valeur</td><td><code>`(a ,x)</code> → <code>(a 42)</code></td></tr>
       <tr><td><code>,@</code> (splice)</td><td>éclate une liste</td><td><code>`(a ,@xs)</code> → <code>(a 1 2)</code></td></tr>
       <tr><td><code>gensym</code></td><td>nom unique</td><td><code>(let ((g (gensym))) …)</code></td></tr>
-      <tr><td><code>defmacro</code></td><td>définit une macro</td><td><code>(defmacro unless …)</code></td></tr>
+      <tr><td><code>defmacro</code></td><td>définit une macro</td><td><code>(defmacro mon-unless …)</code></td></tr>
     </tbody>
   </table>
 </figure>
@@ -248,19 +247,20 @@
 [
   {"type":"text","accept":[",@",",@ ","splice","splicing","unquote-splicing"],"placeholder":"le marqueur qui ÉCLATE une liste dans un gabarit : `(a … xs)","hints":["Une virgule suivie d'une arobase.","`(a ??xs c) → (a 1 2 c).",",@"],"link":{"href":"lecon-13.html","label":"Revoir « splicing »"}},
   {"type":"text","accept":["gensym","(gensym)","(gensym "],"placeholder":"la fonction qui fabrique un nom unique pour éviter la capture : (…)","hints":["gen + symbol.","(let ((tmp (???))) …).","gensym"],"link":{"href":"lecon-13.html","label":"Revoir « gensym »"}},
-  {"type":"text","accept":["defmacro","(defmacro","macro"],"placeholder":"le mot-clé qui définit une macro : (… unless (test . corps) …)","hints":["def + macro.","(??????? nom args …).","defmacro"],"link":{"href":"lecon-13.html","label":"Revoir « macros utiles »"}}
+  {"type":"text","accept":["defmacro","(defmacro"],"placeholder":"le mot-clé qui définit une macro en Common Lisp : (… mon-unless (test . corps) …)","hints":["def + macro.","(??????? nom args …).","defmacro"],"link":{"href":"lecon-13.html","label":"Revoir « macros utiles »"}}
 ]
 </script>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Avec une quasiquote, construis <code>(point 3 4)</code> à partir de deux variables <code>a</code> et <code>b</code> valant 3 et 4.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.lisp"><pre><code class="language-lisp">(define a 3) (define b 4)
 `(point ,a ,b)   ; (point 3 4)</code></pre></figure></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris la macro <code>when-positif</code>&nbsp;: exécute son corps seulement si un nombre est <code>&gt; 0</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.lisp"><pre><code class="language-lisp">(defmacro when-positif (n . corps)
-  `(if (&gt; ,n 0) (begin ,@corps) #f))
-(when-positif 5 (display "ok"))   ; affiche ok</code></pre></figure></details></div>
+  `(if (&gt; ,n 0) (progn ,@corps) nil))
+(when-positif 5 (princ "ok"))   ; affiche ok</code></pre></figure></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris <code>inc!</code>, une macro qui incrémente une variable de 1 (sans temporaire, donc sans capture ici).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution.lisp"><pre><code class="language-lisp">(defmacro inc! (v)
-  `(set! ,v (+ ,v 1)))
-(define n 10)
-(inc! n)   ; n vaut 11</code></pre></figure></details></div>
+  `(setf ,v (+ ,v 1)))
+(let ((n 10))
+  (inc! n)
+  n)   ; 11</code></pre></figure></details></div>
 
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
