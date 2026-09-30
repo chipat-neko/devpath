@@ -8979,6 +8979,116 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       préparation (consigne mesurée), vague d'écriture, relecture par contradiction, correction en
       groupes disjoints, contre-relecture des corrections, clôture.
 
+      ### 58ᵉ cours — `r` (2026-09-30) : **85,7 % → 25,4 %**, EN COURS (vague faite, relecture faite)
+
+      **PRÉPARATION FAITE le 2026-09-30** : `scratchpad/CONSIGNE-R.md` (commit `fe027fe`) — 85,7 % à
+      la longueur, rangs **54/4/4/1**, **13 983 caractères** à écrire sur 60 questions sur 63, rapport
+      bonne/distracteur **4,42** (113,3 contre 25,6 caractères : le plus lourd du chantier), lexique
+      **52 exploitables / 27 retournées / 54 à mettre en forme**, intrus lexical **199 mots sur
+      29 questions**, **4 alertes** de biais inverse, **douze tics de lot** (point-virgule médian
+      **24/5**, deux-points médian **21/1**, quatre segments à virgules 8/0), **2 mots fétiches**
+      (`vecteur` 33,7 %, `lignes` 28,6 %), **46 questions sur 63** trahies par 5 indices ou plus.
+      **R n'est pas installé, mais il S'EXÉCUTE** : `scratchpad/webr/` (hors git, rien d'installé)
+      porte **webR** — R **4.6.0** compilé en WebAssembly, paquet npm — et les paquets du cours
+      compilés pour lui (**dplyr 1.2.1, ggplot2 4.0.3, lubridate 1.9.5**, tidyr, stringr, purrr,
+      forcats, readr, tibble, broom ; 280 Mo), lancés par `node scratchpad/webr/r.js [--echo] x.R`
+      en **≈ 3 s**. ⚠️ Deux correctifs locaux ont été nécessaires sous Windows, dans `node_modules`
+      (à refaire si le paquet est réinstallé) : l'`import()` du worker reçoit un chemin `D:\…` au lieu
+      d'une URL `file://` (`webr-worker.js`), et `readlink` de NODEFS rend `EISDIR` au lieu d'`EINVAL`
+      sur un dossier, ce qui casse `normalizePath` donc `library()` (`R.js`). Table de **25 erreurs
+      classiques EXÉCUTÉE** avant d'être donnée (`scratchpad/r-depart/classiques.out`) : `x[5]` hors
+      bornes → `NA` ; `1:3 + 1:6` → `2 4 6 5 7 9` sans avertissement ; `as.numeric(factor(c("10","20",
+      "10")))` → `1 2 1` ; `1:0` fait tourner la boucle **deux fois** ; `left_join` avec une clé doublée
+      à droite, 2 lignes → **3** ; `ymd("2024-01-31") + months(1)` → **`NA`** ; `sapply(list(),
+      length)` → `list()` ; `var(c(2,4,4,4,5,5,7,9))` → `4.571429`.
+
+      **LA VAGUE (6 écrivains, patchs posés par `pose.js`) : 180 distracteurs sur 189 réécrits** (9
+      gardés dans le bilan de `lecon-17`, dont les bonnes réponses font 1 à 11 caractères : `1`, `NA`,
+      un nom de fonction), **25 scripts R exécutés** (283 expressions pour le seul lot `l04-06`). Puis
+      **une retouche de dosage** simulée avant pose (`essai3.js`) : le tic « le type » (3 bonnes /
+      1 distracteur, 28,2 %) fermé en le donnant à un distracteur de `lecon-02` q3. Résultat : « la
+      plus longue » **85,7 % → 25,4 %** (rangs **16/16/16/15**), lexique **0/0/0**, tics **12 → 0**,
+      mot fétiche **0 alerte**, biais inverse **0 alerte** (pire : la moins bavarde 27,8 %), **pire des
+      44 stratégies 27,0 %** (« écarter les deux extrêmes »). Questions trahies par 5 indices ou plus :
+      **46 → 0**. `mesure-qcm-intouchable r fe027fe` **0 atteinte** ; `verif-html` **0** ; mojibake de
+      `lecon-06` intact (2 occurrences avant, 2 après) ; 0 CRLF. Commit `ce3bc19`.
+      **1 résidu laissé** : l'intrus lexical « inner » du bilan (`lecon-17`, « Quelle jointure dplyr
+      conserve TOUTES les lignes de gauche ? ») — les seuls remplaçants courts sont `full_join()` et
+      `nest_join()`, qui gardent eux aussi toutes les lignes de gauche et rendraient le distracteur
+      VRAI.
+
+      **60 défauts signalés par les écrivains** (sans y toucher), transmis à la relecture dans
+      `scratchpad/r-depart/vague-defauts.json`. Le plus lourd : **`lecon-09` (inférence) affiche des
+      sorties que son code ne rend pas** — avec `set.seed(7)` et le code de la page, le `t.test`
+      présenté comme significatif ne l'est pas, et le `chisq.test`, calcul déterministe, n'a ni la
+      statistique ni la p-value affichées. Aussi : `&&` sur un vecteur « ne regarde que le premier
+      élément » (`lecon-02`, `lecon-04` : c'est une **erreur** depuis R 4.3, et `lecon-03` le dit) ;
+      `fct_reorder()` annoncé décroissant (il est croissant par défaut) ; le modèle de `lecon-17`
+      dont les chiffres viennent de `na.omit(airquality)` (111 lignes) et non de la table `air` du
+      code (116 lignes).
+
+      **LA RELECTURE PAR CONTRADICTION (6 relecteurs, lecture seule, CORPS compris) : 180 FAUTES,
+      1 077 vérifications exécutées sous R, 622 affirmations confirmées justes.** Par zone : 88 corps,
+      37 exercices, 21 distracteurs, 11 schémas, 6 énoncés, 6 explain, 5 glossaires, 4 bonnes
+      réponses, 2 antisèches. Par nature : 61 fausses, 39 incohérences, 36 trompeuses,
+      21 inintelligibles, 12 qui ne fonctionnent pas, 9 de français, 2 calculs faux — **aucun
+      distracteur vrai, aucune bonne réponse fausse**. Par gravité : **8 hautes, 52 moyennes,
+      120 basses**. Des 61 signalements des écrivains : **57 confirmés, 3 partiels, 1 infirmé**
+      (« la bonne réponse est toujours en position 0 » : `js/lecon.js` mélange à l'affichage). Les
+      180 extraits se retrouvent à l'identique dans les pages (`scratchpad/r-relecture/agrege.js` :
+      0 introuvable, 0 ambigu). Le trait du cours : **`lecon-09` affichait des sorties que son code ne
+      rend pas** — tous ses blocs de tirage ou de test, sauf `set.seed(42) ; rnorm(3)`.
+
+      **19 CORRIGÉES CETTE PASSE — les 8 hautes et ce qui porte la même erreur** (script
+      `scratchpad/r-sonde/hautes.js`, **41 motifs trouvés chacun exactement une fois** ; tout a été
+      REJOUÉ par l'orchestrateur avant d'être écrit, `scratchpad/r-hautes/l09.out` et `autres.R`) :
+      - **`lecon-09`, l'exemple central du `t.test`** : avec `set.seed(7)` et le code de la page, R
+        rend **t = −1,7416, p = 0,08557**, intervalle **−12,38 à 0,83** (il contient 0) — la page
+        affichait p = 0,01825 et concluait « significatif ». Graine passée à **`set.seed(123)`** :
+        **t = −2,317, df = 77,656, p = 0,02314**, intervalle −13,426974 à −1,016048, moyennes
+        100,6777 et 107,8993 ; prose et bloc `res$p.value` (**0,02314172**, `TRUE`) alignés ;
+      - **les dix autres sorties de `lecon-09`**, recopiées de R : population **169,9776**,
+        échantillon **170,9793** (« ≈ 171,0 » au schéma, à l'`aria-label`, à la prose et à la
+        légende), intervalle **167,3739 – 174,2753**, `chisq.test` **X² = 9,9556, p = 0,001604**
+        (calcul déterministe : la page donnait 13,36), `cor.test` **t = 5,3915, r = 0,6141477**
+        (0,41 à 0,76), et les trois solutions d'exercice (**12,16302** ; **p = 0,006054539** et
+        8,6 points d'écart, pas 5 ; **X² = 19,334**). Ce qui valide la sonde : `set.seed(42) ;
+        rnorm(3)` rend sous webR les valeurs que la page affichait déjà justes (1,3709584 ;
+        −0,5646982 ; 0,3631284) — le générateur est bien celui de R ;
+      - **`&&` sur un vecteur** (`lecon-02` astuce et piège, schéma de `lecon-03`, piège de
+        `lecon-04`) : il ne « regarde pas le premier élément », il s'arrête sur une **erreur**
+        (« 'length = 4' in coercion to 'logical(1)' ») — ce que la note de `lecon-03` disait déjà ;
+      - **le diagnostic d'encodage de `lecon-06`, inversé** : `Ã©` vient d'un fichier **UTF-8 lu
+        comme du Latin-1** (exécuté : `read_csv(…, locale(encoding = "Latin1"))` sur un fichier
+        UTF-8 rend `"FÃ©vrier"`), et le remède affiché FABRIQUAIT le charabia ; un fichier Latin-1 lu
+        comme de l'UTF-8 rend `"F\xe9vrier"`. Texte, commentaire du bloc, légende et glossaire
+        réécrits ; **le mojibake volontaire est intact** (2 occurrences avant, 2 après) ;
+      - **`lecon-13`** : le schéma donnait `"ada@lovelace.uk"` pour `str_extract(x, "@")`, qui rend
+        **`"@"`** — exactement ce que le QCM de la même page compte comme distracteur ; et l'explain
+        de q1 commettait l'erreur que la leçon dénonce (`str_replace("01.42.68.53", ".", " ")` rend
+        **`" 1.42.68.53"`** : le point non échappé prend le premier caractère) ;
+      - **le rapport Quarto de `lecon-17`**, donné comme modèle de document reproductible, utilisait
+        `air` sans le créer (« object 'air' not found » dans une session neuve) : `library(dplyr)` et
+        la ligne `air <- airquality |> filter(!is.na(Ozone))` ajoutées (116 points tracés).
+      ⚠️ Deux corrections de corps ont rouvert `k` (« depuis » entré dans `lecon-02`, « premier »
+      sorti de `lecon-03`), nommées par la nouvelle sonde `scratchpad/r-sonde/kdiff.js` et refermées
+      en reformulant le corps. `controle.js --ref=ce3bc19` **0 indicateur déplacé**, lexique
+      **0/0/0**, fétiche **0 alerte**, tics **0**, `verif-html` **0**, `verif-rendu` sur six pages
+      **0 erreur** (36 mesures). `mesure-qcm-intouchable r ce3bc19` : **1 atteinte, délibérée**
+      (explain de `lecon-13` q1). Cliquets refigés après la vague (`verif-qcm-biais.js --ecrire`,
+      `verif-qcm-lexique.js --ecrire` ; `traite` reste à poser à la clôture), pages dérivées
+      réassemblées et index régénérés `--fresh` : **point fixe au 3ᵉ tour** (empreinte du diff
+      identique, 0 fichier écrit). `verif-donnees` **0 erreur** ; `verif.js --rapide` **53 étapes
+      vertes (232,1 s)** ; 0 CRLF, 0 chargement externe.
+      **Site : 6 167 questions, réussite « la plus longue » 40,3 % (`mesure-biais-qcm`).**
+
+      **RESTE À FAIRE pour clore `r`** (consigne prête : `scratchpad/CONSIGNE-R-CORRECTION.md`) :
+      **161 fautes — 43 moyennes, 118 basses**, en six groupes disjoints (26 / 25 / 25 / 30 / 30 / 25),
+      dont quatre bonnes réponses à retoucher avec prudence et les distracteurs qui recopient mot
+      pour mot la première moitié de la bonne réponse (`lecon-05` q1, `lecon-11` q1) ; puis la
+      contre-relecture du diff depuis `ce3bc19` (les 19 de cette passe comprises), et la clôture
+      (`traite: true`, désignation du 59ᵉ cours).
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
