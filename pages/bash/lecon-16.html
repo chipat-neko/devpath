@@ -113,7 +113,7 @@
     <text class="d-text" x="85" y="83" text-anchor="middle" font-size="9">tableau de dossiers</text>
     <rect class="d-accent" x="176" y="44" width="140" height="52" rx="6" />
     <text class="d-tag" x="246" y="66" text-anchor="middle" font-size="9" font-family="monospace">tar -czf</text>
-    <text class="d-text" x="246" y="83" text-anchor="middle" font-size="8.5">archive-2026-07-23.tar.gz</text>
+    <text class="d-text" x="246" y="83" text-anchor="middle" font-size="8">sauvegarde-2026-07-23.tar.gz</text>
     <rect class="d-box" x="342" y="44" width="140" height="52" rx="6" />
     <text class="d-tag" x="412" y="66" text-anchor="middle" font-size="9">rotation</text>
     <text class="d-text" x="412" y="83" text-anchor="middle" font-size="8.5">garder les N récentes</text>
@@ -166,20 +166,24 @@ log "Debut de la sauvegarde ($horodatage)"</code></pre></figure>
 
 <figure class="code-block" data-file="sauvegarde.sh"><pre><code class="language-bash">log "Archivage de ${#sources[@]} sources vers $archive"
 
-if tar -czf "$archive" "${sources[@]}" 2&gt;&gt; "$journal"; then
+# tar ecrit sous un nom provisoire : une archive ratee ne doit
+# jamais prendre la place d'une bonne
+if tar -czf "$archive.tmp" "${sources[@]}" 2&gt;&gt; "$journal"; then
+  mv -- "$archive.tmp" "$archive"
   taille="$(du -h "$archive" | cut -f1)"
   log "Archive creee : $archive ($taille)"
 else
+  rm -f -- "$archive.tmp"
   printf '%s [ERREUR] %s\n' "$(date +%FT%T)" "echec de tar, sauvegarde interrompue" \
     | tee -a "$journal" &gt;&amp;2
   exit 1
 fi</code></pre></figure>
 
-<p>Note le <code>"${sources[@]}"</code> entre guillemets&nbsp;: chaque dossier reste un argument distinct, même si son chemin contient une espace. Les messages de <code>tar</code> sont ajoutés au journal via <code>2&gt;&gt;</code>&nbsp;: ses erreurs, mais aussi l'avertissement <code>Removing leading `/' from member names</code>, qu'il émet à chaque lancement réussi quand les sources sont des chemins absolus. La ligne d'erreur, elle, n'appelle pas <code>log()</code>, qui écrirait <code>[INFO]</code> devant&nbsp;: elle reprend son <code>printf</code> avec le niveau <code>[ERREUR]</code>. Le <code>if tar …; then</code> teste le succès&nbsp;: sous <code>set -e</code>, c'est ainsi qu'on réagit à un échec au lieu de subir un arrêt brutal.</p>
+<p>Note le <code>"${sources[@]}"</code> entre guillemets&nbsp;: chaque dossier reste un argument distinct, même si son chemin contient une espace. Les messages de <code>tar</code> sont ajoutés au journal via <code>2&gt;&gt;</code>&nbsp;: ses erreurs, mais aussi l'avertissement <code>Removing leading `/' from member names</code>, qu'il émet à chaque lancement réussi quand les sources sont des chemins absolus. La ligne d'erreur, elle, n'appelle pas <code>log()</code>, qui écrirait <code>[INFO]</code> devant&nbsp;: elle reprend son <code>printf</code> avec le niveau <code>[ERREUR]</code>. Le <code>if tar …; then</code> teste le succès&nbsp;: sous <code>set -e</code>, c'est ainsi qu'on réagit à un échec au lieu de subir un arrêt brutal. Et <code>tar</code> écrit d'abord sous un nom provisoire (<code>.tmp</code>), que <code>mv</code> ne renomme qu'après un succès&nbsp;: un échec ne laisse ni archive incomplète sous le vrai nom, ni bonne archive du jour écrasée. Chaque journée garde ainsi un fichier différent, et toujours entier.</p>
 
 <h2>Brique 4 — la rotation</h2>
 
-<p>Sans ménage, le dossier de sauvegardes gonfle jusqu'à saturer le disque. La <strong>rotation</strong> ne garde que les <code>garder</code> archives les plus récentes. On liste les archives triées par date (<code>ls -1t</code>, la plus récente d'abord), on saute les <code>garder</code> premières, et on supprime le reste. <code>xargs</code> découpe d'ordinaire ce qu'il reçoit aux espaces&nbsp;: <code>-d '\n'</code> lui fait prendre chaque ligne entière comme un seul nom, pour que la rotation tienne aussi quand le chemin contient une espace.</p>
+<p>Sans ménage, le dossier de sauvegardes gonfle jusqu'à saturer le disque. La <strong>rotation</strong> ne garde que les <code>garder</code> archives les plus récentes. On liste les archives triées par date (<code>ls -1t</code>, la plus récente d'abord), on saute les <code>garder</code> premières, et on supprime le reste. <code>xargs</code> découpe d'ordinaire ce qu'il reçoit aux espaces&nbsp;: <code>-d '\n'</code> lui fait prendre chaque ligne entière comme un seul nom, pour que la rotation tienne aussi quand le chemin contient une espace. <code>-d</code> est une option du <code>xargs</code> GNU (Linux, WSL, Git Bash)&nbsp;; celui de macOS ne l'a pas&nbsp;: là-bas, passe par le séparateur nul des leçons 04 et 10, avec <code>tr '\n' '\0' | xargs -0 rm --</code>.</p>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 176" role="img" aria-label="La rotation des sauvegardes. On liste toutes les archives triées de la plus récente à la plus ancienne. Les trois premières, ici numérotées, sont conservées car on a fixé garder à trois. Toutes les archives au-delà du rang trois, plus anciennes, sont supprimées. La commande tail plus n plus quatre saute les trois premières lignes et ne renvoie que les suivantes, qui sont passées à rm.">
@@ -245,7 +249,7 @@ crontab -l</code></pre></figure>
 
 <h2>Le script complet</h2>
 
-<p>Voici les cinq briques assemblées. Lis-le en repérant chaque leçon du cours&nbsp;: mode strict (11), tableau (14), fonction et <code>&gt;&amp;2</code> (08, 11), <code>tee</code> et redirections (15), <code>ls</code> (02), <code>xargs</code> (04, 10) et <code>tar</code>, détaillé ici.</p>
+<p>Voici les quatre briques du script assemblées (la cinquième, <code>cron</code>, vit dans la crontab). Lis-le en repérant chaque leçon du cours&nbsp;: mode strict (11), tableau (14), fonction et <code>&gt;&amp;2</code> (08, 11), <code>tee</code> et redirections (15), <code>ls</code> (02), <code>xargs</code> (04, 10) et <code>tar</code>, détaillé ici.</p>
 
 <figure class="code-block" data-file="sauvegarde.sh"><pre><code class="language-bash">#!/usr/bin/env bash
 set -euo pipefail
@@ -264,16 +268,21 @@ log() { printf '%s [INFO] %s\n' "$(date +%FT%T)" "$*" | tee -a "$journal" &gt;&a
 mkdir -p "$destination"
 log "Debut de la sauvegarde ($horodatage)"
 
-# Archive compressee horodatee
-log "Archivage de ${#sources[@]} sources"
-if tar -czf "$archive" "${sources[@]}" 2&gt;&gt; "$journal"; then
-  log "Archive creee : $archive ($(du -h "$archive" | cut -f1))"
+# Archive compressee horodatee, ecrite sous un nom provisoire
+log "Archivage de ${#sources[@]} sources vers $archive"
+if tar -czf "$archive.tmp" "${sources[@]}" 2&gt;&gt; "$journal"; then
+  mv -- "$archive.tmp" "$archive"
+  taille="$(du -h "$archive" | cut -f1)"
+  log "Archive creee : $archive ($taille)"
 else
-  printf '%s [ERREUR] %s\n' "$(date +%FT%T)" "echec de tar" | tee -a "$journal" &gt;&amp;2
+  rm -f -- "$archive.tmp"
+  printf '%s [ERREUR] %s\n' "$(date +%FT%T)" "echec de tar, sauvegarde interrompue" \
+    | tee -a "$journal" &gt;&amp;2
   exit 1
 fi
 
-# Rotation : ne garder que les $garder plus recentes
+# Rotation
+log "Rotation : on garde les $garder plus recentes"
 ls -1t "$destination"/sauvegarde-*.tar.gz 2&gt;/dev/null \
   | tail -n +"$(( garder + 1 ))" \
   | xargs -r -d '\n' rm --
@@ -323,7 +332,7 @@ log "Sauvegarde terminee avec succes"</code></pre></figure>
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Pourquoi horodater le nom de l'archive (sauvegarde-2026-07-23.tar.gz) ?","a":["Pour que chaque exécution produise un fichier distinct sans écraser les sauvegardes précédentes, ce qui rend la rotation possible","Pour que tar crée chaque fichier, car cette commande reste interrompue lorsque la destination contient une ancienne sauvegarde homonyme","Pour que ls -1t renvoie les archives du dossier triées par ancienneté, car ce programme compare l'horodatage contenu dans le nom du fichier","Pour que tar compare cette date aux documents du disque et enregistre dans le fichier ceux qui sont plus récents, ce qui allège toutes les archives suivantes"],"correct":0,"explain":"Un nom fixe serait écrasé à chaque lancement : on ne garderait qu'une seule version. En insérant la date (date +%F), on conserve un historique de versions, sur lequel la rotation peut ensuite trier et purger."},
+  {"q":"Pourquoi horodater le nom de l'archive (sauvegarde-2026-07-23.tar.gz) ?","a":["Pour que chaque journée produise un fichier différent sans écraser les sauvegardes précédentes, ce qui rend la rotation possible","Pour que tar crée chaque fichier, car cette commande reste interrompue lorsque la destination contient une ancienne sauvegarde homonyme","Pour que ls -1t renvoie les archives du dossier triées par ancienneté, car ce programme compare l'horodatage contenu dans le nom du fichier","Pour que tar compare cette date aux documents du disque et enregistre dans le fichier ceux qui sont plus récents, ce qui allège toutes les archives suivantes"],"correct":0,"explain":"Un nom fixe serait écrasé à chaque lancement : on ne garderait qu'une seule version. En insérant la date (date +%F), on conserve un historique de versions, sur lequel la rotation peut ensuite trier et purger."},
   {"q":"À quoi sert l'option -r de xargs dans la rotation ?","a":["À ne PAS lancer rm si son entrée est vide : sans -r, rm serait appelé sans argument et pourrait provoquer une erreur","À rendre l'effacement RÉCURSIF : avec -r, rm ne s'arrête plus aux fichiers et détruit aussi tous les dossiers trop anciens","À traiter ses arguments à REBOURS : sans -r, rm n'ôterait pas les vieilles archives mais bien les versions les plus récentes","À recevoir les noms BRUTS : sans -r, l'antislash de chaque nom de fichier ne serait pas conservé et rm raterait sa cible réelle"],"correct":0,"explain":"Quand il y a moins d'archives que le seuil, tail ne renvoie rien. Sans -r (--no-run-if-empty), xargs lancerait quand même rm sans argument. Avec -r, la commande n'est exécutée que s'il y a réellement quelque chose à supprimer."},
   {"q":"Que décrit la ligne cron 0 2 * * * commande ?","a":["Exécuter la commande à 2 h 00, chaque jour du mois, chaque mois, chaque jour de la semaine","Exécuter la commande toutes les 2 heures, de jour comme de nuit, chaque jour du mois, chaque mois","Exécuter la commande le deuxième jour du mois, à 0 h 00, chaque mois, du premier au dernier","Exécuter la commande à 0 h 02 de la nuit, chaque jour du mois, chaque mois, chaque jour du lundi au dimanche"],"correct":0,"explain":"Les cinq champs sont minute, heure, jour du mois, mois, jour de semaine. 0 2 * * * signifie minute 0 de l'heure 2, sans restriction de date : donc tous les jours à 2 h du matin."}
 ]
@@ -333,8 +342,8 @@ log "Sauvegarde terminee avec succes"</code></pre></figure>
 
 <script type="application/json" data-exos>
 [
-  {"type":"text","accept":["tar -czf","tar czf","tar -zcf","tar zcf","tar -czvf","tar czvf","tar -cvzf","tar cvzf","-czf","czf","-zcf","-czvf"],"placeholder":"la commande (options comprises) pour CRÉER une archive compressée gzip : tar … archive.tar.gz dossiers","hints":["c pour créer, z pour gzip, f pour le fichier.","tar -???f archive.tar.gz …","Trois lettres après le tiret."],"link":{"href":"lecon-16.html","label":"Revoir « L'archive tar »"}},
-  {"type":"text","accept":["tar -tzf","tar tzf","tar -ztf","tar ztf","tar -tf","tar tf","-tzf","tzf","-ztf","-tf","tf"],"placeholder":"la commande pour LISTER le contenu d'une archive sans l'extraire : tar … archive.tar.gz","hints":["t comme « table des matières ».","tar -??f archive.tar.gz","Remplace le c de création par t."],"link":{"href":"lecon-16.html","label":"Revoir « Vérifier une archive »"}},
+  {"type":"text","accept":["tar -czf","tar czf","tar -zcf","tar zcf","tar -czvf","tar czvf","tar -cvzf","tar cvzf","-czf","czf","-zcf","zcf","-czvf","czvf","-cvzf","cvzf","tar -zcvf","-zcvf","tar cfz"],"placeholder":"la commande (options comprises) pour CRÉER une archive compressée gzip : tar … archive.tar.gz dossiers","hints":["c pour créer, z pour gzip, f pour le fichier.","tar -???f archive.tar.gz …","Trois lettres après le tiret."],"link":{"href":"lecon-16.html","label":"Revoir « L'archive tar »"}},
+  {"type":"text","accept":["tar -tzf","tar tzf","tar -ztf","tar ztf","tar -tf","tar tf","-tzf","tzf","-ztf","ztf","-tf","tf","tar -tvf","tar tvf","tar -tzvf","-tvf","tvf"],"placeholder":"la commande pour LISTER le contenu d'une archive sans l'extraire : tar … archive.tar.gz","hints":["t comme « table des matières ».","tar -??f archive.tar.gz","Remplace le c de création par t."],"link":{"href":"lecon-16.html","label":"Revoir « Vérifier une archive »"}},
   {"type":"text","accept":["crontab -e"],"placeholder":"la commande pour ÉDITER sa table de tâches planifiées : …","hints":["cron + table.","… -e pour éditer, -l pour lister.","crontab -?"],"link":{"href":"lecon-16.html","label":"Revoir « Planifier avec cron »"}}
 ]
 </script>
