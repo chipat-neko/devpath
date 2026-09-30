@@ -97,7 +97,7 @@
             </details>
 
             <article class="prose">
-<p>Onze leçons d'outils, trois de maîtrise&nbsp;: il est temps de tout réunir dans un projet qui compte vraiment. La <strong>sauvegarde</strong> est le script d'administration par excellence — celui qui tourne seul, la nuit, et qu'on ne regarde que le jour où l'on en a besoin. Il doit donc être irréprochable&nbsp;: échouer proprement, ne rien laisser traîner, tracer ce qu'il fait, et ne jamais saturer le disque. On va le construire brique par brique.</p>
+<p>Onze leçons d'outils, quatre de maîtrise&nbsp;: il est temps de tout réunir dans un projet qui compte vraiment. La <strong>sauvegarde</strong> est le script d'administration par excellence — celui qui tourne seul, la nuit, et qu'on ne regarde que le jour où l'on en a besoin. Il doit donc être irréprochable&nbsp;: échouer proprement, ne rien laisser traîner, tracer ce qu'il fait, et ne jamais saturer le disque. On va le construire brique par brique.</p>
 
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que tu vas construire</p><p>Un script <code>sauvegarde.sh</code> qui archive une <strong>liste de dossiers</strong> dans un fichier <code>tar.gz</code> <strong>horodaté</strong>, journalise chaque étape à l'écran et dans un fichier, puis supprime les archives les plus anciennes pour n'en garder qu'un nombre fixé. Enfin, on le planifie avec <code>cron</code> pour qu'il s'exécute chaque nuit.</p></div></div>
 
@@ -139,7 +139,7 @@ IFS=$'\n\t'
 
 # --- Configuration ---
 destination="$HOME/sauvegardes"        # ou l'on depose les archives
-declare -a sources=("$HOME/documents" "$HOME/projets" "/etc")
+declare -a sources=("$HOME/documents" "$HOME/projets")
 garder=7                               # nombre d'archives a conserver
 journal="$destination/sauvegarde.log"
 
@@ -162,7 +162,7 @@ log "Debut de la sauvegarde ($horodatage)"</code></pre></figure>
 
 <h2>Brique 3 — l'archive tar horodatée</h2>
 
-<p>Le cœur du script&nbsp;: <code>tar</code> regroupe les sources en une archive, <code>-z</code> la compresse (gzip), <code>-c</code> crée, <code>-f</code> nomme le fichier. Le nom contient la date&nbsp;: chaque exécution produit une archive distincte, sans écraser la précédente.</p>
+<p>Le cœur du script&nbsp;: <code>tar</code> regroupe les sources en une archive, <code>-z</code> la compresse (gzip), <code>-c</code> crée, <code>-f</code> nomme le fichier. Le nom contient la date&nbsp;: chaque jour produit une archive distincte, sans écraser celle de la veille. Une seconde exécution le même jour, elle, écrit dans le même fichier et remplace la première&nbsp;; pour garder une archive par passage, ajoute l'heure au nom avec <code>date +%F_%H%M%S</code>.</p>
 
 <figure class="code-block" data-file="sauvegarde.sh"><pre><code class="language-bash">log "Archivage de ${#sources[@]} sources vers $archive"
 
@@ -170,19 +170,20 @@ if tar -czf "$archive" "${sources[@]}" 2&gt;&gt; "$journal"; then
   taille="$(du -h "$archive" | cut -f1)"
   log "Archive creee : $archive ($taille)"
 else
-  log "[ERREUR] echec de tar, sauvegarde interrompue"
+  printf '%s [ERREUR] %s\n' "$(date +%FT%T)" "echec de tar, sauvegarde interrompue" \
+    | tee -a "$journal" &gt;&amp;2
   exit 1
 fi</code></pre></figure>
 
-<p>Note le <code>"${sources[@]}"</code> entre guillemets&nbsp;: chaque dossier reste un argument distinct, même si son chemin contient une espace. Les erreurs de <code>tar</code> sont ajoutées au journal via <code>2&gt;&gt;</code>. Le <code>if tar …; then</code> teste le succès&nbsp;: sous <code>set -e</code>, c'est ainsi qu'on réagit à un échec au lieu de subir un arrêt brutal.</p>
+<p>Note le <code>"${sources[@]}"</code> entre guillemets&nbsp;: chaque dossier reste un argument distinct, même si son chemin contient une espace. Les messages de <code>tar</code> sont ajoutés au journal via <code>2&gt;&gt;</code>&nbsp;: ses erreurs, mais aussi l'avertissement <code>Removing leading `/' from member names</code>, qu'il émet à chaque lancement réussi quand les sources sont des chemins absolus. La ligne d'erreur, elle, n'appelle pas <code>log()</code>, qui écrirait <code>[INFO]</code> devant&nbsp;: elle reprend son <code>printf</code> avec le niveau <code>[ERREUR]</code>. Le <code>if tar …; then</code> teste le succès&nbsp;: sous <code>set -e</code>, c'est ainsi qu'on réagit à un échec au lieu de subir un arrêt brutal.</p>
 
 <h2>Brique 4 — la rotation</h2>
 
-<p>Sans ménage, le dossier de sauvegardes gonfle jusqu'à saturer le disque. La <strong>rotation</strong> ne garde que les <code>garder</code> archives les plus récentes. On liste les archives triées par date (<code>ls -1t</code>, la plus récente d'abord), on saute les <code>garder</code> premières, et on supprime le reste.</p>
+<p>Sans ménage, le dossier de sauvegardes gonfle jusqu'à saturer le disque. La <strong>rotation</strong> ne garde que les <code>garder</code> archives les plus récentes. On liste les archives triées par date (<code>ls -1t</code>, la plus récente d'abord), on saute les <code>garder</code> premières, et on supprime le reste. <code>xargs</code> découpe d'ordinaire ce qu'il reçoit aux espaces&nbsp;: <code>-d '\n'</code> lui fait prendre chaque ligne entière comme un seul nom, pour que la rotation tienne aussi quand le chemin contient une espace.</p>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 176" role="img" aria-label="La rotation des sauvegardes. On liste toutes les archives triées de la plus récente à la plus ancienne. Les trois premières, ici numérotées, sont conservées car on a fixé garder à trois. Toutes les archives au-delà du rang trois, plus anciennes, sont supprimées. La commande tail plus n plus quatre saute les trois premières lignes et ne renvoie que les suivantes, qui sont passées à rm.">
-    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">ls -1t | tail -n +$((garder+1)) | xargs -r rm --   (garder=3)</text>
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">ls -1t | tail -n +$((garder+1)) | xargs -r -d '\n' rm --   (garder=3)</text>
     <rect class="d-accent" x="24" y="44" width="176" height="30" rx="5" /><text class="d-text" x="112" y="64" text-anchor="middle" font-size="9.5" font-family="monospace">…07-23.tar.gz</text>
     <rect class="d-accent" x="24" y="80" width="176" height="30" rx="5" /><text class="d-text" x="112" y="100" text-anchor="middle" font-size="9.5" font-family="monospace">…07-22.tar.gz</text>
     <rect class="d-accent" x="24" y="116" width="176" height="30" rx="5" /><text class="d-text" x="112" y="136" text-anchor="middle" font-size="9.5" font-family="monospace">…07-21.tar.gz</text>
@@ -201,9 +202,10 @@ fi</code></pre></figure>
 # -1t : une par ligne, triees par date (recente d'abord)
 # tail -n +N : a partir de la N-ieme ligne
 # xargs -r : ne lance rm QUE s'il y a quelque chose a supprimer
+# -d '\n' : un nom par ligne, meme si le chemin contient une espace
 ls -1t "$destination"/sauvegarde-*.tar.gz 2&gt;/dev/null \
   | tail -n +"$(( garder + 1 ))" \
-  | xargs -r rm --
+  | xargs -r -d '\n' rm --
 
 log "Sauvegarde terminee avec succes"</code></pre></figure>
 
@@ -211,7 +213,7 @@ log "Sauvegarde terminee avec succes"</code></pre></figure>
 
 <h2>Brique 5 — planifier avec cron</h2>
 
-<p>Un dernier maillon&nbsp;: l'automatisation. <code>cron</code> exécute des commandes à heure fixe. On édite sa table avec <code>crontab -e</code> et on décrit l'horaire avec cinq champs.</p>
+<p>Un dernier maillon&nbsp;: l'automatisation. <code>cron</code> exécute des commandes à heure fixe. On édite sa table avec <code>crontab -e</code> et on décrit l'horaire avec cinq champs. Comme <code>cron</code> appelle le script par son chemin, celui-ci doit d'abord avoir le droit d'exécution (<code>chmod +x</code>, leçon 06).</p>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 150" role="img" aria-label="Anatomie d'une ligne cron. Cinq champs séparés par des espaces précèdent la commande. Le premier champ est la minute, ici zéro. Le deuxième est l'heure, ici deux, donc deux heures du matin. Le troisième est le jour du mois, une étoile signifiant chaque jour. Le quatrième est le mois, étoile pour chaque mois. Le cinquième est le jour de la semaine, étoile pour chaque jour. Vient enfin la commande à exécuter, ici le chemin du script de sauvegarde.">
@@ -227,7 +229,10 @@ log "Sauvegarde terminee avec succes"</code></pre></figure>
   <figcaption>Cinq champs — minute, heure, jour, mois, jour de semaine — puis la commande.</figcaption>
 </figure>
 
-<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Editer sa crontab
+<figure class="code-block" data-file="Terminal"><pre><code class="language-bash"># Donner le droit d'execution au script (une seule fois)
+chmod +x /home/noah/sauvegarde.sh
+
+# Editer sa crontab
 crontab -e
 
 # Ligne a ajouter : tous les jours a 2 h du matin
@@ -240,7 +245,7 @@ crontab -l</code></pre></figure>
 
 <h2>Le script complet</h2>
 
-<p>Voici les cinq briques assemblées. Lis-le en repérant chaque leçon du cours&nbsp;: mode strict (11), tableau (14), fonction et <code>&gt;&amp;2</code> (08, 11), <code>tee</code> et redirections (15), <code>tar</code>/<code>ls</code>/<code>xargs</code> (04, 10).</p>
+<p>Voici les cinq briques assemblées. Lis-le en repérant chaque leçon du cours&nbsp;: mode strict (11), tableau (14), fonction et <code>&gt;&amp;2</code> (08, 11), <code>tee</code> et redirections (15), <code>ls</code> (02), <code>xargs</code> (04, 10) et <code>tar</code>, détaillé ici.</p>
 
 <figure class="code-block" data-file="sauvegarde.sh"><pre><code class="language-bash">#!/usr/bin/env bash
 set -euo pipefail
@@ -264,13 +269,14 @@ log "Archivage de ${#sources[@]} sources"
 if tar -czf "$archive" "${sources[@]}" 2&gt;&gt; "$journal"; then
   log "Archive creee : $archive ($(du -h "$archive" | cut -f1))"
 else
-  log "[ERREUR] echec de tar"; exit 1
+  printf '%s [ERREUR] %s\n' "$(date +%FT%T)" "echec de tar" | tee -a "$journal" &gt;&amp;2
+  exit 1
 fi
 
 # Rotation : ne garder que les $garder plus recentes
 ls -1t "$destination"/sauvegarde-*.tar.gz 2&gt;/dev/null \
   | tail -n +"$(( garder + 1 ))" \
-  | xargs -r rm --
+  | xargs -r -d '\n' rm --
 log "Sauvegarde terminee avec succes"</code></pre></figure>
 
 <h2>Antisèche</h2>
@@ -281,12 +287,12 @@ log "Sauvegarde terminee avec succes"</code></pre></figure>
     <tbody>
       <tr><td>Mode strict</td><td><code>set -euo pipefail</code></td><td>11</td></tr>
       <tr><td>Liste de sources</td><td><code>declare -a sources=(…)</code></td><td>14</td></tr>
-      <tr><td>Date pour le nom</td><td><code>date +%F</code></td><td>04</td></tr>
+      <tr><td>Date pour le nom</td><td><code>date +%F</code></td><td>05</td></tr>
       <tr><td>Archive compressée</td><td><code>tar -czf a.tgz dossiers</code></td><td>—</td></tr>
       <tr><td>Lister une archive</td><td><code>tar -tzf a.tgz</code></td><td>—</td></tr>
       <tr><td>Journal à l'écran + fichier</td><td><code>… | tee -a journal</code></td><td>15</td></tr>
-      <tr><td>Rotation</td><td><code>ls -1t | tail -n +N | xargs -r rm</code></td><td>10</td></tr>
-      <tr><td>Planifier</td><td><code>crontab -e</code> → <code>0 2 * * *</code></td><td>10</td></tr>
+      <tr><td>Rotation</td><td><code>ls -1t | tail -n +N | xargs -r -d '\n' rm</code></td><td>10</td></tr>
+      <tr><td>Planifier</td><td><code>crontab -e</code> → <code>0 2 * * *</code></td><td>08</td></tr>
     </tbody>
   </table>
 </figure>
@@ -298,7 +304,7 @@ log "Sauvegarde terminee avec succes"</code></pre></figure>
   <dt>Rotation</dt><dd>Suppression des sauvegardes les plus anciennes pour n'en conserver qu'un nombre fixé, afin de borner l'espace disque.</dd>
   <dt>Idempotent</dt><dd>Se dit d'une opération relançable sans effet de bord&nbsp;: <code>mkdir -p</code> ne casse pas si le dossier existe déjà.</dd>
   <dt><code>cron</code> / <code>crontab</code></dt><dd>Planificateur de tâches Unix&nbsp;; <code>crontab -e</code> édite la table, cinq champs décrivent l'horaire avant la commande.</dd>
-  <dt><code>xargs -r</code></dt><dd>Construit une commande à partir de l'entrée&nbsp;; <code>-r</code> ne la lance pas si l'entrée est vide (pas de <code>rm</code> à blanc).</dd>
+  <dt><code>xargs -r</code></dt><dd>Construit une commande à partir de l'entrée&nbsp;; <code>-r</code> ne la lance pas si l'entrée est vide (pas de <code>rm</code> à blanc)&nbsp;; <code>-d '\n'</code> prend chaque ligne comme un seul argument.</dd>
   <dt>Règle 3-2-1</dt><dd>3 copies, sur 2 supports, dont 1 hors site&nbsp;: le garde-fou classique contre la perte de données.</dd>
   <dt><code>du -h</code></dt><dd>Affiche la taille d'un fichier ou dossier en unités lisibles (Ko, Mo, Go).</dd>
 </dl>
@@ -308,7 +314,7 @@ log "Sauvegarde terminee avec succes"</code></pre></figure>
 <ul>
 <li>Un script de production réunit&nbsp;: préambule strict, configuration groupée, journal, action, ménage.</li>
 <li><code>tar -czf</code> crée l'archive&nbsp;; un nom <strong>horodaté</strong> évite d'écraser les précédentes.</li>
-<li>La <strong>rotation</strong> (<code>ls -1t | tail -n +N | xargs -r rm</code>) borne l'espace disque.</li>
+<li>La <strong>rotation</strong> (<code>ls -1t | tail -n +N | xargs -r -d '\n' rm</code>) borne l'espace disque.</li>
 <li>Journaliser avec <code>tee -a</code> pour voir <em>et</em> garder une trace&nbsp;; vérifier une archive avec <code>tar -tzf</code>.</li>
 <li><code>cron</code> automatise&nbsp;: la meilleure sauvegarde est celle qui se lance seule.</li>
 </ul>
@@ -327,9 +333,9 @@ log "Sauvegarde terminee avec succes"</code></pre></figure>
 
 <script type="application/json" data-exos>
 [
-  {"type":"text","accept":["tar -czf","tar czf","tar -czvf"],"placeholder":"la commande (options comprises) pour CRÉER une archive compressée gzip : tar … archive.tar.gz dossiers","hints":["c pour créer, z pour gzip, f pour le fichier.","tar -???f archive.tar.gz …","Trois lettres après le tiret."],"link":{"href":"lecon-16.html","label":"Revoir « L'archive tar »"}},
-  {"type":"text","accept":["tar -tzf","tar tzf","-t"],"placeholder":"la commande pour LISTER le contenu d'une archive sans l'extraire : tar … archive.tar.gz","hints":["t comme « table des matières ».","tar -??f archive.tar.gz","Remplace le c de création par t."],"link":{"href":"lecon-16.html","label":"Revoir « Vérifier une archive »"}},
-  {"type":"text","accept":["crontab -e","crontab"],"placeholder":"la commande pour ÉDITER sa table de tâches planifiées : …","hints":["cron + table.","… -e pour éditer, -l pour lister.","crontab -?"],"link":{"href":"lecon-16.html","label":"Revoir « Planifier avec cron »"}}
+  {"type":"text","accept":["tar -czf","tar czf","tar -zcf","tar zcf","tar -czvf","tar czvf","tar -cvzf","tar cvzf","-czf","czf","-zcf","-czvf"],"placeholder":"la commande (options comprises) pour CRÉER une archive compressée gzip : tar … archive.tar.gz dossiers","hints":["c pour créer, z pour gzip, f pour le fichier.","tar -???f archive.tar.gz …","Trois lettres après le tiret."],"link":{"href":"lecon-16.html","label":"Revoir « L'archive tar »"}},
+  {"type":"text","accept":["tar -tzf","tar tzf","tar -ztf","tar ztf","tar -tf","tar tf","-tzf","tzf","-ztf","-tf","tf"],"placeholder":"la commande pour LISTER le contenu d'une archive sans l'extraire : tar … archive.tar.gz","hints":["t comme « table des matières ».","tar -??f archive.tar.gz","Remplace le c de création par t."],"link":{"href":"lecon-16.html","label":"Revoir « Vérifier une archive »"}},
+  {"type":"text","accept":["crontab -e"],"placeholder":"la commande pour ÉDITER sa table de tâches planifiées : …","hints":["cron + table.","… -e pour éditer, -l pour lister.","crontab -?"],"link":{"href":"lecon-16.html","label":"Revoir « Planifier avec cron »"}}
 ]
 </script>
 
@@ -340,9 +346,9 @@ tar -czf "docs-$date.tar.gz" "$HOME/documents"
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris la ligne de rotation qui, dans le dossier courant, ne garde que les <strong>5</strong> archives <code>sauvegarde-*.tar.gz</code> les plus récentes et supprime les autres.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">ls -1t sauvegarde-*.tar.gz 2&gt;/dev/null \
   | tail -n +6 \
-  | xargs -r rm --
+  | xargs -r -d '\n' rm --
 # -1t : triees, recente d'abord ; tail -n +6 : a partir de la 6e
-# (on saute les 5 gardees) ; xargs -r rm : supprime le reste</code></pre></figure></details></div>
+# (on saute les 5 gardees) ; xargs -r -d '\n' rm : supprime le reste</code></pre></figure></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris une ligne <code>cron</code> qui lance <code>~/sauvegarde.sh</code> chaque lundi à 3&nbsp;h&nbsp;30 du matin, en ajoutant sa sortie (et ses erreurs) à <code>~/cron.log</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash"># Dans crontab -e :
 30 3 * * 1 /home/noah/sauvegarde.sh &gt;&gt; /home/noah/cron.log 2&gt;&amp;1
