@@ -101,7 +101,7 @@
 
 <h2>Des exemples choisis à la propriété</h2>
 
-<p>Un test classique affirme un lien entre <em>une</em> entrée et <em>une</em> sortie. Un test <strong>basé sur les propriétés</strong> (<em>property-based testing</em>, PBT) affirme une <strong>règle qui doit tenir pour toutes les entrées</strong>, puis laisse l'outil <em>générer</em> les cas aléatoires — une centaine par défaut, des centaines ou des milliers si on le lui demande — pour tenter de la mettre en défaut.</p>
+<p>Un test classique affirme un lien entre <em>une</em> entrée et <em>une</em> sortie. Un test <strong>basé sur les propriétés</strong> (<em>property-based testing</em>, PBT) affirme une <strong>règle qui doit tenir pour toutes les entrées</strong>, puis laisse l'outil <em>générer</em> les cas aléatoires — une centaine par défaut avec fast-check, des centaines ou des milliers si on le lui demande — pour tenter de la mettre en défaut.</p>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 224" role="img" aria-label="À gauche, l'approche par exemples choisis : trois points isolés sur un plan, soit trois cas testés à la main. À droite, l'approche par propriété : un nuage dense de points générés automatiquement couvre le plan, et l'un d'eux, en évidence, est un contre-exemple découvert par l'outil.">
@@ -139,7 +139,7 @@ test("trier est idempotent", () =&gt; {
 
 <h2>Le shrinking : un contre-exemple minimal</h2>
 
-<p>Quand une propriété tombe, l'outil ne se contente pas de crier «&nbsp;ça casse pour <code>[847, -12, 91, 847, 0, 6]</code>&nbsp;». Il <strong>réduit</strong> (<em>shrink</em>) automatiquement ce contre-exemple vers le plus <em>petit</em> qui échoue encore — un tableau d'un ou deux éléments, comme <code>[0, 0]</code> ou <code>[1]</code>. Ce cas minimal pointe droit vers la cause.</p>
+<p>Quand une propriété tombe, l'outil ne se contente pas de crier «&nbsp;ça casse pour <code>[847, -12, 91, 847, 0, 6]</code>&nbsp;». Il <strong>réduit</strong> (<em>shrink</em>) automatiquement ce contre-exemple vers le plus <em>petit</em> qui échoue encore — souvent un tableau d'un ou deux éléments, comme <code>[0, 0]</code> ou <code>[1]</code>. Ce cas minimal pointe droit vers la cause.</p>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 168" role="img" aria-label="Un contre-exemple volumineux à gauche est réduit par étapes successives : un tableau de six nombres devient quatre nombres, puis trois, jusqu'à un cas minimal de deux zéros qui échoue toujours. Une flèche indique la réduction progressive.">
@@ -166,7 +166,8 @@ test("trier est idempotent", () =&gt; {
   <li><strong>Métamorphique</strong>&nbsp;: une relation entre deux appels. <code>trier(tab)</code> et <code>trier(mélange(tab))</code> donnent le même résultat.</li>
 </ul>
 
-<figure class="code-block" data-file="proprietes.test.js"><pre><code class="language-javascript">// Aller-retour : un texte JSON relu puis réécrit est identique
+<figure class="code-block" data-file="proprietes.test.js"><pre><code class="language-javascript">// Aller-retour : un texte produit par JSON.stringify, relu puis réécrit, est identique
+// (fc.json() ne génère que de tels textes ; « { "a": 1 } », avec ses espaces, ne reviendrait pas tel quel)
 fc.assert(fc.property(fc.json(), (texte) =&gt;
   expect(JSON.stringify(JSON.parse(texte))).toBe(texte)
 ));
@@ -269,7 +270,7 @@ test("25 ans est majeur", () =&gt; {
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Qu'est-ce qui distingue un test basé sur les propriétés d'un test par l'exemple ?","a":["Il affirme une règle vraie pour TOUTES les entrées et laisse l'outil générer des centaines de cas aléatoires pour tenter de la briser","Il fait générer une à une TOUTES les valeurs d'un type des plus petites aux plus grandes et cette vérification complète prouve alors que la règle universelle tient partout","Il laisse l'outil introduire de petites altérations dans la fonction et vérifie que la suite ÉCHOUE sur chaque mutant","Il demande au générateur de trouver SEUL la sortie correcte de chaque entrée et la compare automatiquement à celle de la fonction"],"correct":0,"explain":"Le PBT renverse la logique : au lieu de fixer une entrée et sa sortie, on énonce une propriété universelle (aller-retour, invariant…) et le framework génère les entrées, y compris les cas extrêmes qu'on n'aurait pas écrits."},
+  {"q":"Qu'est-ce qui distingue un test basé sur les propriétés d'un test par l'exemple ?","a":["Il affirme une règle vraie pour TOUTES les entrées et laisse l'outil générer cent cas aléatoires ou davantage pour tenter de la briser","Il fait générer une à une TOUTES les valeurs d'un type des plus petites aux plus grandes et cette vérification complète prouve alors que la règle universelle tient partout","Il laisse l'outil introduire de petites altérations dans la fonction et vérifie que la suite ÉCHOUE sur chaque mutant","Il demande au générateur de trouver SEUL la sortie correcte de chaque entrée et la compare automatiquement à celle de la fonction"],"correct":0,"explain":"Le PBT renverse la logique : au lieu de fixer une entrée et sa sortie, on énonce une propriété universelle (aller-retour, invariant…) et le framework génère les entrées, y compris les cas extrêmes qu'on n'aurait pas écrits."},
   {"q":"À quoi sert le shrinking lorsqu'une propriété échoue ?","a":["À réduire automatiquement le contre-exemple généré vers le plus petit cas qui échoue encore, pour faciliter le diagnostic","À retirer du générateur toutes les entrées qui font tomber la propriété, pour que la suite redevienne verte au prochain essai","À relancer dix fois de suite la propriété sur le même contre-exemple, pour confirmer que cet échec revient encore à chaque lancement","À supprimer des lignes du code sous test une à une, pour garder la plus petite fonction qui échoue et simplifier le diagnostic"],"correct":0,"explain":"Un contre-exemple aléatoire est souvent volumineux et illisible. Le shrinking le rétrécit pas à pas (ex. [847,-12,91,847,0,6] → [0,0]) jusqu'au cas minimal fautif, qui pointe directement la cause."},
   {"q":"En mutation testing, que révèle un mutant « survivant » ?","a":["Aucun test n'a détecté l'altération : il manque un cas ou une assertion, angle mort de la suite","La suite encaisse cette altération : aucun test ne tombe, sa force de détection est élevée","Le code est faux : aucun test ne contredit la copie modifiée, il faut donc revoir l'original","Une copie mutée reste dans le code : aucune étape ne la retire, l'original doit la remplacer"],"correct":0,"explain":"Un mutant tué = un test a vu la différence. Un mutant survivant = tous les tests restent verts malgré le bug introduit : la suite ne détecte pas ce type d'erreur. Le score de mutation (tués/total) mesure cette force de détection."}
 ]
