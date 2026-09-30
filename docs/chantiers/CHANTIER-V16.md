@@ -8809,6 +8809,93 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       inchangée : préparation (consigne mesurée), vague d'écriture, relecture par contradiction,
       correction en groupes disjoints, contre-relecture des corrections, clôture.
 
+      ### 57ᵉ cours — `docker` (2026-09-30) : **94,7 % → 26,3 %** après la vague, EN COURS (relecture)
+
+      **PRÉPARATION FAITE le 2026-09-30** : `scratchpad/CONSIGNE-DOCKER.md` (commit `458515e`) —
+      94,7 % à la longueur, rangs **55/1/1/0**, **10 327 caractères** à écrire sur 55 questions sur 57,
+      rapport bonne/distracteur **3,13** (107,9 contre 34,5 caractères), lexique **54 exploitables /
+      36 retournées / 55 à mettre en forme**, intrus lexical **94 mots sur 18 questions**, **5 alertes**
+      de biais inverse, **neuf tics de lot** (deux-points médian **25/7**, point-virgule médian 13/0,
+      glose finale entre parenthèses 12/0 ; « parce » **2/17**, tic de DISTRACTEUR), **4 mots fétiches dès
+      le départ** (`docker` 33,9 %, `conteneur` 33,3 %, `compose` 31,1 %, `build` 30,7 %).
+      **Docker n'est pas installé, mais Compose et les Dockerfile S'EXÉCUTENT** : `docker-compose.exe`
+      **v5.5.1** et `hadolint.exe` **2.15.1**, binaires officiels portables dans `scratchpad/compose/` et
+      `scratchpad/hadolint/` (hors git, rien d'installé) ; `docker-compose config` valide, interpole et
+      normalise **sans démon**. Table des erreurs classiques exécutée avant d'être donnée : `"8080:80"` →
+      `target: 80, published: "8080"` ; `"127.0.0.1:5432:5432"` → `host_ip: 127.0.0.1` ; variable du
+      shell **`depuis_shell`** contre `.env` **`depuis_env_file`** (le shell gagne) ; hadolint **DL3007**
+      (`latest`), **DL3020** (`ADD`), **DL3003** (`cd`), **DL3025** (`CMD` forme shell) ; et une nuance :
+      PyYAML (YAML 1.1) lit `22:22` comme **1342**, Compose v5.5.1 comme `target: 22`.
+
+      **LA VAGUE (6 écrivains, patchs posés par `pose.js`) : 170 distracteurs sur 171 réécrits** (le
+      171ᵉ, « Avec le cache de build », gardé : erreur plausible déjà dans son rang), **78 exécutions**
+      citées (Compose `config`, hadolint, Node, documentation). Puis **un dosage de 4 retouches**
+      simulées avant pose (`essai3.js`, copie d'`essai2.js` qui compare au DISQUE et non à `HEAD`) :
+      « la moins bavarde » rendait **28,8 %** dans le sens INVERSE (5 bonnes sur 37 questions
+      tranchées), ramenée sous le seuil par trois bascules (`lecon-01` q1, `lecon-15` q1 et q2), et
+      « écarter les deux extrêmes » **28,1 % → 27,2 %** (`lecon-15` q6 : « docker build » → « docker
+      volume »). Résultat : « la plus longue » **94,7 % → 26,3 %** (rangs **15/14/14/14**), lexique
+      **0/0/0**, intrus lexical **0 mot**, tics **0**, mot fétiche **0 alerte**, biais inverse **0 alerte**,
+      **pire des 44 stratégies 27,2 %**. Questions trahies par 5 indices ou plus : **44 → 0**.
+      `mesure-qcm-intouchable` **0 atteinte** ; `verif-html` **0**. Commit `15a65ba`.
+
+      **37 défauts signalés par les écrivains** (sans y toucher), transmis à la relecture dans
+      `scratchpad/docker-depart/vague-defauts.json`. Les plus lourds, tous prouvés : le projet Compose
+      de `lecon-13` (un service sans profil qui dépend d'un service à profil) est **rejeté comme invalide**
+      par Compose v5.5.1, alors que la page dit qu'il démarre ; `docker system prune --volumes` ne
+      supprime plus que les volumes ANONYMES depuis l'API 1.42 (`lecon-14`, `lecon-15`, et une BONNE
+      RÉPONSE, `lecon-14` q3) ; « `docker logs` montre un OOMKilled » (`lecon-09` : c'est un champ de
+      `docker inspect`) ; une commande multiligne de `lecon-10` dont chaque `\` est suivi d'un
+      commentaire, ce qui la coupe à la première ligne ; deux solutions Postgres sans
+      `POSTGRES_PASSWORD` (`lecon-04`, `lecon-15`), qui s'arrêtent aussitôt.
+
+      **LA RELECTURE PAR CONTRADICTION (6 relecteurs, lecture seule, CORPS compris) : 126 FAUTES,
+      136 vérifications exécutées (Compose `config`, hadolint, bash, `normExo` rejoué, source de
+      l'entrypoint Postgres) ou sourcées, 173 affirmations confirmées justes.** ⚠️ Le premier passage a
+      été **coupé par la limite de session** (1 lot sur 6 rendu) ; le MÊME workflow a été **repris** à
+      la réouverture du quota, le lot rendu sortant du cache. Par zone : 59 corps, 30 exercices,
+      10 schémas, 10 distracteurs, 6 explain, 4 bonnes réponses, 4 antisèches, 2 glossaires, 1 énoncé.
+      Par nature : 41 fausses, 25 trompeuses, 23 qui ne fonctionnent pas, 21 incohérences,
+      7 inintelligibles, 5 de français, 4 calculs faux — **aucun distracteur vrai**. Par gravité :
+      **8 hautes, 42 moyennes, 76 basses**. Des 37 signalements des écrivains : **34 confirmés, 3 partiels,
+      0 infirmé**. Le trait du cours : **ses exemples ne tournent pas** — un `#` en fin de ligne n'est un
+      commentaire que dans un `RUN` (le shell l'ignore) ; ailleurs c'est un ARGUMENT (référence
+      Dockerfile : « A # marker anywhere else in a line is treated as an argument »), et trois
+      Dockerfile de la page en mouraient.
+
+      **16 CORRIGÉES CETTE PASSE — les 8 hautes et ce qui touche au même passage** (script
+      `scratchpad/docker-sonde/hautes.js`, chaque motif trouvé exactement une fois) :
+      - **les commentaires en fin de ligne** (`lecon-03`, `lecon-06`, `lecon-11`) : `USER app  # …`
+        donnait un utilisateur inexistant, `ENTRYPOINT ["python", "serveur.py"]  # …` retombait en
+        forme shell (hadolint 2.15.1 : « unexpected '#' », exit 1) et `COPY . .  # …` recevait les mots
+        du commentaire comme sources (DL3021). Commentaires sur leur propre ligne : **les quatre blocs
+        repassent hadolint** (exit 0, hormis DL3066 *info*) ;
+      - **la commande de durcissement de `lecon-10`**, dont chaque `\` suivi d'un commentaire échappait
+        l'espace et non le saut de ligne : rejouée sous bash avec un `docker()` factice, elle recevait
+        **4 arguments** avant, **13** après (commentaires regroupés au-dessus) ;
+      - **les deux `postgres:16` sans `POSTGRES_PASSWORD`** de `lecon-04` (corps et solution de
+        l'exercice 3) : l'entrypoint officiel fait `exit 1` sur une base neuve ;
+      - **le schéma santé → redémarrage de `lecon-09`**, qui faisait relancer un conteneur *unhealthy*
+        par la restart policy (documentation « Start containers automatically » : toutes les valeurs
+        dépendent d'un arrêt) — flèche retirée, « signalé, pas relancé », `aria-label` et légende
+        réécrits ; et « `docker logs` montre un OOMKilled » (c'est `docker inspect`) ;
+      - **`--volumes`** (`lecon-14` : encadré, texte, schéma, antisèche, exercice, commentaires ;
+        `lecon-15` : explain q12) : depuis Docker Engine 23 il ne supprime que les volumes
+        **ANONYMES** (référence CLI : « Prune anonymous volumes ») ; un volume nommé ne part qu'avec
+        `docker volume prune -a`. **La bonne réponse de `lecon-14` q3 était fausse** : réécrite après
+        **11 candidats simulés** (`essai3.js`), un seul à 0 écart. ⚠️ La correction du corps a rouvert
+        `k` sur deux questions (« en marche » avait quitté la page) : remis dans une phrase vraie.
+      `controle.js --ref=15a65ba` **0 indicateur déplacé**, lexique **0/0/0**, fétiche **0 alerte**, tics
+      **0**, `verif-html` **0**, `verif-donnees` **0 erreur** (index régénérés `--fresh`), `verif-rendu`
+      sur les trois pages touchées **0 erreur** (18 mesures). `mesure-qcm-intouchable docker 15a65ba` :
+      **3 atteintes, toutes délibérées** (bonne réponse et explain de `lecon-14` q3, explain de
+      `lecon-15` q12).
+
+      **RESTE 110 FAUTES (37 moyennes, 73 basses)**, réparties en six groupes disjoints dans
+      `scratchpad/CONSIGNE-DOCKER-CORRECTION.md` (liste `scratchpad/docker-relecture/fautes.json`, champ
+      `traitee`). **Prochain réveil** : correction des 110 (6 correcteurs), contre-relecture des
+      corrections, clôture.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
