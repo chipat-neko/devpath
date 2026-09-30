@@ -8979,7 +8979,7 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       préparation (consigne mesurée), vague d'écriture, relecture par contradiction, correction en
       groupes disjoints, contre-relecture des corrections, clôture.
 
-      ### 58ᵉ cours — `r` (2026-09-30) : **85,7 % → 25,4 %**, EN COURS (vague faite, relecture faite)
+      ### 58ᵉ cours — `r` (2026-09-30) : **85,7 % → 25,4 %**, CLOS
 
       **PRÉPARATION FAITE le 2026-09-30** : `scratchpad/CONSIGNE-R.md` (commit `fe027fe`) — 85,7 % à
       la longueur, rangs **54/4/4/1**, **13 983 caractères** à écrire sur 60 questions sur 63, rapport
@@ -9082,12 +9082,80 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       vertes (232,1 s)** ; 0 CRLF, 0 chargement externe.
       **Site : 6 167 questions, réussite « la plus longue » 40,3 % (`mesure-biais-qcm`).**
 
-      **RESTE À FAIRE pour clore `r`** (consigne prête : `scratchpad/CONSIGNE-R-CORRECTION.md`) :
-      **161 fautes — 43 moyennes, 118 basses**, en six groupes disjoints (26 / 25 / 25 / 30 / 30 / 25),
-      dont quatre bonnes réponses à retoucher avec prudence et les distracteurs qui recopient mot
-      pour mot la première moitié de la bonne réponse (`lecon-05` q1, `lecon-11` q1) ; puis la
-      contre-relecture du diff depuis `ce3bc19` (les 19 de cette passe comprises), et la clôture
-      (`traite: true`, désignation du 59ᵉ cours).
+      **LES 161 FAUTES RESTANTES CORRIGÉES (réveil suivant, même jour ; commit `af52988`)** — six
+      correcteurs en fichiers disjoints (26 / 25 / 25 / 30 / 30 / 25), consigne
+      `scratchpad/CONSIGNE-R-CORRECTION.md` : **161 corrigées, 0 laissée**. Nature des preuves :
+      **111 par exécution sous webR**, 19 par la source (titres `<h2>` réels, NEWS de R 4.2/4.3),
+      30 par relecture, 1 de mémoire. **10 atteintes délibérées à l'intouchable** (4 bonnes réponses,
+      6 explain), chacune simulée par `essai3.js`. Ce qui a été rejoué et recopié de R : le modèle de
+      `lecon-17` (ajusté sur `air`, 116 lignes : **−146,995 et 2,429**, prédiction à 80 °F
+      **47,30077**), `fct_reorder()` croissant par défaut, `wday(label = TRUE)` qui commence au
+      dimanche, `NA^0` → **1** (« presque toute opération avec NA donne NA »), `sapply(groupes,
+      range)` → **matrice 2 × 2**, `read.csv` qui ne fabrique plus de facteurs depuis R 4.0
+      (`class(...)` → `"character"`), `set.seed(1)` posé en tête du bloc `rnorm(5)` / `runif(5)`.
+      `normExo` rejoué par chaque correcteur sur les exercices de ses leçons : 0 placeholder ni
+      indice accepté. 6 déplacements de `k` apparus en route (« sortie », « taille », « variable », « laisse »,
+      « réglage », « ampleur ») nommés par `kdiff.js` et refermés. `controle.js --ref=ce3bc19`
+      **0 indicateur déplacé**, lexique **0/0/0**, fétiche **0**, tics **0**, `verif-html` **0**,
+      mojibake de `lecon-06` intact (2/2).
+
+      **LA CONTRE-RELECTURE DES CORRECTIONS (6 agents, lecture seule, diff depuis `ce3bc19`, les
+      19 hautes comprises ; commit `9e32d9d`) : 296 blocs exécutés, 293 passages examinés, 266
+      confirmés justes — 42 PRISES** : **26 sur les corrections** (23 corrections distinctes sur 180,
+      soit **12,8 %** — la part la plus basse des cinq cours mesurés : 18,2 / 25,0 / 29,0 / 23,8 %),
+      **16 hors liste confirmées** ; 4 moyennes, 38 basses, **aucun distracteur devenu vrai au sens
+      strict** (un seul lisible comme vrai, `lecon-09` : « tous les tirages aient les mêmes nombres »
+      est vrai d'une exécution à l'autre — réécrit « deux tirages à la file », `identical(a1, a2)` →
+      `FALSE`). Les quatre moyennes, toutes rejouées par l'orchestrateur
+      (`scratchpad/r-contre/moi.R`) avant d'être écrites :
+      - **`lecon-16`, la règle de `pmap()` énoncée à l'envers** par la correction : ce n'est pas
+        « chaque argument porte le nom d'une colonne », c'est chaque COLONNE qui doit trouver son
+        argument — `pmap_dbl(lignes3, \(prix, quantite) …)` avec une colonne `tva` en plus s'arrête
+        sur « unused argument (tva = …) », et un argument sans colonne (`remise = 0`) marche ;
+      - **`lecon-11`** : la phrase corrigée valait pour `map_dbl` et était écrite pour les QUATRE
+        variantes — `map_chr(list(1L, TRUE))` rend « Can't coerce from an integer to a string » ;
+      - **`lecon-06`** : la phrase ajoutait « inconnu » aux textes tenant lieu de valeur manquante,
+        le vecteur `na =` du code juste après ne le contenait pas (colonne restée `<chr>`, moyenne
+        `NA` ; avec « inconnu » : `<dbl>`, moyenne **2**) ;
+      - **`lecon-09`**, le distracteur ci-dessus.
+      Parmi les basses : les coefficients de `lecon-17` recopiés cette fois TELS QUE R LES IMPRIME
+      (`-146.995491 18.2871736 -8.038174 9.366854e-13`), `#| message: false` ajouté au rapport
+      Quarto (le `library(dplyr)` de la passe précédente y aurait imprimé ses messages), `vapply`
+      qui ne refuse pas « tout » autre type (`vapply(1:3, \(i) i > 1, numeric(1))` → `0 1 1`), six
+      listes `accept` élargies à la forme que la leçon enseigne (`t.test(groupe_a, groupe_b)`,
+      `cor(gens$experience, gens$salaire)`, `'\\d'`, `if_else`…), deux séries d'indices remises dans
+      l'ordre (le premier donnait la réponse), « cylindrée » pour `cyl` (c'est `disp`), trois
+      « couches » du schéma de `lecon-07` devenues « briques » (`length(p$layers)` → **1**).
+      **41 corrigées, 1 laissée** : le distracteur 3 de `lecon-10` q1 (« les prédicteurs sont hp tout
+      seul », pluriel bancal, gravité basse) — **7 candidats posés ou simulés, aucun à 0 écart**
+      (« sont » et « prédicteurs » sont des mots de l'énoncé : les retirer ouvre l'écho ; une
+      virgule ouvre « la plus détaillée », « pas » ouvre « la seule qui nie »). ⚠️ La pose des 42
+      règles a d'abord déplacé **4 questions** (`controle.js`), dont trois par le texte même que les
+      contradicteurs proposaient : « matrice » entré dans le corps de `lecon-03` (k de la bonne
+      réponse 1 → 0 ; le corps dit maintenant « en tableau, si chaque appel rend plusieurs
+      valeurs »), « (convertis) » (9 lettres) dans `lecon-11` (devenu « (réels) »), et les deux
+      distracteurs du bilan (`lecon-17` q7, réécrits « Le contenu à afficher par un navigateur » et
+      « Une mesure par capteurs embarqués », mêmes longueurs 39 et 33, mêmes `w` et `k`).
+      État final : `controle.js --ref=ce3bc19` **0 indicateur déplacé**, lexique **0/0/0**, fétiche
+      **0 alerte**, tics **0**, `normExo` 0 fuite, `verif-html` **0**, `verif-rendu` sur six pages
+      **0 erreur** (36 mesures). `mesure-qcm-intouchable r ce3bc19` : **15 atteintes, toutes
+      délibérées** (4 bonnes réponses, 11 explain).
+
+      **CLÔTURE** : cliquets refigés — `verif-qcm-biais.js --ecrire`, `r` marqué `traite`
+      (**57 cours**), longueur **25,4 %**, pire indice du cours **27,0 %** (« écarter les deux
+      extrêmes ») ; `verif-qcm-lexique.js --ecrire`. `tools/doc/gen.js`, assembleurs `etude-inconnu` /
+      `etude-recherche` et `build-index --write --fresh` (quiz, flashcards, search, searchlite,
+      antisèches, pièges) : **point fixe au 3ᵉ tour** (empreinte du diff identique aux tours 2 et 3).
+      `verif-donnees` **0 erreur** ; `verif.js --rapide` **53 étapes vertes (204,3 s)** ; 0 CR,
+      0 BOM, JSON valide, 0 chargement externe.
+      **Site : 6 167 questions, réussite « la plus longue » 40,3 % (`mesure-biais-qcm`), 57 cours
+      traités, 33 restants.**
+
+      **LE 59ᵉ COURS EST DÉSIGNÉ — `bash`.** Classement par nocivité réelle sur les **33 cours
+      restants** (`qcm-biais-reference.json`), `stats` exclu : `bash` (56 questions, 95,5 %)
+      **53,5 devinables**, à égalité avec `tests` 53,5 (57 questions, 93,9 %) — départagés par le
+      taux ; puis `pascal` 53,3, `fsharp` 52,3, `linux` 52,0, `prolog` 52,0, `vb` 52,0, `objc` 51,7.
+      Bash est dans Git Bash : les exemples s'exécutent sans rien installer. Méthode inchangée.
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
