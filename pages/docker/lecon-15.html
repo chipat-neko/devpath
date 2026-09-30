@@ -100,7 +100,7 @@
 <p>Au début de ce cours, Docker était un mot mystérieux. Tu sais maintenant écrire un Dockerfile, gérer volumes et réseaux, orchestrer avec Compose, optimiser une image, la publier, la déboguer, la sécuriser, la configurer (ENTRYPOINT, ARG, ENV) et la construire pour plusieurs plateformes. Ce <strong>projet de synthèse</strong> les fait converger&nbsp;: prendre une application, la conteneuriser <strong>de bout en bout</strong>, et la mener jusqu'à un déploiement <strong>reproductible</strong>. C'est exactement le chemin d'un vrai projet.</p>
 
 <h2>La démarche, du code à la production</h2>
-<p>Conteneuriser sérieusement suit toujours le même fil&nbsp;: on <strong>emballe</strong> l'application dans une image, on <strong>compose</strong> les services qui vont ensemble, on <strong>publie</strong> une image identifiée, puis on la <strong>déploie</strong> à l'identique. Chaque étape mobilise une leçon du cours.</p>
+<p>Conteneuriser sérieusement suit toujours le même fil&nbsp;: on <strong>emballe</strong> l'application dans une image, on <strong>publie</strong> une image identifiée, puis on la <strong>déploie</strong> à l'identique, en laissant Compose lancer les services qui vont ensemble. Chaque étape mobilise une leçon du cours.</p>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 214" role="img" aria-label="Le parcours complet, du code à la production, sur deux rangées. Première rangée, la construction : le code source passe dans un Dockerfile multi-stage, qui produit une image, laquelle est scannée pour ses vulnérabilités puis étiquetée avec une version. Deuxième rangée, la livraison : l'image étiquetée est poussée dans un registre, tirée par le serveur de production, puis lancée via Compose avec healthcheck et politique de redémarrage. Le durcissement de sécurité s'applique tout au long. Le même artefact, identifié par sa version, voyage d'un bout à l'autre.">
@@ -186,7 +186,7 @@ volumes:
 <h2>L'image, construite en deux temps</h2>
 <p>Le <code>compose.yaml</code> orchestre, mais chaque image mérite d'être <strong>légère</strong>. Le projet final s'appuie sur un Dockerfile <strong>multi-stage</strong>&nbsp;: une première étape compile avec tous les outils, une seconde ne garde que le résultat. C'est ce qui sépare une image d'un giga-octet d'une image de cent cinquante méga-octets.</p>
 <figure class="diagram">
-  <svg viewBox="0 0 640 184" role="img" aria-label="Le principe du build multi-étapes. À gauche, une première étape nommée build part d'une image Node complète avec les outils de compilation : elle installe toutes les dépendances puis compile l'application, produisant un dossier dist. Cette étape est lourde et sera jetée. Au centre, l'instruction COPY --from=build ne récupère que le dossier dist. À droite, l'image finale repart d'une base Node propre et ne contient que le dist et les dépendances de production, avec un utilisateur non-root : elle est légère et c'est elle qu'on déploie.">
+  <svg viewBox="0 0 640 184" role="img" aria-label="Le principe du build multi-étapes. À gauche, une première étape nommée build part de l'image node:20-alpine : elle installe toutes les dépendances, outils de compilation compris, puis compile l'application, produisant un dossier dist. Cette étape est lourde et sera jetée. Au centre, l'instruction COPY --from=build ne récupère que le dossier dist. À droite, l'image finale repart d'une base Node propre et ne contient que le dist et les dépendances de production, avec un utilisateur non-root : elle est légère et c'est elle qu'on déploie.">
     <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Multi-stage : compiler dans une étape jetable, n'embarquer que le résultat</text>
     <rect class="d-box" x="20" y="42" width="230" height="126" rx="10" stroke-dasharray="5 4" /><text class="d-tag" x="135" y="60" text-anchor="middle" font-size="9">étape « build » (jetée)</text>
     <text class="d-mut" x="135" y="80" text-anchor="middle" font-size="8">node:20-alpine + outils</text>
@@ -248,21 +248,21 @@ volumes:
 [
   {"q":"Dans quel ordre mène-t-on une application à la production avec Docker ?","a":["Emballer (Dockerfile) → publier (tag + registre) → déployer (Compose, robustesse, sécurité)","Publier (Dockerfile, code sur le registre) → emballer (build sur le serveur) → déployer (Compose, restart)","Emballer (Dockerfile) → déployer (Compose, robustesse) → publier (tag + registre, une fois le service en ligne)","Déployer (Compose, volumes) → emballer (Dockerfile) → publier à la fin (tag, registre)"],"correct":0,"explain":"On construit d'abord une image (Dockerfile), on l'identifie et on la pousse sur un registre, puis on la déploie à l'identique (souvent via Compose), avec healthcheck, restart et durcissement."},
   {"q":"Pourquoi construire l'image une seule fois puis la déployer telle quelle en test, pré-prod et prod ?","a":["Pour déployer exactement le même artefact partout ; seule la configuration change selon l'environnement","Pour déployer plus vite ; relancer le build de l'image selon l'environnement donne un artefact reproductible","Pour figer dans l'image les variables et les secrets du serveur ; le test tourne selon la même configuration","Pour publier sous le tag latest ; une seule version suffit alors en prod selon la règle Twelve-Factor"],"correct":0,"explain":"Reconstruire à chaque environnement produirait des images potentiellement différentes. On fige un artefact (image:1.0.0) et on n'ajuste que la config (variables, secrets) : c'est le principe Twelve-Factor."},
-  {"q":"Qu'apporte un compose.yaml versionné dans le dépôt ?","a":["La reproductibilité : n'importe qui (et la prod) obtient la même pile avec docker compose up","La sauvegarde : le contenu du volume (ses données) ne se perd plus une fois mis au dépôt du projet","La relève du Dockerfile : ce fichier du dépôt décrit seul l'image (sans FROM) et ne s'en sert plus","La tenue des pics : docker compose lance seul trois copies (pas de Kubernetes) face au trafic"],"correct":0,"explain":"Le fichier décrit services, réseau, volume et santé. Versionné avec le code, il fait démarrer un environnement identique partout, supprimant les bugs « impossibles à reproduire »."}
+  {"q":"Qu'apporte un compose.yaml versionné dans le dépôt ?","a":["La reproductibilité : n'importe qui (et la prod) obtient la même pile avec docker compose up","La sauvegarde : le contenu du volume (ses données) ne se perd plus une fois mis au dépôt du projet","La fin des Dockerfile : ce fichier du dépôt décrit seul l'image (sans FROM) et on n'en rédige plus","La tenue des pics : docker compose lance seul des renforts (pas de Kubernetes) face au trafic"],"correct":0,"explain":"Le fichier décrit services, réseau, volume et santé. Versionné avec le code, il fait démarrer un environnement identique partout, supprimant les bugs « impossibles à reproduire »."}
 ]
 </script>
 
 <h2>Exercices</h2>
 <script type="application/json" data-exos>
 [
-  {"type":"text","accept":["emballer","emballer l'app","emballer l'application","construire l'image","empaqueter"],"placeholder":"la 1re des quatre étapes : ___ l'application dans une image (Dockerfile)","hints":["Elle précède composer, publier, déployer.","On enferme l'app dans une image avec le Dockerfile.","« emb____ »."],"link":{"href":"lecon-15.html","label":"Revoir « La démarche, du code à la production »"}},
+  {"type":"text","accept":["emballer","emballer l'app","emballer l'application","empaqueter","empaqueter l'app","empaqueter l'application","construire","construire l'image"],"placeholder":"la 1re des trois étapes : ___ l'application dans une image (Dockerfile)","hints":["Elle précède publier, puis déployer.","On enferme l'app dans une image avec le Dockerfile.","« emb____ »."],"link":{"href":"lecon-15.html","label":"Revoir « La démarche, du code à la production »"}},
   {"type":"text","accept":["service_healthy","condition: service_healthy","healthy"],"placeholder":"la condition de depends_on qui fait attendre que la base soit réellement SAINE (pas juste lancée)","hints":["Elle s'appuie sur le healthcheck de la dépendance.","depends_on … condition: ????","« en bonne santé » en anglais + service_"],"link":{"href":"lecon-15.html","label":"Revoir le healthcheck"}},
   {"type":"text","accept":["version","tag de version","un tag de version","le tag","tag","1.0.0"],"placeholder":"ce qu'on fige avec image:monapp:1.0.0 et que « latest » laisse ambigu : la ___","hints":["« latest » change dans le temps ; 1.0.0 non.","Elle rend le déploiement traçable et le retour arrière possible.","« la ___ »."],"link":{"href":"lecon-15.html","label":"Revoir « une image traçable »"}},
   null
 ]
 </script>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Cite, dans l'ordre, les quatre grandes étapes pour mener une application du code jusqu'à la production avec Docker.</p><details><summary>Voir une solution</summary><p>1) <strong>Emballer</strong> l'application dans une image (Dockerfile, multi-stage). 2) <strong>Composer</strong> les services qui vont ensemble (Compose&nbsp;: app + base, réseau, volume). 3) <strong>Publier</strong> une image étiquetée sur un registre (scan, tag, <code>push</code>). 4) <strong>Déployer</strong> à l'identique (<code>pull</code> + <code>up</code>, avec healthcheck, restart et durcissement).</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Cite, dans l'ordre, les trois grandes étapes pour mener une application du code jusqu'à la production avec Docker.</p><details><summary>Voir une solution</summary><p>1) <strong>Emballer</strong> l'application dans une image (Dockerfile, multi-stage). 2) <strong>Publier</strong> une image étiquetée sur un registre (scan, tag, <code>push</code>). 3) <strong>Déployer</strong> à l'identique (<code>pull</code> + <code>up</code>), en laissant Compose lancer les services qui vont ensemble (app + base, réseau, volume), avec healthcheck, restart et durcissement.</p></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Ajoute à un service <code>db</code> (PostgreSQL) un healthcheck qui le déclare sain quand la base répond, et fais attendre le service <code>app</code> que <code>db</code> soit sain.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="compose.yaml"><pre><code class="language-yaml">services:
   app:
     build: .
@@ -271,6 +271,8 @@ volumes:
         condition: service_healthy
   db:
     image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: secret
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -283,9 +285,9 @@ volumes:
 <p class="kicker kicker--gold">Étapes</p>
 <div class="steps">
 <div class="step"><h3>L'étape de build</h3><p>Pars de <code>node:20-alpine AS build</code>, copie les <code>package*.json</code>, fais <code>npm ci</code> puis <code>npm run build</code>.</p></div>
-<div class="step"><h3>L'image finale</h3><p>Repars d'une image propre, copie le résultat avec <code>COPY --from=build</code> et installe seulement <code>--omit=dev</code>.</p></div>
+<div class="step"><h3>L'image finale</h3><p>Repars d'une image propre, installe seulement les dépendances de production (<code>--omit=dev</code>), puis copie le résultat avec <code>COPY --from=build</code>&nbsp;: le code, qui change le plus souvent, vient en dernier pour garder le cache.</p></div>
 <div class="step"><h3>Sécuriser</h3><p>Passe en <code>USER node</code>, expose le port et définis le <code>CMD</code>.</p></div>
-<div class="step"><h3>Le Compose</h3><p>Déclare deux services (<code>app</code>, <code>db</code>) avec <code>depends_on</code> et un mappage de <code>ports</code>.</p></div>
+<div class="step"><h3>Le Compose</h3><p>Déclare deux services (<code>app</code>, <code>db</code>) avec un mappage de <code>ports</code>, un healthcheck sur <code>db</code> et un <code>depends_on</code> conditionné à sa santé (<code>service_healthy</code>).</p></div>
 <div class="step"><h3>Persister</h3><p>Ajoute un <strong>volume nommé</strong> pour les données PostgreSQL.</p></div>
 </div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Projet</span><span class="exercise__level">Fil rouge</span></div><p>Assemble les deux fichiers. Essaie d'abord par toi-même, puis compare avec la solution de référence.</p><details><summary>Voir une solution complète</summary><figure class="code-block" data-file="Dockerfile"><pre><code class="language-docker"># Étape 1 : build
@@ -300,9 +302,9 @@ RUN npm run build
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=build /app/dist ./dist
 COPY package*.json ./
 RUN npm ci --omit=dev
+COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 3000
 CMD ["node", "dist/serveur.js"]</code></pre></figure><figure class="code-block" data-file="compose.yaml"><pre><code class="language-yaml">services:
@@ -312,14 +314,22 @@ CMD ["node", "dist/serveur.js"]</code></pre></figure><figure class="code-block" 
       - "3000:3000"
     environment:
       - NODE_ENV=production
+      - DB_HOST=db
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    restart: unless-stopped
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_PASSWORD: secret
     volumes:
       - donnees:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      retries: 5
+    restart: unless-stopped
 
 volumes:
   donnees:</code></pre></figure></details></div>
@@ -334,9 +344,9 @@ volumes:
   {"q":"En développement, qu'apporte docker compose watch par rapport à un simple bind mount ?","a":["Il applique la section develop.watch : synchronisation des fichiers modifiés, et reconstruction automatique quand les dépendances changent","Il inverse le sens du watch : recopie des fichiers modifiés dans le conteneur vers ton répertoire local, et reconstruction automatique quand ceux-ci changent","Il remplace toute synchronisation : une retouche provoque une reconstruction automatique, et docker régénère intégralement la pile complète","Il guette toute la pile compose : relance automatique d'un conteneur planté, et reconstruction rapide dès que son test de santé périodique échoue"],"correct":0,"explain":"Le bind mount rend le code visible dans le conteneur ; watch va plus loin en décidant, chemin par chemin, s'il faut synchroniser (sync) ou reconstruire (rebuild)."},
   {"q":"À quoi sert un HEALTHCHECK ?","a":["Tester périodiquement que l'application répond (healthy / unhealthy)","Relancer périodiquement l'application si elle a planté (restart / always)","Déclarer healthy tout conteneur en marche (running / exited)","Isoler du trafic tout conteneur unhealthy (réseau / routage)"],"correct":0,"explain":"Un conteneur « en cours » n'est pas forcément prêt ; le healthcheck vérifie qu'il est réellement sain."},
   {"q":"Comment détecter les failles connues (CVE) d'une image ?","a":["Par un scan de vulnérabilités, avec docker scout ou Trivy","Par docker inspect, qui liste les dépendances","Par un healthcheck, qui vérifie la santé","Par les logs du service, après un redémarrage"],"correct":0,"explain":"Le scan compare l'image à des bases de vulnérabilités ; mettre à jour l'image de base en corrige souvent la majorité, et une base distroless en laisse beaucoup moins apparaître. On complète par le moindre privilège : USER non-root, rootfs en lecture seule (--read-only), --cap-drop ALL."},
-  {"q":"Dans un Dockerfile, à quoi sert la paire ENTRYPOINT + CMD ?","a":["ENTRYPOINT fixe le programme toujours lancé, CMD fournit ses arguments par défaut, remplaçables au docker run","ENTRYPOINT et CMD désignent le même programme lancé, au choix, la dernière ligne écrite l'emportant toujours au docker run","ENTRYPOINT s'exécute pendant la fabrication, CMD lance le programme principal, au démarrage du service","ENTRYPOINT accepte uniquement la notation exec, CMD la notation shell, contrôlée au démarrage du programme"],"correct":0,"explain":"C'est le motif des images officielles : un comportement par défaut sensé (CMD) sans jamais perdre le programme (ENTRYPOINT). En forme exec, ce programme est PID 1 et reçoit proprement le SIGTERM de docker stop."},
+  {"q":"Dans un Dockerfile, à quoi sert la paire ENTRYPOINT + CMD ?","a":["ENTRYPOINT fixe le programme lancé, CMD fournit ses arguments par défaut, toujours remplaçables au docker run","ENTRYPOINT et CMD désignent le même programme lancé, au choix, la dernière ligne écrite l'emportant toujours au docker run","ENTRYPOINT s'exécute pendant la fabrication, CMD lance le programme principal, au démarrage du service","ENTRYPOINT accepte uniquement la notation exec, CMD la notation shell, contrôlée au démarrage du programme"],"correct":0,"explain":"C'est le motif des images officielles : un comportement par défaut sensé (CMD) sans perdre le programme (ENTRYPOINT), que seul --entrypoint remplace. En forme exec, ce programme est PID 1 et reçoit proprement le SIGTERM de docker stop."},
   {"q":"Comment publier une image utilisable à la fois sur un Mac Apple Silicon et sur un serveur x86 ?","a":["La construire en multi-architecture : docker buildx build --platform linux/amd64,linux/arm64 --push","La pousser de deux postes : docker push moi/app, fusionnée par le registre","Construire sur alpine : son index multi-arch couvre amd64/arm64, sans autre option","Deux dépôts distincts du registre : un tag désigne une seule machine, amd64/arm64"],"correct":0,"explain":"buildx produit une image par architecture et publie un index qui les regroupe sous un seul tag : chaque machine tire la bonne variante, fini le exec format error."},
-  {"q":"Dans une pile (stack) Compose, comment exposer le reverse proxy sur le port 80 sans rendre la base joignable depuis l'extérieur ?","a":["Ne mettre « ports: » que sur le reverse proxy et laisser la base sur un réseau interne, où les autres services la joignent par son nom","Ne pas craindre de mettre « ports: » sur la base comme sur le reverse proxy, un mot de passe robuste bloquant tout intrus venu du réseau vers les services","Ne mettre « ports: » ni sur la base ni sur le reverse proxy, les clients externes joignant les services par leurs noms de réseau interne","Ne mettre « ports: » que sur le reverse proxy et brancher la base sur le réseau host de la machine, les autres services la joignant par son IP"],"correct":0,"explain":"Seul un service publié est atteignable depuis la machine hôte. C'est le principe de la segmentation réseau : sur un réseau interne, les services se parlent par leur nom sans publication, la base reste invisible de l'extérieur et la surface d'attaque se réduit d'autant."},
+  {"q":"Dans une pile (stack) Compose, comment exposer le reverse proxy sur le port 80 sans rendre la base joignable depuis l'extérieur ?","a":["Ne mettre « ports: » que sur le reverse proxy et laisser la base sur un réseau interne, où les autres services la joignent par son nom","Ne pas craindre de mettre « ports: » sur la base comme sur le reverse proxy, un mot de passe robuste bloquant tout intrus venu du réseau vers les services","Ne mettre « ports: » ni sur la base ni sur le reverse proxy, les clients externes joignant les services par leurs noms de réseau interne","Ne mettre « ports: » que sur le reverse proxy et brancher la base sur le réseau host de la machine, les autres services la joignant par son IP"],"correct":0,"explain":"Seul un service publié est atteignable depuis l'extérieur de la machine hôte. C'est le principe de la segmentation réseau : sur un réseau interne, les services se parlent par leur nom sans publication, la base reste invisible de l'extérieur et la surface d'attaque se réduit d'autant."},
   {"q":"Docker occupe 40 Go sur ton disque. Par quoi commences-tu ?","a":["docker system df, pour voir la répartition entre images, conteneurs, volumes et cache de build avant de nettoyer","docker system prune --all --volumes --force, détruisant d'un coup images, cache de build, logs et volumes anonymes","docker compose down -v, qui détruit d'emblée toute la pile, ses instances, ses volumes nommés et ses bases à la fois","docker rm, les conteneurs arrêtés occupant la quasi-totalité des 40 Go, bien avant leurs volumes, journaux et vieux tags"],"correct":0,"explain":"On regarde avant de couper : df montre où part la place, et la colonne « reclaimable » ce qui est récupérable. Le prune total avec --volumes, lui, emporte aussi les volumes anonymes, donc les données d'une base lancée sans volume nommé."}
 ]
 </script>

@@ -109,7 +109,7 @@ docker run -it -v "$(pwd):/app" -w /app node:20 npm run dev</code></pre></figure
 <p>Désormais, <code>/app</code> dans le conteneur <strong>est</strong> ton dossier de travail&nbsp;: chaque fichier que tu enregistres dans l'éditeur est vu instantanément à l'intérieur. Attention à ne pas confondre avec le <strong>volume nommé</strong> de la leçon 4&nbsp;: celui-ci est géré par Docker pour <em>persister des données</em> (une base, par exemple), il est opaque et rangé hors de ton dossier. Le bind mount, lui, expose un dossier bien réel de ton disque — parfait pour le <strong>code en cours d'écriture</strong>.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 180" role="img" aria-label="Le bind mount relie un dossier de l'hôte à un dossier du conteneur. À gauche, ta machine contient un dossier de code source, point slash src, que tu édites dans ton éditeur. À droite, le conteneur possède un dossier slash app où l'application lit le code. L'option -v point slash src deux-points slash app relie les deux : toute modification faite sur l'hôte est visible aussitôt dans le conteneur, sans reconstruire l'image.">
+  <svg viewBox="0 0 640 180" role="img" aria-label="Le bind mount relie un dossier de l'hôte à un dossier du conteneur. À gauche, ta machine contient un dossier de code source, point slash src, que tu édites dans ton éditeur. À droite, le conteneur possède un dossier slash app slash src où l'application lit le code. L'option -v point slash src deux-points slash app slash src relie les deux : toute modification faite sur l'hôte est visible aussitôt dans le conteneur, sans reconstruire l'image.">
     <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le bind mount : un dossier de l'hôte, vu dans le conteneur</text>
     <rect class="d-frame" x="24" y="44" width="248" height="118" rx="6" />
     <text class="d-tag" x="148" y="64" text-anchor="middle" font-size="9.5">Ta machine (hôte)</text>
@@ -117,9 +117,9 @@ docker run -it -v "$(pwd):/app" -w /app node:20 npm run dev</code></pre></figure
     <text class="d-mut" x="148" y="126" text-anchor="middle" font-size="8">tu édites ici, dans VS Code</text>
     <rect class="d-frame" x="368" y="44" width="248" height="118" rx="6" />
     <text class="d-tag" x="492" y="64" text-anchor="middle" font-size="9.5">Conteneur</text>
-    <rect class="d-accent" x="388" y="78" width="208" height="26" rx="4" /><text class="d-text" x="492" y="95" text-anchor="middle" font-size="8.5">/app</text>
+    <rect class="d-accent" x="388" y="78" width="208" height="26" rx="4" /><text class="d-text" x="492" y="95" text-anchor="middle" font-size="8.5">/app/src</text>
     <text class="d-mut" x="492" y="126" text-anchor="middle" font-size="8">l'application lit ici</text>
-    <text class="d-tag" x="320" y="86" text-anchor="middle" font-size="8">-v ./src:/app</text>
+    <text class="d-tag" x="320" y="86" text-anchor="middle" font-size="8">-v ./src:/app/src</text>
     <path class="d-line" d="M272 96 L368 96" fill="none" /><circle class="d-dot" cx="368" cy="96" r="2.5" /><circle class="d-dot" cx="272" cy="96" r="2.5" />
     <text class="d-mut" x="320" y="112" text-anchor="middle" font-size="7.5">modifs visibles aussitôt</text>
   </svg>
@@ -154,7 +154,14 @@ docker run -it -v "$(pwd):/app" -w /app node:20 npm run dev</code></pre></figure
       - "3000:3000"
     volumes:
       - ./:/app            # bind mount : le code de l'hôte dans le conteneur
-    env_file: .env         # charge les variables depuis le fichier .env
+    env_file: .env         # charge les variables depuis le fichier .env</code></pre></figure>
+<p>Et la version <code>watch</code>, <strong>sans</strong> le bind mount&nbsp;: pour un même chemin, c'est l'un <em>ou</em> l'autre. Si un bind mount couvre déjà <code>./src</code>, Compose écarte la règle <code>sync</code> et prévient que ce chemin ne sera pas surveillé.</p>
+<figure class="code-block" data-file="compose.yaml"><pre><code class="language-yaml">services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file: .env
     develop:
       watch:
         - action: sync     # copie les fichiers modifiés dans le conteneur
@@ -162,7 +169,7 @@ docker run -it -v "$(pwd):/app" -w /app node:20 npm run dev</code></pre></figure
           target: /app/src
         - action: rebuild  # reconstruit si les dépendances changent
           path: package.json</code></pre></figure>
-<p>Lancé avec <code>docker compose watch</code>, Compose surveille les chemins déclarés&nbsp;: une modification dans <code>./src</code> est <em>synchronisée</em> à chaud, tandis qu'un changement de <code>package.json</code> déclenche une <em>reconstruction</em>. Tu obtiens un environnement de dev complet (app + base + cache) qui se met à jour tout seul.</p>
+<p>Lancé avec <code>docker compose watch</code> (ou <code>docker compose up --watch</code>&nbsp;: un simple <code>up</code> ne surveille rien), Compose surveille les chemins déclarés&nbsp;: une modification dans <code>./src</code> est <em>synchronisée</em> à chaud, c'est-à-dire copiée dans le conteneur, tandis qu'un changement de <code>package.json</code> déclenche une <em>reconstruction</em>. Ton service <code>web</code> se met à jour tout seul&nbsp;; ajoute une base ou un cache comme services voisins pour obtenir un environnement de dev complet.</p>
 
 <h2>La configuration&nbsp;: variables et <code>.env</code></h2>
 <p>Une application a besoin de <strong>configuration</strong>&nbsp;: URL de base de données, clés, mode debug. On ne la code pas en dur&nbsp;: on la passe par des <strong>variables d'environnement</strong>. Compose lit automatiquement un fichier <code>.env</code> placé à côté du <code>compose.yaml</code> et substitue les <code>${VARIABLES}</code>&nbsp;:</p>
@@ -170,6 +177,7 @@ docker run -it -v "$(pwd):/app" -w /app node:20 npm run dev</code></pre></figure
 APP_PORT=3000</code></pre></figure>
 <figure class="code-block" data-file="compose.yaml"><pre><code class="language-yaml">services:
   web:
+    build: .
     ports:
       - "${APP_PORT}:3000"     # valeur lue depuis .env
   db:
@@ -178,16 +186,16 @@ APP_PORT=3000</code></pre></figure>
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}</code></pre></figure>
 <p>Séparer la <strong>configuration</strong> du <strong>code</strong> permet de changer un port ou un mot de passe sans toucher aux fichiers versionnés&nbsp;; le <code>.env</code>, lui, reste hors du dépôt (via <code>.gitignore</code>).</p>
 
-<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.5.5 1 1.5 1 3h6c0-1.5.5-2.5 1-3a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Protéger <code>node_modules</code> du bind mount</p><p>Piège classique&nbsp;: en montant tout ton dossier (<code>./:/app</code>), tu <strong>écrases</strong> le <code>node_modules</code> installé <em>dans</em> l'image par celui — souvent absent ou incompatible — de ton hôte. La parade&nbsp;: ajouter un <strong>volume anonyme</strong> qui préserve le dossier du conteneur, <code>- /app/node_modules</code>. Déclaré <em>après</em> le bind mount, il «&nbsp;protège&nbsp;» ce sous-dossier et laisse les dépendances de l'image intactes.</p></div></div>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.5.5 1 1.5 1 3h6c0-1.5.5-2.5 1-3a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Protéger <code>node_modules</code> du bind mount</p><p>Piège classique&nbsp;: en montant tout ton dossier (<code>./:/app</code>), tu <strong>écrases</strong> le <code>node_modules</code> installé <em>dans</em> l'image par celui — souvent absent ou incompatible — de ton hôte. La parade&nbsp;: ajouter un <strong>volume anonyme</strong> qui préserve le dossier du conteneur, <code>- /app/node_modules</code>. Plus profond que le bind mount (<code>/app/node_modules</code> sous <code>/app</code>), il est monté <em>par-dessus</em>, quel que soit l'ordre des deux lignes&nbsp;: il «&nbsp;protège&nbsp;» ce sous-dossier et laisse les dépendances de l'image intactes.</p></div></div>
 
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Le bind mount, c'est pour le dev — pas la prod</p><p>En production, une image doit être <strong>autonome</strong>&nbsp;: elle contient son code, on la déploie telle quelle. Un bind mount la rendrait dépendante d'un dossier présent sur le serveur — fragile et non reproductible. Réserve les bind mounts au <strong>développement</strong>&nbsp;; pour la prod, le code est <code>COPY</code>é dans l'image au build (leçon 6). <span class="fraicheur" data-arrete="2026-09-03" data-duree="18">Beaucoup d'équipes ont deux fichiers</span>&nbsp;: <code>compose.yaml</code> (base) et <code>compose.override.yaml</code> (surcouche dev avec les bind mounts).</p></div></div>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 168" role="img" aria-label="Deux usages de l'option -v à ne pas confondre. À gauche, le bind mount : la valeur -v point slash src deux-points slash app relie un dossier précis de ton disque, il est idéal pour le code en développement, et tu vois et édites les fichiers directement. À droite, le volume nommé : la valeur -v donnees deux-points slash var slash lib slash db est gérée par Docker en dehors de ton dossier, elle est idéale pour persister des données comme une base, et elle est opaque, tu n'édites pas dedans.">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Deux usages de l'option -v à ne pas confondre. À gauche, le bind mount : la valeur -v point slash src deux-points slash app slash src relie un dossier précis de ton disque, il est idéal pour le code en développement, et tu vois et édites les fichiers directement. À droite, le volume nommé : la valeur -v donnees deux-points slash var slash lib slash db est gérée par Docker en dehors de ton dossier, elle est idéale pour persister des données comme une base, et elle est opaque, tu n'édites pas dedans.">
     <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Bind mount (dev) ≠ volume nommé (données)</text>
     <rect class="d-frame" x="24" y="40" width="280" height="118" rx="6" />
     <text class="d-tag" x="164" y="60" text-anchor="middle" font-size="9.5">Bind mount</text>
-    <rect class="d-accent" x="44" y="70" width="240" height="24" rx="4" /><text class="d-text" x="164" y="86" text-anchor="middle" font-size="8.5">-v ./src:/app</text>
+    <rect class="d-accent" x="44" y="70" width="240" height="24" rx="4" /><text class="d-text" x="164" y="86" text-anchor="middle" font-size="8.5">-v ./src:/app/src</text>
     <text class="d-mut" x="164" y="110" text-anchor="middle" font-size="8">un dossier précis de TON disque</text>
     <text class="d-mut" x="164" y="126" text-anchor="middle" font-size="8">idéal pour le code en dev</text>
     <text class="d-mut" x="164" y="142" text-anchor="middle" font-size="8">tu vois et édites les fichiers</text>
@@ -201,7 +209,7 @@ APP_PORT=3000</code></pre></figure>
   <figcaption>Même option <code>-v</code>, deux intentions&nbsp;: à <strong>gauche</strong> un chemin de l'hôte (le code, pour développer), à <strong>droite</strong> un nom géré par Docker (les données, pour persister).</figcaption>
 </figure>
 
-<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: le même environnement pour toute l'équipe</p><p>Sur un projet réel, chaque développeur avait «&nbsp;sa&nbsp;» version de Node, «&nbsp;sa&nbsp;» base locale, «&nbsp;ses&nbsp;» variables&nbsp;: les bugs «&nbsp;ça marche chez moi&nbsp;» pullulaient. En passant le dev dans Compose — bind mount du code, base PostgreSQL en service, <code>.env</code> d'exemple versionné — l'intégration est devenue&nbsp;: <code>git clone</code>, <code>cp .env.example .env</code>, <code>docker compose watch</code>. Trois lignes, et chacun code dans <strong>exactement</strong> le même environnement que la production, quelle que soit sa machine. Les incidents d'environnement ont quasiment disparu.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: le même environnement pour toute l'équipe</p><p>Sur un projet réel, chaque développeur avait «&nbsp;sa&nbsp;» version de Node, «&nbsp;sa&nbsp;» base locale, «&nbsp;ses&nbsp;» variables&nbsp;: les bugs «&nbsp;ça marche chez moi&nbsp;» pullulaient. En passant le dev dans Compose — bind mount du code, base PostgreSQL en service, <code>.env</code> d'exemple versionné — l'intégration est devenue&nbsp;: <code>git clone</code>, <code>cp .env.example .env</code>, <code>docker compose watch</code>. Trois lignes, et chacun code dans <strong>exactement</strong> le même environnement que ses collègues (mêmes versions de Node et de PostgreSQL), quelle que soit sa machine. Les incidents d'environnement ont quasiment disparu.</p></div></div>
 
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin&nbsp;: les Dev Containers</p><p><span class="fraicheur" data-arrete="2026-09-03" data-duree="12">VS Code pousse l'idée plus loin avec les <strong>Dev Containers</strong></span>&nbsp;: un fichier <code>.devcontainer/devcontainer.json</code> décrit l'image, les extensions et les réglages de l'éditeur. Ouvre le projet, et VS Code s'exécute <em>à l'intérieur</em> du conteneur&nbsp;: terminal, débogueur, IntelliSense, tout tourne dans l'environnement conteneurisé. GitHub Codespaces s'appuie sur le même format pour offrir un poste de dev complet dans le navigateur.</p></div></div>
 
@@ -223,7 +231,7 @@ APP_PORT=3000</code></pre></figure>
 
 <h2>Glossaire</h2>
 <dl class="glossary">
-  <dt>Bind mount</dt><dd>Montage d'un <strong>dossier précis de l'hôte</strong> dans le conteneur (<code>-v ./src:/app</code>)&nbsp;: les fichiers y sont partagés en direct, idéal pour le code en dev.</dd>
+  <dt>Bind mount</dt><dd>Montage d'un <strong>dossier précis de l'hôte</strong> dans le conteneur (<code>-v ./src:/app/src</code>)&nbsp;: les fichiers y sont partagés en direct, idéal pour le code en dev.</dd>
   <dt>Volume nommé</dt><dd>Stockage géré par Docker, hors de ton dossier, pour <strong>persister des données</strong> (opaque)&nbsp;; à ne pas confondre avec le bind mount.</dd>
   <dt>Rechargement à chaud</dt><dd>Redémarrage automatique de l'application quand le code change&nbsp;; assuré par un <strong>watcher</strong> (nodemon, Vite…).</dd>
   <dt>Watcher</dt><dd>Outil qui surveille les fichiers et relance le process à chaque modification.</dd>
@@ -235,7 +243,7 @@ APP_PORT=3000</code></pre></figure>
 
 <h2>Récap et vérification</h2>
 <ul>
-  <li>Un <strong>bind mount</strong> (<code>-v ./src:/app</code>) rend ton code visible dans le conteneur, sans reconstruire.</li>
+  <li>Un <strong>bind mount</strong> (<code>-v ./src:/app/src</code>) rend ton code visible dans le conteneur, sans reconstruire.</li>
   <li>Un <strong>watcher</strong> (nodemon, Vite…) recharge l'app à chaque sauvegarde&nbsp;: boucle de dev rapide.</li>
   <li>Compose automatise via <code>develop.watch</code> (<code>docker compose watch</code>) et lit la config depuis <code>.env</code>.</li>
   <li>Le bind mount est réservé au <strong>dev</strong>&nbsp;; en prod, le code est inclus dans l'image (autonome).</li>
@@ -247,18 +255,18 @@ APP_PORT=3000</code></pre></figure>
 </ol></div>
 <script type="application/json" data-quiz>
 [
-  {"q":"Comment voir ses modifications de code dans le conteneur sans reconstruire l'image ?","a":["Avec un bind mount : monter le dossier de code de l'hôte dans le conteneur (-v ./src:/app)","Avec un volume nommé : créer un volume géré par Docker et monter le code de l'hôte dans le conteneur (-v code:/app)","Avec -w : l'option lie ton code dans le conteneur, en bind mount (-w /app)","Avec stop et start : le conteneur relit le code dans ./src, à la relance (docker start)"],"correct":0,"explain":"Le bind mount relie un dossier réel de ta machine à un dossier du conteneur : les fichiers édités sont vus instantanément à l'intérieur, sans passer par build."},
-  {"q":"Le bind mount suffit-il à recharger automatiquement l'application ?","a":["Non : il rend les fichiers visibles, mais il faut un watcher (nodemon, Vite, --reload) pour relancer le process quand le code change","Oui : Docker surveille le dossier partagé, redémarre le process dès qu'un fichier change, recharge la page, sans outil (ni nodemon ni Vite) à ajouter","Non : le conteneur ne voit pas les fichiers modifiés, il faut un rebuild de l'image (docker build), relancer le conteneur, le code passe dedans","Oui : Compose lance develop.watch dès le up (pas de section), surveille le dossier, redémarre le conteneur, tout seul"],"correct":0,"explain":"Le bind mount partage les fichiers ; le rechargement à chaud vient d'un outil de surveillance qui détecte les changements et relance l'application. Les deux se combinent."},
-  {"q":"Tu montes tout ton dossier dans le conteneur (volumes: - ./:/app) et l'application ne trouve plus ses dépendances. Pourquoi, et quelle est la parade ?","a":["Le montage a recouvert le node_modules installé DANS l'image par celui de l'hôte (souvent absent) ; on ajoute un volume anonyme - /app/node_modules après le bind mount pour préserver ce sous-dossier","Le .dockerignore qui liste node_modules masque AUSSI /app/node_modules dans le montage (comme au build de l'image) et le bind mount laisse ce sous-dossier vide ; on sort souvent node_modules de la liste - le volume ramène celui de l'hôte avec ses modules","Le bind mount copie les fichiers de l'hôte DANS l'image et écrase son /app/node_modules avec celui de ton poste (souvent vide) ; on relance donc docker build avec ce volume - l'image contient de nouveau ses modules installés","Le volume masque le node_modules de l'image par celui de l'hôte (souvent vide) ; on ajoute l'option ro au bind mount - ce mode figé sert AUSSI à préserver /app/node_modules et le conteneur retrouve les modules de l'image"],"correct":0,"explain":"Un montage masque ce qui existait au même chemin dans l'image. En déclarant après lui un volume anonyme sur /app/node_modules, tu remets par-dessus les dépendances de l'image : ton code reste partagé en direct, mais les dépendances installées au build restent intactes."}
+  {"q":"Comment voir ses modifications de code dans le conteneur sans reconstruire l'image ?","a":["Avec un bind mount : monter le dossier de code de l'hôte dans le conteneur (-v ./src:/app/src)","Avec un volume nommé : créer un volume géré par Docker et monter le code de l'hôte dans le conteneur (-v code:/app)","Avec -w : l'option lie ton code dans le conteneur, en bind mount (-w /app)","Avec stop et start : le conteneur relit le code dans ./src, à la relance (docker start)"],"correct":0,"explain":"Le bind mount relie un dossier réel de ta machine à un dossier du conteneur : les fichiers édités sont vus instantanément à l'intérieur, sans passer par build."},
+  {"q":"Le bind mount suffit-il à recharger automatiquement l'application ?","a":["Non : il rend les fichiers visibles, mais il faut un watcher (nodemon, Vite, --reload) pour relancer le process quand le code change","Oui : Docker surveille le dossier partagé, redémarre le process dès qu'un fichier change, recharge la page, sans outil (ni nodemon ni Vite) à ajouter","Non : le conteneur ne voit pas les fichiers modifiés, il faut un rebuild de l'image (docker build), relancer le conteneur, le code passe dedans","Oui : Compose lance develop.watch dès le up (pas besoin de --watch), surveille le dossier, redémarre le conteneur, tout seul"],"correct":0,"explain":"Le bind mount partage les fichiers ; le rechargement à chaud vient d'un outil de surveillance qui détecte les changements et relance l'application. Les deux se combinent."},
+  {"q":"Tu montes tout ton dossier dans le conteneur (volumes: - ./:/app) et l'application ne trouve plus ses dépendances. Pourquoi, et quelle est la parade ?","a":["Le montage a recouvert le node_modules installé DANS l'image par celui de l'hôte (souvent absent) ; on ajoute un volume anonyme - /app/node_modules après le bind mount pour préserver ce sous-dossier","Le .dockerignore qui liste node_modules masque AUSSI /app/node_modules dans le montage (comme au build de l'image) et le bind mount laisse ce sous-dossier vide ; on ôte souvent node_modules de sa liste - le montage ramène celui de l'hôte avec ses modules","Le bind mount copie les fichiers de l'hôte DANS l'image et écrase son /app/node_modules avec celui de ton poste (souvent vide) ; on relance donc docker build avec ce volume - l'image contient de nouveau ses modules installés","Le volume masque le node_modules de l'image par celui de l'hôte (souvent vide) ; on ajoute l'option ro au bind mount - ce mode figé sert AUSSI à préserver /app/node_modules et le conteneur retrouve les modules de l'image"],"correct":0,"explain":"Un montage masque ce qui existait au même chemin dans l'image. En ajoutant un volume anonyme sur /app/node_modules, monté par-dessus car plus profond, tu retrouves les dépendances de l'image : ton code reste partagé en direct, mais les dépendances installées au build restent intactes."}
 ]
 </script>
 
 <h2>Exercices</h2>
 <script type="application/json" data-exos>
 [
-  {"type":"text","accept":["-v","--volume","-v ./src:/app","volume"],"placeholder":"l'option de docker run qui monte un dossier de l'hôte dans le conteneur","hints":["C'est la même option que pour les volumes.","À gauche un chemin de l'hôte, à droite le chemin dans le conteneur.","-? ou --volume"],"link":{"href":"lecon-08.html","label":"Revoir « Monter son code »"}},
+  {"type":"text","accept":["-v","--volume","-v ./src:/app","-v ./src:/app/src","volume","--mount","--mount type=bind"],"placeholder":"l'option de docker run qui monte un dossier de l'hôte dans le conteneur","hints":["C'est la même option que pour les volumes.","À gauche un chemin de l'hôte, à droite le chemin dans le conteneur.","-? ou --volume"],"link":{"href":"lecon-08.html","label":"Revoir « Monter son code »"}},
   {"type":"text","accept":[".env","env",".env file"],"placeholder":"le fichier que Docker Compose lit automatiquement pour les variables d'environnement","hints":["Il est placé à côté du compose.yaml.","Il alimente les ${VARIABLES}.","Un nom qui commence par un point."],"link":{"href":"lecon-08.html","label":"Revoir « La configuration »"}},
-  {"type":"text","accept":["watch","docker compose watch","compose watch","develop watch"],"placeholder":"la commande/section Compose qui synchronise ou reconstruit à la modification","hints":["Section develop: … dans le compose.yaml.","docker compose ????","Il « surveille » les fichiers."],"link":{"href":"lecon-08.html","label":"Revoir « bind mounts et watch »"}}
+  {"type":"text","accept":["watch","docker compose watch","compose watch","develop watch"],"placeholder":"la commande/section Compose qui synchronise ou reconstruit à la modification","hints":["Section develop: … dans le compose.yaml.","docker compose ?????","Il « surveille » les fichiers."],"link":{"href":"lecon-08.html","label":"Revoir « bind mounts et watch »"}}
 ]
 </script>
 
@@ -275,7 +283,7 @@ APP_PORT=3000</code></pre></figure>
     build: .
     volumes:
       - ./:/app
-      - /app/node_modules   # volume anonyme : protège ce sous-dossier</code></pre></figure><p>Le volume anonyme <code>/app/node_modules</code>, déclaré après le bind mount, «&nbsp;masque&nbsp;» ce sous-dossier&nbsp;: Docker y garde les dépendances installées dans l'image au lieu de les faire écraser par le dossier de l'hôte.</p></details></div>
+      - /app/node_modules   # volume anonyme : protège ce sous-dossier</code></pre></figure><p>Le volume anonyme <code>/app/node_modules</code>, monté par-dessus le bind mount quel que soit l'ordre des deux lignes, «&nbsp;masque&nbsp;» ce sous-dossier&nbsp;: Docker y garde les dépendances installées dans l'image au lieu de les faire écraser par le dossier de l'hôte.</p></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>

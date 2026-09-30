@@ -112,7 +112,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -o serveur .
 
 # … image finale distroless : ni shell, ni gestionnaire de paquets
-FROM gcr.io/distroless/static
+FROM gcr.io/distroless/static-debian13:nonroot
 COPY --from=build /app/serveur /
 USER nonroot:nonroot
 CMD ["/serveur"]</code></pre></figure>
@@ -186,12 +186,12 @@ docker run \
 <p>La même chose se déclare en Compose (<code>read_only: true</code>, <code>cap_drop: [ALL]</code>, <code>security_opt</code>). L'idée directrice est le <strong>moindre privilège</strong>&nbsp;: on part de «&nbsp;rien&nbsp;» et on ajoute uniquement ce dont l'application a strictement besoin. Un rootfs en <strong>lecture seule</strong> empêche un intrus d'y déposer un binaire malveillant.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 168" role="img" aria-label="Un conteneur par défaut comparé à un conteneur durci. À gauche, par défaut : il tourne en root, dispose de tous les privilèges Linux et son système de fichiers est modifiable, ce qui laisse un intrus élever ses droits et écrire des fichiers. À droite, durci : utilisateur non-root, tous les privilèges retirés sauf le strict nécessaire, système de fichiers en lecture seule et aucune élévation de droits possible. On applique le principe du moindre privilège.">
+  <svg viewBox="0 0 640 168" role="img" aria-label="Un conteneur par défaut comparé à un conteneur durci. À gauche, par défaut : il tourne en root, dispose d'un jeu de privilèges Linux plus large que nécessaire et son système de fichiers est modifiable, ce qui laisse un intrus élever ses droits et écrire des fichiers. À droite, durci : utilisateur non-root, tous les privilèges retirés sauf le strict nécessaire, système de fichiers en lecture seule et aucune élévation de droits possible. On applique le principe du moindre privilège.">
     <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Du permissif par défaut au moindre privilège</text>
     <rect class="d-frame" x="24" y="40" width="270" height="112" rx="6" />
     <text class="d-tag" x="159" y="59" text-anchor="middle" font-size="9.5">Par défaut</text>
     <rect class="d-box" x="44" y="70" width="230" height="18" rx="3" /><text class="d-mut" x="54" y="83" font-size="7.5">utilisateur root</text>
-    <rect class="d-box" x="44" y="92" width="230" height="18" rx="3" /><text class="d-mut" x="54" y="105" font-size="7.5">toutes les capabilities</text>
+    <rect class="d-box" x="44" y="92" width="230" height="18" rx="3" /><text class="d-mut" x="54" y="105" font-size="7.5">capabilities par défaut (trop larges)</text>
     <rect class="d-box" x="44" y="114" width="230" height="18" rx="3" /><text class="d-mut" x="54" y="127" font-size="7.5">rootfs modifiable</text>
     <rect class="d-frame" x="346" y="40" width="270" height="112" rx="6" />
     <text class="d-tag" x="481" y="59" text-anchor="middle" font-size="9.5">Durci</text>
@@ -210,20 +210,20 @@ docker run \
 <ul>
   <li><strong>Partir d'images de confiance</strong>&nbsp;: <span class="fraicheur" data-arrete="2026-09-03" data-duree="12">les <em>Docker Official Images</em> et les éditeurs <em>vérifiés</em></span>, pas la première image publique venue.</li>
   <li><strong>Épingler par <em>digest</em></strong>&nbsp;: <code>FROM node:20-alpine@sha256:abc…</code> fige le contenu <strong>exact</strong> (un <code>tag</code> peut être redéployé sur une autre image ; le digest, jamais).</li>
-  <li><strong>Signer les images</strong>&nbsp;: <span class="fraicheur" data-arrete="2026-09-03" data-duree="12"><code>cosign</code> (projet Sigstore) ou <em>Docker Content Trust</em></span> attachent une signature vérifiable&nbsp;; la production n'exécute que ce qui est signé.</li>
+  <li><strong>Signer les images</strong>&nbsp;: <span class="fraicheur" data-arrete="2026-09-03" data-duree="12"><code>cosign</code> (projet Sigstore) attache une signature vérifiable, là où l'ancien <em>Docker Content Trust</em> est en cours de retrait</span>&nbsp;; la production n'exécute que ce qui est signé.</li>
   <li><strong>Produire un <em>SBOM</em></strong>&nbsp;: l'inventaire (<em>Software Bill of Materials</em>) de tous les composants de l'image, pour savoir en une requête si une nouvelle CVE te concerne.</li>
 </ul>
 <figure class="code-block" data-file="terminal"><pre><code class="language-bash"># Épingler la base par digest (reproductible au bit près)
 # FROM node:20-alpine@sha256:2b9f... dans le Dockerfile
 
-# Signer une image après le push (cosign / Sigstore)
-cosign sign monorg/monapp:1.4.0
+# Signer une image après le push, par son digest (cosign / Sigstore)
+cosign sign --key cosign.key monorg/monapp@sha256:9c1e...
 
 # Vérifier une image avant de l'exécuter
-cosign verify monorg/monapp:1.4.0
+cosign verify --key cosign.pub monorg/monapp@sha256:9c1e...
 
 # Générer l'inventaire des composants (SBOM)
-docker sbom monorg/monapp:1.4.0</code></pre></figure>
+docker scout sbom monorg/monapp:1.4.0</code></pre></figure>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 158" role="img" aria-label="La chaîne d'approvisionnement d'une image. On construit l'image, on la signe avec une clé privée, puis on la pousse dans un registre. Avant de l'exécuter, la production la tire et vérifie la signature avec la clé publique : seule une image signée et intacte est lancée. Un maillon non vérifié, comme une image publique tirée sans contrôle, est le point faible de la chaîne.">
@@ -261,7 +261,7 @@ docker sbom monorg/monapp:1.4.0</code></pre></figure>
       <tr><td>Secret dans une couche</td><td>secret de build</td><td><code>RUN --mount=type=secret</code> (BuildKit)</td></tr>
       <tr><td>Base qui change sous nos pieds</td><td>épingler</td><td><code>FROM …@sha256:…</code> (digest)</td></tr>
       <tr><td>Image non authentique</td><td>signer + vérifier</td><td><code>cosign sign</code> / <code>verify</code></td></tr>
-      <tr><td>Composant vulnérable inconnu</td><td>inventorier</td><td>SBOM (<code>docker sbom</code>, <code>syft</code>)</td></tr>
+      <tr><td>Composant vulnérable inconnu</td><td>inventorier</td><td>SBOM (<code>docker scout sbom</code>, <code>syft</code>)</td></tr>
     </tbody>
   </table>
 </figure>
@@ -275,7 +275,7 @@ docker sbom monorg/monapp:1.4.0</code></pre></figure>
   <dt>Rootfs en lecture seule</dt><dd>Système de fichiers du conteneur monté en lecture seule (<code>--read-only</code>)&nbsp;: empêche d'y écrire un binaire malveillant.</dd>
   <dt>Secret de build (BuildKit)</dt><dd><code>RUN --mount=type=secret</code>&nbsp;: rend un secret disponible pendant une commande de build sans le figer dans une couche.</dd>
   <dt>Digest</dt><dd>Empreinte <code>sha256</code> du contenu exact d'une image&nbsp;; épingler par digest garantit l'immuabilité, là où un <code>tag</code> peut bouger.</dd>
-  <dt>Signature d'image</dt><dd>Preuve cryptographique d'origine et d'intégrité (<code>cosign</code>, Docker Content Trust)&nbsp;; vérifiée avant l'exécution.</dd>
+  <dt>Signature d'image</dt><dd>Preuve cryptographique d'origine et d'intégrité (<code>cosign</code>&nbsp;; Docker Content Trust, plus ancien, est en cours de retrait)&nbsp;; vérifiée avant l'exécution.</dd>
   <dt>SBOM</dt><dd><em>Software Bill of Materials</em>&nbsp;: inventaire des composants d'une image, pour tracer rapidement l'impact d'une nouvelle faille.</dd>
 </dl>
 
@@ -303,7 +303,7 @@ docker sbom monorg/monapp:1.4.0</code></pre></figure>
 <script type="application/json" data-exos>
 [
   {"type":"text","accept":["distroless","image distroless","gcr.io/distroless"],"placeholder":"le type d'image minimale, sans shell ni gestionnaire de paquets, qui réduit la surface d'attaque","hints":["Sans « distro » complète à l'intérieur.","Google en publie une famille (gcr.io/distroless/…).","On ne peut même pas y faire docker exec sh."],"link":{"href":"lecon-10.html","label":"Revoir « Moins d'image, moins de surface »"}},
-  {"type":"text","accept":["--cap-drop ALL","cap-drop ALL","--cap-drop all","cap-drop all"],"placeholder":"l'option de docker run qui retire TOUS les privilèges Linux du conteneur","hints":["On part de zéro privilège puis on rajoute le minimum.","Le contraire de --cap-add.","--cap-???? ALL"],"link":{"href":"lecon-10.html","label":"Revoir « Durcir l'exécution »"}},
+  {"type":"text","accept":["--cap-drop ALL","cap-drop ALL","--cap-drop all","cap-drop all","--cap-drop=ALL","cap-drop=ALL","docker run --cap-drop ALL","docker run --cap-drop=ALL"],"placeholder":"l'option de docker run qui retire TOUS les privilèges Linux du conteneur","hints":["On part de zéro privilège puis on rajoute le minimum.","Le contraire de --cap-add.","--cap-???? ALL"],"link":{"href":"lecon-10.html","label":"Revoir « Durcir l'exécution »"}},
   {"type":"text","accept":["digest","sha256","par digest","@sha256"],"placeholder":"ce par quoi on épingle une image de base pour figer son contenu EXACT (plus fiable qu'un tag)","hints":["C'est une empreinte sha256 du contenu.","FROM node:20-alpine@sha256:… .","Un tag peut bouger, ceci non."],"link":{"href":"lecon-10.html","label":"Revoir « Sécuriser la chaîne »"}}
 ]
 </script>
@@ -317,8 +317,9 @@ docker sbom monorg/monapp:1.4.0</code></pre></figure>
   --security-opt no-new-privileges \
   monapp</code></pre></figure><p>C'est le principe du moindre privilège&nbsp;: on retire tout, puis on ne rajoute (<code>--cap-add</code>, <code>--tmpfs</code>) que ce dont l'application a réellement besoin.</p></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Une clé privée est nécessaire <em>uniquement pendant le build</em> pour installer une dépendance depuis un dépôt privé. Explique pourquoi <code>ARG CLE</code> est une mauvaise idée et quelle est la bonne approche.</p><details><summary>Voir une solution</summary><p>Avec <code>ARG CLE</code>, la valeur se retrouve figée dans une couche de l'image et reste récupérable via <code>docker history</code>&nbsp;: le secret fuite. La bonne approche est le <strong>montage de secret BuildKit</strong>&nbsp;:</p><figure class="code-block" data-file="Dockerfile"><pre><code class="language-docker"># syntax=docker/dockerfile:1
+# .npmrc du projet : //registry.npmjs.org/:_authToken=${CLE}
 RUN --mount=type=secret,id=clerepo \
-    CLE=$(cat /run/secrets/clerepo) npm ci</code></pre></figure><p>construit avec <code>docker build --secret id=clerepo,src=./cle.txt .</code>. Le secret n'existe que le temps de la commande et <strong>n'entre dans aucune couche</strong>.</p></details></div>
+    CLE=$(cat /run/secrets/clerepo) npm ci</code></pre></figure><p>construit avec <code>docker build --secret id=clerepo,src=$HOME/cle.txt .</code> (le fichier reste hors du dossier de build, sinon un <code>COPY . .</code> l'embarquerait). npm ne lit pas de lui-même une variable <code>CLE</code>&nbsp;: c'est le <code>.npmrc</code> du projet qui la lui transmet. Le secret n'existe que le temps de la commande et <strong>n'entre dans aucune couche</strong>.</p></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>

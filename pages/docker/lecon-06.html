@@ -100,26 +100,26 @@
 <p>Tu sais conteneuriser et orchestrer. Reste à faire des images <strong>dignes de la production</strong>&nbsp;: légères (pour démarrer vite et coûter moins), sûres (pour limiter les risques), et reproductibles. Cette leçon de synthèse rassemble les bonnes pratiques qui séparent une image «&nbsp;qui marche&nbsp;» d'une image professionnelle.</p>
 
 <h2>Le poids, ça compte</h2>
-<p>Une image lourde se télécharge lentement, occupe le disque et la mémoire, et augmente la surface d'attaque. Première règle&nbsp;: partir d'une <strong>base minimale</strong>. Les variantes <code>-slim</code> et surtout <code>alpine</code> (une distribution Linux de quelques Mo) réduisent drastiquement la taille.</p>
-<figure class="code-block" data-file="comparaison de bases"><pre><code class="language-docker"># Lourde : image complète (~1 Go)
+<p>Une image lourde se télécharge lentement, occupe le disque et la mémoire, et augmente la surface d'attaque. Première règle&nbsp;: partir d'une <strong>base minimale</strong>. Les variantes <code>-slim</code> et surtout <code>alpine</code> (une distribution Linux de quelques Mo) réduisent drastiquement la taille. Les tailles ci-dessous sont celles de l'image <em>décompressée</em>, telle que <code>docker images</code> l'affiche&nbsp;; le téléchargement, compressé, pèse environ trois fois moins.</p>
+<figure class="code-block" data-file="comparaison de bases"><pre><code class="language-docker"># Lourde : image complète (~1,1 Go)
 FROM node:20
 
 # Légère : variante slim (~200 Mo)
 FROM node:20-slim
 
-# Très légère : Alpine (~50 Mo)
+# Très légère : Alpine (~140 Mo)
 FROM node:20-alpine</code></pre></figure>
 <p><span class="fraicheur" data-arrete="2026-09-03" data-duree="12">Alpine est le choix par défaut pour beaucoup d'images de production</span>. Attention toutefois&nbsp;: Alpine utilise une bibliothèque C différente (musl), ce qui peut poser problème à de rares dépendances natives&nbsp;; teste avant d'adopter.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 152" role="img" aria-label="Le poids des images de base, en ordre de grandeur. L'image complète node:20 pèse environ 1 Go et occupe une très longue barre. La variante node:20-slim tombe à environ 200 Mo, une barre bien plus courte. La variante node:20-alpine descend à environ 50 Mo, une barre minuscule. Plus la base est petite, plus l'image se télécharge vite et expose moins de surface d'attaque.">
-    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le poids de la base (ordres de grandeur)</text>
+  <svg viewBox="0 0 640 152" role="img" aria-label="Le poids des images de base décompressées, en ordre de grandeur. L'image complète node:20 pèse environ 1,1 Go et occupe une très longue barre. La variante node:20-slim tombe à environ 200 Mo, une barre cinq fois plus courte. La variante node:20-alpine descend à environ 140 Mo, une barre huit fois plus courte que la première. Plus la base est petite, plus l'image se télécharge vite et expose moins de surface d'attaque.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Le poids de la base, décompressée (ordres de grandeur)</text>
     <text class="d-text" x="24" y="52" font-size="9">node:20</text>
-    <rect class="d-box" x="120" y="42" width="460" height="16" rx="3" /><text class="d-mut" x="588" y="54" text-anchor="end" font-size="8">~1 Go</text>
+    <rect class="d-box" x="120" y="42" width="460" height="16" rx="3" /><text class="d-mut" x="588" y="54" text-anchor="end" font-size="8">~1,1 Go</text>
     <text class="d-text" x="24" y="86" font-size="9">node:20-slim</text>
-    <rect class="d-box" x="120" y="76" width="92" height="16" rx="3" /><text class="d-mut" x="220" y="88" font-size="8">~200 Mo</text>
+    <rect class="d-box" x="120" y="76" width="84" height="16" rx="3" /><text class="d-mut" x="212" y="88" font-size="8">~200 Mo</text>
     <text class="d-text" x="24" y="120" font-size="9">node:20-alpine</text>
-    <rect class="d-accent" x="120" y="110" width="24" height="16" rx="3" /><text class="d-mut" x="152" y="122" font-size="8">~50 Mo</text>
+    <rect class="d-accent" x="120" y="110" width="57" height="16" rx="3" /><text class="d-mut" x="185" y="122" font-size="8">~140 Mo</text>
     <text class="d-mut" x="320" y="144" text-anchor="middle" font-size="8">plus léger = téléchargement plus rapide · moins de surface d'attaque</text>
   </svg>
   <figcaption>À service égal, changer d'image de base fait fondre le poids&nbsp;: <code>-slim</code> retire l'inutile, <code>alpine</code> repart d'un Linux minuscule. Attention&nbsp;: <code>alpine</code> utilise musl, à tester avec les dépendances natives.</figcaption>
@@ -141,10 +141,10 @@ FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 # On ne garde QUE le résultat (dist/) : ni Node, ni node_modules,
 # ni le code source ne se retrouvent dans l'image finale.</code></pre></figure>
-<p>Le <code>COPY --from=build</code> récupère un fichier de l'étape précédente. Résultat&nbsp;: l'image finale ne contient que les fichiers compilés et un serveur léger — pas les centaines de Mo d'outils de build. C'est la différence entre <span class="fraicheur" data-arrete="2026-09-03" data-duree="18">une image de 1&nbsp;Go et une de 30&nbsp;Mo</span>, pour le même service.</p>
+<p>Le <code>COPY --from=build</code> récupère un fichier de l'étape précédente. Résultat&nbsp;: l'image finale ne contient que les fichiers compilés et un serveur léger — pas les centaines de Mo d'outils de build. C'est la différence entre <span class="fraicheur" data-arrete="2026-09-03" data-duree="18">une image de plus de 1&nbsp;Go et une d'environ 65&nbsp;Mo</span>, pour le même service.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 206" role="img" aria-label="Le principe du build multi-stage. À gauche, l'étape de construction nommée build part de node:20 avec tout l'outillage : le code source, npm install, node_modules et la commande de build qui produit un dossier dist. Cette étape est lourde, environ 1 Go. Une flèche COPY --from=build ne recopie que le dossier dist dans l'image finale, à droite, bâtie sur nginx alpine : elle ne contient que les fichiers compilés et pèse environ 30 Mo. Tout le reste, Node, node_modules, code source, est laissé derrière et n'atterrit pas en production.">
+  <svg viewBox="0 0 640 206" role="img" aria-label="Le principe du build multi-stage. À gauche, l'étape de construction nommée build part de node:20 avec tout l'outillage : le code source, npm install, node_modules et la commande de build qui produit un dossier dist. Cette étape est lourde, plus de 1 Go. Une flèche COPY --from=build ne recopie que le dossier dist dans l'image finale, à droite, bâtie sur nginx alpine : elle ne contient que les fichiers compilés et pèse environ 65 Mo. Tout le reste, Node, node_modules, code source, est laissé derrière et n'atterrit pas en production.">
     <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">Multi-stage : construire lourd, livrer léger</text>
     <rect class="d-frame" x="20" y="36" width="270" height="150" rx="6" />
     <text class="d-tag" x="155" y="56" text-anchor="middle" font-size="10">Étape « build »</text>
@@ -152,17 +152,17 @@ COPY --from=build /app/dist /usr/share/nginx/html
     <rect class="d-box" x="40" y="88" width="230" height="18" rx="3" /><text class="d-mut" x="50" y="101" font-size="8">npm install · code source</text>
     <rect class="d-box" x="40" y="110" width="230" height="18" rx="3" /><text class="d-mut" x="50" y="123" font-size="8">node_modules (des centaines de Mo)</text>
     <rect class="d-accent" x="40" y="132" width="230" height="20" rx="3" /><text class="d-text" x="155" y="146" text-anchor="middle" font-size="8.5">npm run build → dist/</text>
-    <text class="d-mut" x="155" y="172" text-anchor="middle" font-size="8">tout l'outillage · ~1 Go · jetée</text>
+    <text class="d-mut" x="155" y="172" text-anchor="middle" font-size="8">tout l'outillage · &gt; 1 Go · jetée</text>
     <rect class="d-frame" x="370" y="36" width="250" height="150" rx="6" />
     <text class="d-tag" x="495" y="56" text-anchor="middle" font-size="10">Image finale</text>
     <rect class="d-box" x="390" y="70" width="210" height="18" rx="3" /><text class="d-mut" x="400" y="83" font-size="8">FROM nginx:alpine</text>
     <rect class="d-accent" x="390" y="96" width="210" height="26" rx="3" /><text class="d-text" x="495" y="113" text-anchor="middle" font-size="8.5">dist/ (résultat compilé)</text>
     <text class="d-mut" x="495" y="150" text-anchor="middle" font-size="8">ni Node, ni node_modules,</text>
-    <text class="d-mut" x="495" y="162" text-anchor="middle" font-size="8">ni code source · ~30 Mo</text>
+    <text class="d-mut" x="495" y="162" text-anchor="middle" font-size="8">ni code source · ~65 Mo</text>
     <path class="d-line" d="M290 111 L370 105" fill="none" /><circle class="d-dot" cx="370" cy="105" r="3" />
     <text class="d-tag" x="330" y="98" text-anchor="middle" font-size="7.5">COPY --from=build</text>
   </svg>
-  <figcaption>Le <code>COPY --from=build</code> ne récupère que le <code>dist/</code> de l'étape de construction. L'outillage lourd reste dans l'étape jetable&nbsp;: l'image livrée passe de ~1&nbsp;Go à quelques dizaines de Mo.</figcaption>
+  <figcaption>Le <code>COPY --from=build</code> ne récupère que le <code>dist/</code> de l'étape de construction. L'outillage lourd reste dans l'étape jetable&nbsp;: l'image livrée passe de plus de 1&nbsp;Go à quelques dizaines de Mo.</figcaption>
 </figure>
 
 <h2>La sécurité de base</h2>
@@ -189,7 +189,7 @@ USER app
 CMD ["node", "server.js"]</code></pre></figure>
 <p>Le passage en utilisateur non-root est l'une des protections au meilleur rapport effort/bénéfice&nbsp;: si une faille de l'application est exploitée, l'attaquant n'a pas les droits root <em>dans</em> le conteneur, ce qui limite les dégâts.</p>
 
-<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: le secret resté dans une couche</p><p>Une image est faite de <strong>couches empilées</strong>, chacune figée. Un développeur copie un fichier <code>.env</code> contenant une clé d'API, puis le supprime dans une instruction suivante&nbsp;: le fichier <em>disparaît</em> de l'image finale… mais reste présent dans la couche où il a été ajouté. N'importe qui peut le récupérer avec <code>docker history</code> ou en extrayant l'image (<code>docker save</code>). Des milliers de clés ont ainsi fuité dans des images publiques. La règle&nbsp;: un secret ne doit <strong>jamais</strong> entrer dans une couche — on passe par des variables d'environnement au lancement ou des secrets de build, et on exclut <code>.env</code> via <code>.dockerignore</code>.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel&nbsp;: le secret resté dans une couche</p><p>Une image est faite de <strong>couches empilées</strong>, chacune figée. Un développeur copie un fichier <code>.env</code> contenant une clé d'API, puis le supprime dans une instruction suivante&nbsp;: le fichier <em>disparaît</em> de l'image finale… mais reste présent dans la couche où il a été ajouté. N'importe qui peut le récupérer en extrayant les couches de l'image (<code>docker save</code>)&nbsp;; <code>docker history</code>, lui, montre l'instruction qui l'a copié, et affiche en clair un secret passé par <code>ARG</code> ou <code>ENV</code>. Des milliers de clés ont ainsi fuité dans des images publiques. La règle&nbsp;: un secret ne doit <strong>jamais</strong> entrer dans une couche — on passe par des variables d'environnement au lancement ou des secrets de build, et on exclut <code>.env</code> via <code>.dockerignore</code>.</p></div></div>
 
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.5.5 1 1.5 1 3h6c0-1.5.5-2.5 1-3a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">L'ordre des instructions accélère les builds</p><p>Docker met chaque instruction en <strong>cache</strong> et rejoue tout ce qui suit un changement. En copiant d'abord <code>package*.json</code> et en installant les dépendances <em>avant</em> de copier le reste du code (<code>COPY . .</code>), l'installation — l'étape la plus lente — n'est refaite que si les dépendances changent. Modifier une ligne de code ne réinstalle plus tout&nbsp;: les builds passent de plusieurs minutes à quelques secondes.</p></div></div>
 
@@ -220,7 +220,7 @@ docker run -d -p 80:3000 monorg/monapp:1.4.0</code></pre></figure>
     <path class="d-line" d="M394 89 L446 89" fill="none" /><circle class="d-dot" cx="446" cy="89" r="3" />
     <text class="d-mut" x="320" y="150" text-anchor="middle" font-size="8">même version d'un bout à l'autre → traçable et réversible</text>
   </svg>
-  <figcaption>On <strong>pousse</strong> une image <em>étiquetée</em> (<code>1.4.0</code>) vers un registre, d'où la production la <strong>tire</strong>. Le tag fige ce qui tourne&nbsp;: on sait exactement quelle version est déployée et on peut y revenir.</figcaption>
+  <figcaption>On <strong>pousse</strong> une image <em>étiquetée</em> (<code>1.4.0</code>) vers un registre, d'où la production la <strong>tire</strong>. Le tag nomme ce qui tourne&nbsp;: tant qu'on ne le repousse jamais vers une autre image (un tag reste modifiable, seul le digest <code>@sha256:…</code> est immuable), on sait exactement quelle version est déployée et on peut y revenir.</figcaption>
 </figure>
 
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Tu maîtrises maintenant l'essentiel de Docker. La suite naturelle&nbsp;: les <strong>healthchecks</strong> pour la robustesse&nbsp;; <span class="fraicheur" data-arrete="2026-09-03" data-duree="12">l'analyse de vulnérabilités des images (<code>docker scout</code>, Trivy)</span>&nbsp;; et surtout l'<strong>orchestration à grande échelle</strong> avec <strong>Kubernetes</strong>, qui gère des centaines de conteneurs sur des grappes de serveurs (mise à l'échelle, auto-réparation, déploiements progressifs). Docker est la brique&nbsp;; Kubernetes est le chef d'orchestre.</p></div></div>
@@ -271,16 +271,16 @@ docker run -d -p 80:3000 monorg/monapp:1.4.0</code></pre></figure>
 [
   {"q":"Quel est l'intérêt principal d'un build multi-stage ?","a":["Construire avec tous les outils dans une étape, puis ne copier que le résultat dans une image finale minimale (sans les outils de build)","Construire plusieurs images en même temps avec le même Dockerfile, puis ne garder que la plus légère comme image finale (sans lancer deux fois le build)","Construire une image pour amd64 puis une pour arm64 avec plusieurs Dockerfile, pour ne pousser que celle qui tourne en production (sans autre build)","Construire l'image comme une suite de serveurs à démarrer l'un après l'autre en production, puis ne laisser que le service final en marche (sans tous les outils du build)"],"correct":0,"explain":"Les outils de compilation/build sont inutiles à l'exécution. Le multi-stage construit dans une première étape, puis COPY --from ne reprend que les fichiers produits : l'image finale est bien plus légère (et sûre)."},
   {"q":"Pourquoi éviter de faire tourner un conteneur en utilisateur root ?","a":["Si l'application est compromise, un attaquant non-root a des droits limités dans le conteneur, ce qui réduit les dégâts","Passer en non-root empêche que l'application soit compromise, l'attaquant ne trouvant plus de prise dans le conteneur, ce qui évite les dégâts","Sur un serveur, Docker refuse toute image lancée en root, donc l'image non-root devient la seule version validée","Le mode non-root allège l'image, les outils du compte root restant exclus, d'où une taille réduite"],"correct":0,"explain":"Par défaut un conteneur tourne en root. En basculant sur un utilisateur sans privilèges (USER), on limite ce qu'une faille exploitée peut faire : c'est une protection à fort bénéfice pour un effort minime."},
-  {"q":"Pourquoi étiqueter une image avec une version (ex. 1.4.0) plutôt que latest ?","a":["Pour des déploiements traçables et réversibles : on sait exactement quelle version tourne et on peut revenir en arrière","Pour alléger les déploiements : une étiquette permet au serveur de stocker moins de couches d'image dupliquées","Pour pousser en production : le registre peut refuser le tag latest réservé aux images publiques de Docker","Pour purger le cache : une version étiquetée peut forcer exactement la construction complète des couches empilées"],"correct":0,"explain":"« latest » est ambigu : il change dans le temps et masque ce qui tourne réellement. Un tag de version fige le contenu, rend chaque déploiement identifiable et permet un retour arrière fiable."}
+  {"q":"Pourquoi étiqueter une image avec une version (ex. 1.4.0) plutôt que latest ?","a":["Pour des déploiements traçables et réversibles : on sait exactement quelle version tourne et on peut revenir en arrière","Pour alléger les déploiements : une étiquette permet au serveur de stocker moins de couches d'image dupliquées","Pour pousser en production : le registre peut refuser le tag latest réservé aux images publiques de Docker","Pour purger le cache : une version étiquetée peut refaire exactement la construction complète des couches empilées"],"correct":0,"explain":"« latest » est ambigu : il change dans le temps et masque ce qui tourne réellement. Un tag de version nomme un contenu, rend chaque déploiement identifiable et permet un retour arrière fiable."}
 ]
 </script>
 
 <h2>Exercices</h2>
 <script type="application/json" data-exos>
 [
-  {"type":"text","accept":["alpine","base alpine","image alpine"],"placeholder":"la variante d'image de base minimaliste (quelques Mo) souvent utilisée pour réduire la taille","hints":["Elle est construite sur une distribution Linux ultra-légère.","On la voit dans node:20-…, python:3.12-… .","Un nom de massif montagneux."],"link":{"href":"lecon-06.html","label":"Revoir « Réduire la taille »"}},
-  {"type":"text","accept":["USER"],"placeholder":"l'instruction Dockerfile qui bascule sur un utilisateur non privilégié (app)","hints":["Par défaut, un conteneur tourne en root : risqué.","Après avoir créé l'utilisateur, on change d'identité.","??? app"],"link":{"href":"lecon-06.html","label":"Revoir « Un utilisateur non root »"}},
-  {"type":"text","accept":["AS","FROM ... AS","as"],"placeholder":"le mot-clé qui nomme une étape dans un Dockerfile multi-stage (FROM node:20 … nom)","hints":["Un build multi-stage enchaîne plusieurs FROM.","On nomme une étape pour y piocher des fichiers ensuite.","FROM node:20 ??? build"],"link":{"href":"lecon-06.html","label":"Revoir « Le multi-stage »"}}
+  {"type":"text","accept":["alpine","base alpine","image alpine"],"placeholder":"la variante d'image de base minimaliste (quelques Mo) souvent utilisée pour réduire la taille","hints":["Elle est construite sur une distribution Linux ultra-légère.","On la voit dans node:20-…, python:3.12-… .","Un nom de massif montagneux."],"link":{"href":"lecon-06.html","label":"Revoir « Le poids, ça compte »"}},
+  {"type":"text","accept":["USER","USER app"],"placeholder":"l'instruction Dockerfile qui bascule sur un utilisateur non privilégié (app)","hints":["Par défaut, un conteneur tourne en root : risqué.","Après avoir créé l'utilisateur, on change d'identité.","??? app"],"link":{"href":"lecon-06.html","label":"Revoir « La sécurité de base »"}},
+  {"type":"text","accept":["AS","FROM ... AS","as"],"placeholder":"le mot-clé qui nomme une étape dans un Dockerfile multi-stage (FROM node:20 … nom)","hints":["Un build multi-stage enchaîne plusieurs FROM.","On nomme une étape pour y piocher des fichiers ensuite.","FROM node:20 ??? build"],"link":{"href":"lecon-06.html","label":"Revoir « Le build multi-stage »"}}
 ]
 </script>
 
