@@ -9157,7 +9157,7 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       taux ; puis `pascal` 53,3, `fsharp` 52,3, `linux` 52,0, `prolog` 52,0, `vb` 52,0, `objc` 51,7.
       Bash est dans Git Bash : les exemples s'exécutent sans rien installer. Méthode inchangée.
 
-      ### 59ᵉ cours — `bash` (2026-09-30) : PRÉPARÉ, vague non commencée
+      ### 59ᵉ cours — `bash` (2026-09-30) : vague et relecture FAITES, 129 corrections à poser
 
       **PRÉPARATION FAITE le 2026-09-30** : `scratchpad/CONSIGNE-BASH.md` — **95,5 %** à la longueur
       (couverture 96,4 %, rendement 98,1 %), rangs **55/1/0/0** (cible 14/14/14/14), **12 252
@@ -9179,8 +9179,75 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       Bash, mesuré** : les permissions (un fichier sans bit `x` s'exécute, `ls -l` ne montre pas le
       bit), les liens symboliques (`ln -s` fait une copie : `[ -L l ]` faux), et `cron`, `rsync`,
       `jq`, ShellCheck sont absents — pour ceux-là, la source, pas l'exécution.
-      **Prochain réveil : la vague d'écriture (workflow 1, six lots disjoints donnés dans la
-      consigne), puis la relecture par contradiction (workflow 2).**
+
+      **LA VAGUE (réveil suivant, même jour ; commits `ee845c3` et `5b3c59a`)** — six écrivains en
+      lots disjoints, **161 distracteurs réécrits sur 168, 7 gardés** (`lecon-01` q3 et quatre
+      formes courtes du bilan), **32 scripts Bash exécutés**. Mesures relancées par l'orchestrateur
+      sur le cours entier :
+
+      | | avant | après |
+      |---|---:|---:|
+      | « la plus longue » | 95,5 % | **25,0 %** (couverture 100 %, rendement 25,0 %) |
+      | pire indice du cours | 95,5 % | **27,4 %** (« la TROISIÈME plus longue ») |
+      | questions trahies par 5 indices ou plus | 42 | **0** (49 à 0–2 indices, 7 à 3–4) |
+      | tics de lot | 12 | **0** |
+      | alertes de biais inverse | 5 | **0** (pire : la moins bavarde, 27,3 %) |
+      | lexique (exploitables) | 44 | **1** (`lecon-03` q1 : `k` tenu 1/1/1/1, `w` 4/4/4/3) |
+      | mots fétiches (alertes) | 3 | **0** après dosage |
+
+      `mesure-qcm-intouchable bash 961b440` : **0 atteinte** ; `verif-html` **0**. ⚠️ La vague
+      avait fait de « chaque » un mot de DISTRACTEUR (10 bonnes / 46 distracteurs, ÉCARTER
+      **28,1 %**, juste au-dessus du seuil) : la consigne demandait de le poser, elle ne disait pas
+      combien. **Deux retouches de dosage** (`lecon-02` q3, `lecon-11` q3, simulées par
+      `essai3.js`) l'ont ramené sous le seuil. `lecon-03` q1 reste « à mettre en forme » : **9
+      candidats simulés, aucun à 0 écart** (« crée » et « encore » sont des mots de l'énoncé, un
+      mot de 9 lettres ouvre le mot technique exclusif, 62 caractères font une égalité de rang).
+
+      **LA RELECTURE PAR CONTRADICTION (même réveil ; commit `8c67d6f`)** — six relecteurs en
+      lecture seule, **756 vérifications exécutées sous bash 5.3.9, 568 affirmations confirmées
+      justes, 146 FAUTES** : **4 hautes, 50 moyennes, 92 basses** ; 75 dans les corps, 38 dans les
+      exercices, 11 dans les QCM, 8 schémas, 6 antisèches. Les 50 signalements des écrivains ont
+      été rejoués. **16 corrigées à cette passe**, toutes rejouées par l'orchestrateur avant
+      d'être écrites (`scratchpad/bash-hautes/moi.sh`) :
+      - **`set -u` présenté comme une protection contre une variable VIDE** — dans le « Cas réel »
+        Steam de `lecon-06` ET de `lecon-11`, dans l'antisèche et dans l'explain de q3 de
+        `lecon-06`. Exécuté : `set -u; V=""; echo "[$V]"` → code **0** ; seule une variable jamais
+        définie rend « unbound variable » (code **127**). Ce qui aurait arrêté le script, c'est
+        `set -e` sur la substitution de commande en échec (code **1**, suite non atteinte ; sous
+        `set -u` seul : « suite atteinte [] », code 0) ;
+      - **`trap … ERR` « à chaque commande qui renvoie un statut non nul »** (`lecon-12`) : faux
+        dans le cas même que la leçon vise. Exécuté avec le piège de la page : un `false` DANS une
+        fonction arrête le script **sans aucun message** (code 1) ; avec `set -Eeuo pipefail`,
+        « ERREUR ligne 3 : "false" (code 1) » ; et aucun déclenchement dans un `if`, à gauche de
+        `||` ou de `&&` ;
+      - **`cron` « démarre souvent dans `/` »** (`lecon-02`) : il se place dans le HOME du compte
+        (source : crontab(5) ; cron est absent de Git Bash) ;
+      - **un distracteur VRAI par l'énoncé** : bilan q1 de `lecon-16`, « Comment lit-on la valeur
+        d'une variable ? » — `nom` nu est juste dans `$(( n + 1 ))` (→ **6**), et le mini-projet
+        de la page lit ainsi ses variables ; l'énoncé fixe le contexte (« dans une commande comme
+        echo ») ;
+      - **7 distracteurs** (4 inintelligibles, 3 de français) et l'explain de `lecon-15` q3
+        (`sort a.txt | diff - <(sort b.txt)` lit le tube : code 1, différences affichées).
+      ⚠️ **La pose des 17 règles a d'abord déplacé 8 questions** : 5 par le texte que les
+      relecteurs proposaient (« malgré », « calcule », « nombre », « aucun », « direct »), 2 par
+      un mot SORTI du corps (« échouer », nommé par `kdiff.js` : le corps dit de nouveau « aurait
+      fait échouer le script »), 1 par la bonne réponse de `lecon-16` q1 (« journée » : mot
+      technique exclusif et `k` déplacés — **revenue à l'état d'origine et laissée**, gravité
+      basse). Après 8 rattrapages : `controle.js --ref=5b3c59a` **0 indicateur déplacé**, fétiche
+      **0 alerte**, tics **0**, inverse **0 alerte**, `verif-html` **0**, `verif-rendu` sur six
+      pages **aucun problème**. `mesure-qcm-intouchable bash 5b3c59a` : **3 atteintes, toutes
+      délibérées** (2 explain, 1 énoncé). ⚠️ Un patch JSON écrit par heredoc a perdu son `\\;`
+      (refusé par `pose.js` au parse) : le piège connu, repris dans la consigne.
+      Cliquets refigés (`verif-qcm-biais.js --ecrire`, `verif-qcm-lexique.js --ecrire` ; `traite`
+      reste à poser à la clôture), pages dérivées réassemblées et index régénérés `--fresh` :
+      **point fixe au 3ᵉ tour** (empreinte du diff identique aux tours 2 et 3). `verif-donnees`
+      **0 erreur** ; `verif.js --rapide` **53 étapes vertes (203,1 s)** ; 0 CR, 0 BOM, 0
+      chargement externe.
+      **Site : 6 167 questions, réussite « la plus longue » 39,7 % (`mesure-biais-qcm`).**
+
+      **Prochain réveil : la correction des 129 fautes restantes (45 moyennes, 84 basses ; six
+      groupes disjoints, `scratchpad/CONSIGNE-BASH-CORRECTION.md`), puis la contre-relecture des
+      corrections (diff depuis `5b3c59a`), puis la clôture (`traite: true`, désignation du 60ᵉ).**
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
