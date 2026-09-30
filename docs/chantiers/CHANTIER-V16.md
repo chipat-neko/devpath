@@ -8644,6 +8644,8 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       `vb` 52,0. Méthode inchangée : préparation (consigne mesurée), vague d'écriture, relecture par
       contradiction, correction en groupes disjoints, **contre-relecture des corrections**, clôture.
 
+      ### 56ᵉ cours — `observabilite` (2026-09-30) : **96,4 % → 25,0 %**, clos — et une contre-relecture qui prend **29,0 %** des corrections
+
       **PRÉPARATION FAITE le 2026-09-30** : `scratchpad/CONSIGNE-OBSERVABILITE.md` (suivie par git,
       commit `cc0b804`) — 96,4 % à la longueur (couverture 100 %), rangs **54/2/0/0**, **10 491
       caractères** à écrire sur 55 questions sur 56, rapport bonne/distracteur **3,60** (104,3 contre
@@ -8731,14 +8733,81 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       `mesure-qcm-intouchable observabilite 753bc60` : **3 atteintes, toutes délibérées** (bonne
       réponse et `explain` de `lecon-06` q3, `explain` de `lecon-06` q4).
 
-      **RESTE À FAIRE (prochain réveil) : 51 fautes, 14 moyennes et 37 basses.** Consigne prête :
-      `scratchpad/CONSIGNE-OBSERVABILITE-CORRECTION.md` (suivie par git), six groupes disjoints
-      (12 / 9 / 6 / 4 / 11 / 9), garde-fou `controle.js --ref=753bc60`, outil de pose
-      `scratchpad/observabilite-corr/remplace.js`. Fautes : `scratchpad/observabilite-relecture/
-      fautes.json` (local), champ `traitee`. Points durs : la règle sur les données personnelles,
-      incohérente entre `lecon-02` et `lecon-09` (elle interdit « les données personnelles » et
-      journalise `user_id` — une bonne réponse en dépend) ; la bonne réponse du bilan q2 de
-      `lecon-11`. Puis contre-relecture des corrections, et clôture.
+      **LA CORRECTION DES 51 RESTANTES (6 correcteurs, groupes disjoints, consigne
+      `scratchpad/CONSIGNE-OBSERVABILITE-CORRECTION.md`) : 51 corrigées sur 51** (14 moyennes,
+      37 basses), commit `8903476`. `controle.js --ref=753bc60` **0 indicateur déplacé**, 0 bloc JSON
+      cassé ; lexique **0/0/0** ; fétiche **0 alerte** ; `verif-html` **0** ; `node --check js/data.js`
+      vert ; 0 CRLF, 0 BOM. Les moyennes, chacune prouvée :
+      - **les deux moyennes fausses, recalculées** : `lecon-03` (promtool : 95 rapides à 50 ms et
+        5 lentes à 3 s par minute → **0,1975 s**, soit 197,5 ms et non 100 ms) ; `lecon-08` (Node :
+        95 % à 100 ms + 5 % à 3 000 ms = **245 ms**, pas 180 — l'exemple garde 180 ms en passant les
+        5 % lents à **1,7 s**, recalculé : **180 ms**) ;
+      - **les données personnelles, rendues cohérentes** entre `lecon-02` et `lecon-09` : on exclut
+        les secrets et les données personnelles SENSIBLES, le reste au strict nécessaire (un
+        identifiant interne plutôt que le nom ou l'e-mail) — OWASP *Logging Cheat Sheet*, RGPD
+        art. 4(1), 5.1.c, 9(1) et considérant 26. La bonne réponse de `lecon-02` q3 réécrite après
+        **7 candidats simulés** : un seul à 0 écart ;
+      - **la bonne réponse du bilan q2 de `lecon-11`** : « Logs (quoi) » → « Logs (pourquoi) »,
+        comme la figure de la page (« 4 · Journaux / le pourquoi ») ; 6 candidats simulés ;
+      - Loki présenté comme un « stockage indexé » du contenu (`lecon-09`) — il n'indexe que les
+        étiquettes (documentation Grafana) ; l'agrégation « réservée aux logs structurés »
+        (`lecon-02`) — Loki a ses analyseurs `pattern` et `regexp` ; le schéma `traceparent` de
+        `lecon-07` recalé par script (champs aux colonnes **16-47** et **49-64**) ; la paire de
+        fenêtres 6 h / 30 min de `lecon-11` rendue au seuil **6** qui réveille (SRE Workbook,
+        table 5-8 ; Node : burn 6 sur 6 h = **5,00 %** du budget) ; un « cas réel » qui prêtait aux
+        post-mortems de GitLab et Cloudflare un scénario qu'ils ne racontent pas (`lecon-06`) ;
+        deux distracteurs (`lecon-09` q3 qui décrivait le mécanisme de la page, `lecon-08` q2 qui
+        citait un chiffre sans référent) ; trois `accept` qui refusaient la réponse enseignée
+        (« gravité », « les quatre signaux dorés », « niveaux de log » : `normExo` rejoué).
+
+      **LA CONTRE-RELECTURE (6 agents en lecture seule, chargés de démolir le diff `753bc60..8903476`) :
+      29 PRISES, 40 blocs exécutés, 84 passages corrigés examinés dont 65 confirmés justes (77,4 %).**
+      **20 prises portent sur les 69 corrections elles-mêmes, soit 29,0 %** (54ᵉ cours 18,2 %, 55ᵉ
+      25,0 % : la part MONTE à chaque cours) ; s'y ajoutent **9 défauts hors liste**, vus par les
+      correcteurs sans y toucher et confirmés. Deux moyennes, et ce qui compte :
+      - **une correction de calcul qui en fausse un autre** (`lecon-08`) : ramener les requêtes lentes
+        à 1,7 s pour tenir la moyenne de 180 ms laissait, deux lignes plus bas, « un p99 à 3 s » — sur
+        10 000 valeurs (Node) le p99 vaut **1 700 ms**, aucune requête n'atteint 3 000 ms, et le p95
+        tombe pile à la frontière (100 ms au rang, 180 ms interpolé). Même piège en `lecon-03`
+        (promtool : p95 **0,05 s**, p99 **2,41 s**) — « le p95 ou p99 révèle… » : seul le p99 ;
+      - **la nouvelle règle des données personnelles, appliquée à moitié** : un tableau « À NE JAMAIS
+        journaliser » qui contenait l'e-mail « (selon usage) » (`lecon-09`), une antisèche restée à
+        l'ancienne règle, le NIR rangé parmi les données « sensibles » alors qu'il n'est pas dans
+        l'art. 9 du RGPD (régime propre, art. 87), et l'e-mail écarté « parce que c'est une donnée
+        personnelle » — ce que `user_id` est aussi ;
+      - **un placeholder qui donnait la réponse** (`lecon-11`, exo 2 : l'`accept` élargi validait le
+        texte d'exemple) et **un premier indice qui la donnait aussi** (« SDK + Collector + OTLP. », et
+        « otlp » venait d'être accepté) — `normExo` rejoué : plus aucune réponse acceptée dans un
+        placeholder ou un indice ;
+      - l'exemplar présenté comme LE chemin métrique → trace (glossaire de `lecon-11`, bonne réponse
+        de `lecon-06` q3) alors qu'il est optionnel (drapeau `exemplar-storage`, documentation
+        Prometheus) — bonne réponse réécrite après **11 candidats simulés**, 2 à 0 écart ; « trois vues
+        d'un même événement » restée dans deux conclusions (une métrique agrège) ; un distracteur
+        devenu absurde (« l'archive, la plus rapide ») et un autre agrammatical ; `exemplar` employé
+        en `lecon-04` avant d'être défini ; le schéma `trace.txt` décalé d'une colonne ; « La SRE » au
+        féminin dans `cours.html` ; 14,4 « en 2 jours » (Node : **2,083 j = 50 h**).
+
+      **29 corrigées sur 29** (5 correcteurs en groupes disjoints, commit `cabe9d0`) ; 2 distracteurs
+      simulés avant pose (`lecon-09` q3 : 10 candidats, `lecon-04` q4 : 5 — « services » rouvrait le mot
+      fétiche). `controle.js --ref=753bc60` **0 indicateur déplacé**, lexique **0/0/0**, fétiche
+      **0 alerte**, `verif-html` **0**.
+
+      **CLÔTURE** : cliquets refigés — `verif-qcm-biais.js --ecrire`, `observabilite` marqué `traite`
+      (**55 cours**), longueur **25,0 %**, pire indice du cliquet **25,2 %** (« la plus détaillée ») ;
+      `verif-qcm-lexique.js --ecrire` (inchangé, déjà à 0). `tools/doc/gen.js`, assembleurs
+      `etude-inconnu` / `etude-recherche` et `build-index --write --fresh` (quiz, flashcards, search,
+      searchlite, antisèches, pièges) : **point fixe au 2ᵉ tour**, vérifié au contenu (empreinte du
+      diff identique au tour suivant). `verif-donnees` **0 erreur** ; `verif.js --rapide` **53 étapes
+      vertes (208,1 s)** ; 0 CRLF, 0 BOM, JSON valide, 0 chargement externe.
+      **Site : 6 167 questions, réussite « la plus longue » 41,5 % (`mesure-biais-qcm`), 55 cours
+      traités.**
+
+      **LE 57ᵉ COURS EST DÉSIGNÉ — `docker`.** Classement par nocivité réelle sur les **35 cours
+      restants** (`qcm-biais-reference.json`), `stats` exclu (cours-témoin) : `docker` (57 questions,
+      **94,7 %**) et `r` (63, 85,7 %) ex aequo à **54,0 devinables**, départagés par le taux ; puis
+      `bash` 53,5, `tests` 53,5, `pascal` 53,3, `fsharp` 52,3, `vb` 52,0, `linux` 52,0. Méthode
+      inchangée : préparation (consigne mesurée), vague d'écriture, relecture par contradiction,
+      correction en groupes disjoints, contre-relecture des corrections, clôture.
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
