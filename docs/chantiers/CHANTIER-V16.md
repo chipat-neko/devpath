@@ -9157,7 +9157,7 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       taux ; puis `pascal` 53,3, `fsharp` 52,3, `linux` 52,0, `prolog` 52,0, `vb` 52,0, `objc` 51,7.
       Bash est dans Git Bash : les exemples s'exécutent sans rien installer. Méthode inchangée.
 
-      ### 59ᵉ cours — `bash` (2026-09-30) : vague et relecture FAITES, 129 corrections à poser
+      ### 59ᵉ cours — `bash` (2026-09-30) : CLOS — 95,5 % → 25,0 %
 
       **PRÉPARATION FAITE le 2026-09-30** : `scratchpad/CONSIGNE-BASH.md` — **95,5 %** à la longueur
       (couverture 96,4 %, rendement 98,1 %), rangs **55/1/0/0** (cible 14/14/14/14), **12 252
@@ -9245,9 +9245,85 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       chargement externe.
       **Site : 6 167 questions, réussite « la plus longue » 39,7 % (`mesure-biais-qcm`).**
 
-      **Prochain réveil : la correction des 129 fautes restantes (45 moyennes, 84 basses ; six
-      groupes disjoints, `scratchpad/CONSIGNE-BASH-CORRECTION.md`), puis la contre-relecture des
-      corrections (diff depuis `5b3c59a`), puis la clôture (`traite: true`, désignation du 60ᵉ).**
+      **LA CORRECTION (réveil suivant, même jour ; commit `ccc117c`)** — six correcteurs en lots
+      disjoints (un seul par fichier), consigne `scratchpad/CONSIGNE-BASH-CORRECTION.md`. **128
+      fautes corrigées sur 129, 1 laissée** (n° 100 : elle repose sur Bash 3.2, qui ne s'exécute
+      pas ici), **plus 11 corrections supplémentaires de même nature**. Preuves : **99 par
+      exécution sous bash 5.3.9, 26 par la source, 4 de mémoire**. Exemples exécutés : les quatre
+      sorties `ls` de `lecon-02` recopiées d'UN même dossier jetable (240K et 1,1M pour 245 760 et
+      1 150 000 octets) ; `pile.sh` de `lecon-12` (« + 7:main: externe / + 6:externe: interne ») ;
+      le `kill -TERM` de `lecon-10` (signal à 1 s, piège joué à 4 s, fin du `sleep`) ; le script de
+      `lecon-08` rejoué en entier deux fois de suite (code 0, l'archive reste) ; le mini-projet de
+      `lecon-16` avec une espace dans HOME (9 archives + celle du jour → **7**, code 0). **Deux
+      rattrapages** : « qu'une » sorti du corps de `lecon-06` (k de q3), « guillemets » sorti de
+      l'`aria-label` de `lecon-12` (k de q2). `controle.js --ref=8c67d6f` : **0 indicateur déplacé**
+      sur 56 questions ; `mesure-qcm-intouchable bash 8c67d6f` : **0 atteinte**. ⚠️ Un rejeu a écrit
+      pour de bon `/tmp/sauvegarde.tar.gz` (Git Bash convertit le chemin passé au script) : supprimé
+      aussitôt, et la règle « dossier jetable SOUS le dossier de travail » est passée en consigne.
+
+      **LA CONTRE-RELECTURE (même réveil ; commit `69c78e9`)** — six contradicteurs en lecture seule
+      sur le diff `5b3c59a..ccc117c`, **environ 780 commandes rejouées sous bash 5.3.9 et 686 essais
+      `normExo`**. **49 fautes : 9 moyennes, 40 basses, aucune haute** — **25 dues aux corrections
+      (23 corrections distinctes sur 155, soit 14,8 %** ; cours précédents 18,2 / 25,0 / 29,0 /
+      23,8 / 12,8 %) et 24 anciennes que personne n'avait vues. Les plus nettes :
+      - **un absolu DÉPLACÉ, encore** : « sauf dans un if » (`lecon-08`) — exécuté, un `false` dans
+        le bloc `then` arrête bien le script (code 1) ; seule la CONDITION est épargnée (code 0) ;
+        et « seul un `kill -9` y échappe » (`lecon-11`), démenti par un script qui finit par `exec` ;
+      - **une astuce fausse pour le script de sa propre page** (`lecon-11`) : « le script continue »
+        après Ctrl-C — sous `set -e`, le piège se joue deux fois puis le script S'ARRÊTE (code 130) ;
+      - **un libellé de lien devenu la réponse** (`lecon-02` : « Revoir … (cd -) », affiché au 10ᵉ
+        essai) et une liste `accept` élargie à une forme FAUSSE (`(( ))` sans dollar, `lecon-05`) ;
+      - **le mini-projet ne tenait pas sa promesse** (« échouer proprement, ne rien laisser
+        traîner ») : après un échec de `tar`, l'archive amputée restait sous le nom définitif et
+        écrasait la bonne archive du jour. `tar` écrit maintenant sous un nom provisoire que `mv`
+        ne renomme qu'après succès — rejoué : **3 entrées avant l'échec, 3 après, code 1, aucun
+        `.tmp`** ; le script complet et l'assemblage des briques rendent désormais **le même
+        journal** (`diff` vide hors chemins ; la page disait « cinq briques », le script en a quatre) ;
+      - **`xargs -d` est une option GNU** posée à neuf endroits sans le dire (le cours annonce
+        macOS) : la phrase le dit, avec la variante `tr '\n' '\0' | xargs -0 rm --` (exécutée :
+        code 0) ; l'absence de `-d` sur macOS est établie par la source, pas exécutée ;
+      - **la bonne réponse de `lecon-16` q1** (la n° 22, laissée à la passe précédente) : « chaque
+        exécution produise un fichier distinct » est fausse à l'exécution (deux lancements le même
+        jour → **1 archive**). **8 candidats simulés, 1 à 0 écart** — « chaque journée produise un
+        fichier différent » —, et seulement après avoir fait entrer « journée » et « différent »
+        dans le CORPS (sinon `k` passait de 2 à 4 ; « quotidien » et « horodatage » déplaçaient le
+        mot technique exclusif).
+      **48 corrigées par l'orchestrateur, 1 laissée** (`-L` accepté pour `-l` : `normExo` passe en
+      minuscules, limite du moteur). Trois distracteurs retouchés après simulation (`lecon-04` q1 :
+      5 candidats, 1 à 0 écart ; `lecon-13` q3 : 3, 1 ; `lecon-15` q2 : 3, 2). **En plus** : deux
+      indices qui ÉTAIENT la réponse (`$(( … ))` en `lecon-05`, `$#` en `lecon-06`), trouvés par un
+      rejeu `normExo` étendu aux 50 exercices du cours (198 réponses acceptées), et **un
+      débordement ancien de +300 px à 1280 px** dans `lecon-07` (un `<code>` en ligne de 128
+      caractères, vu par `verif-rendu` lancé sur les 16 pages du cours : découpé en sept morceaux).
+      ⚠️ **Laissé, et dit** : dans 13 exercices du cours, le libellé du lien « Revoir « grep » »
+      affiche au 10ᵉ essai un mot qui est une réponse acceptée — c'est le titre de la section
+      visée, convention du moteur sur tout le site, pas une faute de ce cours.
+      État final : `controle.js --ref=8c67d6f` **0 indicateur déplacé**, fétiche **0 alerte**, tics
+      **0**, lexique **1 question à mettre en forme** (`lecon-03` q1, connue), `verif-html` **0**,
+      `verif-rendu` sur les 16 pages **0 erreur**. `mesure-qcm-intouchable bash 5b3c59a` : **6
+      atteintes, toutes délibérées** (4 explain, 1 bonne réponse, 1 énoncé).
+
+      **CLÔTURE** : cliquets refigés — `verif-qcm-biais.js --ecrire`, `bash` marqué `traite`
+      (**58 cours**), longueur **25,0 %**, pire indice du cours **27,4 %** (« la TROISIÈME plus
+      longue ») ; `verif-qcm-lexique.js --ecrire` ; épreuve `verif-qcm-biais-mutations` **10/10**.
+      `tools/doc/gen.js`, assembleurs `etude-inconnu` / `etude-recherche` et `build-index --write
+      --fresh` (quiz, flashcards, search, searchlite, antisèches, pièges) : **point fixe au 3ᵉ
+      tour**, puis au 2ᵉ après la retouche de `lecon-07`. `verif-donnees` **0 erreur** ;
+      `verif.js --rapide` **53 étapes vertes (228,7 s)** — ⚠️ un premier passage, lancé dans la
+      foulée des index, s'était terminé en renvoyant vers `verif-erreurs.js` (sortie non
+      conservée) ; relancé seul, cet outil est vert (55 entrées, 78 extraits réexécutés), et la
+      chaîne entière l'est au second passage : à surveiller, non expliqué. 0 CR, 0 BOM, JSON
+      valide, 0 chargement externe.
+      **Site : 6 167 questions, réussite « la plus longue » 39,7 % (`mesure-biais-qcm`), 58 cours
+      traités, 32 restants.**
+
+      **LE 60ᵉ COURS EST DÉSIGNÉ — `tests`.** Classement par nocivité réelle sur les **32 cours
+      restants** (`qcm-biais-reference.json`), `stats` exclu : `tests` (57 questions, 93,9 %)
+      **53,5 devinables** ; puis `pascal` 53,3 (59 questions, 90,4 %), `fsharp` 52,3, `prolog` 52,0,
+      `linux` 52,0, `vb` 52,0, `objc` 51,7, `api` 51,2. Méthode inchangée, avec deux ajouts tirés
+      de `bash` : (1) le rejeu `normExo` couvre TOUS les exercices du cours et teste aussi les
+      morceaux d'indice entre guillemets ou parenthèses (`scratchpad/bash-contre/moi/exos-tous.js`) ;
+      (2) `verif-rendu` se lance sur TOUTES les pages du cours à la clôture, pas sur six.
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
