@@ -8516,6 +8516,36 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       à la longueur (42,8 %), 53 cours traités.** Méthode inchangée, et une étape de plus, qui a
       payé ici : **la contre-relecture des corrections**, avant de clore.
 
+
+      **PRÉPARATION FAITE le 2026-09-30** : `scratchpad/CONSIGNE-LISP.md` (suivie par git) — 98,2 % à
+      la longueur (couverture 100 %), rangs **54/0/1/0**, **11 080 caractères** à écrire sur 55
+      questions, rapport bonne/distracteur **4,19** (106,0 contre 25,3 caractères), lexique
+      **50 exploitables / 24 retournées / 52 à mettre en forme**, **4 alertes** de biais inverse,
+      **douze tics de lot** (deux-points médian **21/2**, le plus fort mesuré en B4 ; point-virgule
+      médian 15/0), **3 mots fétiches dès le départ** (`liste` 35,0 %, `fonction` 34,7 %, `arguments`
+      31,4 %). **Le cours S'EXÉCUTE** : Racket 8.17 minimal (archive `.tgz`) et SBCL 2.5.8 (MSI extrait
+      par `msiexec /a`, rien d'installé), tous deux dans `scratchpad/` hors git ; la table des dix
+      erreurs classiques de la consigne a été exécutée avant d'être donnée (`9`, `(1 . 2)`, `let` → 1
+      contre `let*` → 2, fermeture après `set!` → 5…).
+
+      **LA VAGUE (6 écrivains, patchs posés par `pose.js`) : 165 distracteurs sur 165 réécrits**,
+      programmes Racket et SBCL exécutés pour chaque valeur annoncée, et les CORPS de neuf leçons
+      rejoués au passage (50 sorties en 01-03, 39 en 04-06, toutes celles de 10-12 et 15 : exactes).
+      `mesure-qcm-intouchable` **0 atteinte**. « La plus longue » **98,2 % → 25,5 %** (rangs
+      **14/14/14/13**, exactement la cible), lexique **0/0/0**, tics **0**, mot fétiche **0 alerte**,
+      biais inverse **0 alerte** (pire 26,7 %), intrus lexical **0 mot à traiter**, point interne
+      **25,0 %**. **Pire des 44 stratégies : 27,9 %** (« ECARTER la moins bavarde »), sous le seuil de
+      28 % : **pas de dosage** cette fois. `verif-html` **0**. Commit `df426ac`.
+
+      **15 défauts de CORPS signalés par les écrivains** (sans y toucher), presque tous de DIALECTE :
+      `fold-left` (R6RS) présenté comme de base alors que ni Racket ni R7RS ne l'ont (`lecon-06`,
+      `lecon-10`) ; `make-hash-table` de Guile (`lecon-12`) ; `defmacro` de Common Lisp mêlé à du
+      Scheme (`#f`, `set!`, `begin`) en `lecon-13`, qui ne tourne sous AUCUN des deux interprètes ;
+      le `t` de Common Lisp dans un `cond` Scheme (`lecon-07`) ; `macroexpand` absent de Scheme
+      (`lecon-08`) ; « Lisp a 67 ans » (2026 − 1958 = **68**, calculé) ; une bonne réponse sur la
+      fermeture qui « se souvient des valeurs » quand elle capture la LIAISON (exécuté : 1 puis 5
+      après `set!`) → transmis à la relecture par contradiction, qui les confirme ou les infirme.
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
