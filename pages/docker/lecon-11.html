@@ -140,7 +140,7 @@ ENTRYPOINT ["echo"]
 <figure class="code-block" data-file="Dockerfile"><pre><code class="language-docker">FROM python:3.12-slim
 WORKDIR /app
 COPY serveur.py .
-# le programme, toujours lancé
+# le programme lancé par défaut (remplaçable par --entrypoint)
 ENTRYPOINT ["python", "serveur.py"]
 # les arguments PAR DÉFAUT
 CMD ["--port", "8000"]</code></pre></figure>
@@ -191,8 +191,8 @@ docker run monserveur --port 9000  # -&gt; python serveur.py --port 9000</code><
   <li><code>ENV</code>&nbsp;: une variable <strong>inscrite dans l'image</strong>, présente à la construction <em>et</em> à l'exécution (l'application peut la lire). On la surcharge au lancement avec <code>-e</code> ou <code>--env-file</code>.</li>
 </ul>
 <figure class="code-block" data-file="Dockerfile"><pre><code class="language-docker"># ARG : paramètre de BUILD (valeur par défaut, surchargée par --build-arg)
-ARG NODE_VERSION=20
-FROM node:${NODE_VERSION}-alpine
+ARG VERSION_NODE=20
+FROM node:${VERSION_NODE}-alpine
 
 WORKDIR /app
 COPY package*.json ./
@@ -206,7 +206,7 @@ ENV PORT=3000
 EXPOSE 3000
 CMD ["node", "server.js"]</code></pre></figure>
 <figure class="code-block" data-file="terminal"><pre><code class="language-bash"># Choisir la version de base AU BUILD (ARG)
-docker build --build-arg NODE_VERSION=22 -t monapp .
+docker build --build-arg VERSION_NODE=22 -t monapp .
 
 # Surcharger une variable À L'EXÉCUTION (ENV)
 docker run -e PORT=8080 monapp
@@ -290,14 +290,14 @@ docker run --env-file .env monapp     # un fichier de variables (KEY=valeur)</co
 [
   {"type":"text","accept":["ENTRYPOINT","entrypoint"],"placeholder":"l'instruction qui fixe le programme, de sorte qu'un argument du run s'ajoute au lieu de le remplacer","hints":["CMD, lui, est entièrement remplacé.","Cette instruction agit comme un préfixe qu'on complète.","??? [\"python\", \"serveur.py\"]"],"link":{"href":"lecon-11.html","label":"Revoir « CMD et ENTRYPOINT »"}},
   {"type":"text","accept":["exec","la forme exec","forme exec"],"placeholder":"le nom de la forme d'écriture (en tableau JSON) qui fait du programme le PID 1 et permet un arrêt propre","hints":["L'autre forme passe par /bin/sh -c.","Elle s'écrit CMD [\"node\", \"x\"].","La forme ????"],"link":{"href":"lecon-11.html","label":"Revoir « Forme exec ou forme shell »"}},
-  {"type":"text","accept":["docker run -e PORT=8080 monapp","docker run --env PORT=8080 monapp","docker run --env=PORT=8080 monapp","-e PORT=8080","--env PORT=8080","run -e PORT=8080 monapp","run --env PORT=8080 monapp"],"placeholder":"la commande qui lance l'image monapp en fixant la variable d'environnement PORT à 8080","hints":["On surcharge une ENV au lancement.","L'option courte est -e CLE=valeur.","docker run ??? monapp"],"link":{"href":"lecon-11.html","label":"Revoir « ARG et ENV »"}}
+  {"type":"text","accept":["docker run -e PORT=8080 monapp","docker run --env PORT=8080 monapp","docker run --env=PORT=8080 monapp","-e PORT=8080","--env PORT=8080","--env=PORT=8080","run -e PORT=8080 monapp","run --env PORT=8080 monapp","run --env=PORT=8080 monapp"],"placeholder":"la commande qui lance l'image monapp en fixant la variable d'environnement PORT à 8080","hints":["On surcharge une ENV au lancement.","L'option courte est -e CLE=valeur.","docker run ??? monapp"],"link":{"href":"lecon-11.html","label":"Revoir « ARG et ENV »"}}
 ]
 </script>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Une image déclare <code>ENTRYPOINT ["echo"]</code>. Que produit <code>docker run img bonjour tout le monde</code>&nbsp;? Et si l'image avait déclaré <code>CMD ["echo"]</code> à la place&nbsp;?</p><details><summary>Voir une solution</summary><p>Avec <code>ENTRYPOINT ["echo"]</code>&nbsp;: les mots sont ajoutés en arguments, donc la sortie est <code>bonjour tout le monde</code>. Avec <code>CMD ["echo"]</code>&nbsp;: l'argument du run <strong>remplace</strong> le CMD, Docker tente donc d'exécuter la commande <code>bonjour</code> (qui n'existe pas) — erreur. C'est toute la différence entre «&nbsp;compléter&nbsp;» et «&nbsp;remplacer&nbsp;».</p></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris les deux dernières lignes d'un Dockerfile pour une image qui lance <strong>toujours</strong> <code>python app.py</code>, avec <code>--workers 4</code> comme valeur <strong>par défaut</strong> que l'utilisateur peut remplacer.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="Dockerfile"><pre><code class="language-docker">ENTRYPOINT ["python", "app.py"]
 CMD ["--workers", "4"]</code></pre></figure><p><code>docker run img</code> lance <code>python app.py --workers 4</code>&nbsp;; <code>docker run img --workers 8</code> lance <code>python app.py --workers 8</code> (le CMD par défaut est remplacé, l'ENTRYPOINT reste).</p></details></div>
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>On veut choisir la version de Node <strong>au moment du build</strong> et fixer <code>NODE_ENV</code> <strong>pour l'exécution</strong>. Quelle instruction pour chacun, et pourquoi ne pas inverser&nbsp;?</p><details><summary>Voir une solution</summary><p>La version de base est un paramètre de <strong>construction</strong> → <code>ARG NODE_VERSION=20</code> (utilisé dans <code>FROM node:${NODE_VERSION}-alpine</code>), fixé par <code>--build-arg</code>. <code>NODE_ENV</code> doit être lu par l'application <strong>au run</strong> → <code>ENV NODE_ENV=production</code>. Inverser ne marcherait pas&nbsp;: un <code>ARG</code> n'existe plus dans le conteneur (l'app ne pourrait pas le lire), et un <code>ENV</code> ne peut pas paramétrer la ligne <code>FROM</code> avant que l'image n'existe.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>On veut choisir la version de Node <strong>au moment du build</strong> et fixer <code>NODE_ENV</code> <strong>pour l'exécution</strong>. Quelle instruction pour chacun, et pourquoi ne pas inverser&nbsp;?</p><details><summary>Voir une solution</summary><p>La version de base est un paramètre de <strong>construction</strong> → <code>ARG VERSION_NODE=20</code> (utilisé dans <code>FROM node:${VERSION_NODE}-alpine</code>), fixé par <code>--build-arg</code>. <code>NODE_ENV</code> doit être lu par l'application <strong>au run</strong> → <code>ENV NODE_ENV=production</code>. Inverser ne marcherait pas&nbsp;: un <code>ARG</code> n'existe plus dans le conteneur (l'app ne pourrait pas le lire), et un <code>ENV</code> ne peut pas paramétrer la ligne <code>FROM</code> avant que l'image n'existe.</p></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>
