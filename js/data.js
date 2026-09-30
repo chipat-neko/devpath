@@ -1350,7 +1350,7 @@ window.SITE_DATA = (function () {
       ],
       modules: [
         {
-          num: "01", title: "Voir l'état du système", sub: "Logs, métriques, traces",
+          num: "01", title: "Voir l'état du système", sub: "Logs, métriques",
           lessons: [
             { num: "01", title: "Pourquoi l'observabilité", file: "lecon-01.html", status: "complet" },
             { num: "02", title: "Les journaux (logs) structurés", file: "lecon-02.html", status: "complet" },
