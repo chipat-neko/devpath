@@ -8644,6 +8644,42 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       `vb` 52,0. Méthode inchangée : préparation (consigne mesurée), vague d'écriture, relecture par
       contradiction, correction en groupes disjoints, **contre-relecture des corrections**, clôture.
 
+      **PRÉPARATION FAITE le 2026-09-30** : `scratchpad/CONSIGNE-OBSERVABILITE.md` (suivie par git,
+      commit `cc0b804`) — 96,4 % à la longueur (couverture 100 %), rangs **54/2/0/0**, **10 491
+      caractères** à écrire sur 55 questions sur 56, rapport bonne/distracteur **3,60** (104,3 contre
+      29,0 caractères), lexique **51 exploitables / 34 retournées / 54 à mettre en forme**, intrus
+      lexical **90 mots sur 16 questions**, **4 alertes** de biais inverse, **quinze tics de lot**
+      (glose finale entre parenthèses **16/2**, deux-points médian 12/2, point-virgule médian 10/0 —
+      et « parce que » **1/18**, tic de DISTRACTEUR), **5 mots fétiches dès le départ** (`requête`
+      35,3 %, `traces` 32,6 %, `erreurs` 31,0 %, `métriques` 30,4 %, `données` 28,1 %).
+      **Le PromQL S'EXÉCUTE** : `promtool` 3.15.0 portable (archive officielle, rien d'installé) dans
+      `scratchpad/prometheus/`, hors git ; `promtool test rules` évalue une expression sur des séries
+      synthétiques (attendu absurde, on lit le `got:`). La table des erreurs classiques de la consigne
+      a été exécutée avant d'être donnée : `rate()` d'un compteur à +60/min → **1**/s, `increase()` →
+      **300**, `rate()` sur une jauge 10/5/10/5 → **0,083** contre `deriv()` → **0**, remise à zéro →
+      **0,889**/s, p95 interpolé → **0,778** s, p99 de deux serveurs **0,1** et **0,3** s : moyenne
+      0,2, fusionné **0,3** ; 99,9 % sur 30 j → **43,2 min**, burn rate 14,4 pendant 1 h → **2,0 %**
+      du budget.
+
+      **LA VAGUE (6 écrivains, patchs posés par `pose.js`) : 168 distracteurs sur 168 réécrits**,
+      **50 exécutions** citées (promtool et Node : `sum(increase())` sur trois `user_id` → **300**
+      comme sans étiquette, `count()` → **3** séries, 1 000 requêtes à 95 % × 50 ms / 5 % × 3 s →
+      moyenne **197,5 ms** et p99 **3 000 ms**…). `mesure-qcm-intouchable` **0 atteinte**. « La plus
+      longue » **96,4 % → 25,0 %** (rangs **14/14/14/14**), lexique **0/0/0**, intrus lexical **0 mot**,
+      tics **0**, mot fétiche **0 alerte**, biais inverse **0 alerte** (pire 25,5 %). **Pire des 44
+      stratégies : 25,6 %** (« la moins bavarde »), sous le seuil de 28 % : **pas de dosage**. Questions trahies par 5 indices ou plus : **47 → 0**. `verif-html` **0**.
+      Commit `753bc60`.
+
+      **12 défauts signalés par les écrivains** (sans y toucher), transmis à la relecture : le
+      `trace_id` présenté comme reliant aussi les MÉTRIQUES d'une requête (`lecon-06`, `lecon-11` —
+      une métrique est un agrégat, le lien passe par les *exemplars*, jamais nommés) ; l'encadré
+      multi-fenêtres de `lecon-10`, qui prête à la fenêtre courte la détection rapide (promtool :
+      panne totale à 60 min, la fenêtre de 1 h seule et la combinaison sonnent **à la même minute**,
+      61 ; à 80 min la fenêtre longue seule sonne encore, la combinaison non) ; deux moyennes fausses
+      (`lecon-03` : « 100 ms » pour un mélange qui donne **197,5 ms** ; `lecon-08` : « 180 ms » pour
+      **245 ms**) ; l'exporteur `loki` pointé sur l'endpoint `/otlp` (`lecon-11`) ; la bonne réponse
+      du bilan q2 de `lecon-11` (« logs = le quoi ») contre le corps (« journaux = le pourquoi »).
+
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
