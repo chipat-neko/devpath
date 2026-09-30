@@ -104,7 +104,7 @@
 <p>Historiquement, la sécurité arrivait <em>à la fin</em>&nbsp;: un audit juste avant la mise en production, quand tout changement coûte cher. Le <strong>shift-left</strong> («&nbsp;décaler à gauche&nbsp;») renverse la logique&nbsp;: on place les contrôles le plus <strong>tôt</strong> possible, dès l'écriture du code et à chaque commit. Plus un défaut est trouvé tard, plus il coûte à corriger.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 202" role="img" aria-label="Le coût de correction d'un défaut croît fortement selon l'étape où on le découvre : très faible à la conception et au développement, modéré au test, très élevé en production. Une flèche invite à décaler les contrôles vers la gauche, tôt dans le cycle.">
+  <svg viewBox="0 0 640 202" role="img" aria-label="Le coût de correction d'un défaut croît fortement selon l'étape où on le découvre : faible à la conception, déjà plus élevé au développement, modéré au test, très élevé en production. Une flèche invite à décaler les contrôles vers la gauche, tôt dans le cycle.">
     <text class="d-label" x="320" y="22" text-anchor="middle" font-size="13">Plus on trouve tard, plus ça coûte — d'où le « shift-left »</text>
     <line class="d-line" x1="60" y1="150" x2="600" y2="150" />
     <rect class="d-accent" x="80" y="138" width="70" height="12" rx="3" />
@@ -122,7 +122,7 @@
     <path class="d-line" d="M520 190 L100 190" fill="none" /><path class="d-line" d="M120 184 L100 190 L120 196" fill="none" />
     <text class="d-text" x="330" y="187" text-anchor="middle" font-size="10">décaler les contrôles vers la gauche</text>
   </svg>
-  <figcaption>Le coût d'un défaut de sécurité explose s'il n'est trouvé qu'en production. Automatiser des contrôles dès le commit, c'est corriger quand c'est encore quasi gratuit.</figcaption>
+  <figcaption>Le coût d'un défaut de sécurité explose s'il n'est trouvé qu'en production. Automatiser des contrôles dès le commit, c'est corriger quand c'est encore quasi gratuit. Les multiplicateurs sont des ordres de grandeur souvent cités, pas des mesures.</figcaption>
 </figure>
 
 <h2>La boîte à outils : SAST, DAST, SCA</h2>
@@ -132,7 +132,7 @@
 <ul>
 <li><strong>SAST</strong> (analyse <em>statique</em>)&nbsp;: lit le <strong>code source</strong> au repos et repère des motifs dangereux (concaténation d'une requête SQL, appel risqué). Comme un correcteur qui relit sans exécuter.</li>
 <li><strong>DAST</strong> (analyse <em>dynamique</em>)&nbsp;: attaque l'<strong>application qui tourne</strong>, de l'extérieur, en envoyant des requêtes malveillantes pour voir ce qui cède. Il ne voit pas le code, seulement le comportement.</li>
-<li><strong>SCA</strong> (analyse des <em>dépendances</em>)&nbsp;: compare tes <strong>bibliothèques tierces</strong> à des bases de vulnérabilités connues (les <em>CVE</em>) et signale les versions à risque.</li>
+<li><strong>SCA</strong> (analyse des <em>dépendances</em>)&nbsp;: compare tes <strong>bibliothèques tierces</strong> à des bases de vulnérabilités connues (souvent numérotées par un <em>CVE</em>) et signale les versions à risque.</li>
 </ul>
 
 <figure class="diagram">
@@ -163,23 +163,29 @@
 
 <p>Aujourd'hui, l'essentiel du code qui tourne en production, tu ne l'as pas écrit&nbsp;: il vient de tes <strong>dépendances</strong> et des leurs. C'est donc là que se cachent le plus de failles «&nbsp;gratuites&nbsp;» à trouver. Le SCA se lance en une commande&nbsp;:</p>
 
-<figure class="code-block" data-file="terminal"><pre><code class="language-bash"># Lister les dépendances aux vulnérabilités connues (CVE)
+<figure class="code-block" data-file="terminal"><pre><code class="language-bash"># Lister les dépendances touchées par un avis de sécurité connu (souvent doté d'un CVE)
 npm audit
 
-#   found 3 vulnerabilities (2 moderate, 1 high)
-#   run `npm audit fix` to address them
+#   […] fin de la sortie :
+#   3 vulnerabilities (2 moderate, 1 high)
+#
+#   To address all issues, run:
+#     npm audit fix
 
 # Dans le pipeline : n'échouer que sur les failles hautes ou critiques
 npm audit --audit-level=high</code></pre></figure>
 
-<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Une faille dans une dépendance touche tout le monde d'un coup</p><p>Quand une vulnérabilité grave est publiée sur une bibliothèque très répandue, des centaines de milliers de projets deviennent vulnérables <em>le même jour</em>, sans avoir rien changé. Un scan de dépendances automatisé dans le pipeline te prévient dès qu'une CVE touche l'une des tiennes&nbsp;: tu mets à jour avant qu'on ne l'exploite.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Une faille dans une dépendance touche tout le monde d'un coup</p><p>Quand une vulnérabilité grave est publiée sur une bibliothèque très répandue, des centaines de milliers de projets deviennent vulnérables <em>le même jour</em>, sans avoir rien changé. Un scan de dépendances automatisé dans le pipeline te prévient dès qu'une faille publiée touche l'une des tiennes&nbsp;: tu mets à jour avant qu'on ne l'exploite.</p></div></div>
 
 <h2>Un garde-fou dans le pipeline</h2>
 
-<p>Comme pour la performance (leçon 11), un contrôle de sécurité n'a de valeur que s'il peut faire <strong>échouer le build</strong>. On l'ajoute au pipeline d'intégration continue (leçon 6), à chaque push&nbsp;:</p>
+<p>Comme pour la performance (leçon 11), un contrôle de sécurité n'a de valeur que s'il peut faire <strong>échouer le build</strong>. On l'ajoute au pipeline d'intégration continue (leçon 6), à chaque push et une fois par jour&nbsp;:</p>
 
 <figure class="code-block" data-file=".github/workflows/securite.yml"><pre><code class="language-yaml">name: securite
-on: [push]
+on:
+  push:
+  schedule:
+    - cron: "0 6 * * *"   # chaque matin (6 h UTC) : une faille peut être publiée sans qu'on ait rien poussé
 jobs:
   audit:
     runs-on: ubuntu-latest
@@ -192,19 +198,26 @@ jobs:
 <p>Autre technique, prolongement direct du <em>property-based testing</em> (leçon 10)&nbsp;: le <strong>fuzzing</strong>. On bombarde une fonction d'entrées <strong>malformées ou hostiles</strong> et on vérifie qu'elle ne cède jamais (ni plantage, ni faille). Un mini-fuzzer «&nbsp;à la main&nbsp;» se résume à une liste d'entrées méchantes&nbsp;:</p>
 
 <figure class="code-block" data-file="nom.securite.test.js"><pre><code class="language-javascript">// Des entrées classiquement hostiles (injection, traversée, octet nul…)
-const HOSTILES = ["", "' OR 1=1 --", "&lt;script&gt;alert(1)&lt;/script&gt;",
-                  "../../etc/passwd", " ", "A".repeat(100000)];
+const HOSTILES = [
+  ["chaîne vide", ""],
+  ["injection SQL", "' OR 1=1 --"],
+  ["balise script", "&lt;script&gt;alert(1)&lt;/script&gt;"],
+  ["traversée de dossiers", "../../etc/passwd"],
+  ["espace seule", " "],
+  ["octet nul", "photo.png\u0000.php"],
+  ["100 000 caractères", "A".repeat(100000)],
+];
 
-test.each(HOSTILES)("rejette proprement l'entrée hostile %j", (mauvais) =&gt; {
+test.each(HOSTILES)("rejette proprement l'entrée hostile : %s", (_nom, mauvais) =&gt; {
   // La validation doit refuser SANS planter ni exécuter quoi que ce soit
   expect(() =&gt; validerNom(mauvais)).toThrow(/invalide/);
 });</code></pre></figure>
 
-<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — commence petit, mais commence</p><p>Pas besoin d'une plateforme coûteuse pour démarrer&nbsp;: un <code>npm audit</code> au pipeline, un scan de secrets sur les commits, et une poignée de tests d'entrées hostiles couvrent déjà beaucoup. L'important est que ces contrôles tournent <strong>automatiquement à chaque changement</strong>, pas une fois par an.</p></div></div>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — commence petit, mais commence</p><p>Pas besoin d'une plateforme coûteuse pour démarrer&nbsp;: un <code>npm audit</code> au pipeline, un scan de secrets sur les commits, et une poignée de tests d'entrées hostiles couvrent déjà beaucoup. L'important est que ces contrôles tournent <strong>automatiquement à chaque changement et chaque jour</strong>, pas une fois par an.</p></div></div>
 
 <h2>Cas réel</h2>
 
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Cas réel — la faille venue d'une dépendance de dépendance</p><p>En 2021, une vulnérabilité critique frappe une bibliothèque de journalisation utilisée <em>partout</em>. Des équipes qui ne l'avaient jamais installée directement se découvrent vulnérables&nbsp;: elle arrivait en <strong>dépendance d'une dépendance</strong>, trois niveaux plus bas. Celles qui avaient un <strong>SCA dans leur pipeline</strong> l'ont su en quelques heures&nbsp;: le scan a pointé la version fautive dans l'arbre complet, et elles ont corrigé dans la journée. Les autres ont cherché à l'aveugle pendant des semaines. La leçon&nbsp;: on ne peut pas sécuriser ce qu'on ne sait pas utiliser&nbsp;— d'où l'importance de scanner l'arbre entier des dépendances, en continu.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Cas réel — la faille venue d'une dépendance de dépendance</p><p>En 2021, une vulnérabilité critique frappe une bibliothèque de journalisation utilisée <em>partout</em>. Des équipes qui ne l'avaient jamais installée directement se découvrent vulnérables&nbsp;: elle arrivait en <strong>dépendance d'une dépendance</strong>, trois niveaux plus bas. Celles qui avaient un <strong>SCA dans leur pipeline</strong> l'ont su en quelques heures&nbsp;: le scan a pointé la version fautive dans l'arbre complet, et elles ont corrigé dans la journée. Les autres ont cherché à l'aveugle pendant des semaines. La leçon&nbsp;: on ne peut pas sécuriser ce qu'on ne sait pas qu'on utilise&nbsp;— d'où l'importance de scanner l'arbre entier des dépendances, en continu.</p></div></div>
 
 <h2>Pièges fréquents</h2>
 
@@ -225,7 +238,7 @@ test.each(HOSTILES)("rejette proprement l'entrée hostile %j", (mauvais) =&gt; {
       <tr><td>Shift-left</td><td>Contrôler la sécurité au plus tôt (dès le commit)</td></tr>
       <tr><td>SAST</td><td>Analyse statique du <em>code source</em> au repos</td></tr>
       <tr><td>DAST</td><td>Attaque l'<em>application qui tourne</em>, de l'extérieur</td></tr>
-      <tr><td>SCA</td><td>Scanne les <em>dépendances</em> vulnérables (CVE)</td></tr>
+      <tr><td>SCA</td><td>Scanne les <em>dépendances</em> vulnérables (failles publiées)</td></tr>
       <tr><td>Scan de secrets</td><td>Détecte clés et mots de passe commités</td></tr>
       <tr><td>Fuzzing</td><td>Bombarder d'entrées malformées&nbsp;: rien ne doit céder</td></tr>
       <tr><td>Garde-fou CI</td><td><code>npm audit --audit-level=high</code> casse le build</td></tr>
@@ -268,23 +281,24 @@ test.each(HOSTILES)("rejette proprement l'entrée hostile %j", (mauvais) =&gt; {
 
 <script type="application/json" data-exos>
 [
-  {"type":"text","accept":["shift-left","shift left","shiftleft","décaler à gauche","decaler a gauche"],"placeholder":"le principe : placer les contrôles de sécurité AU PLUS TÔT : le … (terme anglais avec un tiret)","hints":["« décaler à gauche » en français.","On l'oppose à un audit tardif avant la prod.","shift-????"],"link":{"href":"lecon-13.html","label":"Revoir « Décaler la sécurité à gauche »"}},
-  {"type":"text","accept":["sca","analyse des dépendances","analyse des dependances","npm audit","dépendances","dependances"],"placeholder":"l'analyse qui détecte les DÉPENDANCES vulnérables (CVE) : le … (sigle de 3 lettres)","hints":["Software Composition Analysis.","npm audit en est un exemple.","S?A"],"link":{"href":"lecon-13.html","label":"Revoir « Le plus rentable : scanner ses dépendances »"}},
-  {"type":"text","accept":["fuzzing","fuzz","le fuzzing","fuzz testing"],"placeholder":"la technique qui bombarde une fonction d'entrées malformées/hostiles : le … (prolonge le property-based)","hints":["Anglicisme, de la famille de « fuzz ».","On vérifie que rien ne cède.","fuz????"],"link":{"href":"lecon-13.html","label":"Revoir « Un garde-fou dans le pipeline »"}}
+  {"type":"text","accept":["shift-left","shift left","shiftleft","le shift-left"],"placeholder":"le principe : placer les contrôles de sécurité AU PLUS TÔT : le … (terme anglais avec un tiret)","hints":["« décaler à gauche » en français.","On l'oppose à un audit tardif avant la prod.","shift-????"],"link":{"href":"lecon-13.html","label":"Revoir « Décaler la sécurité à gauche »"}},
+  {"type":"text","accept":["sca","le sca"],"placeholder":"l'analyse qui détecte les DÉPENDANCES vulnérables (CVE) : le … (sigle de 3 lettres)","hints":["Software Composition Analysis.","npm audit en est un exemple.","S?A"],"link":{"href":"lecon-13.html","label":"Revoir « Le plus rentable : scanner ses dépendances »"}},
+  {"type":"text","accept":["fuzzing","fuzz","le fuzzing","fuzz testing"],"placeholder":"la technique qui bombarde une fonction d'entrées malformées/hostiles : le … (prolonge le property-based)","hints":["Anglicisme qui finit en -ing.","On vérifie que rien ne cède.","fuz????"],"link":{"href":"lecon-13.html","label":"Revoir « Un garde-fou dans le pipeline »"}}
 ]
 </script>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Une équipe fait auditer la sécurité une fois par an, la veille de la grosse mise en production. Cite deux inconvénients, et propose l'alternative en un mot.</p><details><summary>Voir une solution</summary><p><strong>Inconvénients&nbsp;:</strong> (1) les défauts sont trouvés très tard, donc coûteux et stressants à corriger juste avant de livrer&nbsp;; (2) tout ce qui a été introduit dans l'année est passé en production sans contrôle entre-temps. <strong>Alternative&nbsp;:</strong> le <strong>shift-left</strong> — des contrôles automatiques (SCA, scan de secrets, tests d'entrées hostiles) à <em>chaque</em> commit, dans le pipeline.</p></details></div>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Pour chacun, dis quel outil convient&nbsp;: (a) «&nbsp;une de nos bibliothèques a-t-elle une faille connue&nbsp;?&nbsp;»&nbsp;; (b) «&nbsp;notre code concatène-t-il des requêtes SQL&nbsp;?&nbsp;»&nbsp;; (c) «&nbsp;le site en ligne est-il vulnérable à une injection&nbsp;?&nbsp;».</p><details><summary>Voir une solution</summary><p>(a) <strong>SCA</strong> — il confronte les dépendances aux CVE connues (ex. <code>npm audit</code>). (b) <strong>SAST</strong> — il lit le code source au repos et repère le motif dangereux. (c) <strong>DAST</strong> — il attaque l'application en cours d'exécution, de l'extérieur, sans voir le code. Les trois angles sont complémentaires.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Pour chacun, dis quel outil convient&nbsp;: (a) «&nbsp;une de nos bibliothèques a-t-elle une faille connue&nbsp;?&nbsp;»&nbsp;; (b) «&nbsp;notre code concatène-t-il des requêtes SQL&nbsp;?&nbsp;»&nbsp;; (c) «&nbsp;le site en ligne est-il vulnérable à une injection&nbsp;?&nbsp;».</p><details><summary>Voir une solution</summary><p>(a) <strong>SCA</strong> — il confronte les dépendances aux failles publiées (ex. <code>npm audit</code>). (b) <strong>SAST</strong> — il lit le code source au repos et repère le motif dangereux. (c) <strong>DAST</strong> — il attaque l'application en cours d'exécution, de l'extérieur, sans voir le code. Les trois angles sont complémentaires.</p></details></div>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris un test qui vérifie qu'une fonction <code>validerNom(x)</code> <strong>rejette</strong> (lève une erreur) sur une petite liste d'entrées hostiles — un mini-fuzzer.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">const HOSTILES = ["", "' OR 1=1 --", "&lt;script&gt;", "../../etc/passwd", " "];
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris un test qui vérifie qu'une fonction <code>validerNom(x)</code> <strong>rejette</strong> (lève une erreur dont le message contient «&nbsp;invalide&nbsp;») sur une petite liste d'entrées hostiles — un mini-fuzzer.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">const HOSTILES = ["", "' OR 1=1 --", "&lt;script&gt;", "../../etc/passwd", " "];
 
 test.each(HOSTILES)("validerNom rejette l'entrée hostile %j", (mauvais) =&gt; {
-  // Aucune de ces entrées ne doit être acceptée : la fonction doit lever
-  expect(() =&gt; validerNom(mauvais)).toThrow();
+  // Aucune de ces entrées ne doit être acceptée : la fonction doit REFUSER, pas planter
+  expect(() =&gt; validerNom(mauvais)).toThrow(/invalide/);
 });
-// Le test échoue si UNE seule entrée hostile passe : on sait alors où trouer.</code></pre></figure></details></div>
+// toThrow() nu resterait vert si validerNom plantait (TypeError) : on exige le message du refus.
+// Si UNE entrée hostile passe, son test rougit et la nomme : on sait où est le trou.</code></pre></figure></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>

@@ -85,8 +85,8 @@
                 <ul>
                   <li>Reconnaître ce qu'est un <strong>code legacy</strong> et pourquoi il fait peur&nbsp;;</li>
                   <li>Poser un <strong>filet</strong> avec des tests de <strong>caractérisation</strong> avant de toucher au code&nbsp;;</li>
-                  <li>Ouvrir des <strong>coutures</strong> (<em>seams</em>) pour rendre testable un code qui ne l'était pas&nbsp;;</li>
-                  <li>Assembler une <strong>suite de tests complète</strong> mobilisant tout le cours.</li>
+                  <li>Ouvrir des <strong>coutures</strong> (<em>seams</em>) pour rendre facile à tester un code qui ne l'était pas&nbsp;;</li>
+                  <li>Assembler une <strong>suite de tests</strong> qui sert de filet autour d'un code existant.</li>
                 </ul>
               </div>
             </header>
@@ -97,28 +97,44 @@
             </details>
 
             <article class="prose">
-<p>Tu sais désormais écrire de bons tests, doser la pyramide, pratiquer le TDD, générer des cas et éprouver tes tests. Reste l'épreuve qui attend <em>vraiment</em> tout développeur&nbsp;: hériter d'un <strong>code sans tests</strong>, en production, que personne n'ose toucher. Cette dernière leçon rassemble tout le cours autour de ce défi, puis te fait assembler une suite de tests complète en fil rouge.</p>
+<p>Tu sais désormais écrire de bons tests, doser la pyramide, pratiquer le TDD, générer des cas et éprouver tes tests. Reste l'épreuve qui attend <em>vraiment</em> tout développeur&nbsp;: hériter d'un <strong>code sans tests</strong>, en production, que personne n'ose toucher. Cette dernière leçon reprend les outils du cours pour relever ce défi, puis te fait assembler une suite de tests en fil rouge.</p>
 
 <h2>Qu'est-ce que le code legacy</h2>
 
 <p>La définition la plus utile vient de Michael Feathers&nbsp;: <strong>le code legacy, c'est du code sans tests</strong>. Peu importe son âge ou son élégance&nbsp;: sans filet, chaque modification est un pari. Le paradoxe est cruel&nbsp;: pour le modifier sans risque il faudrait des tests, mais pour le tester il faut souvent… le modifier. On dénoue ce nœud pas à pas.</p>
 
-<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Le dilemme du legacy</p><p>«&nbsp;Je ne peux pas refactorer sans tests, et je ne peux pas tester sans refactorer.&nbsp;» La sortie&nbsp;: poser d'abord un filet <em>grossier</em> autour du comportement existant (caractérisation), puis n'ouvrir que de <em>petites</em> coutures sûres pour rendre le code injectable.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Le dilemme du legacy</p><p>«&nbsp;Je ne peux pas refactorer sans tests, et je ne peux pas tester sans refactorer.&nbsp;» La sortie&nbsp;: poser d'abord un filet <em>grossier</em> autour du comportement existant (caractérisation), puis n'ouvrir que de <em>petites</em> coutures sûres pour rendre le code injectable. Et quand le code ne se laisse pas tester en l'état, la toute première couture se pose <em>sans</em> filet&nbsp;: on la veut minuscule et mécanique (un paramètre par défaut), rien de plus.</p></div></div>
 
 <h2>Les tests de caractérisation</h2>
 
-<p>Un test de <strong>caractérisation</strong> ne vérifie pas ce que le code <em>devrait</em> faire, mais fige ce qu'il <em>fait aujourd'hui</em> — bugs compris. Son but n'est pas de juger&nbsp;: c'est un <strong>filet de sécurité</strong>. Tant qu'il reste vert, tu sais que tu n'as rien changé au comportement observable. S'il rougit après un refactor, tu as modifié quelque chose — volontairement ou non.</p>
+<p>Un test de <strong>caractérisation</strong> ne vérifie pas ce que le code <em>devrait</em> faire, mais fige ce qu'il <em>fait aujourd'hui</em> — bugs compris. Son but n'est pas de juger&nbsp;: c'est un <strong>filet de sécurité</strong>. Tant qu'il reste vert, tu sais que tu n'as rien changé <em>pour les entrées qu'il rejoue</em> — d'où l'intérêt d'en caractériser plusieurs (cas courant, bornes, cas d'erreur). S'il rougit après un refactor, tu as modifié quelque chose — volontairement ou non.</p>
 
-<figure class="code-block" data-file="facture.caracterisation.test.js"><pre><code class="language-javascript">// On IGNORE si le résultat est "juste" : on capture l'existant tel quel.
+<figure class="code-block" data-file="facture.js"><pre><code class="language-javascript">// Le code hérité, sans un seul test. On n'y touche pas : on l'observe.
+function calculerFacture(commande) {
+  var ht = 0;
+  for (var i = 0; i &lt; commande.articles.length; i++) {
+    ht = ht + commande.articles[i].prix * commande.articles[i].qte;
+  }
+  var tva = ht * 0.2;
+  return { ht: ht, tva: tva, ttc: ht + tva };
+}
+
+module.exports = { calculerFacture };</code></pre></figure>
+
+<figure class="code-block" data-file="facture.caracterisation.test.js"><pre><code class="language-javascript">const { calculerFacture } = require("./facture");
+
+// On IGNORE si le résultat est "juste" : on capture l'existant tel quel.
 test("caractérise calculerFacture (comportement actuel)", () =&gt; {
   const sortie = calculerFacture({ articles: [{ prix: 50, qte: 2 }] });
   // Première exécution : on lit la vraie sortie et on la fige ici.
   expect(sortie).toEqual({ ht: 100, tva: 20, ttc: 120 });
 });
-// Ce test rougira au moindre changement de comportement : c'est le filet.</code></pre></figure>
+// Ce test rougit si le comportement change POUR CETTE ENTRÉE : c'est une maille du filet.</code></pre></figure>
+
+<p>Une maille, pas encore un filet. Passe la TVA de 20&nbsp;% à 10&nbsp;% dans <code>facture.js</code>&nbsp;: le test rougit (<code>ttc</code> attendu à 120, reçu à 110). Ajoute à la place une remise de 10&nbsp;% au-delà de 1&nbsp;000&nbsp;€&nbsp;: il reste vert, car la seule entrée figée vaut 100&nbsp;€. Chaque entrée de plus resserre le filet.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 200" role="img" aria-label="Le test de caractérisation en deux temps. D'abord la capture : on exécute le code legacy, on lit sa sortie réelle, par exemple un total à 120, et on la fige telle quelle dans une assertion, sans juger si elle est correcte ; c'est le filet. Ensuite la garde : après un refactor, si le filet reste vert le comportement n'a pas changé, s'il devient rouge le comportement a été modifié, volontairement ou non.">
+  <svg viewBox="0 0 640 200" role="img" aria-label="Le test de caractérisation en deux temps. D'abord la capture : on exécute le code legacy, on lit sa sortie réelle, par exemple un total à 120, et on la fige telle quelle dans une assertion, sans juger si elle est correcte ; c'est le filet. Ensuite la garde : après un refactor, si le filet reste vert rien n'a changé sur les cas figés, s'il devient rouge le comportement a été modifié, volontairement ou non.">
     <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Le test de caractérisation : photographier, pas juger</text>
     <rect class="d-frame" x="16" y="40" width="150" height="40" rx="8" /><text class="d-text" x="91" y="64" text-anchor="middle" font-size="10">code legacy</text>
     <rect class="d-box" x="246" y="40" width="150" height="40" rx="8" /><text class="d-text" x="321" y="59" text-anchor="middle" font-size="10">sortie réelle</text><text class="d-mut" x="321" y="73" text-anchor="middle" font-size="8.5">{ ht:100 … ttc:120 }</text>
@@ -128,12 +144,14 @@ test("caractérise calculerFacture (comportement actuel)", () =&gt; {
     <text class="d-mut" x="205" y="52" text-anchor="middle" font-size="8">exécute</text>
     <text class="d-mut" x="435" y="52" text-anchor="middle" font-size="8">on fige</text>
     <text class="d-mut" x="321" y="104" text-anchor="middle" font-size="9">on ne juge pas si c'est « juste » — on capture l'existant</text>
-    <rect class="d-box" x="70" y="128" width="230" height="44" rx="8" /><text class="d-text" x="185" y="150" text-anchor="middle" font-size="10">reste vert ✓</text><text class="d-mut" x="185" y="165" text-anchor="middle" font-size="9">le comportement n'a pas changé</text>
+    <rect class="d-box" x="70" y="128" width="230" height="44" rx="8" /><text class="d-text" x="185" y="150" text-anchor="middle" font-size="10">reste vert ✓</text><text class="d-mut" x="185" y="165" text-anchor="middle" font-size="9">rien n'a changé sur les cas figés</text>
     <rect class="d-box" x="340" y="128" width="230" height="44" rx="8" /><text class="d-text" x="455" y="150" text-anchor="middle" font-size="10">devient rouge ✗</text><text class="d-mut" x="455" y="165" text-anchor="middle" font-size="9">le comportement a été modifié</text>
-    <text class="d-mut" x="320" y="190" text-anchor="middle" font-size="8.5">après chaque refactor, le filet répond : as-tu changé le comportement observable ?</text>
+    <text class="d-mut" x="320" y="190" text-anchor="middle" font-size="8.5">après chaque refactor, le filet répond : as-tu changé le comportement sur les cas figés ?</text>
   </svg>
-  <figcaption>Le test de caractérisation ne dit pas si le code est <em>correct</em>&nbsp;: il dit s'il a <em>changé</em>. C'est exactement le filet qu'il faut avant de toucher à un legacy.</figcaption>
+  <figcaption>Le test de caractérisation ne dit pas si le code est <em>correct</em>&nbsp;: il dit s'il a <em>changé</em> sur les cas qu'il fige. C'est exactement le filet qu'il faut avant de toucher à un legacy.</figcaption>
 </figure>
+
+<p>La reprise se fait en boucle. <strong>Sonder</strong>, c'est appeler le code avec quelques entrées et regarder ce qui sort, pour comprendre ce qu'il fait avant de figer quoi que ce soit. On caractérise ensuite ce qu'on a vu, puis on refactore par petits pas, et on recommence.</p>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 224" role="img" aria-label="Une boucle de reprise du legacy en quatre étapes autour du code central : sonder pour comprendre, caractériser pour figer l'existant, obtenir un filet vert, puis refactorer par tout petits pas, avant de reboucler. Chaque tour agrandit le filet de tests.">
@@ -144,7 +162,7 @@ test("caractérise calculerFacture (comportement actuel)", () =&gt; {
     <rect class="d-accent" x="250" y="154" width="140" height="34" rx="8" /><text class="d-text" x="320" y="175" text-anchor="middle" font-size="10">3. Filet vert ✓</text>
     <rect class="d-box" x="60" y="88" width="150" height="34" rx="8" /><text class="d-text" x="135" y="109" text-anchor="middle" font-size="10">4. Refactorer petit</text>
     <path class="d-line" d="M320 74 Q400 68 470 88" fill="none" /><path class="d-line" d="M505 122 Q440 160 390 168" fill="none" /><path class="d-line" d="M250 168 Q160 160 135 122" fill="none" /><path class="d-line" d="M135 88 Q200 60 250 57" fill="none" />
-    <text class="d-mut" x="320" y="212" text-anchor="middle" font-size="10">chaque tour couvre un peu plus ; on ne refactore JAMAIS hors du vert</text>
+    <text class="d-mut" x="320" y="212" text-anchor="middle" font-size="10">chaque tour couvre un peu plus ; hors du vert, rien qu'une couture minuscule</text>
   </svg>
   <figcaption>On tourne en rond… mais le filet grossit à chaque passage. Le code redevient modifiable sans jouer à la roulette.</figcaption>
 </figure>
@@ -154,33 +172,41 @@ test("caractérise calculerFacture (comportement actuel)", () =&gt; {
 <p>Souvent le code résiste au test parce qu'il crée lui-même ses dépendances&nbsp;: il lit l'heure réelle, ouvre une vraie connexion, appelle un service distant. Une <strong>couture</strong> (<em>seam</em>, terme de Feathers) est un point où l'on peut <strong>changer le comportement sans éditer le code sur place</strong>. La couture la plus simple&nbsp;: transformer une dépendance <em>dure</em> en <strong>paramètre injectable</strong> — exactement la technique d'injection vue à la leçon&nbsp;8.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 188" role="img" aria-label="À gauche, une dépendance dure : la fonction lit l'heure réelle en interne, elle est impossible à contrôler en test. À droite, une couture par injection : l'heure devient un paramètre, si bien qu'un test peut fournir une fausse heure déterministe.">
-    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Une couture rend testable ce qui ne l'était pas</text>
+  <svg viewBox="0 0 640 188" role="img" aria-label="À gauche, une dépendance dure : la fonction lit l'heure réelle en interne, et le test ne la choisit pas, sauf à figer la date du système. À droite, une couture par injection : l'heure devient un paramètre, si bien qu'un test peut fournir une fausse heure déterministe.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Une couture rend facile à tester ce qui ne l'était pas</text>
     <rect class="d-frame" x="28" y="42" width="266" height="118" rx="10" />
     <text class="d-tag" x="161" y="64" text-anchor="middle" font-size="11">Dépendance dure</text>
     <rect class="d-box" x="52" y="80" width="218" height="26" rx="5" /><text class="d-text" x="60" y="97" text-anchor="start" font-size="9" font-family="monospace">new Date() DANS la fonction</text>
-    <text class="d-mut" x="161" y="132" text-anchor="middle" font-size="9">l'heure réelle est figée</text>
-    <text class="d-mut" x="161" y="148" text-anchor="middle" font-size="9">→ intestable</text>
+    <text class="d-mut" x="161" y="132" text-anchor="middle" font-size="9">l'heure réelle est subie</text>
+    <text class="d-mut" x="161" y="148" text-anchor="middle" font-size="9">→ pénible à tester</text>
     <rect class="d-frame" x="346" y="42" width="266" height="118" rx="10" />
     <text class="d-tag" x="479" y="64" text-anchor="middle" font-size="11">Couture par injection</text>
     <rect class="d-accent" x="370" y="80" width="218" height="26" rx="5" /><text class="d-text" x="378" y="97" text-anchor="start" font-size="9" font-family="monospace">(maintenant = new Date())</text>
     <text class="d-mut" x="479" y="132" text-anchor="middle" font-size="9">le test fournit une fausse heure</text>
     <text class="d-mut" x="479" y="148" text-anchor="middle" font-size="9">→ déterministe</text>
   </svg>
-  <figcaption>On ne réécrit pas le corps&nbsp;: on ajoute un point d'entrée (un paramètre par défaut) qui laisse le test prendre la main.</figcaption>
+  <figcaption>On ne réécrit pas la logique&nbsp;: on ajoute un point d'entrée (un paramètre par défaut), on y branche la ligne qui lisait l'heure, et le test peut prendre la main.</figcaption>
 </figure>
 
-<figure class="code-block" data-file="ouverture.js"><pre><code class="language-javascript">// AVANT — dépendance dure : impossible à contrôler en test
+<figure class="code-block" data-file="ouverture.avant.js"><pre><code class="language-javascript">// AVANT — dépendance dure : le test ne choisit pas l'heure
+// (sauf à figer la date avec jest.setSystemTime, le temps simulé de la leçon 8)
 function estOuvert() {
-  const h = new Date().getHours();     // l'heure réelle, non maîtrisable
+  const h = new Date().getHours();     // l'heure réelle, lue sur place
   return h &gt;= 9 &amp;&amp; h &lt; 18;
 }
 
-// APRÈS — couture : l'heure devient un paramètre (défaut = comportement inchangé)
+module.exports = { estOuvert };</code></pre></figure>
+
+<figure class="code-block" data-file="ouverture.js"><pre><code class="language-javascript">// APRÈS — couture : l'heure devient un paramètre
+// (défaut = comportement inchangé pour un appel sans argument)
 function estOuvert(maintenant = new Date()) {
   const h = maintenant.getHours();
   return h &gt;= 9 &amp;&amp; h &lt; 18;
 }
+
+module.exports = { estOuvert };</code></pre></figure>
+
+<figure class="code-block" data-file="ouverture.test.js"><pre><code class="language-javascript">const { estOuvert } = require("./ouverture");
 
 test("fermé à 8 h, ouvert à 10 h", () =&gt; {
   expect(estOuvert(new Date("2026-01-05T08:00"))).toBe(false);
@@ -189,7 +215,7 @@ test("fermé à 8 h, ouvert à 10 h", () =&gt; {
 
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — le golden master pour les grosses sorties</p><p>Quand la sortie est volumineuse (un rapport, un HTML, un gros JSON), n'écris pas l'assertion à la main&nbsp;: capture une fois la sortie de référence (le <strong>golden master</strong>) dans un fichier, puis compare chaque exécution à ce fichier. C'est l'<em>approval testing</em>&nbsp;: idéal pour figer d'un coup le comportement d'un code legacy tentaculaire.</p></div></div>
 
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Cas réel — la refonte qui n'osait pas commencer</p><p>Une équipe hérite d'un moteur de calcul de primes de 3&nbsp;000 lignes, sans un seul test, écrit par quelqu'un parti depuis longtemps. Personne n'ose y toucher&nbsp;: un changement, et la paie de milliers de salariés dérape. Plutôt qu'une réécriture risquée, ils posent un <strong>golden master</strong>&nbsp;: ils rejouent 500 dossiers réels à travers le moteur et figent chaque sortie. Le filet devient vert. <em>Ensuite seulement</em>, ils refactorent par petits pas — extraire une fonction, injecter une dépendance — en surveillant le master à chaque étape. Six semaines plus tard, le moteur est modulaire et couvert&nbsp;; aucune prime n'a bougé d'un centime. C'est la démarche exacte du livre de Feathers, <em>Working Effectively with Legacy Code</em>.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Scénario — la refonte qui n'osait pas commencer</p><p>Une équipe hérite d'un moteur de calcul de primes de 3&nbsp;000 lignes, sans un seul test, écrit par quelqu'un parti depuis longtemps. Personne n'ose y toucher&nbsp;: un changement, et la paie de milliers de salariés dérape. Plutôt qu'une réécriture risquée, ils posent un <strong>golden master</strong>&nbsp;: ils rejouent 500 dossiers réels à travers le moteur et figent chaque sortie. Le filet devient vert. <em>Ensuite seulement</em>, ils refactorent par petits pas — extraire une fonction, injecter une dépendance — en surveillant le master à chaque étape. Six semaines plus tard, le moteur est modulaire et couvert&nbsp;; aucune prime n'a bougé d'un centime. C'est l'esprit du livre de Feathers, <em>Working Effectively with Legacy Code</em>&nbsp;: d'abord un filet, ensuite de petits pas.</p></div></div>
 
 <div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin — la méthode Mikado</p><p>Pour des refontes plus profondes, la <strong>méthode Mikado</strong> systématise l'approche par petits pas&nbsp;: tente le changement voulu&nbsp;; note ce qui casse&nbsp;; <strong>annule tout</strong>&nbsp;; traite d'abord les prérequis&nbsp;; recommence. On dessine ainsi un «&nbsp;graphe Mikado&nbsp;» des dépendances à régler dans l'ordre, sans jamais laisser le code cassé plus de quelques minutes. Le principe reste celui de cette leçon&nbsp;: <em>on ne progresse que depuis un état vert</em>.</p></div></div>
 
@@ -213,7 +239,7 @@ test("fermé à 8 h, ouvert à 10 h", () =&gt; {
 <dl class="glossary">
   <dt>Code legacy</dt><dd>Code dépourvu de tests&nbsp;: modifiable seulement au prix d'un risque, quelle que soit sa qualité apparente.</dd>
   <dt>Test de caractérisation</dt><dd>Test qui capture le comportement existant tel quel (sans le juger) pour servir de filet avant refactor.</dd>
-  <dt>Couture (seam)</dt><dd>Endroit du code où l'on peut altérer le comportement sans en modifier le corps, pour le rendre testable.</dd>
+  <dt>Couture (seam)</dt><dd>Endroit du code où l'on peut altérer le comportement sans éditer le code sur place, pour le tester plus facilement.</dd>
   <dt>Injection de dépendance</dt><dd>Fournir une dépendance de l'extérieur (paramètre) au lieu de la créer en dur&nbsp;: la couture la plus courante.</dd>
   <dt>Golden master</dt><dd>Sortie de référence figée une fois, à laquelle on compare les exécutions suivantes (approval testing).</dd>
   <dt>Refactor</dt><dd>Modifier la structure interne sans changer le comportement observable&nbsp;; sûr uniquement sous filet de tests.</dd>
@@ -235,8 +261,8 @@ test("fermé à 8 h, ouvert à 10 h", () =&gt; {
 <script type="application/json" data-quiz>
 [
   {"q":"Selon la définition de Michael Feathers, qu'est-ce qui caractérise un « code legacy » ?","a":["Du code sans tests : peu importe son âge ou son élégance, sans filet chaque modification est un pari","Du code écrit il y a longtemps : passé dix ans, même avec des tests, plus personne ne sait le modifier sans risque","Du code sans qualité apparente ni élégance : mal écrit et dur à lire, il garde ce nom même si une suite de tests le couvre","Du code en production : sitôt livré, peu importe ses tests, le modifier devient un pari"],"correct":0,"explain":"Feathers définit le legacy par l'absence de tests, pas par l'âge. Sans tests, on ne peut pas modifier le code en confiance : c'est ce qui le rend difficile à faire évoluer."},
-  {"q":"Que capture un test de caractérisation, et dans quel but ?","a":["Le comportement ACTUEL du code (bugs compris), pour servir de filet : tant qu'il reste vert, on n'a rien changé","Le comportement CORRECT du code (celui qu'il devrait avoir), pour juger sa justesse réelle : tant qu'il reste rouge, le code n'est pas au point","La structure INTERNE du code (corps compris), pour servir de filet : tant qu'il reste vert, rien n'a été modifié","Les bugs du code ACTUEL (un cas rouge par bug), à corriger avant le moindre refactor : tant qu'il reste rouge, un bug n'est pas encore réglé"],"correct":0,"explain":"Un test de caractérisation ne juge pas : il fige ce que le code fait aujourd'hui. Il devient un filet qui rougit dès qu'un refactor modifie le comportement observable, volontairement ou non."},
-  {"q":"Comment une « couture » par injection rend-elle une fonction testable sans réécrire son corps ?","a":["En transformant une dépendance dure (ex. new Date() interne) en paramètre injectable, avec une valeur par défaut qui préserve le comportement","En transformant la dépendance dure (ex. new Date() interne) en heure fixe codée en dur, ce qui garantit un comportement identique à chaque exécution du module","En figeant la sortie réelle (ex. new Date() compris) dans une assertion, si bien que son heure devient déterministe pour tous les appels suivants","En remplaçant le module entier par un faux (ex. un estOuvert() de test) dont la sortie est choisie, ce qui évite de toucher à son code comme à sa dépendance interne"],"correct":0,"explain":"La couture ajoute un point d'entrée (un paramètre par défaut) sans changer le comportement existant. Le test peut alors fournir une fausse dépendance déterministe — ici une heure fixe — comme à la leçon 8."}
+  {"q":"Que capture un test de caractérisation, et dans quel but ?","a":["Le comportement ACTUEL du code (bugs compris), pour servir de filet : tant qu'il reste vert, rien n'y a changé","Le comportement CORRECT du code (celui qu'il devrait avoir), pour juger sa justesse réelle : tant qu'il reste rouge, le code n'est pas au point","La structure INTERNE du code (corps compris), pour servir de filet : tant qu'il reste vert, rien n'a été modifié","Les bugs du code ACTUEL (un cas rouge par bug), à corriger avant le moindre refactor : tant qu'il reste rouge, un bug n'est pas encore réglé"],"correct":0,"explain":"Un test de caractérisation ne juge pas : il fige ce que le code fait aujourd'hui. Il devient un filet qui rougit quand un refactor modifie le comportement qu'il a figé, volontairement ou non ; ce qu'il n'a pas figé lui échappe."},
+  {"q":"Comment une « couture » par injection rend-elle une fonction testable sans réécrire sa logique ?","a":["En transformant une dépendance dure (ex. new Date() interne) en paramètre injectable, avec une valeur par défaut qui préserve le comportement","En transformant la dépendance dure (ex. new Date() interne) en heure fixe codée en dur, ce qui garantit un comportement identique à chaque exécution du module","En figeant la sortie de 10 h dans une assertion, si bien que la dépendance (ex. new Date() interne) devient déterministe pour tous les appels suivants","En remplaçant le module entier par un faux (ex. un estOuvert() de test) dont la sortie est choisie, ce qui évite de toucher à son code comme à sa dépendance interne"],"correct":0,"explain":"La couture ajoute un point d'entrée (un paramètre par défaut) sans changer le comportement existant. Le test peut alors fournir une fausse dépendance déterministe — ici une heure fixe — comme à la leçon 8."}
 ]
 </script>
 
@@ -244,16 +270,16 @@ test("fermé à 8 h, ouvert à 10 h", () =&gt; {
 
 <script type="application/json" data-exos>
 [
-  {"type":"text","accept":["legacy","code legacy","sans tests","sans test"],"placeholder":"selon Feathers, un code sans tests est un code … (un mot anglais)","hints":["Ce n'est pas une question d'âge mais d'absence de filet.","« héritage » en anglais.","le??cy"],"link":{"href":"lecon-14.html","label":"Revoir « Qu'est-ce que le code legacy »"}},
-  {"type":"text","accept":["caractérisation","caracterisation","test de caractérisation","characterization","caractérisation "],"placeholder":"le test qui fige le comportement ACTUEL du code (bugs compris) : test de …","hints":["Il ne juge pas, il capture l'existant.","On l'écrit avant de refactorer un legacy.","carac??????ion"],"link":{"href":"lecon-14.html","label":"Revoir « Les tests de caractérisation »"}},
-  {"type":"text","accept":["couture","seam","une couture","coutures"],"placeholder":"le point où l'on peut changer le comportement sans éditer le code sur place : une … (terme de Feathers)","hints":["« seam » en anglais.","L'injection en est la forme la plus simple.","cou????"],"link":{"href":"lecon-14.html","label":"Revoir « Ouvrir des coutures »"}},
+  {"type":"text","accept":["caractérisation","test de caractérisation","tests de caractérisation","un test de caractérisation","characterization","characterisation"],"placeholder":"le test qui fige le comportement ACTUEL du code (bugs compris) : test de …","hints":["Il ne juge pas, il capture l'existant.","On l'écrit avant de refactorer un legacy.","carac???????ion"],"link":{"href":"lecon-14.html","label":"Revoir « Les tests de caractérisation »"}},
+  {"type":"text","accept":["couture","une couture","la couture","coutures","seam","seams"],"placeholder":"le point où l'on peut changer le comportement sans éditer le code sur place : une … (terme de Feathers)","hints":["L'injection en est la forme la plus simple.","Un mot de tailleur : là où deux pièces de tissu se rejoignent.","cou????"],"link":{"href":"lecon-14.html","label":"Revoir « Ouvrir des coutures »"}},
+  {"type":"text","accept":["master","golden master","le golden master","un golden master","approval testing","approval"],"placeholder":"la sortie de référence capturée une fois, puis comparée à chaque exécution : le golden …","hints":["On ne rédige pas les assertions à la main.","Une référence validée une fois, puis gardée telle quelle.","ma???r"],"link":{"href":"lecon-14.html","label":"Revoir l'astuce des grosses sorties"}},
   null
 ]
 </script>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>On te confie une fonction <code>score(joueur)</code> de 200 lignes, sans aucun test, que tu dois modifier demain. Quelle est la <strong>toute première</strong> chose à écrire, et pourquoi&nbsp;?</p><details><summary>Voir une solution</summary><p>Un <strong>test de caractérisation</strong>&nbsp;: appelle <code>score</code> avec une entrée réaliste, lis la sortie réelle et fige-la dans une assertion. Tu ne cherches pas encore à corriger quoi que ce soit — tu poses un <strong>filet</strong>. Ainsi, quand tu modifieras le code demain, tout écart de comportement fera rougir ce test immédiatement.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>On te confie une fonction <code>score(joueur)</code> de 200 lignes, sans aucun test, que tu dois modifier demain. Quelle est la <strong>toute première</strong> chose à écrire, et pourquoi&nbsp;?</p><details><summary>Voir une solution</summary><p>Un <strong>test de caractérisation</strong>&nbsp;: appelle <code>score</code> avec une entrée réaliste, lis la sortie réelle et fige-la dans une assertion. Tu ne cherches pas encore à corriger quoi que ce soit — tu poses un <strong>filet</strong>. Ainsi, quand tu modifieras le code demain, un écart de comportement sur cette entrée fera rougir ce test immédiatement. Une seule entrée ne garde qu'elle-même&nbsp;: caractérise-en plusieurs (cas courant, bornes, cas d'erreur) pour élargir le filet.</p></details></div>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Cette fonction est intestable car elle lit l'heure réelle. Ouvre une couture par injection sans changer son comportement par défaut&nbsp;: <code>function salutation() { const h = new Date().getHours(); return h &lt; 18 ? "Bonjour" : "Bonsoir"; }</code></p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">function salutation(maintenant = new Date()) {
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Cette fonction est pénible à tester car elle lit l'heure réelle. Ouvre une couture par injection sans changer son comportement par défaut&nbsp;: <code>function salutation() { const h = new Date().getHours(); return h &lt; 18 ? "Bonjour" : "Bonsoir"; }</code></p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">function salutation(maintenant = new Date()) {
   const h = maintenant.getHours();
   return h &lt; 18 ? "Bonjour" : "Bonsoir";
 }
@@ -267,14 +293,21 @@ test("salue selon l'heure injectée", () =&gt; {
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Un module génère un rapport HTML de 300 lignes. Comment le mettre sous filet <strong>sans</strong> écrire des dizaines d'assertions&nbsp;? Nomme la technique et décris les deux étapes.</p><details><summary>Voir une solution</summary><p>Un <strong>golden master</strong> (approval testing). <strong>1)</strong> On exécute le module une fois, on relit sa sortie et on l'enregistre telle quelle dans un fichier de référence (le <em>master</em>), après l'avoir inspectée. <strong>2)</strong> Le test rejoue le module et compare la sortie au fichier&nbsp;: toute différence le fait rougir. On fige ainsi 300 lignes d'un coup, sans rédiger les assertions à la main&nbsp;; c'est parfait pour un legacy volumineux avant refactor.</p></details></div>
 
 <h2 id="mini-projet">Mini-projet fil rouge — une suite de tests complète</h2>
-<p>Pour clore le cours, écrivons une <strong>suite de tests</strong> pour une fonction <code>total</code> — le genre de filet qu'on poserait justement autour d'un code existant. Elle réunit l'organisation <code>describe</code>/<code>test</code>, le <code>beforeEach</code>, le motif <strong>AAA</strong> (Arrange-Act-Assert), les <strong>assertions</strong> et la couverture des <strong>cas limites</strong> — un condensé de tout ce cours.</p>
+<p>Pour clore le cours, écrivons une <strong>suite de tests</strong> pour une fonction <code>total</code> — le genre de filet qu'on poserait justement autour d'un code existant. Elle réunit l'organisation <code>describe</code>/<code>test</code>, le <code>beforeEach</code>, le motif <strong>AAA</strong> (Arrange-Act-Assert), les <strong>assertions</strong> et la couverture des <strong>cas limites</strong> — un condensé des bases du cours, appliqué à un code livré sans tests.</p>
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Ce que tu vas construire</p><p>Trois tests pour <code>total(panier)</code>&nbsp;: un panier vide, un cas nominal, et un cas limite (quantité nulle), avec un état réinitialisé avant chacun.</p></div></div>
+<p>Voici le code existant&nbsp;: un fichier qu'on a pu livrer sans un seul test — du legacy, au sens de Feathers. Avant d'écrire le moindre test, <strong>sonde-le</strong>&nbsp;: appelle <code>total</code> sur un ou deux paniers et lis ce qui sort. Les tests qui suivent figent ces sorties.</p>
+<figure class="code-block" data-file="panier.js"><pre><code class="language-javascript">// Le code existant, livré sans un seul test.
+function total(panier) {
+  return panier.reduce((somme, article) =&gt; somme + article.prix * article.quantite, 0);
+}
+
+module.exports = { total };</code></pre></figure>
 <p class="kicker kicker--gold">Étapes</p>
 <div class="steps">
-<div class="step"><h3>Le bloc describe</h3><p>Regroupe les tests de <code>total</code> dans un <code>describe</code>.</p></div>
-<div class="step"><h3>Réinitialiser</h3><p>Avec <code>beforeEach</code>, remets le panier à vide avant chaque test (isolation).</p></div>
+<div class="step"><h3>Le bloc describe</h3><p>Regroupe les tests de <code>total</code> dans un <code>describe</code>&nbsp;: un bloc qui range sous un même titre les tests d'un même sujet, et qui délimite la portée de <code>beforeEach</code>.</p></div>
+<div class="step"><h3>Réinitialiser</h3><p>Avec <code>beforeEach</code>, remets le panier à vide avant chaque test (isolation). Ses cousins <code>beforeAll</code> et <code>afterAll</code> ne tournent qu'une fois pour tout le bloc&nbsp;: avec eux, les articles ajoutés par un test resteraient dans le panier du suivant.</p></div>
 <div class="step"><h3>Le cas de base</h3><p>Un panier vide doit valoir 0&nbsp;: <code>expect(total(panier)).toBe(0)</code>.</p></div>
-<div class="step"><h3>Le cas nominal</h3><p>Ajoute deux articles et vérifie la somme (motif Arrange-Act-Assert).</p></div>
+<div class="step"><h3>Le cas nominal</h3><p>Ajoute deux articles et vérifie la somme (motif Arrange-Act-Assert). Deux lignes suffisent ici&nbsp;; pour des données plus lourdes, tu sortirais une fixture ou une factory (leçon&nbsp;7).</p></div>
 <div class="step"><h3>Le cas limite</h3><p>Une quantité nulle ne doit rien ajouter.</p></div>
 </div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Projet</span><span class="exercise__level">Fil rouge</span></div><p>Assemble les étapes en une suite complète. Essaie d'abord par toi-même, puis compare avec la solution de référence.</p><details><summary>Voir une solution complète</summary><figure class="code-block" data-file="panier.test.js"><pre><code class="language-javascript">const { total } = require("./panier");
@@ -287,14 +320,17 @@ describe("total du panier", () =&gt; {
   });
 
   test("un panier vide vaut 0", () =&gt; {
-    // Arrange / Act / Assert
     expect(total(panier)).toBe(0);
   });
 
   test("additionne les sous-totaux", () =&gt; {
+    // Arrange
     panier.push({ prix: 10, quantite: 2 });
     panier.push({ prix: 5, quantite: 1 });
-    expect(total(panier)).toBe(25);
+    // Act
+    const resultat = total(panier);
+    // Assert
+    expect(resultat).toBe(25);
   });
 
   test("ignore les quantités nulles", () =&gt; {
@@ -305,18 +341,18 @@ describe("total du panier", () =&gt; {
 
 <script type="application/json" data-quiz-bilan>
 [
-  {"q":"Quelle est la structure recommandée d'un test ?","a":["Arrange / Act / Assert","Init / Run / Stop","Given / Loop / End","Arrange / Assert"],"correct":0,"explain":"Préparer, agir, vérifier une seule chose."},
+  {"q":"Quelle est la structure recommandée d'un test ?","a":["Arrange / Act / Assert","Init / Run / Stop","When / Loop / Then","Arrange / Assert"],"correct":0,"explain":"Préparer, agir, vérifier une seule chose."},
   {"q":"Quel test vérifie une unité de code isolée ?","a":["Le test unitaire","Le test d'intégration","Le test end-to-end","Le test de charge"],"correct":0,"explain":"Rapide et ciblé."},
   {"q":"Comment préparer un état frais avant CHAQUE test ?","a":["beforeEach","beforeAll","describe","afterAll"],"correct":0,"explain":"Garantit l'isolation des tests."},
-  {"q":"Comment remplacer une dépendance réelle par un substitut ?","a":["Un mock / stub","Une fixture / factory","Un SAST / SCA","Un VU / seuil"],"correct":0,"explain":"On contrôle ainsi le comportement testé."},
+  {"q":"Comment remplacer une dépendance réelle par un substitut ?","a":["Un mock / stub","Une fixture / factory","Un SAST / SCA","Un VU / seuil"],"correct":0,"explain":"On contrôle ainsi ce que répond la dépendance."},
   {"q":"Quel est le cycle du TDD ?","a":["Rouge (échoue), vert (passe), refactor","Rouge (échoue), vert (passe), livrer","Rouge (échoue), refactor (code), vert","Vert (passe), rouge (échoue), refactor"],"correct":0,"explain":"On écrit le test AVANT le code."},
   {"q":"Que recommande la « pyramide des tests » ?","a":["Beaucoup d'unitaires, peu d'E2E","Beaucoup d'E2E, moins d'unitaires","Moitié d'unitaires, le reste en E2E","Peu d'unitaires, presque pas d'E2E"],"correct":0,"explain":"Les E2E sont lents et fragiles : on en met peu."},
   {"q":"Comment appelle-t-on un test qui échoue de façon aléatoire ?","a":["Un test flaky (instable)","Un test fuzz (hasard)","Un test rouge (échoué)","Un test E2E (parcours)"],"correct":0,"explain":"Souvent dû au temps, au réseau ou à l'ordre."},
   {"q":"Quel est le but principal des tests automatisés ?","a":["Détecter les régressions tôt, en confiance","Prouver l'absence de tout bug, grâce à la couverture","Réparer les régressions, automatiquement","Remplacer chaque revue humaine, en CI"],"correct":0,"explain":"On modifie le code sans crainte de casser."},
   {"q":"Pour tester une fonction avec beaucoup de cas d'entrée similaires, quelle technique évite la duplication ?","a":["Les tests paramétrés (test.each)","Les tests imbriqués (describe)","Les crochets (beforeEach)","Les doublures de test (mock)"],"correct":0,"explain":"Les tests paramétrés rejouent le même corps sur plusieurs jeux de données (classes d'équivalence, valeurs limites)."},
-  {"q":"Comment rendre déterministe un test qui dépend de l'heure courante ?","a":["Injecter l'horloge (ou utiliser de faux minuteurs)","Relancer la suite (jusqu'à ce que chaque rouge redevienne vert)","Attendre suffisamment (allonger encore le sleep)","Relire la même horloge (pendant l'assertion)"],"correct":0,"explain":"On injecte le temps comme une dépendance ; le test fournit une heure fixe et devient reproductible."},
-  {"q":"Une couverture de 100 % garantit-elle de bons tests ?","a":["Non : du code peut être exécuté sans être vérifié (aucune assertion)","Oui : chaque ligne exécutée par un test ne peut être que vérifiée (par son assertion)","Oui : le taux ne peut voir qu'un code exécuté et vérifié (aucune ligne sans assertion)","Non : le taux peut ne suivre que des assertions (exécution oubliée)"],"correct":0,"explain":"La couverture mesure l'exécution, pas la vérification. Le mutation testing, lui, mesure la force de détection."},
-  {"q":"Comment mettre sous filet un code legacy avant de le refactorer ?","a":["Écrire des tests de caractérisation qui figent le comportement actuel","Écrire des tests du comportement voulu puis corriger immédiatement ce qui rougit","Ouvrir des coutures par injection dans tout le module","Viser une couverture complète qui exécute toute fonction"],"correct":0,"explain":"On capture l'existant (bugs compris) pour détecter tout écart, puis on ouvre des coutures et on refactore par petits pas."},
+  {"q":"Comment rendre déterministe un test qui dépend de l'heure courante ?","a":["Injecter l'horloge (ou utiliser de faux minuteurs)","Relancer la suite (jusqu'à ce que chaque rouge redevienne vert)","Attendre suffisamment (allonger encore le sleep)","Comparer à l'horloge (pendant l'assertion)"],"correct":0,"explain":"On injecte le temps comme une dépendance ; le test fournit une heure fixe et devient reproductible. Les faux minuteurs y arrivent aussi, à condition de fixer l'heure (setSystemTime)."},
+  {"q":"Une couverture de 100 % garantit-elle de bons tests ?","a":["Non : du code peut être exécuté sans être vérifié (aucune assertion)","Oui : chaque ligne exécutée par un test ne peut être que vérifiée (par son assertion)","Oui : le taux ne peut voir qu'un code exécuté et vérifié (aucune ligne sans assertion)","Non : le taux peut ne suivre que les assertions (exécution ignorée)"],"correct":0,"explain":"La couverture mesure l'exécution, pas la vérification. Le mutation testing, lui, mesure la force de détection."},
+  {"q":"Comment mettre sous filet un code legacy avant de le refactorer ?","a":["Écrire des tests de caractérisation qui figent le comportement actuel","Écrire des tests du comportement voulu puis corriger immédiatement ce qui rougit","Ouvrir des coutures par injection dans tout le module","Viser une couverture complète qui exécute toute fonction"],"correct":0,"explain":"On capture l'existant (bugs compris) pour voir rougir un écart sur les cas figés, puis on ouvre des coutures et on refactore par petits pas."},
   {"q":"En test de performance, pourquoi regarder le 95ᵉ centile (p95) plutôt que la moyenne des temps de réponse ?","a":["La moyenne masque les cas lents ; le p95 montre le mieux que vivent les 5 % d'utilisateurs les plus mal servis","La moyenne prend tout ; le p95 refait la moyenne des 95 % de requêtes les plus rapides et met de côté les cas aberrants","La moyenne cache les cas rapides ; le p95 indique la durée que dépassent 95 % des requêtes dans un usage normal","La moyenne oublie les erreurs ; le p95 montre que 95 % des appels aboutissent sans échec"],"correct":0,"explain":"Quelques requêtes très lentes se noient dans la moyenne mais dégradent l'expérience réelle ; les centiles (p95, p99) révèlent la traîne que la moyenne cache."},
   {"q":"À quoi sert un test de contrat entre deux services ?","a":["Vérifier que le producteur respecte les attentes du consommateur, chacun testé de son côté, sans tout déployer ensemble","Vérifier que le producteur et le consommateur fonctionnent ensemble, déployés côte à côte, dans un environnement réaliste","Vérifier que chaque réponse du producteur respecte le schéma complet de l'API, champ par champ, lu ou non par le consommateur","Vérifier que le producteur répond assez vite au consommateur, sous un seuil de latence, fixé d'un commun accord par les équipes"],"correct":0,"explain":"Le consommateur décrit ses attentes (le contrat) ; on vérifie de part et d'autre. Plus rapide et plus stable qu'un test E2E qui déploie les deux services."},
   {"q":"Que détecte une analyse des dépendances (SCA, ex. npm audit) dans un pipeline ?","a":["Les bibliothèques tierces vulnérables (CVE connues) que le projet utilise","Les motifs dangereux du code (une requête SQL concaténée) que le projet contient","Les failles vues de l'extérieur (requêtes hostiles) sur l'application déployée","Les secrets commités (identifiants oubliés) de l'historique du projet"],"correct":0,"explain":"Le SCA compare tes dépendances à des bases de vulnérabilités connues et alerte sur les versions à risque : un pilier du « shift-left » sécurité."}

@@ -141,31 +141,31 @@ test("un id inconnu est rejeté", async () =&gt; {
 <p>Les frameworks fournissent des <strong>faux minuteurs</strong> (<em>fake timers</em>)&nbsp;: ils interceptent <code>setTimeout</code>, <code>setInterval</code> et compagnie, et te laissent avancer le temps d'un simple appel. Le rappel prévu « dans 5&nbsp;s » s'exécute alors instantanément, quand <em>toi</em> le décides.</p>
 
 <figure class="code-block" data-file="rappel.test.js"><pre><code class="language-javascript">test("le rappel se déclenche après 5 s", () =&gt; {
-  vi.useFakeTimers();               // on prend la main sur le temps
-  const espion = vi.fn();
+  jest.useFakeTimers();             // on prend la main sur le temps
+  const espion = jest.fn();
   planifierRappel(espion);          // fait un setTimeout(espion, 5000)
 
-  expect(espion).not.toHaveBeenCalled();   // rien encore
-  vi.advanceTimersByTime(5000);            // on avance de 5 s… d'un coup
-  expect(espion).toHaveBeenCalledOnce();   // le rappel a bien eu lieu
+  expect(espion).not.toHaveBeenCalled();     // rien encore
+  jest.advanceTimersByTime(5000);            // on avance de 5 s… d'un coup
+  expect(espion).toHaveBeenCalledTimes(1);   // le rappel a bien eu lieu
 
-  vi.useRealTimers();               // on rend l'horloge au système
+  jest.useRealTimers();             // on rend l'horloge au système
 });</code></pre></figure>
 
-<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — restaure toujours les vrais minuteurs</p><p>Termine par <code>useRealTimers()</code> (ou fais-le dans un <code>afterEach</code>). Sinon les faux minuteurs « fuient » vers les tests suivants, qui se figent mystérieusement&nbsp;: un cauchemar à diagnostiquer. Nettoyer après soi (leçon&nbsp;5) vaut aussi pour le temps.</p></div></div>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — restaure toujours les vrais minuteurs</p><p>Termine par <code>useRealTimers()</code> (ou fais-le dans un <code>afterEach</code>). Sinon les faux minuteurs « fuient » vers les tests suivants, qui se figent mystérieusement&nbsp;: un cauchemar à diagnostiquer. Nettoyer après soi (leçon&nbsp;2) vaut aussi pour le temps.</p></div></div>
 
 <h2>Injecter l'horloge</h2>
 
-<p>Le vrai remède de fond&nbsp;: ne pas <em>coder en dur</em> une dépendance au temps. Une fonction qui appelle <code>Date.now()</code> à l'intérieur cache une entrée qu'aucun test ne peut fixer. Fais de l'horloge un <strong>paramètre</strong> (avec une valeur par défaut pour l'usage normal)&nbsp;: la fonction devient testable sans aucun outil.</p>
+<p>Le vrai remède de fond&nbsp;: ne pas <em>coder en dur</em> une dépendance au temps. Une fonction qui appelle <code>Date.now()</code> à l'intérieur cache une entrée&nbsp;: pour la fixer, le test doit truquer l'horloge globale (les faux minuteurs savent aussi figer <code>Date</code>), ce qui le lie à un outil. Fais de l'horloge un <strong>paramètre</strong> (avec une valeur par défaut pour l'usage normal)&nbsp;: la fonction devient testable sans aucun outil.</p>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 176" role="img" aria-label="À gauche, une fonction estExpire appelle Date.now en interne : une dépendance cachée, non contrôlable par le test. À droite, la même fonction reçoit maintenant en paramètre avec une valeur par défaut : le test peut fixer le temps librement.">
+  <svg viewBox="0 0 640 176" role="img" aria-label="À gauche, une fonction estExpire appelle Date.now en interne : une dépendance cachée, que le test ne peut fixer qu'en truquant l'horloge globale. À droite, la même fonction reçoit maintenant en paramètre avec une valeur par défaut : le test peut fixer le temps librement.">
     <text class="d-label" x="320" y="20" text-anchor="middle" font-size="13">Rendre le temps injectable</text>
     <text class="d-mut" x="160" y="44" text-anchor="middle" font-size="10">Dépendance cachée</text>
     <rect class="d-box" x="36" y="56" width="248" height="66" rx="9" />
     <text class="d-text" x="160" y="82" text-anchor="middle" font-size="10">estExpire(token)</text>
-    <text class="d-mut" x="160" y="102" text-anchor="middle" font-size="9">appelle Date.now() dedans → non contrôlable</text>
-    <text class="d-mut" x="160" y="144" text-anchor="middle" font-size="11">🔒 le test ne peut pas fixer l'heure</text>
+    <text class="d-mut" x="160" y="102" text-anchor="middle" font-size="9">appelle Date.now() dedans → entrée cachée</text>
+    <text class="d-mut" x="160" y="144" text-anchor="middle" font-size="11">🔒 fixer l'heure oblige à truquer l'horloge</text>
     <text class="d-mut" x="480" y="44" text-anchor="middle" font-size="10">Horloge injectée</text>
     <rect class="d-accent" x="356" y="56" width="248" height="66" rx="9" />
     <text class="d-text" x="480" y="82" text-anchor="middle" font-size="10">estExpire(token, maintenant)</text>
@@ -175,7 +175,7 @@ test("un id inconnu est rejeté", async () =&gt; {
   <figcaption>Transformer une dépendance cachée en paramètre, c'est de l'<em>injection de dépendance</em> (leçon&nbsp;5) appliquée au temps.</figcaption>
 </figure>
 
-<figure class="code-block" data-file="token.js"><pre><code class="language-javascript">// ❌ dépendance cachée : le test ne maîtrise pas l'heure
+<figure class="code-block" data-file="token.js"><pre><code class="language-javascript">// ❌ dépendance cachée : l'heure n'est pas une entrée du test
 function estExpire(token) {
   return token.fin &lt; Date.now();
 }
@@ -217,7 +217,7 @@ test("tirage déterministe quand on fixe le hasard", () =&gt; {
 
 <h2>Pour aller plus loin</h2>
 
-<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Pour un contrôle fin, encapsule le temps dans un petit objet <em>Clock</em> injectable (méthode <code>now()</code>) dont tu fournis une version « fausse » en test&nbsp;: c'est le patron <em>Clock</em>, standard dans les langages typés (l'interface <code>Clock</code> de Java, par exemple). Côté aléatoire, beaucoup de générateurs acceptent une <strong>graine</strong> (<em>seed</em>) qui rend la suite « aléatoire » parfaitement reproductible.</p></div></div>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Pour un contrôle fin, encapsule le temps dans un petit objet <em>Clock</em> injectable (méthode <code>now()</code>) dont tu fournis une version « fausse » en test&nbsp;: c'est le patron <em>Clock</em>, standard dans les langages typés (la classe abstraite <code>Clock</code> de Java, par exemple). Côté aléatoire, beaucoup de générateurs acceptent une <strong>graine</strong> (<em>seed</em>) qui rend la suite « aléatoire » parfaitement reproductible.</p></div></div>
 
 <h2>Antisèche</h2>
 <figure class="cheat-table">
@@ -261,8 +261,8 @@ test("tirage déterministe quand on fixe le hasard", () =&gt; {
 <script type="application/json" data-quiz>
 [
   {"q":"Que risque un test asynchrone si l'on oublie le await devant expect(...).rejects ?","a":["Le test peut finir vert sans rien tester : l'assertion renvoie une promesse non attendue, et l'échec n'est jamais constaté à temps","Le test ne peut jamais démarrer : sans ce mot-clé, l'analyseur de Jest rejette d'un bloc la promesse nue pour une erreur de syntaxe","Le test ne peut jamais rendre la main à la suite : Jest guette la promesse orpheline, jusqu'au délai de cinq secondes où il échoue seul","Le modificateur rejects peut attendre seul la promesse : ce mot-clé n'est jamais là que pour le confort, sans aucun effet sur l'issue"],"correct":0,"explain":"Sans await, la promesse de l'assertion n'est pas attendue : le test se termine avant que le rejet soit vérifié et peut passer pour de mauvaises raisons. C'est une cause classique de faux positif ; et quand l'assertion échoue après coup, Jest s'arrête sans rapport lisible au lieu d'afficher un test rouge."},
-  {"q":"Pourquoi préférer des faux minuteurs (fake timers) à un vrai sleep de 5 secondes dans un test ?","a":["Ils rendent le test instantané et déterministe : on avance l'horloge à la main au lieu d'attendre le temps réel","Ils laissent le délai passer réellement : Jest lit alors sur la machine que le rappel du test est parti exactement à la fin","Ils sont seuls à faire vraiment attendre une promesse : Jest clôt immédiatement tout test asynchrone dès qu'on les laisse de côté","Ils déclenchent le rappel dès leur activation : le test vérifie alors le résultat sans agir sur l'horloge"],"correct":0,"explain":"Un vrai sleep rend la suite lente et fragile (dépend de la machine). Les faux minuteurs interceptent setTimeout/setInterval : advanceTimersByTime déclenche le rappel immédiatement, de façon reproductible."},
-  {"q":"Comment rendre testable une fonction qui décide en fonction de l'heure courante (Date.now) ?","a":["Injecter l'horloge en paramètre (avec un défaut Date.now) pour que le test fixe l'instant voulu","Passer par useRealTimers (l'horloge de Jest) pour que Date.now reste figé sur l'instant voulu par le test","Transformer la fonction en async (une promesse) pour que await gèle le temps du test","Préférer new Date à Date.now (un simple objet) que le test règle librement"],"correct":0,"explain":"Appeler Date.now() en interne cache une entrée non contrôlable. En faire un paramètre (maintenant = Date.now()) est de l'injection de dépendance : le test choisit l'instant et le résultat devient déterministe."}
+  {"q":"Pourquoi préférer des faux minuteurs (fake timers) à un vrai sleep de 5 secondes dans un test ?","a":["Ils rendent le test instantané et déterministe : on avance l'horloge à la main au lieu d'attendre le temps réel","Ils laissent le délai passer réellement : Jest voit alors sur la machine que le rappel du test part exactement à la fin du délai","Ils sont seuls à faire vraiment attendre une promesse : Jest clôt immédiatement tout test asynchrone dès qu'on les laisse de côté","Ils déclenchent le rappel dès leur activation : le test vérifie alors le résultat sans agir sur l'horloge"],"correct":0,"explain":"Un vrai sleep rend la suite lente et fragile (dépend de la machine). Les faux minuteurs interceptent setTimeout/setInterval : advanceTimersByTime déclenche le rappel immédiatement, de façon reproductible."},
+  {"q":"Comment rendre testable une fonction qui décide en fonction de l'heure courante (Date.now) ?","a":["Injecter l'horloge en paramètre (défaut tiré de Date.now) pour que le test fixe l'instant voulu","Passer par useRealTimers (l'horloge de Jest) pour que Date.now reste figé sur l'instant voulu par le test","Transformer la fonction en async (une promesse) pour que await gèle le temps du test","Préférer new Date à Date.now (un simple objet) que le test règle librement"],"correct":0,"explain":"Appeler Date.now() en interne cache une entrée que le test ne voit pas (pour la fixer, il faudrait truquer l'horloge globale). En faire un paramètre (maintenant = Date.now()) est de l'injection de dépendance : le test choisit l'instant et le résultat devient déterministe."}
 ]
 </script>
 
@@ -272,7 +272,7 @@ test("tirage déterministe quand on fixe le hasard", () =&gt; {
 [
   {"type":"text","accept":["flaky","instable","test instable","test flaky"],"placeholder":"le qualificatif d'un test qui passe ou échoue sans changement de code : test … (fr ou en)","hints":["Anglicisme très courant.","Ou son équivalent français « in… ».","fl??y / in??able"],"link":{"href":"lecon-08.html","label":"Revoir l'introduction"}},
   {"type":"text","accept":["await"],"placeholder":"le mot-clé à ne PAS oublier devant une assertion asynchrone (expect(...).rejects) : …","hints":["Il va de pair avec async.","Cinq lettres.","a???t"],"link":{"href":"lecon-08.html","label":"Revoir « Tester du code asynchrone »"}},
-  {"type":"text","accept":["injection de dépendance","injection de dependance","injection","injecter"],"placeholder":"le nom du principe : passer l'horloge ou le hasard en PARAMÈTRE plutôt qu'en dur : … de dépendance","hints":["On « injecte » la dépendance.","Trois mots.","injection de d…"],"link":{"href":"lecon-08.html","label":"Revoir « Injecter l'horloge »"}}
+  {"type":"text","accept":["injection de dépendance","injection de dependance","injection de dépendances","injection de dependances","injection","injecter"],"placeholder":"le nom du principe : passer l'horloge ou le hasard en PARAMÈTRE plutôt qu'en dur : … de dépendance","hints":["On « injecte » la dépendance.","Trois mots.","inj?????? de d…"],"link":{"href":"lecon-08.html","label":"Revoir « Injecter l'horloge »"}}
 ]
 </script>
 

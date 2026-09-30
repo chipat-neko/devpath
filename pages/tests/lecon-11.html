@@ -101,7 +101,7 @@
 
 <h2>Latence, débit, et la moyenne qui ment</h2>
 
-<p>Deux grandeurs résument la performance. La <strong>latence</strong> est le temps d'une requête (en millisecondes)&nbsp;; le <strong>débit</strong> (<em>throughput</em>) est le nombre de requêtes servies par seconde. On veut une latence basse <em>et</em> un débit élevé — et les deux se dégradent quand la charge monte.</p>
+<p>Deux grandeurs résument la performance. La <strong>latence</strong> est le temps d'une requête (en millisecondes)&nbsp;; le <strong>débit</strong> (<em>throughput</em>) est le nombre de requêtes servies par seconde. On veut une latence basse <em>et</em> un débit élevé — or, quand la charge monte trop, la latence grimpe et le débit ne suit plus.</p>
 
 <p>Le piège classique&nbsp;: résumer la latence par sa <strong>moyenne</strong>. Quelques requêtes très lentes tirent la moyenne vers le haut, mais elle reste très loin de ce qu'elles durent — et ce sont elles qui ruinent l'expérience de vrais utilisateurs. On regarde donc des <strong>centiles</strong>&nbsp;: le <code>p95</code> est la valeur en dessous de laquelle tombent 95&nbsp;% des requêtes — autrement dit, le mieux que vivent les 5&nbsp;% les moins bien servis, qui attendent parfois bien plus longtemps.</p>
 
@@ -119,14 +119,14 @@
     <text class="d-mut" x="520" y="182" text-anchor="middle" font-size="9">lent →</text>
     <text class="d-mut" x="320" y="204" text-anchor="middle" font-size="10">p95 et p99 vivent dans la traîne&nbsp;: la moyenne les gomme</text>
   </svg>
-  <figcaption>La distribution est <em>asymétrique</em>&nbsp;: une longue traîne de requêtes lentes. La médiane (p50) est basse, mais le p95/p99 raconte la vraie histoire de tes utilisateurs les plus mal servis.</figcaption>
+  <figcaption>La distribution est <em>asymétrique</em>&nbsp;: une longue traîne de requêtes lentes. La médiane (p50) est basse, mais le p95/p99 marque le seuil que dépassent tes utilisateurs les plus mal servis.</figcaption>
 </figure>
 
-<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Pourquoi les grands services parlent en « neuf »</p><p>Sur une page qui déclenche cent requêtes internes, chaque utilisateur touche presque à coup sûr la traîne&nbsp;: un p99 mauvais devient l'expérience <em>ordinaire</em>. C'est pourquoi les équipes fixent des objectifs sur le p95, le p99, voire le p99,9 — jamais sur la moyenne seule.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Pourquoi les grands services parlent en « neuf »</p><p>Sur une page qui déclenche cent requêtes internes indépendantes, près de deux utilisateurs sur trois touchent la traîne (1 − 0,99<sup>100</sup> ≈ 63&nbsp;%)&nbsp;: un p99 mauvais devient l'expérience <em>ordinaire</em>. C'est pourquoi les équipes fixent des objectifs sur le p95, le p99, voire le p99,9 — jamais sur la moyenne seule.</p></div></div>
 
 <h2>Les quatre familles de tests de charge</h2>
 
-<p>«&nbsp;Test de charge&nbsp;» est un raccourci&nbsp;: il existe en réalité quatre profils, selon la <em>question</em> qu'on se pose. Chacun fait varier autrement le nombre d'<strong>utilisateurs virtuels</strong> dans le temps.</p>
+<p>«&nbsp;Test de charge&nbsp;» est un raccourci&nbsp;: on en distingue couramment quatre profils, selon la <em>question</em> qu'on se pose (la documentation de k6 en compte six&nbsp;: elle ajoute le test de fumée, et nomme <em>breakpoint</em> la montée jusqu'à la rupture, que l'usage courant range sous «&nbsp;stress&nbsp;»). Chacun fait varier autrement le nombre d'<strong>utilisateurs virtuels</strong> dans le temps.</p>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 208" role="img" aria-label="Quatre profils de charge dans le temps. Charge : montée puis plateau au niveau du trafic attendu puis descente. Stress : paliers croissants jusqu'à la rupture. Endurance : un long plateau modéré. Pic : une montée brutale et brève puis retour au calme.">
@@ -186,7 +186,7 @@ export default function () {
   sleep(1);   // temps de réflexion entre deux actions
 }</code></pre></figure>
 
-<p>Chaque VU exécute la fonction par défaut en boucle&nbsp;; le <code>sleep</code> imite le temps de réflexion d'un humain entre deux clics. Sans lui, on ne mesure pas un usage réaliste mais un martèlement.</p>
+<p>Chaque VU exécute la fonction par défaut en boucle&nbsp;; le <code>sleep</code> imite le temps de réflexion d'un humain entre deux clics. Sans lui, on ne mesure pas un usage réaliste mais un martèlement. Quant au <code>check</code>, il compte les réponses correctes dans le rapport, mais un check raté ne fait pas échouer k6&nbsp;: ce rôle revient au seuil, que voici.</p>
 
 <h2>Le seuil qui fait échouer le build</h2>
 
@@ -207,14 +207,15 @@ export default function () {
 <figure class="code-block" data-file="terminal"><pre><code class="language-bash"># On lance le scénario ; le code de sortie ≠ 0 si un seuil casse
 k6 run charge.js
 
-#   ✓ statut 200
-#   ✗ http_req_duration..: p(95)=820ms  (seuil : p95&lt;500ms)  → BUILD ROUGE</code></pre></figure>
+# Extrait simplifié du résumé :
+#   http_req_duration
+#   ✗ 'p(95)&lt;500' p(95)=820ms      → seuil violé : BUILD ROUGE</code></pre></figure>
 
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — un budget de performance, comme un budget de dépenses</p><p>Écris le seuil <em>avant</em> d'optimiser&nbsp;: «&nbsp;le p95 de la recherche doit rester sous 300&nbsp;ms&nbsp;». Chaque commit qui le dépasse casse le build. C'est un <strong>budget de perf</strong>&nbsp;: il empêche la lente dérive où chaque petite fonctionnalité ajoute «&nbsp;juste 20&nbsp;ms&nbsp;»… jusqu'à la seconde de trop.</p></div></div>
 
-<h2>Cas réel</h2>
+<h2>Un scénario type</h2>
 
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Cas réel — le lancement qui n'a pas tenu la ruée</p><p>Une billetterie ouvre les ventes d'un concert très attendu à 10&nbsp;h pile. Les tests fonctionnels étaient tous verts, la latence «&nbsp;moyenne&nbsp;» excellente en préproduction. Mais personne n'avait joué un <strong>test de pic</strong>&nbsp;: à 10&nbsp;h, 50&nbsp;000 personnes arrivent en dix secondes. La base de données sature, le p99 explose, le site tombe. Un simple scénario <em>spike</em> — montée à 50&nbsp;000&nbsp;VUs en 10&nbsp;s, seuil sur le p99 — aurait révélé la rupture une semaine plus tôt, quand il était encore temps d'ajouter une file d'attente. La performance ne se teste pas «&nbsp;en moyenne, un jour calme&nbsp;»&nbsp;: elle se teste au pire moment prévu.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Scénario type — le lancement qui n'a pas tenu la ruée</p><p>Une billetterie ouvre les ventes d'un concert très attendu à 10&nbsp;h pile. Les tests fonctionnels étaient tous verts, la latence «&nbsp;moyenne&nbsp;» excellente en préproduction. Mais personne n'avait joué un <strong>test de pic</strong>&nbsp;: à 10&nbsp;h, 50&nbsp;000 personnes arrivent en dix secondes. La base de données sature, le p99 explose, le site tombe. Un simple scénario <em>spike</em> — montée à 50&nbsp;000&nbsp;VUs en 10&nbsp;s, seuil sur le p99 — aurait révélé la rupture une semaine plus tôt, quand il était encore temps d'ajouter une file d'attente. La performance ne se teste pas «&nbsp;en moyenne, un jour calme&nbsp;»&nbsp;: elle se teste au pire moment prévu.</p></div></div>
 
 <h2>Pièges fréquents</h2>
 
@@ -271,7 +272,7 @@ k6 run charge.js
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Pourquoi préférer le 95ᵉ centile (p95) à la moyenne pour juger une latence ?","a":["La moyenne est tirée par le gros des requêtes brèves et masque les cas lents ; le p95 montre le mieux que vivent les 5 % les moins bien servis","La moyenne garde les requêtes les plus lentes ; le p95 est une moyenne faite sur les 95 % de requêtes les mieux servies puis il met de côté les 5 % qui restent","Le p95 donne le temps de la requête la plus lente du relevé et décrit le pire de ce que vit chaque client ; la moyenne varie beaucoup d'un jour à un autre","Le p95 dit que 95 % des requêtes ont une réponse sans erreur ; la moyenne met dans le même sac ce que le serveur sert et ce que le serveur rejette"],"correct":0,"explain":"La distribution des latences est asymétrique : une longue traîne de requêtes lentes. La moyenne les gomme, alors que les centiles (p95, p99) révèlent l'expérience des utilisateurs les plus mal servis."},
+  {"q":"Pourquoi préférer le 95ᵉ centile (p95) à la moyenne pour juger une latence ?","a":["La moyenne est tirée par le gros des requêtes brèves et masque les cas lents ; le p95 montre le mieux que vivent les 5 % les moins bien servis","La moyenne garde les requêtes les plus lentes ; le p95 est une moyenne faite sur les 95 % de requêtes les mieux servies puis il met de côté les 5 % qui restent","Le p95 donne le temps de la requête la plus lente du relevé et décrit le pire de ce que vit chaque client ; la moyenne varie beaucoup d'un jour à un autre","Le p95 dit que 95 % des requêtes ont une réponse sans erreur ; la moyenne met dans le même sac ce que le serveur sert et ce que le serveur rejette"],"correct":0,"explain":"La distribution des latences est asymétrique : une longue traîne de requêtes lentes. La moyenne les gomme, alors que les centiles (p95, p99) montrent le seuil que dépassent les utilisateurs les plus mal servis."},
   {"q":"Quelle famille de test de charge cherche à trouver le point de rupture du système ?","a":["Le test de stress : on augmente la charge par paliers jusqu'à ce que le système cède","Le test d'endurance : on garde des heures une charge moyenne jusqu'à ce que le système ait une fuite","Le test de pic : on envoie au système une ruée soudaine aussi brève que la charge d'endurance est longue","Le test de charge nominale : on rejoue sur le système le trafic attendu"],"correct":0,"explain":"Le stress pousse volontairement au-delà du trafic attendu pour découvrir la limite et le comportement à la rupture. La charge nominale, elle, vérifie seulement le trafic prévu."},
   {"q":"À quoi sert un seuil (threshold) comme p(95)<500 dans un scénario k6 ?","a":["À faire échouer le build automatiquement quand la performance viole l'objectif fixé","À interrompre toute requête restée sans réponse au bout de 500 ms","À plafonner à 500 par seconde les requêtes envoyées vers le site","À supprimer automatiquement du rapport chaque cas jugé trop lent"],"correct":0,"explain":"Le seuil traduit un SLO en règle chiffrée : si le p95 dépasse 500 ms (ou le taux d'erreur 1 %), le test devient rouge et le pipeline échoue — on l'apprend avant les utilisateurs."}
 ]
@@ -281,13 +282,13 @@ k6 run charge.js
 
 <script type="application/json" data-exos>
 [
-  {"type":"text","accept":["centile","centiles","percentile","percentiles","p95","p99"],"placeholder":"l'indicateur qui montre la traîne des requêtes lentes que la moyenne cache : le … (p95, p99)","hints":["p95 et p99 en sont des exemples.","Synonyme : « percentile ».","cen????"],"link":{"href":"lecon-11.html","label":"Revoir « Latence, débit, et la moyenne qui ment »"}},
+  {"type":"text","accept":["centile","centiles","percentile","percentiles","le centile","les centiles"],"placeholder":"l'indicateur qui montre la traîne des requêtes lentes que la moyenne cache : le … (p95, p99)","hints":["p95 et p99 en sont des exemples.","cen????","Synonyme : « percentile »."],"link":{"href":"lecon-11.html","label":"Revoir « Latence, débit, et la moyenne qui ment »"}},
   {"type":"text","accept":["stress","test de stress","de stress","le stress"],"placeholder":"la famille de test qui pousse le système jusqu'à la RUPTURE : test de …","hints":["On dépasse volontairement le trafic prévu.","Anglicisme de six lettres.","st????"],"link":{"href":"lecon-11.html","label":"Revoir « Les quatre familles de tests de charge »"}},
-  {"type":"text","accept":["threshold","thresholds","seuil","seuils","le seuil"],"placeholder":"le nom (fr ou en) de la règle chiffrée qui fait ÉCHOUER le build : un … (ex. p95<500)","hints":["« seuil » en français.","C'est la clé thresholds dans les options k6.","s???l / thr??hold"],"link":{"href":"lecon-11.html","label":"Revoir « Le seuil qui fait échouer le build »"}}
+  {"type":"text","accept":["threshold","thresholds","seuil","seuils","le seuil","un seuil","un threshold"],"placeholder":"le nom (fr ou en) de la règle chiffrée qui fait ÉCHOUER le build : un … (ex. p95<500)","hints":["Une limite à ne pas franchir, tirée d'un SLO.","s???l / thr??hold","C'est la clé thresholds dans les options k6."],"link":{"href":"lecon-11.html","label":"Revoir « Le seuil qui fait échouer le build »"}}
 ]
 </script>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un rapport indique&nbsp;: latence moyenne 90&nbsp;ms, p99 3&nbsp;800&nbsp;ms. Le service est-il «&nbsp;rapide&nbsp;»&nbsp;? Explique en une phrase ce que vit un utilisateur sur cent.</p><details><summary>Voir une solution</summary><p>Non&nbsp;: la moyenne basse cache une traîne sévère. Le <strong>p99 à 3,8&nbsp;s</strong> signifie qu'<strong>environ un appel sur cent</strong> met près de quatre secondes — une éternité perçue. Sur une page qui fait beaucoup de requêtes, presque chaque utilisateur touchera ce cas lent. Il faut cibler le p99, pas se rassurer avec la moyenne.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 1</span><span class="exercise__level">Échauffement</span></div><p>Un rapport indique&nbsp;: latence moyenne 90&nbsp;ms, p99 3&nbsp;800&nbsp;ms. Le service est-il «&nbsp;rapide&nbsp;»&nbsp;? Explique en une phrase ce que vit un utilisateur sur cent.</p><details><summary>Voir une solution</summary><p>Non&nbsp;: la moyenne basse cache une traîne sévère. Le <strong>p99 à 3,8&nbsp;s</strong> signifie qu'<strong>environ un appel sur cent</strong> met 3,8&nbsp;secondes ou plus — une éternité perçue. Sur une page qui fait beaucoup de requêtes, la plupart des utilisateurs toucheront ce cas lent. Il faut cibler le p99, pas se rassurer avec la moyenne.</p></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu veux vérifier qu'une <strong>promo éclair</strong> annoncée sur les réseaux ne fera pas tomber le site quand des milliers de curieux arrivent d'un coup. Quelle famille de test choisis-tu, et quelle forme a la courbe d'utilisateurs&nbsp;?</p><details><summary>Voir une solution</summary><p>Un <strong>test de pic</strong> (<em>spike</em>). La courbe d'utilisateurs virtuels reste basse, puis <strong>monte très brutalement</strong> (par exemple de 100 à 20&nbsp;000&nbsp;VUs en quelques secondes), tient un court instant, puis redescend. On observe si le système encaisse la ruée, s'il se dégrade proprement (file d'attente) plutôt que de s'effondrer, et à quelle vitesse il se rétablit ensuite.</p></details></div>
 

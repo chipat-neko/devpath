@@ -128,38 +128,90 @@
 <p>L'idée fondatrice s'appelle <strong>consumer-driven contract</strong>&nbsp;: c'est le <em>consommateur</em> qui décrit ce dont il a besoin, interaction par interaction («&nbsp;si j'appelle <code>GET /produits/1</code>, j'attends un objet avec un <code>id</code> et un <code>montant</code>&nbsp;»). Un outil comme <a href="https://pact.io" rel="noopener">Pact</a> intercepte ces attentes pendant les tests du consommateur et en génère un fichier de contrat.</p>
 
 <figure class="code-block" data-file="produits.pact.test.js"><pre><code class="language-javascript">// Côté CONSOMMATEUR : je déclare ce que j'attends du producteur.
+const { PactV3, MatchersV3 } = require("@pact-foundation/pact");
+const { integer, number } = MatchersV3;
+const clientProduits = require("./clientProduits");   // le client HTTP de mon appli
+
+const provider = new PactV3({ consumer: "appli-web", provider: "api-produits" });
+
 provider
   .given("le produit 1 existe")
   .uponReceiving("une demande du produit 1")
   .withRequest({ method: "GET", path: "/produits/1" })
   .willRespondWith({
     status: 200,
-    body: { id: 1, montant: 50 },   // les champs dont J'AI besoin
+    body: { id: integer(1), montant: number(50) },   // les champs dont J'AI besoin, et leur TYPE
   });
 
-test("lit le montant du produit", async () =&gt; {
-  const p = await clientProduits.get(1);   // tourne contre un faux serveur Pact
-  expect(p.montant).toBe(50);
+test("lit le montant du produit", () =&gt; {
+  // executeTest démarre le faux serveur Pact, joue le test, puis ÉCRIT le contrat
+  return provider.executeTest(async (fauxServeur) =&gt; {
+    const p = await clientProduits(fauxServeur.url).get(1);
+    expect(p.montant).toBe(50);
+  });
 });
-// En passant, Pact ÉCRIT le contrat dans un fichier (voir ci-dessous).</code></pre></figure>
+// Si le test passe, Pact écrit le contrat dans un fichier (voir ci-dessous).</code></pre></figure>
 
 <h2>Le contrat, un fichier partagé</h2>
 
-<p>Le contrat généré est un simple fichier <strong>JSON</strong>&nbsp;: une liste d'interactions, chacune avec la requête attendue et la réponse promise. Ce fichier est l'<strong>artefact partagé</strong> entre les deux équipes.</p>
+<p>Le contrat généré est un simple fichier <strong>JSON</strong>&nbsp;: une liste d'interactions, chacune avec la requête attendue et la réponse promise. Ce fichier est l'<strong>artefact partagé</strong> entre les deux équipes. Voici celui que le test précédent écrit dans le dossier <code>pacts/</code> (extrait&nbsp;: Pact y ajoute un bloc <code>metadata</code> sur ses propres outils)&nbsp;:</p>
 
-<figure class="code-block" data-file="consommateur-producteur.json"><pre><code class="language-json">{
-  "consumer": { "name": "appli-web" },
-  "provider": { "name": "api-produits" },
+<figure class="code-block" data-file="pacts/appli-web-api-produits.json"><pre><code class="language-json">{
+  "consumer": {
+    "name": "appli-web"
+  },
   "interactions": [
     {
       "description": "une demande du produit 1",
-      "request":  { "method": "GET", "path": "/produits/1" },
-      "response": { "status": 200, "body": { "id": 1, "montant": 50 } }
+      "providerStates": [
+        {
+          "name": "le produit 1 existe"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/produits/1"
+      },
+      "response": {
+        "body": {
+          "id": 1,
+          "montant": 50
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "matchingRules": {
+          "body": {
+            "$.id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "integer"
+                }
+              ]
+            },
+            "$.montant": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "number"
+                }
+              ]
+            }
+          }
+        },
+        "status": 200
+      }
     }
-  ]
+  ],
+  "provider": {
+    "name": "api-produits"
+  }
 }</code></pre></figure>
 
-<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — le broker, place d'échange des contrats</p><p>Plutôt que de s'envoyer ce fichier par courriel, les équipes le publient sur un <strong>broker</strong> (un dépôt central de contrats, comme le <em>Pact Broker</em>). Le consommateur y <em>publie</em> ses contrats&nbsp;; le producteur les <em>récupère</em> pour se vérifier. Le broker sait aussi quelles versions sont compatibles entre elles&nbsp;: il peut répondre à «&nbsp;puis-je déployer ce producteur en production sans casser aucun consommateur&nbsp;?&nbsp;».</p></div></div>
+<p>Le bloc <code>matchingRules</code> vient des <em>matchers</em> <code>integer</code> et <code>number</code>&nbsp;: le producteur devra renvoyer un <code>id</code> entier et un <code>montant</code> numérique, quelle que soit leur valeur. Sans eux, Pact exigerait les valeurs exactes 1 et 50&nbsp;: un simple changement de prix romprait le contrat.</p>
+
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.7.7 1 1.2 1 2h6c0-.8.3-1.3 1-2a7 7 0 0 0-4-12Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — le broker, place d'échange des contrats</p><p>Plutôt que de s'envoyer ce fichier par courriel, les équipes le publient sur un <strong>broker</strong> (un dépôt central de contrats, comme le <em>Pact Broker</em>). Le consommateur y <em>publie</em> ses contrats&nbsp;; le producteur les <em>récupère</em> pour se vérifier. Le broker sait aussi quelles versions sont compatibles entre elles&nbsp;: il peut répondre à «&nbsp;puis-je déployer ce producteur en production sans casser aucun consommateur&nbsp;?&nbsp;». Il ne rejoue rien lui-même&nbsp;: il s'appuie sur les résultats de vérification que chaque producteur y publie.</p></div></div>
 
 <h2>La vérification côté producteur</h2>
 
@@ -188,7 +240,7 @@ test("lit le montant du produit", async () =&gt; {
 
 <h2>Cas réel</h2>
 
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Cas réel — le champ renommé un vendredi soir</p><p>Une équipe «&nbsp;paiement&nbsp;» renomme <code>amount</code> en <code>amount_cents</code> pour lever une ambiguïté de devise. Tous leurs tests passent&nbsp;; ils déploient. Le week-end, l'appli mobile — un <em>consommateur</em> maintenu par une autre équipe — affiche des prix à zéro&nbsp;: elle lisait <code>amount</code>, désormais absent. Après l'incident, ils adoptent le contract testing&nbsp;: l'appli mobile publie un contrat exigeant <code>amount</code>. La fois suivante où quelqu'un veut renommer le champ, la <strong>vérification du producteur casse en intégration continue</strong>, avec un message clair&nbsp;: «&nbsp;le consommateur appli-mobile attend <code>amount</code>&nbsp;». Le renommage se fait alors proprement, en versionnant le changement des deux côtés. Le couplage n'a pas disparu&nbsp;— il est devenu <em>visible</em>.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Cas d'école — le champ renommé un vendredi soir</p><p>Une équipe «&nbsp;paiement&nbsp;» renomme <code>amount</code> en <code>amount_cents</code> pour lever une ambiguïté de devise. Tous leurs tests passent&nbsp;; ils déploient. Le week-end, l'appli mobile — un <em>consommateur</em> maintenu par une autre équipe — affiche des prix à zéro&nbsp;: elle lisait <code>amount</code>, désormais absent. Après l'incident, ils adoptent le contract testing&nbsp;: l'appli mobile publie un contrat exigeant <code>amount</code>. La fois suivante où quelqu'un veut renommer le champ, la <strong>vérification du producteur casse en intégration continue</strong>, avec un message clair sur le contrat du consommateur appli-mobile&nbsp;: <code>Actual map is missing the following keys: amount</code> (la réponse n'a plus le champ <code>amount</code>). Le renommage se fait alors proprement, en versionnant le changement des deux côtés. Le couplage n'a pas disparu&nbsp;— il est devenu <em>visible</em>.</p></div></div>
 
 <h2>Pièges fréquents</h2>
 
@@ -242,7 +294,7 @@ test("lit le montant du produit", async () =&gt; {
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Pourquoi un changement d'API peut-il casser un consommateur alors que tous les tests unitaires restent verts des deux côtés ?","a":["Chaque service se teste isolément, souvent contre un faux serveur figé : le couplage réel entre eux n'est vérifié nulle part","Le faux serveur relit l'API réelle du producteur à tout lancement : la rupture peut venir du réseau, qui n'est pas visible d'un test unitaire","Un test unitaire contrôle le statut de la réponse, pas le nom des champs : un renommage peut donc échapper à la suite du producteur","Chaque suite appelle bien l'autre service, mais souvent en préproduction : le service livré n'a plus cette même version"],"correct":0,"explain":"C'est le couplage caché : le producteur change son API, ses tests passent ; le consommateur teste contre un stub figé, ses tests passent aussi. Rien ne confronte les deux — sauf un test de contrat ou un E2E."},
+  {"q":"Pourquoi un changement d'API peut-il casser un consommateur alors que tous les tests unitaires restent verts des deux côtés ?","a":["Chaque service se teste isolément, souvent contre un faux serveur figé : le couplage réel entre eux n'est vérifié nulle part","Le faux serveur relit l'API réelle du producteur à tout lancement : la rupture peut venir du réseau, qui n'est pas visible d'un test unitaire","Un test unitaire contrôle le statut de la réponse, pas le nom des champs : un renommage peut donc échapper à la suite du producteur","Chaque suite appelle bien l'autre service, mais souvent en préproduction : le service livré n'a déjà plus cette version"],"correct":0,"explain":"C'est le couplage caché : le producteur change son API, ses tests passent ; le consommateur teste contre un stub figé, ses tests passent aussi. Rien ne confronte les deux — sauf un test de contrat ou un E2E."},
   {"q":"Dans un contrat « consumer-driven », qui décrit les interactions attendues ?","a":["Le consommateur : il déclare les requêtes qu'il envoie et les réponses dont il a besoin","Le producteur : il expose l'API et fixe donc seul les requêtes qu'il reçoit et les réponses qu'il envoie","Le broker : il déduit les requêtes et les réponses des versions compatibles","Le schéma : cette spécification impose les requêtes et les réponses de chaque API"],"correct":0,"explain":"Consumer-driven signifie que le contrat naît des besoins réels du consommateur. Le producteur, lui, doit ensuite prouver qu'il respecte ces attentes."},
   {"q":"Quelle étape du test de contrat attrape concrètement une rupture d'API ?","a":["La vérification côté producteur : il rejoue le contrat contre sa vraie API et échoue si une interaction n'est plus respectée","Le fichier JSON du consommateur : Pact échoue à le générer si une réponse du contrat n'est plus respectée par la vraie API du producteur","La mise en commun sur le broker : sa vérification lance tout appel du contrat sur la vraie API avant déploiement et échoue si la réponse n'est plus respectée","Le déploiement en commun : le consommateur appelle la vraie API puis échoue si une interaction du contrat n'est plus respectée"],"correct":0,"explain":"Générer le contrat ne suffit pas : c'est en le rejouant contre l'implémentation réelle du producteur qu'on détecte un champ disparu ou changé — et que le build casse avant la production."}
 ]
@@ -252,9 +304,9 @@ test("lit le montant du produit", async () =&gt; {
 
 <script type="application/json" data-exos>
 [
-  {"type":"text","accept":["consommateur","consumer","le consommateur"],"placeholder":"dans un contrat consumer-driven, qui décrit ses attentes : le … (fr ou en)","hints":["C'est le service qui APPELLE l'API.","« consumer » en anglais.","conso??????r"],"link":{"href":"lecon-12.html","label":"Revoir « Le contrat : les attentes du consommateur »"}},
-  {"type":"text","accept":["producteur","provider","le producteur"],"placeholder":"le service qui doit VÉRIFIER qu'il respecte le contrat contre sa vraie API : le … (fr ou en)","hints":["C'est le service appelé, celui qui expose l'API.","« provider » en anglais.","prod??teur"],"link":{"href":"lecon-12.html","label":"Revoir « La vérification côté producteur »"}},
-  {"type":"text","accept":["broker","pact broker","le broker"],"placeholder":"le dépôt central qui publie et partage les contrats entre équipes : le … (Pact …)","hints":["Terme anglais pour « courtier / place d'échange ».","On y publie et on en récupère les contrats.","br???r"],"link":{"href":"lecon-12.html","label":"Revoir « Le contrat, un fichier partagé »"}}
+  {"type":"text","accept":["consommateur","consumer","le consommateur","le consumer"],"placeholder":"dans un contrat consumer-driven, qui décrit ses attentes : le … (fr ou en)","hints":["C'est le service qui APPELLE l'API.","conso??????r","« consumer » en anglais."],"link":{"href":"lecon-12.html","label":"Revoir « Le contrat : les attentes du consommateur »"}},
+  {"type":"text","accept":["producteur","provider","le producteur","le provider"],"placeholder":"le service qui doit VÉRIFIER qu'il respecte le contrat contre sa vraie API : le … (fr ou en)","hints":["C'est le service appelé, celui qui expose l'API.","prod??teur","« provider » en anglais."],"link":{"href":"lecon-12.html","label":"Revoir « La vérification côté producteur »"}},
+  {"type":"text","accept":["broker","pact broker","le broker","le pact broker"],"placeholder":"le dépôt central qui publie et partage les contrats entre équipes : le … (Pact …)","hints":["Terme anglais pour « courtier / place d'échange ».","On y publie et on en récupère les contrats.","br???r"],"link":{"href":"lecon-12.html","label":"Revoir « Le contrat, un fichier partagé »"}}
 ]
 </script>
 
@@ -262,17 +314,24 @@ test("lit le montant du produit", async () =&gt; {
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Un consommateur a besoin, pour <code>GET /clients/7</code>, d'un objet contenant <code>id</code> et <code>email</code>. Décris en une phrase l'interaction que son contrat doit capturer, puis ce que le producteur devra prouver.</p><details><summary>Voir une solution</summary><p><strong>Interaction</strong>&nbsp;: «&nbsp;quand j'envoie <code>GET /clients/7</code>, j'attends un statut <code>200</code> avec un corps possédant les champs <code>id</code> et <code>email</code>&nbsp;». <strong>Vérification producteur</strong>&nbsp;: rejouer cette requête contre l'API réelle et confirmer que la réponse a bien le statut 200 <em>et</em> les deux champs, aux bons types. Si l'API renvoie <code>courriel</code> au lieu d'<code>email</code>, la vérification échoue et le build casse.</p></details></div>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Complète ce contrat Pact côté consommateur pour exiger que <code>GET /produits/1</code> renvoie un <code>id</code> et un <code>montant</code>.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">provider
-  .given("le produit 1 existe")
-  .uponReceiving("une demande du produit 1")
-  .withRequest({ method: "GET", path: "/produits/1" })
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Écris la déclaration Pact côté consommateur qui exige que <code>GET /clients/7</code> renvoie un <code>id</code> entier et un <code>email</code> textuel (l'interaction de l'exercice 2).</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-javascript">const { PactV3, MatchersV3 } = require("@pact-foundation/pact");
+const { integer, string } = MatchersV3;
+
+const provider = new PactV3({ consumer: "appli-web", provider: "api-clients" });
+
+provider
+  .given("le client 7 existe")
+  .uponReceiving("une demande du client 7")
+  .withRequest({ method: "GET", path: "/clients/7" })
   .willRespondWith({
     status: 200,
-    body: { id: 1, montant: 50 },   // les champs dont le consommateur a besoin
+    body: { id: integer(7), email: string("ana@exemple.fr") },   // les champs attendus, et leur type
   });
 
-// Ce test génère un contrat JSON. Le producteur devra ensuite le vérifier
-// contre sa vraie API : s'il ne renvoie plus « montant », son build casse.</code></pre></figure></details></div>
+// Cette déclaration ne suffit pas : le contrat JSON n'est écrit que lorsqu'un test
+// la joue dans provider.executeTest(...), comme dans la leçon. Le producteur devra
+// ensuite le vérifier contre sa vraie API : s'il renvoie « courriel » au lieu
+// de « email », son build casse.</code></pre></figure></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>
