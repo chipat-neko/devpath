@@ -8579,12 +8579,70 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
         **dix candidats simulés** contre les 44 stratégies : le seul retenu donne **0 écart** ; le
         schéma ne dit plus « n figé ». `mesure-qcm-intouchable` : **1 atteinte, délibérée**.
 
-      **RESTE À FAIRE (prochain réveil) : 91 fautes, 24 moyennes et 67 basses**, dont 42 dans les
-      corps. Consigne prête : `scratchpad/CONSIGNE-LISP-CORRECTION.md` (suivie par git), six groupes
-      disjoints (12 / 12 / 26 / 18 / 9 / 14), garde-fou `controle.js --ref=df426ac`, puis
-      **contre-relecture des corrections** avant de clore. Fautes : `scratchpad/lisp-relecture/fautes.json`
-      (local), champ `traitee`. Contrôles de sortie : `verif-html` **0** ; `verif-donnees` **0 erreur**
-      (après `build-index --write --fresh`) ; 0 CRLF, 0 BOM, JSON valide, 0 chargement externe.
+      ### 55ᵉ cours — `lisp` (2026-09-30) : **98,2 % → 25,5 %**, clos — et une contre-relecture qui prend **une correction sur quatre**
+
+      **LA CORRECTION (6 correcteurs, groupes disjoints 01-03 / 04-06 / 07-09 / 10-12 / 13-14 / 15,
+      consigne `scratchpad/CONSIGNE-LISP-CORRECTION.md`) : 90 fautes corrigées sur les 91 restantes**,
+      chaque valeur exécutée sous Racket 8.17 ou SBCL 2.5.8, ou citée de R7RS / CLHS (commit `08b9997`).
+      **Une laissée** : la n° 64 (`lecon-10`, un distracteur), faute réelle mais aucun remplaçant ne tient
+      les indicateurs — il faudrait un mot d'exactement 8 caractères, présent dans le corps, que ni
+      « Racket » (6, devient la plus courte), ni « Emacs Lisp » (change `w`), ni « Chez Scheme » (11,
+      devient la plus longue) ne satisfont. `controle.js --ref=df426ac` **0 indicateur déplacé**, lexique
+      **0/0/0**, fétiche **0 alerte**, intouchable : 2 `explain` et 1 énoncé, tous trois fautes listées.
+
+      **LA CONTRE-RELECTURE (6 agents en lecture seule, chargés de démolir le diff `df426ac..08b9997`) :
+      33 PRISES, 156 blocs exécutés, 103 corrections confirmées.** Sur les 112 corrections du cours
+      (22 du réveil précédent + 90), **28 prises portent sur les corrections elles-mêmes, soit 25,0 %**
+      (contre 18,2 % sur `perf-web`) ; s'y ajoutent 1 défaut vu hors liste et confirmé, et 4 défauts
+      préexistants. ⚠️ Le message du commit `f145c70` écrit « 29,5 % » : c'est 33 sur 112, qui mêle les
+      trois origines — le bon chiffre est 25,0 %. Les prises qui comptent :
+      - **un distracteur rendu VRAI** (`lecon-15` q3 : « empiler les arguments évalués… et, plus tard,
+        lambda » — appliquer une fermeture étend bien l'environnement) → exemple remplacé par `cadddr`,
+        une primitive, qui ne touche pas `env-base` (le code de la page : `(apply fn args)`) ;
+      - **un distracteur qui redonnait la définition de l'hygiène** dans sa seconde moitié (`lecon-08`
+        q3) → thèse « ni `let` intérieur ni `lambda` nouvelle », réfutée par l'exécution (`echange!`
+        hygiénique avec son `let` interne, sur une variable nommée `tmp` : **tmp=2 y=1**) ;
+      - **une prémisse que R7RS soutient en partie** (`lecon-08` q2 : `unless` « déjà pris », or
+        redéfinir un identifiant importé « is an error ») → « une fonction ne saurait évaluer un `if` »,
+        réfuté (`(f #f)` → **2**) ;
+      - **`foldl` de Racket donné pour équivalent de `fold-left`** alors qu'il reçoit l'élément PUIS
+        l'accumulateur (`(foldl cons '() '(1 2 3))` → **(3 2 1)**) ; et le `(reduce #'f xs)` de
+        l'antisèche sans valeur initiale (**-4** contre **4** avec `:initial-value 10`, exécuté) ;
+      - **`print` donné pour afficher « Bonjour »** : SBCL écrit `"Bonjour"` avec ses guillemets, après un
+        saut de ligne ; `format` avait été retiré des réponses alors que le glossaire le cite ;
+      - la règle d'évaluation « en trois cas, plus une exception » restée à trois cas dans le récap, le
+        schéma et son `aria-label` (« évalue a et b » → « évalue f, a et b ») ; `eval` à un argument
+        présenté comme une règle du REPL alors que c'est un comportement de Racket (R7RS §6.12 exige
+        l'environnement partout) ; `cdr` « toujours une liste » sur une liste propre — sauf `'()`
+        (`(cdr '())` → erreur, exécuté) ;
+      - **neuf liens « Revoir » vers des sections qui n'existent pas** (`lecon-02` à `lecon-06`) — la
+        faute n° 13 n'avait été corrigée qu'en `lecon-01` ; le second schéma de `lecon-11` qui dessinait
+        **cinq** cadres pour la factorielle de 5 (sixième boîte ajoutée) ; l'indice `do` qui laissait
+        `acc` non lié (exécuté avec `(acc 1 (* acc i))` : **120**) ; `gensym` « nom unique » dans
+        l'antisèche et un exercice alors que le corps dit « symbole neuf, non interné » (préfixe exécuté :
+        `#:TMP99`, `#:TMP100`, `eq` → **NIL**).
+
+      **33 corrigées sur 33** (commit `f145c70`) ; **7 distracteurs simulés** (44 stratégies + `w` +
+      `k`, `essai2.js`) avant d'être posés, entre 1 et 3 séries de candidats chacun, et la bonne réponse
+      de `lecon-06` q2 (« vivantes » → « réelles ») à **0 écart**. `controle.js --ref=df426ac`
+      **0 indicateur déplacé**, lexique **0/0/0**, fétiche **0 alerte**, `verif-html` **0**.
+
+      **CLÔTURE** : cliquets refigés — `verif-qcm-biais.js --ecrire`, `lisp` marqué `traite`
+      (**54 cours**), longueur **25,5 %**, pire indice du cliquet **27,3 %** (« écarter les deux
+      extrêmes ») ; `verif-qcm-lexique.js --ecrire` (STRICTE 12,5 % → 0,0 %). `tools/doc/gen.js` et les
+      assembleurs `etude-inconnu` / `etude-recherche` relancés avec `build-index --write --fresh`
+      (quiz, flashcards, search, searchlite, antisèches, pièges) : **point fixe au 2ᵉ tour**.
+      `verif-donnees` **0 erreur** (il fallait aussi `--only=antiseches` et `--only=pieges`, que la
+      régénération par défaut ne couvre pas : 8 puis 5 erreurs I18 avant) ; `verif.js --rapide`
+      **53 étapes vertes (243,8 s)** ; 0 CRLF, 0 BOM, JSON valide, 0 chargement externe.
+      **Site : 6 167 questions, 2 602 devinables à la longueur (42,2 %), 54 cours traités.**
+
+      **LE 56ᵉ COURS EST DÉSIGNÉ — `observabilite`.** Classement par nocivité réelle sur les **36 cours
+      restants**, `stats` exclu (cours-témoin) : trois ex aequo à **54,0 devinables** —
+      `observabilite` (56 questions, **96,4 %**), `docker` (94,7 %), `r` (85,7 %) — départagés par le
+      taux, puis `bash` 53,5, `tests` 53,5, `pascal` 53,3, `fsharp` 52,3, `prolog` 52,0, `linux` 52,0,
+      `vb` 52,0. Méthode inchangée : préparation (consigne mesurée), vague d'écriture, relecture par
+      contradiction, correction en groupes disjoints, **contre-relecture des corrections**, clôture.
 
 - [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
