@@ -1,7 +1,12 @@
 # En cours — où en est Syntaxe, et ce qu'il reste à faire
 
-*État mesuré le 2026-09-29. Les chiffres vivants (cases cochées, dernière passe) sont réécrits
-chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à côté.*
+*État mesuré le 2026-09-30 à 14 h 30. Les chiffres vivants (cases cochées, dernière passe) sont
+réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à côté.*
+
+> **⏸️ L'AUTONOMIE EST À L'ARRÊT depuis le 2026-09-30 à 14 h 12**, à la demande de Noah, entre deux
+> passes (la dernière s'est terminée normalement à 14 h 10). Tâche désactivée **et**
+> `.autonomie/arret-volontaire.txt` posé. Tout est commité et poussé. Quota hebdomadaire à
+> **93 %**, remis à zéro le **06/10 à 01 h 00**.
 
 ---
 
@@ -9,7 +14,8 @@ chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à côté.*
 
 | | |
 |---|---|
-| **Mode** | **Autonomie totale** (décision de Noah du 2026-09-29) : la tâche planifiée Windows `Syntaxe-Autonomie` lance une passe, et le wrapper replanifie la suivante 5 minutes après la fin. Aucune validation n'est demandée entre les passes. |
+| **Mode** | **Autonomie totale** quand elle tourne (décision de Noah du 2026-09-29) : la tâche planifiée Windows `Syntaxe-Autonomie` lance une passe, et le wrapper replanifie la suivante 5 minutes après la fin. Aucune validation n'est demandée entre les passes. **Actuellement à l'arrêt** (voir ci-dessus). |
+| **Rythme mesuré** | Du 29/09 19 h au 30/09 14 h : **10 cours clos en 19 heures**, et le quota hebdomadaire est passé de **18 % à 93 %**, soit environ **7 à 8 points par cours**. Mesure grossière : le quota est commun à tous les projets de Noah. |
 | **Garde-fou de quota** | Pause automatique à **99 %** du quota hebdomadaire (`.autonomie/seuil-hebdo.txt`), reprise seule après la remise à zéro. Une limite de session (fenêtre de 5 h) décale simplement le réveil suivant. |
 | **Surveillance** | Tâche `Syntaxe-Sante`, chaque heure : compare le journal aux plans, réécrit `ETAT-AUTONOMIE.md`, relance une autonomie arrêtée **anormalement**. Un arrêt volontaire n'est jamais « réparé ». |
 | **Modèle** | Opus 5.5 (`claude-opus-5-5`, contexte natif d'un million de jetons), effort `high`, mot-clé **ultracode** dans le prompt (orchestration multi-agents autorisée, au plus 6 agents par workflow). |
@@ -53,29 +59,32 @@ nocivité restante). 19 cours sont **volontairement laissés de côté** : `clou
 `ml`, `erlang`, `ada`, `llm`, `fortran`, `groovy`, `compilation`, `patterns`, `http`, `graphql`,
 `kubernetes`, `cicd`, `markdown`, `formats`, `regex`, `vscode`.
 
-### Avancement mesuré le 2026-09-29 (« la plus longue », depuis `js/quiz-index.js`)
+### Avancement mesuré le 2026-09-30 (« la plus longue », depuis `js/quiz-index.js`)
+
+**21 cours clos sur 30.** Il en reste 9, soit **496 questions**.
 
 | | Cours | Taux |
 |---|---|---:|
-| ✅ clos (11) | `pandas` 26,2 · `haskell` 25,8 · `crypto` 25,0 · `sass` 26,2 · `securite` 24,2 · `clojure` 25,8 · `powershell` 25,4 · `go` 25,8 · `elixir` 25,4 · `nosql` 26,3 · `julia` 25,4 | ~25 % |
-| 🟠 **en cours** | **`vue`** (12ᵉ des 30, 51ᵉ cours du chantier) | 25,8 % |
-| ⬜ à faire (18) | `perl` 91,7 · `dart` 91,7 · `perf-web` 94,7 · `lisp` 98,1 · `observabilite` 96,2 · `docker` 93,0 · `r` 85,7 · `bash` 94,6 · `tests` 93,0 · `pascal` 89,8 · `fsharp` 96,3 · `prolog` 96,3 · `linux` 94,3 · `vb` 88,1 · `objc` 94,4 · `api` 87,5 · `asm` 86,0 · `cobol` 98,0 | 86 à 98 % |
+| ✅ clos avant le 29/09 (11) | `pandas` 26,2 · `haskell` 25,8 · `crypto` 25,0 · `sass` 26,2 · `securite` 24,2 · `clojure` 25,8 · `powershell` 25,4 · `go` 25,8 · `elixir` 25,4 · `nosql` 26,3 · `julia` 25,4 | ~25 % |
+| ✅ clos les 29 et 30/09 (10) | `vue` 25,8 · `perl` 25,0 · `dart` 25,0 · `perf-web` 26,3 · `lisp` 25,9 · `observabilite` 24,5 · `docker` 26,3 · `r` 25,4 · `bash` 25,0 · `tests` 22,8 | ~25 % |
+| ⬜ à faire (9) | **`pascal` 89,8** (le suivant, déjà désigné) · `fsharp` 96,3 · `prolog` 96,3 · `linux` 94,3 · `vb` 88,1 · `objc` 94,4 · `api` 87,5 · `asm` 86,0 · `cobol` 98,0 | 86 à 98 % |
 
-Soit **1 013 questions** dans les 18 cours restants.
+Quand le 30ᵉ est clos : **cocher B4** avec son compte rendu, puis ajouter la mesure globale sur
+les 30 cours (et non sur 90 : le taux du site restera élevé à dessein, à cause des 19 cours écartés).
 
-### Ce qui reste sur `vue` (chiffré dans le plan, § « ÉTAT DU 51ᵉ COURS »)
+### Le prochain cours : `pascal` (61ᵉ du chantier, désigné le 30/09)
 
-« La plus longue » est déjà à 25,8 %, mais le **pire indice est encore à 28,6 %** :
-- « la plus dense » 28,6 % — **2 bascules** suffisent (liste : `scratchpad/vue-sonde/densite.js`) ;
-- tiret puis longueur 27,4 %, absolus 27,0 %, mot technique exclusif 27,0 %, glose finale 27,0 %,
-  majuscule d'emphase 26,6 % ;
-- lexique : 3 exploitables, 5 à mettre en forme (`node tools/mesure-lexique-qcm.js --liste=vue`) ;
-- mot fétiche : 1 alerte (« chaque ») ;
-- ~~une décision d'orchestrateur~~ **réglée le 2026-09-29 à 19:05** (commit `0cf006c`) : la bonne
-  réponse de `vue/lecon-09` q2 enseignait la priorité `v-for`/`v-if` de **Vue 2** dans un cours
-  Vue 3 ; l'autonomie l'a corrigée elle-même, en tant qu'orchestrateur.
-- Les deux cliquets (`verif-qcm-biais`, `verif-qcm-lexique`) ne sont **pas encore refigés** : ils
-  le seront à la clôture du cours. C'est pour cela que `verif.js --rapide` signale 5 étapes.
+Désigné par nocivité réelle sur les 31 cours restants : **59 questions, 53,3 devinables**
+(plan, § « LE 61ᵉ COURS EST DÉSIGNÉ »). La préparation n'a pas commencé. Le plan y ajoute trois
+règles tirées de `tests` :
+- **mesurer « la plus dense » dès la fin de la vague**, et faire porter aux distracteurs le
+  vocabulaire technique de la bonne réponse ;
+- le contrôle des fuites couvre aussi les suites de mots des indices et l'énoncé visible ;
+- **les corrections de l'orchestrateur passent la contre-relecture comme les autres** (trois sur
+  neuf étaient fautives sur `tests`).
+
+⚠️ **Pascal ne s'exécute pas sur cette machine** : aucun compilateur `fpc` n'est installé. Chercher
+un compilateur portable, hors du dépôt, **avant** d'écrire la consigne, comme pour `dart`.
 
 ### Les leçons qui coûtent cher si on les oublie
 
@@ -129,14 +138,15 @@ Outils à lancer : `node tools/verif.js --rapide` (≈ 4 min, 53 étapes), `node
 
 ---
 
-## 6. Points connus, non bloquants
+## 6. État des vérifications, et points connus
 
-- ~~`.autonomie/epreuve-reset.ps1` : 2 cas en échec~~ **réglé le 2026-09-29** : les tests de dates
-  attendaient « l'année courante » alors que la fonction bascule (à raison) à l'année suivante une
-  date passée de plus d'un mois. `Get-HeureReset` accepte maintenant un instant de référence, que
-  l'épreuve fixe au 2026-09-29 : **82 cas conformes, 0 en échec**, et trois cas éprouvent la bascule.
-- `verif.js --rapide` signale **5 étapes** attendues tant que `vue` n'est pas clos (cliquets de biais
-  et de lexique non refigés, `doc/lecon-03`, études à réassembler).
+- **`node tools/verif.js --rapide` : 53 étapes sur 53 vertes, code de sortie 0** (mesuré le
+  2026-09-30 après l'arrêt). Les cliquets de biais et de lexique sont refigés sur les cours clos, et
+  `verif-donnees` ne remonte aucune erreur.
+- `.autonomie/epreuve-reset.ps1` : **82 cas conformes, 0 en échec** depuis le 2026-09-29 (les tests
+  de dates ont une référence fixe au lieu de dépendre du jour où on les lance).
+- Pendant qu'une passe réécrit un cours, `verif-donnees` peut signaler des index périmés
+  (`quiz-index.js`, `search-index.js`) : c'est normal, ils sont régénérés à la clôture du cours.
 
 ---
 
