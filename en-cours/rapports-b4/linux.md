@@ -228,3 +228,39 @@ Rien sur les QCM du cours. Pour l'orchestrateur, à la fusion : refiger les cliq
 
 À rejouer par l'orchestrateur après la fusion, dans le dépôt principal (LF), une fois les
 cliquets refigés, les index et les pages dérivées régénérés.
+
+## Retouche après fusion : un distracteur de remplissage (`lecon-01` q1)
+
+Faite sur `b4/linux` à partir de `d6cd961` (master après les neuf fusions), copie en LF.
+
+Le 4ᵉ distracteur de `lecon-01` q1 portait une parenthèse de remplissage, une liste de synonymes
+qui ne servait qu'à tenir les compteurs :
+
+- avant : « Le noyau et la distribution sont un même programme (distro, kernel, système, base,
+  socle) ; le second terme est plus répandu chez les débutants » ;
+- après : « Le noyau et la distribution sont, au fond, un même programme (Debian ou Ubuntu) ; le
+  second terme, plus répandu, parle surtout aux débutants ».
+
+La phrase reste fausse (le noyau est un programme, une distribution est un système complet bâti
+autour de lui : c'est ce que dit l'explication, intouchée) et plausible : c'est la confusion du
+débutant pour qui « Ubuntu, c'est Linux ». Ce que la mesure imposait, et que la nouvelle phrase
+tient sans liste de remplissage :
+
+- cinq signes `,` `:` `;` comme les trois autres options (`la plus détaillée` ne tranche pas) :
+  deux virgules autour de « au fond », deux autour de « plus répandu », le point-virgule ;
+- une incise entre parenthèses, et pas de deux-points ni de guillemets ;
+- 8 mots de six lettres et plus, tous présents dans la page (w = 8, k = 0) ;
+- 140 caractères (la plus courte, comme avant), 23 mots (la moins bavarde, comme avant), densité
+  4,78 (sous l'option la plus dense) ;
+- un seul mot exclusif de neuf lettres et plus (`débutants`), aucun mot partagé par trois options.
+
+| Contrôle | Résultat |
+| --- | --- |
+| `controle.js --ref=d6cd961` | **0** question dont un indicateur a bougé (« TOUT EST EN PLACE ») |
+| lexique `--liste=linux` | 0 / 0 / 0 (inchangé) |
+| la plus longue / questions trahies par 5 indices ou plus | 25,5 % / 0 (inchangés) |
+| mot fétiche / tics de lot | 0 / 0 |
+| intrus lexical DÉFAUT / EXCÈS (direct / inverse) | 25,0 / 25,0 · 24,5 / 25,2 (inchangés) |
+| explications orphelines | 0 (un cas indicatif, `système`, mot français courant de l'explication) |
+| atteintes à l'intouchable | 0 |
+| `verif-html.js` | 0 |
