@@ -110,7 +110,7 @@ Relevé du 2026-11-10, `node tools/mesure-biais-qcm.js --seul=prolog` :
 
 ## Le travail est de l'ALLONGEMENT
 
-Bonne réponse : **94,8 caractères** en moyenne ; distracteur : **20,6** (rapport **4,6**).
+Bonne réponse : **88,5 caractères** en moyenne ; distracteur : **19,6** (rapport **4,5**) — mesuré sur `a6a45f2` (un premier jet de cette ligne disait 94,8 / 20,6, écrit sans mesure : corrigé).
 `node tools/plan-rangs-qcm.js prolog` : rangs **52 / 2 / 0 / 0**, cible **14 / 14 / 13 / 13**,
 **9 403 caractères** à écrire sur 52 questions. **Suis EXACTEMENT** le rang visé et la bande de
 caractères de chaque option. Donne au distracteur la MÊME STRUCTURE que la bonne réponse : la
