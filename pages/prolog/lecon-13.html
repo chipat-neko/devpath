@@ -130,17 +130,17 @@ Vars = [A, B, C], A in 0..9, B in 0..9, C in 0..9.</code></pre></figure>
 <p>Les contraintes CLP(FD) reprennent les opérateurs arithmétiques, <strong>précédés d'un dièse</strong> pour les distinguer de la comparaison classique&nbsp;: <code>#=</code> (égal), <code>#\=</code> (différent), <code>#&lt;</code>, <code>#&gt;</code>, <code>#=&lt;</code>, <code>#&gt;=</code>. Et <code>all_different/1</code> impose que toutes les variables d'une liste soient distinctes.</p>
 
 <figure class="code-block" data-file="contraintes"><pre><code class="language-prolog">?- X in 1..9, Y in 1..9, X + Y #= 10, X #&lt; Y.
-X in 1..4, Y in 6..9, ...     % déjà rétréci, sans rien « essayer » !
+X in 1..8, X#=&lt;Y+ -1, X+Y#=10, Y in 2..9.   % déjà rétréci, sans rien « essayer »
 
 ?- Vars = [A, B, C], Vars ins 1..3, all_different(Vars).
 % A, B, C devront être une permutation de 1, 2, 3</code></pre></figure>
 
-<p>Remarque bien&nbsp;: en posant <code>X + Y #= 10</code> et <code>X #&lt; Y</code>, le moteur a <strong>déjà</strong> réduit les domaines (<code>X in 1..4</code>) <em>avant</em> toute recherche. C'est la <strong>propagation</strong>.</p>
+<p>Remarque bien&nbsp;: en posant <code>X + Y #= 10</code> et <code>X #&lt; Y</code>, le moteur a <strong>déjà</strong> réduit les domaines (<code>X in 1..8</code>, <code>Y in 2..9</code>) <em>avant</em> toute recherche. C'est la <strong>propagation</strong>. Elle reste prudente&nbsp;: chaque contrainte élague pour son compte, sans combiner les deux, et il reste 64 couples pour 4 solutions — <code>label</code> fera le reste.</p>
 
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Ne confonds pas <code>#=</code>, <code>is</code> et <code>=</code></p><p>Trois signes proches, trois sens très différents. <code>=</code> <strong>unifie</strong> deux termes sans rien calculer&nbsp;: <code>X = 2 + 3</code> lie <code>X</code> au terme <code>2+3</code>, pas à <code>5</code>. <code>is</code> <strong>évalue une fois</strong> une expression et exige que sa droite soit entièrement connue&nbsp;: <code>X is 2 + 3</code> donne <code>5</code>, mais <code>10 is X + Y</code> lève une erreur. <code>#=</code> est une <strong>contrainte réversible</strong> qui accepte des variables libres et <em>propage</em>&nbsp;: <code>10 #= X + Y</code> est légal et se souviendra de la relation. Règle simple&nbsp;: en CLP(FD), remplace <em>tous</em> tes <code>is</code> et comparaisons arithmétiques par leurs versions dièse.</p></div></div>
 
 <figure class="diagram">
-  <svg viewBox="0 0 640 190" role="img" aria-label="La propagation rétrécit les domaines. Au départ, X et Y peuvent valoir de 1 à 9. En posant la contrainte X plus Y égale 10 puis X inférieur à Y, le moteur en déduit que X ne peut aller que de 1 à 4 et Y de 6 à 9, sans avoir essayé aucune valeur.">
+  <svg viewBox="0 0 640 190" role="img" aria-label="La propagation rétrécit les domaines. Au départ, X et Y peuvent valoir de 1 à 9. En posant la contrainte X plus Y égale 10 puis X inférieur à Y, le moteur en déduit que X ne peut aller que de 1 à 8 et Y de 2 à 9, sans avoir essayé aucune valeur.">
     <rect class="d-frame" x="1" y="1" width="638" height="188" rx="12" />
     <text class="d-label" x="30" y="30">La propagation réduit les domaines avant toute recherche</text>
     <rect class="d-box" x="24" y="54" width="250" height="118" rx="8" />
@@ -152,11 +152,11 @@ X in 1..4, Y in 6..9, ...     % déjà rétréci, sans rien « essayer » !
     <text class="d-mut" x="306" y="102" text-anchor="middle" font-size="10">X+Y#=10, X#&lt;Y</text>
     <rect class="d-accent" x="366" y="54" width="250" height="118" rx="8" />
     <text class="d-tag" x="491" y="80" text-anchor="middle">après propagation</text>
-    <text class="d-text" x="491" y="112" text-anchor="middle">X in 1..4</text>
-    <text class="d-text" x="491" y="138" text-anchor="middle">Y in 6..9</text>
-    <text class="d-mut" x="491" y="160" text-anchor="middle">4 couples restants</text>
+    <text class="d-text" x="491" y="112" text-anchor="middle">X in 1..8</text>
+    <text class="d-text" x="491" y="138" text-anchor="middle">Y in 2..9</text>
+    <text class="d-mut" x="491" y="160" text-anchor="middle">64 couples restants</text>
   </svg>
-  <figcaption>Poser les contraintes <strong>élague</strong> les domaines immédiatement&nbsp;: on passe de 81 couples à 4, <em>sans</em> essayer une seule valeur. La recherche n'explorera que ce qui reste.</figcaption>
+  <figcaption>Poser les contraintes <strong>élague</strong> les domaines immédiatement&nbsp;: on passe de 81 couples à 64, <em>sans</em> essayer une seule valeur. La recherche n'explorera que ce qui reste.</figcaption>
 </figure>
 
 <h2>label : passer des domaines aux solutions</h2>
@@ -212,7 +212,7 @@ resoudre([S,E,N,D,M,O,R,Y]) :-
 ?- resoudre(L).
 L = [9, 5, 6, 7, 1, 0, 8, 2].       % 9567 + 1085 = 10652</code></pre></figure>
 
-<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>La programmation par contraintes n'est pas un jeu&nbsp;: c'est l'outil de fond de l'<strong>ordonnancement industriel</strong> et de la <strong>planification</strong>. Des <strong>emplois du temps</strong> scolaires aux <strong>rotations d'équipages aériens</strong>, en passant par le placement de tâches en usine ou l'affectation de fréquences radio, ces problèmes se modélisent en variables à domaines finis et en contraintes. SICStus Prolog et son moteur CLP(FD) ont longtemps résolu ces casse-têtes en production&nbsp;; les solveurs de contraintes modernes (OR-Tools de Google, Gecode) en descendent directement. Écrire la contrainte, laisser le solveur chercher&nbsp;: exactement l'esprit de <code>SEND + MORE = MONEY</code>, à l'échelle réelle.</p></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel</p><p>La programmation par contraintes n'est pas un jeu&nbsp;: c'est l'outil de fond de l'<strong>ordonnancement industriel</strong> et de la <strong>planification</strong>. Des <strong>emplois du temps</strong> scolaires aux <strong>rotations d'équipages aériens</strong>, en passant par le placement de tâches en usine ou l'affectation de fréquences radio, ces problèmes se modélisent en variables à domaines finis et en contraintes. SICStus Prolog et son moteur CLP(FD) ont longtemps résolu ces casse-têtes en production&nbsp;; les solveurs de contraintes modernes (OR-Tools de Google, Gecode) appartiennent à la même famille. Écrire la contrainte, laisser le solveur chercher&nbsp;: exactement l'esprit de <code>SEND + MORE = MONEY</code>, à l'échelle réelle.</p></div></div>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 200" role="img" aria-label="Deux stratégies face à un puzzle. À gauche, générer-et-tester construit un candidat complet puis vérifie, en explorant un arbre immense. À droite, contraindre-puis-chercher élague l'arbre dès le départ grâce à la propagation, et n'explore qu'une petite zone.">
@@ -285,13 +285,13 @@ L = [9, 5, 6, 7, 1, 0, 8, 2].       % 9567 + 1085 = 10652</code></pre></figure>
   <li>Usages réels&nbsp;: puzzles, emplois du temps, ordonnancement, affectation.</li>
 </ul>
 
-<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi <code>10 is X + Y</code> échoue-t-il alors que <code>X + Y #= 10</code> passe&nbsp;?</li><li>Qu'est-ce que la propagation&nbsp;?</li><li>Dans quel ordre pose-t-on domaines, contraintes et <code>label</code>&nbsp;?</li></ol></div>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>Pourquoi <code>10 is X + Y</code> lève-t-il une erreur alors que <code>X + Y #= 10</code> passe&nbsp;?</li><li>Qu'est-ce que la propagation&nbsp;?</li><li>Dans quel ordre pose-t-on domaines, contraintes et <code>label</code>&nbsp;?</li></ol></div>
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Pourquoi X + Y #= 10 est-il permis alors que 10 is X + Y échoue quand X et Y sont inconnus ?","a":["#= est une contrainte qui accepte des variables non instanciées ; is exige que la partie droite soit entièrement connue","is est plus récent","#= arrondit les valeurs","Il n'y a aucune différence"],"correct":0,"explain":"is évalue une expression et réclame donc des valeurs connues. Les contraintes CLP(FD) (préfixées par #) relient des variables encore libres et se contentent de mémoriser la relation."},
-  {"q":"Qu'est-ce que la propagation en CLP(FD) ?","a":["La réduction automatique des domaines déduite des contraintes, avant toute recherche","L'affichage des solutions","Le tri des variables","La suppression de clauses"],"correct":0,"explain":"Dès qu'on pose une contrainte, le moteur retire des domaines les valeurs devenues impossibles. On cherche ensuite dans un espace déjà rétréci."},
-  {"q":"Dans quel ordre écrit-on un modèle CLP(FD) ?","a":["Déclarer les domaines, poser toutes les contraintes, puis étiqueter avec label en dernier","label d'abord, puis les contraintes","Les contraintes après label","L'ordre n'a aucune importance"],"correct":0,"explain":"Étiqueter en dernier laisse la propagation faire son travail. Mettre label trop tôt revient à un simple générer-et-tester, sans le bénéfice de l'élagage."}
+  {"q":"Pourquoi X + Y #= 10 est-il permis alors que 10 is X + Y lève une erreur quand X et Y sont inconnus ?","a":["#= est une contrainte qui accepte des variables non instanciées ; is exige que la partie droite soit entièrement connue","#= est une recherche qui essaie toutes les valeurs des variables non instanciées ; is exige que la droite soit entièrement connue","#= est une syntaxe qui remplace immédiatement is pour toutes variables non instanciées ; is exige que la partie droite soit entièrement connue","#= est une comparaison qui refuse des variables non instanciées ; is exige que la droite soit entièrement connue"],"correct":0,"explain":"is évalue une expression et réclame donc des valeurs connues. Les contraintes CLP(FD) (préfixées par #) relient des variables encore libres et se contentent de mémoriser la relation."},
+  {"q":"Qu'est-ce que la propagation en CLP(FD) ?","a":["La réduction automatique des domaines déduite des contraintes, avant toute recherche","L'affectation automatique des valeurs par label, avant toute recherche","La mise en ordre automatique des variables par domaine, avant toute recherche","L'oubli automatique des contraintes arithmétiques, avant toute recherche"],"correct":0,"explain":"Dès qu'on pose une contrainte, le moteur retire des domaines les valeurs devenues impossibles. On cherche ensuite dans un espace déjà rétréci."},
+  {"q":"Dans quel ordre écrit-on un modèle CLP(FD) ?","a":["Déclarer les domaines, poser toutes les contraintes, puis étiqueter avec label en dernier","Étiqueter par label, déclarer les domaines, puis poser toutes les contraintes en dernier","Poser les contraintes, étiqueter par label, puis déclarer les domaines en dernier","Déclarer les domaines, étiqueter avec label, puis poser les contraintes en dernier"],"correct":0,"explain":"Étiqueter en dernier laisse la propagation faire son travail. Mettre label trop tôt revient à un simple générer-et-tester, sans le bénéfice de l'élagage."}
 ]
 </script>
 
