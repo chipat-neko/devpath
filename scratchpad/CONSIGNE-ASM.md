@@ -174,3 +174,20 @@ fausse mais cohérente. **Trois erreurs différentes, jamais le miroir de la bon
 3. **Aucune URL externe** ajoutée.
 4. Après chaque lot : `node scratchpad/asm-sonde/qcheck.js <patchs> --fichier=…`, puis
    `pose.js --ecrire`, `controle.js`, et **commit** sur `b4/asm`.
+
+## Reprise du lexique (2026-11-10/11) : ce qui a marché
+
+Résultat : 18 / 25 / 36 → **0 / 0 / 0**, un seul crédit déplacé sur 44 stratégies × 57
+questions. Sonde : `scratchpad/asm-lex/essai.js` (locale) essaie en mémoire les retouches
+**et** les phrases de corps (`{"fichier", "corps": "…"}`), et compare le **crédit** de
+chaque stratégie, pas seulement sa désignation.
+
+- Si la bonne réponse porte des mots que la page dit autrement, **une phrase vraie au
+  corps** ramène k à 0 ; alors tout mot de moins de 6 lettres redevient libre dans les
+  distracteurs, et la règle du w ne s'applique plus.
+- Sinon, **k / k / k / k et w égal** au mot près.
+- À chaque essai, vérifier quatre choses que le lexique ignore : le **compte** de mots
+  exclusifs de 9 lettres et plus de chaque option ; l'**écho** de l'énoncé (« passe »,
+  « valeurs », « sqrt », « niveau » sont dans des énoncés) ; la **négation** (« pas » est
+  aussi un nom, « non signé » en porte une) ; les **égalités de longueur** qui portent un
+  crédit (trois distracteurs à 149 caractères dans `lecon-10` q3).
