@@ -1,4 +1,4 @@
-# LE NNᵉ COURS — `api` (« API REST »), 89,9 % → 22,8 %
+# LE NNᵉ COURS — `api` (« API REST »), 89,9 % → 24,6 %
 
 Branche `b4/api`, copie de travail `D:\test-claude-b4\api`, passe parallèle du 2026-11-10, un seul
 rédacteur pour tous les rôles (écriture, dosage, relecture, contre-relecture). 14 leçons,
@@ -36,29 +36,33 @@ atteintes, toutes délibérées** (ces deux bonnes réponses et leurs deux expla
 
 ## Avant / après
 
-| indice (commande) | départ (`a6a45f2`) | arrivée |
+| indice (commande) | départ (`a6a45f2`) | arrivée (`ce74c6e`) |
 |---|---:|---:|
-| « la plus longue » (`mesure-biais-qcm --seul=api`) | **89,9 %** (couv. 93,0 %, rend. 94,3 %) | **22,8 %** (rend. 24,5 %) |
-| rangs de la bonne réponse (`plan-rangs-qcm api`) | 53 / 2 / 2 / 0 | **15 / 15 / 13 / 14** |
-| questions trahies par 5 indices ou plus | 44 sur 57 (77,2 %) | **0** (39 à 0–2, 18 à 3–4) |
+| « la plus longue » (`mesure-biais-qcm --seul=api`) | **89,9 %** (couv. 93,0 %, rend. 94,3 %) | **24,6 %** (rend. 26,0 %) — 22,8 % avant la fin du dosage |
+| rangs de la bonne réponse (`plan-rangs-qcm api`) | 53 / 2 / 2 / 0 | **16 / 14 / 13 / 14** (15 / 15 / 13 / 14 avant la fin du dosage) |
+| questions trahies par 5 indices ou plus | 44 sur 57 (77,2 %) | **0** (46 à 0–2, 11 à 3–4) |
 | la plus détaillée / ponctuation forte / incise / point-virgule / écho / guillemets / absolus / négation / prudente / majuscule / point interne / barre oblique / attaque | 70,0 / 60,5 / 60,1 / 46,1 / 42,8 / 31,6 / 27,9 / 32,2 / 29,4 / 29,8 / 27,6 / 33,8 / 28,9 % | **25,0 % chacune, couverture 0,0 %** |
 | le mot technique exclusif | 58,3 % | **25,4 %** (1 question, `lecon-14` q9) |
-| la DEUXIÈME / TROISIÈME / QUATRIÈME plus longue | 4,8 / 3,1 / 2,2 % | 27,2 / 23,7 / 26,3 % |
-| **la plus dense (mots longs)** | 31,1 % | **38,6 %** ⚠️ (70,2 % après la vague, 42,1 % après `fdb7c7d`) |
-| **la moins bavarde (peu de mots)** | 4,5 % | **34,8 %** ⚠️ (43,3 % après la vague, 39,2 % après `fdb7c7d`) |
-| pire indice hors ces deux-là | — | la DEUXIÈME plus longue, 27,2 % |
-| biais inverse (`mesure-biais-inverse --toutes api`) | 4 alertes | **0 alerte** (pire : écarter les deux extrêmes, 25,9 %) |
+| la DEUXIÈME / TROISIÈME / QUATRIÈME plus longue | 4,8 / 3,1 / 2,2 % | **25,4 / 23,7 / 26,3 %** (27,2 / 23,7 / 26,3 % avant la fin du dosage) |
+| écarter les deux extrêmes / ECARTER la plus courte | — | 25,0 / 25,1 % |
+| **la plus dense (mots longs)** | 31,1 % | **26,3 %** (rend. 25,9 %) — 70,2 % après la vague, 42,1 % après `fdb7c7d`, 38,6 % après `7fcbbf1` |
+| **la moins bavarde (peu de mots)** | 4,5 % | **25,4 %** (rend. 23,9 %) — 43,3 % après la vague, 39,2 % après `fdb7c7d`, 34,8 % après `7fcbbf1` |
+| ECARTER la plus dense / ECARTER la moins bavarde | — | 24,3 / 24,0 % |
+| **pire indice des 44 stratégies** | la plus longue, 89,9 % | **26,3 %** (ex æquo : la plus dense et la QUATRIÈME plus longue) |
+| biais inverse (`mesure-biais-inverse --toutes api`) | 4 alertes | **0 alerte** (pire : la moins bavarde, 25,4 %) |
 | lexique (`mesure-lexique-qcm --liste=api`) | 46 exploitables, 33 retournées, 49 à mettre en forme | **0 / 0 / 0** |
-| mots fétiches (`mesure-mot-fetiche api`) | 5 alertes (`requête`, `ressource`, `client`, `parce`, `serveur`) | **0** |
+| mots fétiches (`mesure-mot-fetiche api`) | 5 alertes (`requête`, `ressource`, `client`, `parce`, `serveur`) | **0** (au plus près : `serveur` ECARTER 27,9 %, `chaque` ECARTER 27,6 %) |
 | tics de lot (`mesure-tics-lot api`) | 9 (point-virgule médian 17/3, glose finale 13/2, deux-points 14/5…) | **0** |
 | intrus lexical (`mesure-mot-question api`) | — | DÉFAUT 25,0 / 25,0 %, EXCÈS 24,6 / 24,9 %, 0 question sûre |
 
-Sorties brutes : `scratchpad/api-depart/` (départ) et `scratchpad/api-final/` (arrivée), hors git.
+Sorties brutes : `scratchpad/api-depart/` (départ) et `scratchpad/api-final/` (arrivée ; `*-v2.txt` après
+`ce74c6e`), hors git.
 
 **Écriture** : 159 distracteurs réécrits sur 171, 12 gardés (bilan : `GET/POST/PUT/DELETE`,
 `404/200/500/301`, et un distracteur de q6, q7, q10 ; `lecon-13` q1 « Les tests unitaires »).
 **11 486 caractères écrits** (4 865 → 16 351 pour les distracteurs). Cinq lots commités
-(`d058849`, `4cd66b0`, `4e5746e`, `adec41f`, `0aa32ee`), un dosage (`fdb7c7d`).
+(`d058849`, `4cd66b0`, `4e5746e`, `adec41f`, `0aa32ee`), un dosage en trois temps (`fdb7c7d`,
+`7fcbbf1`, puis `ce74c6e` : 15 options sur 15 questions, distracteurs 16 341 → 16 298 caractères).
 
 **Le corps des leçons a reçu les mots de 6 lettres et plus que les bonnes réponses étaient seules à
 porter** (règle du `k` : 20 bonnes réponses sur 57 en avaient), toujours dans une phrase qui dit
@@ -70,7 +74,12 @@ plusieurs appels », la phrase RFC 9110 sur le 400, « ce 200 trompe les clients
 recalcule… n'a pas été modifiée », « un double effet », « garantis, donc testés », « attrapant le
 champ manquant ou le type changé », « (anciennement Swagger) », « un test de contrat valide chaque
 réponse contre le schéma ». Ensuite, chaque distracteur n'emploie que des mots de la page (ou de
-moins de 6 lettres) : lexique 0 / 0 / 0.
+moins de 6 lettres) : lexique 0 / 0 / 0. Fin du dosage (`ce74c6e`) : une phrase de plus, cette fois
+pour un DISTRACTEUR — `lecon-14`, étape « Créer » du mini-projet : « `201` + un en-tête `Location`
+pointant vers la tâche créée » (au lieu de « `201` + `Location` »). Vrai : c'est le rôle de
+`Location` dans une réponse `201` (RFC 9110 §15.3.2, citée de mémoire ; la solution de l'exercice 2
+de la même page le dit déjà : « il pointe vers l'URL de la nouvelle ressource »). Ajout seulement,
+aucun mot retiré du corps : le `k` des autres questions de la page ne peut que baisser, il était à 0.
 
 ## Ce qui a été exécuté, et ce qui ne l'a pas été
 
@@ -147,6 +156,17 @@ absente). `verif-donnees` : **7 erreurs, toutes [I18]** (index dérivés périm�
 `verif.js --rapide` **non lancé** (faute de temps ; les cliquets `qcmbiai` / `qcmlexi` et I18
 signaleraient comme prévu).
 
+Après la fin du dosage (`ce74c6e`) : `verif-html` **0** (1 629 fichiers) ; `verif-rendu
+--pages=` sur les **7 pages touchées** (`lecon-02`, `03`, `06`, `07`, `08`, `09`, `14`) : **0 erreur,
+0 avertissement** sur 42 mesures (2 mesures « non stabilisées après 3 s », `lecon-03` 320 px sombre et
+`lecon-07` 1 280 px sombre, mesurées quand même) ; JSON reparsé à chaque pose par `pose.js` ;
+`mesure-qcm-intouchable api a6a45f2` : **4 atteintes**, les mêmes (les deux bonnes réponses corrigées
+et leurs explain) ; `mesure-explain-orpheline --depuis=c5c337e --seul=api` : **0 orpheline**, 1 cas
+indicatif (`lecon-14` q15 : l'explain dit « valide la forme complète de la réponse », l'option
+effacée disait « validation complète de chaque réponse » — c'est justement pourquoi elle a été
+remplacée, voir plus bas) ; `verif-donnees` : les mêmes **7 erreurs [I18]** (index périmés), rien
+d'autre de nouveau.
+
 ## Les leçons de ce cours
 
 1. **La règle du `k` fabrique « la plus dense » et « la moins bavarde ».** Pour que chaque mot de 6
@@ -165,6 +185,30 @@ signaleraient comme prévu).
 4. **Une bonne réponse « de cours » peut être fausse et le cours ne le voit pas** : la phrase CORS
    était écrite trois fois (corps, bonne réponse, explain), cohérente avec elle-même, fausse dans un
    vrai navigateur.
+5. **Le blocage de la densité n'était pas structurel : il venait des questions où la bonne réponse
+   est la plus COURTE.** Là, le distracteur doit être à la fois plus long en caractères et plus court
+   en mots, donc fait de mots de 7 à 9 lettres. Là où la bonne réponse est au rang 0, 1 ou 2, un
+   distracteur plus COURT qu'elle peut être plus dense sans contrainte de longueur : 4 des 7 bascules
+   de `ce74c6e` y sont (`lecon-02` q3, `lecon-07` q2, `lecon-08` q2, `lecon-09` q3). Sur les 3 autres
+   (rang 3), un jeton de moins et deux à quatre lettres de plus suffisaient : « à chaque origine du
+   web et tombe vite » → « à toutes les origines hostiles et tombe », « qui ouvre … prêt à » → « qui
+   protège … censé », « qui pointe » → « pointant ». Calculer d'abord
+   `lettres ≥ densité × mots` ET `caractères = lettres + mots − 1 + signes` donne la cible exacte ;
+   chercher à l'œil ne la donne pas.
+6. **Raccourcir le distracteur le plus long d'une question au rang 1 fait coup triple** (`lecon-02`
+   q3) : la bonne réponse passe au rang 0, ce qui remonte « la plus longue » (22,8 → 24,6 %, elle
+   était SOUS la cible) et redescend « la DEUXIÈME plus longue » (27,2 → 25,4 %), et le distracteur
+   raccourci en mots devient à la fois le plus dense et le moins bavard.
+7. **Défaire un ex æquo de longueur peut rouvrir le biais inverse ailleurs.** En raccourcissant
+   `lecon-14` q3, les deux distracteurs les plus courts ont cessé d'être à égalité : « écarter les deux
+   extrêmes » n'y désignait plus la bonne réponse seule, et son inverse est monté à **29,2 %** (8
+   questions tranchées, 1 seule sur la bonne). `controle.js` le montre question par question, mais
+   seul `mesure-biais-inverse --toutes` en donne le chiffre : il faut le relancer après CHAQUE lot.
+   Rattrapé en défaisant un autre ex æquo, sans effet sur la bonne réponse (`lecon-14` q15, 59/59).
+8. **Relire en contradicteur l'option qu'on retouche pour le compteur** : la seule que je comptais
+   changer d'un mot (`lecon-14` q15, « chaque » → « toute ») était presque VRAIE — « Un test de
+   fonction (validation complète de chaque réponse) » attrape bel et bien un champ disparu, et l'explain
+   dit « valide la forme complète de la réponse ». Remplacée par une thèse franchement fausse.
 
 ## Ce qui reste, sans arrondir
 
@@ -177,37 +221,68 @@ signaleraient comme prévu).
   --ref=HEAD` : seuls ces deux indicateurs et leurs « ECARTER » ont bougé (plus un échange de rang
   entre deux distracteurs de `lecon-12` q3, sans effet sur la bonne réponse). Tout le reste tient :
   la plus longue 22,8 %, inverse 0 alerte, fétiche 0, tics 0, lexique 0, intrus 0 sûr.
-- **⚠️ CE QUI RESTE : « la plus dense » 38,6 % (crédit 22,0, il manque ~6,3 bascules pour 27,5 %) et
-  « la moins bavarde » 34,8 % (crédit 19,8, il manque ~4,2).** La passe N'EST PAS close sur ces deux
-  indicateurs. Questions essayées et laissées, avec la raison chiffrée (`scratchpad/api-sonde/
-  essaie.js`, `besoin.js`) :
+- **FIN DU DOSAGE (commit `ce74c6e`) : « la plus dense » 38,6 → 26,3 %, « la moins bavarde » 34,8 →
+  25,4 %.** Dosage recalculé avant d'écrire : crédit de densité 22,0 sur 57 (cible 14,25 ; 15,7 pour
+  27,5 %), donc **7 bascules** pour 26,3 % ; crédit du nombre de mots 19,83, donc **≈ 5,3** pour
+  25,4 %. Sonde ajoutée : `scratchpad/api-sonde/var.js` (essaie plusieurs variantes d'une option, une
+  par une, et affiche caractères / mots / densité, les deux crédits et les alertes d'`etat.js`) et
+  `ajoute.js` ; patchs dans `scratchpad/api-lots/dosage4.json` et `dosage5.json` (hors git).
+  - **Les 7 bascules de densité** (le distracteur nommé devient plus dense que la bonne réponse) :
+    `lecon-02` q3 d1 (« POST passe sans corps : … et risque une ressource vide », 17 mots, 4,76 contre
+    4,72 ; raccourci SOUS la bonne réponse, qui passe au rang 0 — voulu, voir leçon 6), `lecon-06` q2
+    d1 (« … répondre à toutes les origines hostiles et tombe ; … », 4,33 contre 4,20), `lecon-07` q2
+    d3 (« … (JSON signé + profil) accepté sans contrôle par le serveur ; … donc on garde le même »,
+    4,68 contre 4,67), `lecon-08` q1 d3 (« … le jeton qui protège la réponse ; … (jeton admis), censé
+    retransmettre tout le contenu », 4,16 contre 4,13), `lecon-08` q2 d3 (« … répond 503 aux autres
+    clients », 4,05 contre 3,96), `lecon-09` q3 d2 (« Ils ouvrent un canal direct vers un cache
+    bidirectionnel : le client peut recevoir les messages en mémoire, sans serveur », 5,21 contre
+    5,18, « peut » gardé), `lecon-14` q1 d3 (« 302 Found, avec un en-tête Location pointant vers la
+    nouvelle ressource », 4,92 contre 4,82 — « pointant » entré d'abord dans le corps).
+  - **Nombre de mots** (la bonne réponse cesse d'être la moins bavarde, seule ou à égalité) :
+    `lecon-02` q3 et `lecon-07` q2 (mêmes options), `lecon-03` q3 d1 (« pas de donnée ici »), `lecon-06`
+    q2 (égalité à 30 mots), `lecon-08` q4 d2 (« … et souvent plus robuste aux abus »), `lecon-09` q1 d1
+    (« … met en cache chaque objet et les champs voulus du client, au lieu de recalculer par
+    requête »), `lecon-14` q2 d3, q3 d1 (« Une tâche créée (tache.creation) »), q4 d3 (« Des flux
+    (TCP) bruts très longs »), q13 d2 (« HTML Fault (application/html+xml, RFC 9110) ») ; `lecon-14`
+    q15 dans l'autre sens (+0,5, voir ci-dessous).
+  - **Deux rattrapages** : (1) `mesure-biais-inverse --toutes api` a sonné après le premier lot —
+    « écarter les deux extrêmes » à 29,2 % en inverse (leçon 7) ; `lecon-14` q15 d3 sort de son ex æquo
+    de la plus longue (59/59) : 7 questions tranchées, non mesurable, **0 alerte**. (2) Ce même
+    distracteur, relu en contradicteur, était presque vrai (leçon 8) → « Un test de sécurité
+    (validation du jeton Bearer requis partout) ». Il compte 10 mots, la bonne réponse redevient la
+    moins bavarde seule (+0,5), compensé par `lecon-14` q2 d3 (« Pour que l'API n'ait qu'un format à
+    produire en validation comme en panne, des pages HTML », 19 mots).
+  - `controle.js --ref=c5c337e` : seuls bougent la densité, le nombre de mots, leurs deux « ECARTER »,
+    `w` (le `k` reste à 0 partout) et la famille des rangs (échanges entre distracteurs, plus le rang
+    voulu de `lecon-02` q3). Tout le reste tient : lexique 0 / 0 / 0, fétiche 0 alerte (`chaque`
+    ECARTER 27,9 → 27,6 % : deux « chaque » de distracteur retirés), tics 0, intrus 0 sûr, inverse 0.
+- **Ce qui reste, après `ce74c6e`** : plus aucun indice au-dessus de 27,5 %. Le pire est à **26,3 %**,
+  à égalité entre « la plus dense » et « la QUATRIÈME plus longue » ; « la plus longue » 24,6 %,
+  « la DEUXIÈME » 25,4 %. Questions où la bonne réponse reste la plus dense (17 sur 57, dont 3 à égalité,
+  `lecon-14` q8, q10, q11) : on pourrait encore en basculer une (24,6 %), mais ce serait viser sous 25 %
+  pour un indice déjà dans la cible ; non fait. Laissées, avec leur raison chiffrée :
   - `lecon-02` q2 : la bonne réponse vaut 5,41 lettres par mot sur 17 mots ; un distracteur plus
     long (≥ 113 caractères) en moins de 17 mots exige des mots de 9 lettres (`collection`) qui
     deviennent EXCLUSIFS (mot technique exclusif rouvert) ou des mots absents de la page (`listes`,
     `existant` : k = 2, lexique rouvert) ; la meilleure variante simulée rendait 5,75 mais k = 2 et
     l'intrus « ressource » à 3 porteurs ;
-  - `lecon-14` q13 : « Request Details (application/request+json, RFC 9110) » égale la bonne réponse
-    au centième (6,14) et à la longueur (52 caractères, rang rouvert) ; la variante à 53 caractères
-    porte « requests », absent de la page (k = 1) ;
-  - `lecon-09` q3 : la variante à 5,35 retire « peut » (« la plus prudente » rouverte) ; avec
-    « peut », 5,17 contre 5,18 ;
-  - `lecon-13` q3, `lecon-14` q1, `lecon-07` q4, `lecon-10` q1 (bonne réponse la plus courte) : il
-    faut un distracteur PLUS LONG en caractères et en MOINS de mots, donc fait de mots de 7 à 9
-    lettres ; les candidats de la page sont soit de 9 lettres et plus (exclusifs), soit absents
-    (`fourni`, `superflu`, `pointant`, `indiquant`, `permanente`… : k > 0, sondés avec `k.js`) ;
-  - `lecon-06` q1 (plan croisé Authorization/Accept × 401/403 : la densité suit « Unauthorized »,
-    12 lettres, que seul un autre code en -ized porterait), `lecon-14` q9 (« 401 Unauthorized »
-    7,5 contre « 403 Forbidden » 6,0 ; « 422 Unprocessable Content » passerait mais ferait de la
-    bonne réponse la 2ᵉ plus longue, et « la DEUXIÈME plus longue » est déjà à 27,2 %), `lecon-14`
-    q3, q12 (formes de cinq mots, la bonne réponse porte « spécification » ou « terminée ») ;
-  - `lecon-02` q3, `lecon-03` q1, `lecon-05` q1, `lecon-07` q2, `lecon-08` q1, q2, q4, `lecon-09` q4,
-    `lecon-13` q2 : écart de 3 à 17 lettres, pas tenté faute de temps.
-  La cause est structurelle et chiffrée : la règle du `k` (aucun mot de 6 lettres et plus absent de
-  la page) combinée à « le mot technique exclusif » (aucun mot de 9 lettres et plus propre à une
-  option) et à l'intrus lexical (aucun mot de 5 lettres et plus porté par exactement 3 options) ne
-  laisse aux distracteurs que les mots de 6 à 8 lettres DE LA PAGE pour gagner en densité. La seule
-  issue qui a marché sans rien rouvrir (`lecon-09` q2, `lecon-10` q2, `lecon-04` q3) : reprendre
-  dans un distracteur court un mot long de la bonne réponse qu'AUCUN autre distracteur ne porte.
+  - `lecon-05` q1 (rang 1, 4,40) : le distracteur doit rester sous 114 caractères avec au moins 4,45
+    lettres par mot ; « dans un autre sens » n'a pas d'équivalent court de la page (`inversée`,
+    `désordonnée`, `renversée` absents ; `décroissant` et `croissant` ont 9 lettres et deviendraient
+    exclusifs ; « à l'inverse » ajoute deux jetons d'une lettre) ;
+  - `lecon-13` q2 (rang 0) : le préfixe commun « Parce que les refus (401, 403, 404, 422) » vaut 3,5
+    lettres par mot ; il faudrait une suite de 9 mots à 5,1 lettres de moyenne, sans mot de 9 lettres
+    ni mot absent de la page — aucune phrase naturelle trouvée ;
+  - `lecon-13` q3, `lecon-07` q4, `lecon-10` q1, `lecon-09` q4 (bonne réponse la plus courte et
+    dense) : il faut 5 à 17 lettres de plus à nombre de mots égal ; possible seulement avec des mots de
+    7 à 9 lettres que la page n'a pas (`fourni`, `superflu`, `indiquant`, `permanente`…) ; on pourrait
+    les faire entrer dans le corps comme « pointant », non fait faute de besoin ;
+  - `lecon-08` q4 (5,71), `lecon-06` q1 (plan croisé Authorization/Accept × 401/403), `lecon-14` q9
+    (« Unauthorized », 12 lettres), q3 et q12 (formes de cinq mots, « terminée », « spécification »),
+    q13 (« Request Details » égale la bonne réponse au centième et à la longueur ; « Problem
+    Responses » porterait un mot de 9 lettres exclusif ; « messages » absent de la page), q7 (une
+    forme d'un mot, `DELETE` : « OPTIONS » rouvrirait le rang) ; `lecon-14` q8, q10, q11 : égalités
+    de formes d'un mot ou de quatre mots, déjà au hasard ou à demi.
 - `lecon-14` q9 : « le mot technique exclusif » tranche (`Unauthorized` / `Forbidden`, 50 %) ;
   q5, q7 : l'intrus EXCÈS désigne `DELETE` / `{DELETE, PATCH}` (formes d'un mot) — laissés.
 - Non vérifiés (voir plus haut) : GitHub et la pagination par curseur, Stripe 24 h, « toute clé »
