@@ -164,3 +164,24 @@ conséquence » : donne-le à tes distracteurs, avec une glose qui PRÉCISE l'er
    ajuster, poser (`pose.js --ecrire`), commiter le lot.
 4. Après chaque lot : `mesure-tics-lot`, `mesure-mot-fetiche`, `mesure-lexique-qcm --liste=cobol`,
    `mesure-mot-question cobol`, `mesure-biais-inverse --toutes cobol`.
+
+---
+
+## Relecture, correction, contre-relecture — faites par le même agent (2026-11-10)
+
+Ce qui a été fait après la vague et le dosage, à reprendre pour un cours suivant :
+
+1. **Relire chaque option réécrite** comme un apprenant et comme un expert qui veut la démolir :
+   quatre distracteurs repris (deux mots réservés de GnuCOBOL, `TYPE` et `FORMAT` ; un
+   « deux chiffres par octet » numériquement vrai pour un `PIC 9(4) COMP` ; un « le compilateur
+   accepte sa présence comme son absence » vrai pour les en-têtes de division).
+2. **Relire le corps**, chaque bloc de code recompilé dans `D:\outils-b4\cobol\essais\`, chaque
+   sortie en commentaire rejouée : 18 groupes de fautes, détaillés dans
+   `en-cours/rapports-b4/cobol.md`. Croiser les noms de données du cours avec
+   `cobc --list-reserved` (deux blocs ne compilaient pas).
+3. **Rejouer `normExo`** sur les 35 exercices (`scratchpad/cobol-contre/exos-tous.js`,
+   `fuites-larges.js`, `fuites-enonces.js`) : six indices livraient la réponse.
+4. Après chaque correction de corps : `kdiff.js HEAD <pages>` (un mot entré ou sorti de la page
+   bouge le `k` des options) et `controle.js` (0 indicateur déplacé attendu).
+5. **Contre-relire ses propres corrections** : relire le diff ligne à ligne, chercher l'absolu
+   déplacé (« s'arrête à 9999 » dépendait du dialecte) et la même faute ailleurs dans la page.
