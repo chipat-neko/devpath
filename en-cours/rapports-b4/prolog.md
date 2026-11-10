@@ -8,7 +8,8 @@ distracteurs**. Consigne versionnée : `scratchpad/CONSIGNE-PROLOG.md`. Aucun fi
 
 **Commits** (dans l'ordre) : `c7b4e1a` (corrections prouvées AVANT la vague), `fb25ac6`,
 `30dd470`, `e568e47`, `880d122`, `2d1e1d1` (la vague, cinq lots), `8376c2f` (dosage), `9ecb826`
-(relecture par contradiction), `0a2aebd` (contre-relecture), puis le commit de ce rapport.
+(relecture par contradiction), `0a2aebd` (contre-relecture), `c080cca` (ce rapport), `464b57f`
+(clause MUST M6 rétablie après `verif.js --rapide`), puis le commit qui complète ce rapport.
 
 #### PROLOG S'EXÉCUTE — SANS RIEN INSTALLER
 
@@ -122,6 +123,40 @@ ou placeholders donnaient la réponse avant le masque** (`lecon-01` exo 2, `leco
 `exos-tous.js` : 17 → **14 fuites**, toutes des **derniers indices délibérés** ou des données de
 l'énoncé (`lecon-04` exo 3).
 
+#### `verif.js --rapide` — CE QU'IL SIGNALE, ÉTAPE PAR ÉTAPE
+
+Joué sur la copie (53 étapes, 383,5 s) : 10 étapes signalent, 1 ne mesure rien. Pour séparer ce
+qui vient du cours de ce qui existait avant, les huit étapes en cause ont été rejouées deux fois
+dans la copie, pages de `prolog` prises à `a6a45f2` puis remises à `HEAD` (sorties :
+`scratchpad/prolog-apres/signaux-a6a45f2/` et `signaux-head/`, script
+`scratchpad/prolog-corr/signaux.sh`).
+
+- **Une faute à moi, corrigée (`464b57f`)** : `doc-ref`/`normatf` — « aucune question du site ne
+  viole un MUST » tombait à **1 manquement**, et c'était `lecon-04` q3 : deux distracteurs finissaient
+  par « la réponse suivante », que la clause **M6** (« aucune option ne fait référence à sa position
+  d'affichage », `tools/doc/mesures/conformite-quiz.js`) lit comme un renvoi à l'option suivante.
+  En Prolog, c'est la solution d'après le « ; », mais la règle est un MUST : réécrit « la réponse à
+  suivre » (même longueur, `w` et `k` inchangés, `controle.js --ref=c080cca` : 0 indicateur
+  déplacé). M6 : **0 / 6 103**.
+- **Attendus** : `qcmbiai` et `qcmlexi` (le cours a progressé, 96,3 % → 25,0 %, sans que le gain
+  soit figé) ; `donnees` (I18, 8 erreurs : index dérivés périmés).
+- **Dus au cours, hors de mon périmètre** : `normatf` — **9 contrôles de plus en échec** (4 à
+  `a6a45f2`, 13 à `HEAD`), tous des chiffres du site que **`pages/doc/lecon-03.html`** cite et que
+  le cours a fait bouger : manquements à S3 **1 282 → 1 231** (21,0 % → 20,2 %), conformes 4 821 →
+  4 872 (79,0 % → 79,8 %), S4 **58 → 59 / 89 cours** (65,2 % → 66,3 %), ancienne clause 3 661 →
+  3 699 questions, rang 1 35,2 % → 35,1 %. Page d'un autre cours : non touchée, à régénérer après
+  fusion (voir « Ce qui reste »).
+- **Préexistants, sans lien avec `prolog`** (sortie identique ligne pour ligne à `a6a45f2`) :
+  `etudes` (`pages/etude-inconnu.html` périmée), `moteurs` (`build-sources-worker`), `maths`
+  (58 divergents, leçons 07-08 de maths), `rj-cpp` (12 blocs C++ introuvables), `doc-ref` (« écart
+  de 1 caractère » avec `tools/doc/reference/slugify.txt`), les 4 échecs de `normatf` présents à
+  `a6a45f2` (sorties publiées « 31 lignes, obtenu 31 »), `requete` NON MESURÉ (« fin de JUGE_SQL
+  introuvable »). `etude-inconnu` ne diffère que par le poids du corpus (6 728,8 → 6 728,9 Ko ; la
+  page publiée en annonce 6 570,2 depuis avant `a6a45f2`). Hypothèse **non prouvée** pour plusieurs
+  d'entre eux : les fins de ligne CRLF que la copie de travail reçoit (`core.autocrlf=true`) —
+  `tools/doc/reference/slugify.txt` y est en CRLF ; à rejouer dans le dépôt principal.
+- 28 étapes ne sont pas jouées par ce mode ; `verif-rendu` l'a été à part (15 pages, 0 erreur).
+
 #### CE QUI N'A PAS ÉTÉ EXÉCUTÉ
 
 SWISH, Tau Prolog, GNU Prolog, SICStus, Mercury, Datalog, ASP ; le traceur interactif (`trace.`,
@@ -158,14 +193,22 @@ de millions de dollars par an » (`lecon-14`), le Sudoku « en quelques millisec
   DISTINCTS, `mesure-lexique-qcm.js` (celui du cliquet) les OCCURRENCES ; sur `lecon-06` q2, le
   distracteur qui répète « l'unification » est conforme pour l'outil officiel et signalé par la
   sonde. À harmoniser hors B4.
+- **Les 44 stratégies, le lexique, l'intrus, les tics, le fétiche et mes sondes étaient tous verts
+  sur une option qu'une clause MUST du site interdit** (« la réponse suivante », M6) : seul
+  `verif-normatif` la lit. Il se joue en une seconde
+  (`tools/doc/mesures/conformite-quiz.js`, fonction `mesurer()`) : à mettre dans la boucle de la
+  vague, pas seulement à la fin.
 
 #### CE QUI RESTE
 
 - Lexique : **5 questions retournées** (une variante désigne un distracteur seul : l'écarter rend
   33,3 % sur la question) et **8 à mettre en forme** ; aucune exploitable.
-- Intrus lexical : deux questions où trois options partagent un mot que le quatrième distracteur
-  n'a pas (`lecon-06` q2 « évalue », « côtés » ; bilan q14 « inconnues ») — désignation d'un
-  distracteur, aucune de la bonne réponse.
+- Intrus lexical (`mesure-mot-question.js prolog --plan`) : **11 mots sur 3 questions** qui
+  tranchent — `lecon-06` q2 (« égalité », « arithmétique », « évalue », « côtés » absents de
+  l'option 3 ; « aussi », « termes », « entiers » propres à elle), `lecon-07` q1 (« points »,
+  « retour », « arrière » absents de l'option 3), `lecon-14` q14 (« inconnues » absent de
+  l'option 2). Tous désignent un **distracteur**, jamais la bonne réponse : **0 question sûre**,
+  DÉFAUT 23,6 / 25,5 %, EXCÈS 24,5 / 25,2 %.
 - « la DEUXIÈME plus longue » à **26,9 %** (rangs 14 / 14 / 13 / 13 exacts ; la différence vient des
   égalités de longueur restantes).
 - Affichage du toplevel : les pages montrent `true.` ou `F = 120.` là où SWI-Prolog attend un « ; »
@@ -178,4 +221,7 @@ de millions de dollars par an » (`lecon-14`), le Sudoku « en quelques millisec
 - **À faire par l'orchestrateur** : refiger les cliquets (`verif-qcm-biais.js --ecrire`, `prolog`
   à marquer `traite` ; `verif-qcm-lexique.js --ecrire`), régénérer les index (`build-index --write
   --fresh`, `tools/doc/gen.js`, assembleurs des études) jusqu'au point fixe, puis `verif.js
-  --rapide`. Dans cette copie, `verif-donnees` ne signale que l'I18 attendu.
+  --rapide`. Dans cette copie, `verif-donnees` ne signale que l'I18 attendu. **Et régénérer les
+  chiffres du site que cite `pages/doc/lecon-03.html`** (S3, S4, ancienne clause : 9 contrôles de
+  `verif-normatif` les attendent à jour), une fois toutes les branches B4 fusionnées, puisque chaque
+  cours clos les déplace.
