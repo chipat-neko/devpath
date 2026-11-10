@@ -284,3 +284,74 @@ Seuls les journaux de `donnees`, `qcmbiai` et `qcmlexi` contiennent le mot « co
 remesurées seules sur `lecon-06`, `lecon-07` et `lecon-08` : 18 mesures, 0 erreur, toutes
 stabilisées. Les schémas retouchés de `lecon-03`, `lecon-10` (4 boîtes de 52 px au lieu de 2 de
 108 px pour COMP) et `lecon-13` ne débordent pas.
+
+## Reprise du lexique (après fusion)
+
+Reprise faite sur `b4/cobol` à partir de `d6cd961` (master après les neuf fusions), copie en LF.
+Seul l'indice lexical restait ouvert, et le cliquet `verif-qcm-lexique` signalait
+**PROPORTION 31,6 % → 50,0 %** sur `cobol`.
+
+### Avant / après
+
+| Indicateur | Avant (`d6cd961`) | Après |
+| --- | --- | --- |
+| lexique `--liste=cobol` (exploitables / retournées / à mettre en forme) | **2 / 1 / 3** | **0 / 0 / 0** |
+| PROPORTION, désignation unique (couverture / rendement) | 4,0 % / 50,0 % | 0,0 % / — |
+| PROPORTION, lecture RESTREINDRE (couverture / rendement) | 6,0 % / 44,4 % | 0,0 % / — |
+| cliquet `verif-qcm-lexique` | `cobol` dans « a EMPIRÉ » (PROPORTION 31,6 % → 50,0 %) | `cobol` sorti de la liste (reste « progressé sans que le gain soit figé », attendu) |
+| la plus longue | 24,5 % | 24,5 % |
+| pire indice | 26,5 % (la DEUXIÈME plus longue, à égalité avec la TROISIÈME, ECARTER la plus courte, écarter les deux extrêmes) | inchangé |
+| rangs | 13 / 13 / 13 / 11 | inchangés |
+| questions trahies par 5 indices ou plus | 0 | 0 |
+| mot fétiche / tics de lot / biais inverse | 0 / 0 / 0 alerte | 0 / 0 / 0 alerte |
+| intrus lexical DÉFAUT (direct / inverse / sûres) | 17,2 % / 27,8 % / 0 | 17,2 % / 27,8 % / 0 |
+| explications orphelines | — | 0 (`--depuis=d6cd961 --travail`) |
+| atteintes à l'intouchable (`mesure-qcm-intouchable.js cobol d6cd961`) | — | **0** (2 distracteurs réécrits) |
+| `verif-html.js` | 0 | 0 |
+
+`controle.js --ref=d6cd961` : 3 questions bougent, et seulement sur `w` ou `k` ; **aucune des 44
+stratégies ne désigne d'autres options qu'avant**.
+
+### Ce qui a été fait
+
+- `lecon-10` q3 (ON SIZE ERROR), **retournée** : le distracteur « À agrandir le champ numérique quand
+  le résultat calculé ne tient pas » portait 4 mots longs contre 3 aux trois autres options, donc
+  PROPORTION le désignait seul. Réécrit « À redimensionner le champ cible quand le résultat calculé
+  ne tient pas » : 3 mots longs dont 1 étranger (`redimensionner`), 70 caractères (rang 3 gardé),
+  12 mots (toujours la moins bavarde), densité 4,92 (toujours la plus dense). Faux : un champ COBOL
+  garde la taille fixée par sa PICTURE ; `ON SIZE ERROR` exécute un traitement de secours.
+- `lecon-13` q2 (DELIMITED BY), **restreinte** : le distracteur « À fixer le séparateur inséré entre
+  deux sources … » portait 6 mots longs contre 8. Réécrit « À placer un séparateur précis après
+  chaque morceau (STRING ou UNSTRING) : SPACE, SIZE, ou une chaîne » : 8 mots longs dont 1 étranger
+  (`placer`), 100 caractères (la bonne en a 101, rang gardé), 16 mots. Faux : DELIMITED BY n'ajoute
+  aucun séparateur, il dit jusqu'où copier (STRING) ou où couper (UNSTRING).
+  ⚠️ Un premier essai (« … après chaque source … ») tenait les 44 stratégies mais **rouvrait
+  l'intrus lexical** : `source` passait à trois options sur quatre, la lecture inverse de DÉFAUT
+  remontait de 27,8 % à **28,0 %** (seuil d'alerte). Remplacé avant commit par `morceau`.
+- `lecon-07` q1 (SELECT … ASSIGN), **exploitable** (PROPORTION et RESTREINDRE) : la bonne portait
+  7 mots longs contre 6, 4 et 4, impossible à égaliser dans la fenêtre de longueur. Fermée par le
+  **corps** : les mots étrangers des quatre options (`l'environment`, `l'en-tête`, `l'ouverture`)
+  entrent dans la page, si bien que les quatre options passent à k = 0 et que PROPORTION ne tranche
+  plus. Aucune option n'est touchée ; les deux autres questions de la page ne changent pas de k.
+
+### Phrases ajoutées au corps (`lecon-07`)
+
+1. Après le code de la FD : « L'en-tête `FD F-CLIENTS` reprend le nom **logique** déclaré par le
+   `SELECT` ; le programme ne cite le fichier physique, `clients.dat`, que dans l'ENVIRONMENT
+   DIVISION. » — **Exécuté** (GnuCOBOL 3.2, `D:\outils-b4\cobol\essais\lexique\fdnom.cbl`) : une FD
+   dont le nom n'est pas déclaré par un SELECT est refusée à la compilation (`'F-AUTRE' is not
+   defined`, `missing file description for FILE F-CLIENTS`). Dans les exemples de la page,
+   `clients.dat` n'apparaît que dans l'`ASSIGN TO`.
+2. Après le code « Ouvrir, lire, fermer » : « Le fichier physique n'est cherché sur le disque qu'à
+   l'ouverture : si `clients.dat` n'existe pas, le programme compile sans erreur et c'est
+   l'`OPEN INPUT` qui échoue, à l'exécution. » — **Exécuté** (`absent.cbl`, `ASSIGN TO "absent.dat"`) :
+   compilation acceptée, le programme affiche « avant OPEN » puis s'arrête sur l'OPEN avec
+   `libcob: error: file does not exist (status = 35)`, code de sortie 1.
+
+### Ce qui reste
+
+- Lexique : rien (0 / 0 / 0).
+- Inchangé depuis la passe B4 : point interne (`lecon-05` q2, bonne partagée), intrus lexical DÉFAUT
+  inverse à 27,8 % (juste sous 28 %), et les pages dérivées / index à régénérer par l'orchestrateur
+  (`verif-donnees` [I18] : `quiz-index.js` et `search-index.js` divergent, attendu ; le corps de
+  `lecon-07` a changé).
