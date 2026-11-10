@@ -81,7 +81,8 @@
                   <li>centraliser des <strong>jetons</strong> (tokens) dans des <strong>maps</strong> Sass&nbsp;;</li>
                   <li><strong>générer</strong> des classes utilitaires par boucle&nbsp;;</li>
                   <li>gérer un thème <strong>clair/sombre</strong> proprement&nbsp;;</li>
-                  <li>combiner <strong>maps Sass</strong> et <strong>custom properties</strong> CSS.</li>
+                  <li>combiner <strong>maps Sass</strong> et <strong>custom properties</strong> CSS&nbsp;;</li>
+                  <li><strong>générer</strong> les custom properties d'un thème et <strong>vérifier</strong> qu'aucun jeton ne manque.</li>
                 </ul>
               </div>
             </header>
@@ -179,6 +180,113 @@ body {
 
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — le mode sombre de GitHub</p><p>Quand <strong>GitHub</strong> a ajouté son mode sombre (puis ses thèmes «&nbsp;dimmed&nbsp;» et à contraste élevé), il n'a pas réécrit ses feuilles de styles&nbsp;: son design system <strong>Primer</strong> définit chaque couleur comme un <strong>jeton</strong> exposé en custom property CSS. Basculer de thème revient à charger un autre jeu de valeurs pour les <em>mêmes</em> variables&nbsp;; tous les composants, qui ne référencent que des <code>var(--…)</code>, suivent instantanément. C'est très exactement le pattern «&nbsp;Sass définit, CSS expose&nbsp;» de cette leçon — et ce qui permet d'ajouter un thème <em>après coup</em> sans toucher au reste.</p></div></div>
 
+<h2>Générer les custom properties depuis la map</h2>
+<p>Le fichier <code>theme.scss</code> plus haut tape les couleurs à la main, une fois par thème. Avec trois couleurs, ça passe&nbsp;; avec trente, une faute de frappe finit toujours par se glisser. On applique donc aux thèmes la recette des utilitaires&nbsp;: <strong>une map par thème</strong>, avec les <strong>mêmes clés</strong>, et un <strong>mixin</strong> qui parcourt la map pour écrire une custom property par entrée.</p>
+<figure class="code-block" data-file="_themes.scss"><pre><code class="language-scss">@use 'sass:map';
+
+// Deux maps qui portent les MÊMES clés : une par thème
+$theme-clair: (
+  'fond':     #ffffff,
+  'texte':    #1a1a2e,
+  'primaire': #3a6df0,
+);
+$theme-sombre: (
+  'fond':     #14141f,
+  'texte':    #e8e8f0,
+  'primaire': #8aa2ff,
+);
+
+// Transforme chaque entrée de la map en custom property
+@mixin exposer($theme) {
+  @each $nom, $valeur in $theme {
+    --couleur-#{$nom}: #{$valeur};
+  }
+}
+
+:root               { @include exposer($theme-clair); }
+[data-theme='dark'] { @include exposer($theme-sombre); }</code></pre></figure>
+<p>Compilé par Dart Sass (version 1.108.1), ce fichier produit exactement les deux blocs qu'on écrivait à la main&nbsp;; ajouter un jeton aux deux maps ajoute une ligne à chaque bloc, sans rien toucher d'autre&nbsp;:</p>
+<figure class="code-block" data-file="css produit"><pre><code class="language-css">:root {
+  --couleur-fond: #ffffff;
+  --couleur-texte: #1a1a2e;
+  --couleur-primaire: #3a6df0;
+}
+
+[data-theme=dark] {
+  --couleur-fond: #14141f;
+  --couleur-texte: #e8e8f0;
+  --couleur-primaire: #8aa2ff;
+}</code></pre></figure>
+<p>Deux détails à remarquer. Le compilateur a retiré les guillemets de <code>[data-theme='dark']</code>&nbsp;: c'est le même sélecteur, écrit plus court. Et la couleur primaire n'est pas la même dans les deux thèmes&nbsp;: <code>#3a6df0</code> atteint un rapport de contraste de 4,54:1 sur le blanc, mais seulement 4,02:1 sur le fond sombre, sous le seuil de 4,5:1 que les WCAG demandent pour un texte courant. Le thème sombre prend donc un bleu plus clair, <code>#8aa2ff</code>, qui monte à 7,56:1. Un thème sombre n'est pas une inversion des couleurs&nbsp;: chaque jeton se choisit pour le fond sur lequel il sera posé.</p>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Dans une custom property, <code>$valeur</code> reste du texte</p><p>Écris <code>--couleur-#{$nom}: $valeur;</code> sans les accolades, et Sass n'émet ni erreur ni avertissement&nbsp;: il recopie le texte <code>$valeur</code> tel quel dans le CSS (essai fait avec Dart Sass 1.108.1, qui produit <code>--couleur-fond: $valeur;</code>). La documentation de Sass le dit en toutes lettres&nbsp;: dans la déclaration d'une custom property, tout est transmis au CSS sans être évalué, <strong>sauf l'interpolation</strong> <code>#{…}</code>, seule façon d'y injecter une valeur calculée. Le navigateur accepte <code>$valeur</code> comme valeur de variable&nbsp;; c'est à l'usage que ça casse&nbsp;: <code>background: var(--couleur-fond)</code> devient invalide, et la propriété retombe sur sa valeur héritée ou initiale (ici, un fond transparent). D'où la règle&nbsp;: <strong>dans une custom property, toujours <code>#{$valeur}</code></strong>.</p></div></div>
+
+<h2>Un jeton oublié ne prévient pas</h2>
+<p>Ce système a un point faible&nbsp;: rien n'oblige le thème sombre à redéfinir <em>tous</em> les jetons. Si <code>'texte'</code> manque dans <code>$theme-sombre</code>, la compilation réussit, aucune ligne <code>--couleur-texte</code> n'est écrite pour <code>[data-theme=dark]</code>, et la page en mode sombre garde la valeur de <code>:root</code>&nbsp;: un texte <code>#1a1a2e</code> sur un fond <code>#14141f</code>. Rapport de contraste calculé&nbsp;: 1,07:1, c'est-à-dire un texte presque invisible. Et personne ne s'en aperçoit avant d'avoir cliqué sur le bouton du mode sombre.</p>
+<p>Comme les maps sont connues <strong>à la compilation</strong>, Sass peut faire ce contrôle à notre place, et refuser de produire un CSS incomplet&nbsp;:</p>
+<figure class="code-block" data-file="_garde-themes.scss"><pre><code class="language-scss">@use 'sass:map';
+
+$theme-clair: (
+  'fond':     #ffffff,
+  'texte':    #1a1a2e,
+  'primaire': #3a6df0,
+);
+$theme-sombre: (
+  'fond':     #14141f,
+  'texte':    #e8e8f0,
+  // 'primaire' oublié !
+);
+
+// Garde-fou : chaque jeton du thème clair doit exister dans le thème sombre
+@each $nom, $valeur in $theme-clair {
+  @if not map.has-key($theme-sombre, $nom) {
+    @error "Jeton « #{$nom} » absent du thème sombre.";
+  }
+}</code></pre></figure>
+<p>La compilation s'arrête alors sur <code>Error: "Jeton « primaire » absent du thème sombre."</code>, suivi du nom du fichier et du numéro de la ligne fautive. L'oubli est signalé à la personne qui l'a commis, au moment où elle le commet&nbsp;— et non à un utilisateur, des semaines plus tard.</p>
+<div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0-4 10.5c.5.5 1 1.2 1 2V17h6v-1.5c0-.8.5-1.5 1-2A6 6 0 0 0 12 3Z" /><path d="M9 21h6" /></svg><div class="callout__body"><p class="callout__title">Où ranger le garde-fou</p><p>Place la boucle de contrôle <strong>juste sous les maps</strong>, dans le même partial&nbsp;: elle tourne à chaque compilation sans que personne ait à y penser, et elle n'ajoute <strong>aucune ligne au CSS</strong>, car <code>@each</code>, <code>@if</code> et <code>@error</code> ne laissent rien dans le fichier final (compilé avec les trois clés présentes, le fichier ci-dessus produit un CSS vide). Pour être complet, fais la même boucle dans l'autre sens&nbsp;: un jeton présent seulement dans le thème sombre n'aurait aucune valeur en mode clair.</p></div></div>
+
+<h2>Suivre le réglage du système</h2>
+<p>Le bouton n'est pas la seule source de préférence&nbsp;: le système d'exploitation a lui aussi un réglage clair/sombre, que CSS lit avec la media query <code>prefers-color-scheme</code>. Le plus respectueux est de le suivre <strong>par défaut</strong>, et de laisser le bouton <strong>l'emporter</strong> dès que la personne a fait un choix. Avec le mixin <code>exposer</code>, cela tient en trois règles&nbsp;:</p>
+<figure class="code-block" data-file="_themes.scss (suite)"><pre><code class="language-scss">// 1. Par défaut : thème clair
+:root {
+  @include exposer($theme-clair);
+  color-scheme: light;
+}
+// 2. Système réglé en sombre, et aucun choix forcé en clair
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    @include exposer($theme-sombre);
+    color-scheme: dark;
+  }
+}
+// 3. Choix explicite du sombre, fait avec le bouton
+[data-theme='dark'] {
+  @include exposer($theme-sombre);
+  color-scheme: dark;
+}</code></pre></figure>
+<p>Trois règles, trois situations. Sans attribut, c'est le système qui décide (règle&nbsp;2). Avec <code>data-theme="light"</code>, le <code>:not()</code> écarte la règle&nbsp;2 et le thème clair de <code>:root</code> reste en place, même sur un système sombre. Avec <code>data-theme="dark"</code>, la règle&nbsp;3 s'applique quel que soit le système&nbsp;: elle a la même spécificité que <code>:root</code> et vient après lui dans la feuille, donc elle l'emporte. Le schéma ci-dessous a été relevé dans Chrome, en lisant <code>--couleur-fond</code> sur <code>&lt;html&gt;</code> dans chacun des six cas.</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 640 206" role="img" aria-label="Quel thème s'applique, relevé dans Chrome pour six cas. Système réglé en clair : sans attribut data-theme, thème clair ; avec data-theme='light', thème clair ; avec data-theme='dark', thème sombre. Système réglé en sombre : sans attribut, thème sombre ; avec data-theme='light', thème clair ; avec data-theme='dark', thème sombre.">
+    <text class="d-label" x="320" y="20" text-anchor="middle" font-size="12">Quel thème s'applique ?</text>
+    <text class="d-tag" x="240" y="50" text-anchor="middle" font-size="11">sans data-theme</text>
+    <text class="d-tag" x="400" y="50" text-anchor="middle" font-size="11">data-theme='light'</text>
+    <text class="d-tag" x="560" y="50" text-anchor="middle" font-size="11">data-theme='dark'</text>
+    <text class="d-label" x="24" y="88" font-size="11">système clair</text>
+    <text class="d-label" x="24" y="144" font-size="11">système sombre</text>
+    <rect class="d-box" x="170" y="64" width="140" height="42" rx="6" /><text class="d-text" x="240" y="82" text-anchor="middle" font-size="11">clair</text><text class="d-mut" x="240" y="98" text-anchor="middle" font-size="10">règle 1 (:root)</text>
+    <rect class="d-box" x="330" y="64" width="140" height="42" rx="6" /><text class="d-text" x="400" y="82" text-anchor="middle" font-size="11">clair</text><text class="d-mut" x="400" y="98" text-anchor="middle" font-size="10">règle 1 (:root)</text>
+    <rect class="d-accent" x="490" y="64" width="140" height="42" rx="6" /><text class="d-text" x="560" y="82" text-anchor="middle" font-size="11">sombre</text><text class="d-mut" x="560" y="98" text-anchor="middle" font-size="10">règle 3 (le bouton)</text>
+    <rect class="d-accent" x="170" y="120" width="140" height="42" rx="6" /><text class="d-text" x="240" y="138" text-anchor="middle" font-size="11">sombre</text><text class="d-mut" x="240" y="154" text-anchor="middle" font-size="10">règle 2 (@media)</text>
+    <rect class="d-box" x="330" y="120" width="140" height="42" rx="6" /><text class="d-text" x="400" y="138" text-anchor="middle" font-size="11">clair</text><text class="d-mut" x="400" y="154" text-anchor="middle" font-size="10">:not() écarte la règle 2</text>
+    <rect class="d-accent" x="490" y="120" width="140" height="42" rx="6" /><text class="d-text" x="560" y="138" text-anchor="middle" font-size="11">sombre</text><text class="d-mut" x="560" y="154" text-anchor="middle" font-size="10">règle 3 (le bouton)</text>
+    <text class="d-mut" x="320" y="190" text-anchor="middle" font-size="10.5">Le choix fait avec le bouton l'emporte ; sans choix, le réglage du système décide.</text>
+  </svg>
+  <figcaption>Six cas, trois règles&nbsp;: la colonne de gauche suit le <strong>système</strong>, les deux autres suivent le <strong>choix</strong> de la personne. Valeurs lues dans Chrome sur le CSS compilé ci-dessus.</figcaption>
+</figure>
+
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin&nbsp;: <code>color-scheme</code></p><p>Les custom properties ne colorent que ce que ton CSS dessine. Les <strong>contrôles natifs</strong> (cases à cocher, listes déroulantes, champs de saisie), les <strong>barres de défilement</strong> et le fond du canevas sont peints par le navigateur, avec ses propres couleurs. La propriété <code>color-scheme</code> lui dit dans quel jeu de couleurs la page peut s'afficher&nbsp;: avec <code>color-scheme: dark</code>, il peint ces éléments dans leur version sombre (source&nbsp;: MDN, page <em>color-scheme</em>). Sans elle, une page au thème sombre soigné garde, par défaut, des champs de formulaire clairs.</p></div></div>
+
 <figure class="cheat-table">
   <table>
     <caption>Design tokens &amp; thématisation — mémo</caption>
@@ -191,6 +299,10 @@ body {
       <tr><td><code>--x</code> (custom property)</td><td>vit dans le navigateur, change à l'exécution&nbsp;: thème</td></tr>
       <tr><td><code>var(--x)</code></td><td>référence une custom property (bascule auto)</td></tr>
       <tr><td><code>[data-theme='dark']</code></td><td>redéfinit les mêmes <code>--x</code> pour le thème sombre</td></tr>
+      <tr><td><code>--x-#{$n}: #{$v}</code></td><td>écrit une custom property depuis une map (interpolation obligatoire)</td></tr>
+      <tr><td><code>map.has-key($m, 'clé')</code> + <code>@error</code></td><td>refuse de compiler un thème incomplet</td></tr>
+      <tr><td><code>@media (prefers-color-scheme: dark)</code></td><td>suit le réglage du système quand rien n'est forcé</td></tr>
+      <tr><td><code>color-scheme: dark</code></td><td>contrôles natifs et barres de défilement en sombre</td></tr>
     </tbody>
   </table>
 </figure>
@@ -204,6 +316,8 @@ body {
   <dt>Custom property</dt><dd>Variable CSS native (<code>--x</code>) qui vit dans le navigateur et se redéfinit par contexte&nbsp;; lue avec <code>var(--x)</code>.</dd>
   <dt>Thématisation</dt><dd>Capacité à changer l'apparence (clair/sombre, marque) à l'exécution en redéfinissant les mêmes custom properties.</dd>
   <dt>Source de vérité</dt><dd>Endroit unique où une décision est définie&nbsp;; la modifier là met à jour tous ses usages.</dd>
+  <dt>Interpolation</dt><dd>Écriture <code>#{…}</code> qui insère la valeur d'une expression Sass dans un nom de classe, de propriété, ou dans la valeur d'une custom property, où <code>$x</code> seul serait recopié tel quel.</dd>
+  <dt><code>prefers-color-scheme</code></dt><dd>Media query qui lit le réglage clair/sombre du système d'exploitation&nbsp;; elle fournit le thème par défaut tant que la personne n'a rien choisi.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
@@ -212,8 +326,11 @@ body {
 <li>Les <strong>maps</strong> Sass = une <strong>source de vérité</strong> (palette, espacements) ; <code>map.get</code> pour y accéder.</li>
 <li><code>@each</code> + map = <strong>génération</strong> de classes utilitaires cohérentes sans répétition.</li>
 <li>Pour la <strong>thématisation</strong> : variables Sass (fixe, compilation) <strong>+</strong> custom properties CSS (dynamique, exécution).</li>
+<li>Un <strong>mixin</strong> + <code>@each</code> écrit les custom properties de chaque thème depuis sa map&nbsp;; la valeur s'y injecte avec <code>#{$valeur}</code>, jamais <code>$valeur</code> seul.</li>
+<li>Un jeton oublié ne fait pas d'erreur&nbsp;: une garde <code>map.has-key</code> + <code>@error</code> le fait apparaître dès la compilation.</li>
+<li><code>prefers-color-scheme</code> donne le thème par défaut, <code>data-theme</code> le choix de la personne, <code>color-scheme</code> la couleur des contrôles natifs.</li>
 </ul>
-<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>À quoi sert une map Sass dans un design system ?</li><li>Comment générer des utilitaires sans tout écrire à la main ?</li><li>Pourquoi Sass seul ne suffit pas pour un thème clair/sombre ?</li></ol></div>
+<div class="lesson-check"><p class="kicker kicker--gold">Vérifie ta compréhension</p><ol><li>À quoi sert une map Sass dans un design system ?</li><li>Comment générer des utilitaires sans tout écrire à la main ?</li><li>Pourquoi Sass seul ne suffit pas pour un thème clair/sombre ?</li><li>Que produit <code>--couleur-fond: $valeur;</code> dans un mixin, et pourquoi ?</li></ol></div>
 
 <script type="application/json" data-quiz>
 [
