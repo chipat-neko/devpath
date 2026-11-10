@@ -127,7 +127,7 @@ objc_msgSend(compte, @selector(deposer:), 100);</code></pre></figure>
   <figcaption>Le C lie l'appel à la compilation&nbsp;; Objective-C ne fige que le <strong>nom</strong> du message et laisse le <strong>runtime</strong> trouver la méthode à l'exécution.</figcaption>
 </figure>
 
-<p>Mais <em>où</em> le runtime cherche-t-il&nbsp;? Il regarde d'abord dans la classe de l'objet, puis <strong>remonte</strong> la chaîne des superclasses jusqu'à <code>NSObject</code>. S'il trouve la méthode, il l'exécute&nbsp;; s'il atteint le sommet sans l'avoir trouvée, il appelle <code>doesNotRecognizeSelector:</code> et le programme s'arrête. C'est ce qui rend le motif «&nbsp;demander avant d'envoyer&nbsp;» si important.</p>
+<p>Mais <em>où</em> le runtime cherche-t-il&nbsp;? Il regarde d'abord dans la classe de l'objet, puis <strong>remonte</strong> la chaîne des superclasses jusqu'à <code>NSObject</code>. S'il trouve la méthode, il l'exécute&nbsp;; s'il atteint le sommet sans l'avoir trouvée (ni redirection prévue), il appelle <code>doesNotRecognizeSelector:</code>, qui lève une exception&nbsp;: non rattrapée, elle arrête le programme. C'est ce qui rend le motif «&nbsp;demander avant d'envoyer&nbsp;» si important.</p>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 176" role="img" aria-label="La recherche d'une méthode remonte la hiérarchie des classes. Le message deposer est envoyé à un objet de classe CompteEpargne. Le runtime cherche la méthode deposer d'abord dans CompteEpargne : absente, il remonte à la superclasse Compte, où il la trouve et l'exécute. La classe racine NSObject est encore au-dessus mais n'est pas atteinte. Si aucune classe de la chaîne ne définissait la méthode, le runtime appellerait doesNotRecognizeSelector, ce qui interromprait le programme.">
@@ -231,7 +231,7 @@ if ([obj respondsToSelector:action]) {   // garde-fou : sait-il le faire ?
   <dt><code>respondsToSelector:</code></dt><dd>Demande si un objet sait répondre à un message&nbsp;; base des méthodes de protocole optionnelles.</dd>
   <dt><code>performSelector:</code></dt><dd>Envoie un message désigné par un <code>SEL</code>, éventuellement décidé à l'exécution.</dd>
   <dt>Method swizzling</dt><dd>Échange à l'exécution des implémentations de deux méthodes&nbsp;; puissant mais à réserver aux outils.</dd>
-  <dt><code>doesNotRecognizeSelector:</code></dt><dd>Appelé par le runtime quand aucune classe de la hiérarchie ne répond au message&nbsp;; provoque l'arrêt du programme.</dd>
+  <dt><code>doesNotRecognizeSelector:</code></dt><dd>Appelé par le runtime quand aucune classe de la hiérarchie ne répond au message&nbsp;; lève une exception qui, non rattrapée, arrête le programme.</dd>
 </dl>
 
 <h2>Récap et vérification</h2>
@@ -245,16 +245,16 @@ if ([obj respondsToSelector:action]) {   // garde-fou : sait-il le faire ?
 
 <script type="application/json" data-quiz>
 [
-  {"q":"À quel moment le lien entre un message Objective-C et sa méthode est-il résolu ?","a":["À l'exécution : le runtime cherche la méthode via objc_msgSend","À la compilation, comme un appel de fonction C","Jamais, c'est aléatoire","À l'édition de liens uniquement"],"correct":0,"explain":"Le compilateur traduit [obj faire] en objc_msgSend(obj, @selector(faire)). C'est le runtime qui, à l'exécution, cherche la méthode nommée faire dans la classe de obj puis l'exécute — d'où le dynamisme du langage."},
-  {"q":"Quelle méthode demande à un objet s'il sait répondre à un message donné ?","a":["respondsToSelector: (avec un @selector)","isMemberOfClass:","description","conformsToProtocol:"],"correct":0,"explain":"respondsToSelector:@selector(nom:) renvoie YES si l'objet implémente ce message. On l'utilise comme garde-fou avant performSelector:, et c'est le socle des méthodes de protocole optionnelles."},
-  {"q":"Quelle fonctionnalité des protocoles repose sur respondsToSelector: ?","a":["Les méthodes @optional : le framework vérifie qu'elles existent avant de les appeler","Les méthodes @required, toujours appelées sans vérification","L'héritage multiple de classes","La gestion mémoire ARC"],"correct":0,"explain":"Une méthode @optional peut être absente du delegate. Avant de l'appeler, le framework fait if ([delegate respondsToSelector:@selector(...)]) : c'est exactement l'introspection du runtime qui rend les delegates souples."}
+  {"q":"À quel moment le lien entre un message Objective-C et sa méthode est-il résolu ?","a":["À l'exécution : le runtime cherche la méthode via objc_msgSend","À la compilation : on fige tout de suite l'adresse de la méthode comme en C","À la liaison : l'implémentation de chaque méthode se fige","À main() : le runtime fige explicitement chaque méthode"],"correct":0,"explain":"Le compilateur traduit [obj faire] en objc_msgSend(obj, @selector(faire)). C'est le runtime qui, à l'exécution, cherche la méthode nommée faire dans la classe de obj puis l'exécute — d'où le dynamisme du langage."},
+  {"q":"Quelle méthode demande à un objet s'il sait répondre à un message donné ?","a":["respondsToSelector: (avec un @selector)","isMemberOfClass: ([NSString class])","performSelector: (avec un @selector)","isKindOfClass: (avec une classe)"],"correct":0,"explain":"respondsToSelector:@selector(nom:) renvoie YES si l'objet implémente ce message. On l'utilise comme garde-fou avant performSelector:, et c'est le socle des méthodes de protocole optionnelles."},
+  {"q":"Quelle fonctionnalité des protocoles repose sur respondsToSelector: ?","a":["Les méthodes @optional : le framework vérifie qu'elles existent avant de les appeler","Les méthodes @required : le framework teste leur présence chez le delegate pour chaque méthode","L'héritage multiple : chaque classe prend les implémentations des protocoles, ses superclasses","La gestion de la mémoire par ARC : le runtime vérifie que l'objet existe avant de le libérer"],"correct":0,"explain":"Une méthode @optional peut être absente du delegate. Avant de l'appeler, le framework fait if ([delegate respondsToSelector:@selector(...)]) : c'est exactement l'introspection du runtime qui rend les delegates souples."}
 ]
 </script>
 
 <h2>Exercices</h2>
 <script type="application/json" data-exos>
 [
-  {"type":"text","accept":["exécution","execution","runtime","à l'exécution","a l'execution"],"placeholder":"le lien message → méthode est résolu à la … (compilation ou … ?)","hints":["C'est le rôle du runtime.","objc_msgSend cherche la méthode au dernier moment.","À l'e…"],"link":{"href":"lecon-12.html","label":"Revoir « Envoyer un message »"}},
+  {"type":"text","accept":["exécution","execution","à l'exécution","a l'execution"],"placeholder":"le lien message → méthode est résolu à la … (compilation ou … ?)","hints":["C'est le rôle du runtime.","objc_msgSend cherche la méthode au dernier moment.","À l'e…"],"link":{"href":"lecon-12.html","label":"Revoir « Envoyer un message »"}},
   {"type":"text","accept":["respondsToSelector:","respondsToSelector","respondstoselector"],"placeholder":"la méthode qui demande à un objet s'il sait répondre à un message : …:","hints":["On la met avant performSelector:.","Prend un @selector.","responds…"],"link":{"href":"lecon-12.html","label":"Revoir « Les sélecteurs »"}},
   {"type":"text","accept":["isKindOfClass:","isKindOfClass","iskindofclass"],"placeholder":"la méthode qui teste si un objet est d'une classe OU de ses sous-classes : …:","hints":["isMemberOfClass: est strict, celle-ci non.","[obj …[NSString class]].","isKind…"],"link":{"href":"lecon-12.html","label":"Revoir « L'introspection »"}}
 ]
