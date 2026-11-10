@@ -103,35 +103,38 @@
 
 <h2>De l'instruction au code machine</h2>
 
-<p>Quand tu écris <code>mov rax, 1</code>, NASM ne range pas le texte «&nbsp;mov rax, 1&nbsp;» dans le binaire. Il le traduit en octets. Une instruction x86-64 se décompose (en gros) en&nbsp;: un préfixe optionnel, un <strong>opcode</strong> (le code de l'opération), un octet ModR/M qui dit quels registres ou quelle mémoire sont impliqués, parfois un octet SIB, un déplacement et une valeur immédiate.</p>
+<p>Quand tu écris <code>mov rax, -1</code>, NASM ne range pas le texte «&nbsp;mov rax, -1&nbsp;» dans le binaire. Il le traduit en octets. Une instruction x86-64 se décompose (en gros) en&nbsp;: un préfixe optionnel, un <strong>opcode</strong> (le code de l'opération), un octet ModR/M qui dit quels registres ou quelle mémoire sont impliqués, parfois un octet SIB, un déplacement et une valeur immédiate.</p>
 
 <figure class="code-block" data-file="encodage.asm"><pre><code class="language-nasm">; Ce que tu écris :
-mov rax, 1            ; charger l'immediat 1 dans rax
+mov rax, -1           ; charger l'immediat -1 dans rax
 
 ; Ce que nasm produit (octets, en hexadecimal) :
-; 48 c7 c0 01 00 00 00
+; 48 c7 c0 ff ff ff ff
 ;
 ;  48        = prefixe REX.W  -&gt; «&nbsp;l'operande fait 64 bits&nbsp;» (rax et pas eax)
 ;  c7        = opcode  -&gt; «&nbsp;mov registre/memoire, immediat&nbsp;»
 ;  c0        = ModR/M -&gt; cible = rax
-;  01 00 00 00 = l'immediat 1, en little-endian sur 4 octets (etendu a 64 bits)</code></pre></figure>
+;  ff ff ff ff = l'immediat -1 sur 4 octets (signe etendu a 64 bits)
+;
+; (mov rax, 1 donnerait b8 01 00 00 00 : NASM le raccourcit en mov eax, 1,
+;  meme effet, puisque ecrire eax met a zero le haut de rax)</code></pre></figure>
 
 <p>Le point à retenir&nbsp;: <strong>chaque instruction occupe un nombre variable d'octets</strong> (de 1 à 15 sur x86-64). C'est pour ça qu'on ne peut pas «&nbsp;sauter au hasard&nbsp;» au milieu du code&nbsp;: il faut tomber pile sur le premier octet d'une instruction. Le préfixe REX (<code>48</code> ici) est ce qui distingue le monde 64 bits du monde 32 bits&nbsp;; c'est lui qui fait que <code>rax</code> est utilisé plutôt que <code>eax</code>.</p>
 <figure class="diagram">
-  <svg viewBox="0 0 640 180" role="img" aria-label="Encodage de l'instruction mov rax, 1 en code machine. NASM la traduit en sept octets hexadécimaux : 48 est le préfixe REX.W qui indique un opérande 64 bits ; c7 est l'opcode mov registre/mémoire vers immédiat ; c0 est l'octet ModR/M qui désigne le registre rax ; enfin 01 00 00 00 est l'immédiat 1 codé en little-endian sur quatre octets. La longueur d'une instruction x86-64 est donc variable.">
-    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">mov rax, 1  →  7 octets de code machine</text>
+  <svg viewBox="0 0 640 180" role="img" aria-label="Encodage de l'instruction mov rax, -1 en code machine. NASM la traduit en sept octets hexadécimaux : 48 est le préfixe REX.W qui indique un opérande 64 bits ; c7 est l'opcode mov registre/mémoire vers immédiat ; c0 est l'octet ModR/M qui désigne le registre rax ; enfin ff ff ff ff est l'immédiat -1 codé sur quatre octets, étendu par le signe à 64 bits. La longueur d'une instruction x86-64 est donc variable.">
+    <text class="d-label" x="320" y="22" text-anchor="middle" font-size="12">mov rax, -1  →  7 octets de code machine</text>
     <rect class="d-accent" x="40" y="44" width="70" height="34" rx="3" /><text class="d-text" x="75" y="66" text-anchor="middle" font-size="12">48</text>
     <rect class="d-box" x="112" y="44" width="70" height="34" rx="3" /><text class="d-text" x="147" y="66" text-anchor="middle" font-size="12">c7</text>
     <rect class="d-box" x="184" y="44" width="70" height="34" rx="3" /><text class="d-text" x="219" y="66" text-anchor="middle" font-size="12">c0</text>
-    <rect class="d-frame" x="256" y="44" width="70" height="34" rx="3" /><text class="d-text" x="291" y="66" text-anchor="middle" font-size="12">01</text>
-    <rect class="d-frame" x="328" y="44" width="70" height="34" rx="3" /><text class="d-text" x="363" y="66" text-anchor="middle" font-size="12">00</text>
-    <rect class="d-frame" x="400" y="44" width="70" height="34" rx="3" /><text class="d-text" x="435" y="66" text-anchor="middle" font-size="12">00</text>
-    <rect class="d-frame" x="472" y="44" width="70" height="34" rx="3" /><text class="d-text" x="507" y="66" text-anchor="middle" font-size="12">00</text>
+    <rect class="d-frame" x="256" y="44" width="70" height="34" rx="3" /><text class="d-text" x="291" y="66" text-anchor="middle" font-size="12">ff</text>
+    <rect class="d-frame" x="328" y="44" width="70" height="34" rx="3" /><text class="d-text" x="363" y="66" text-anchor="middle" font-size="12">ff</text>
+    <rect class="d-frame" x="400" y="44" width="70" height="34" rx="3" /><text class="d-text" x="435" y="66" text-anchor="middle" font-size="12">ff</text>
+    <rect class="d-frame" x="472" y="44" width="70" height="34" rx="3" /><text class="d-text" x="507" y="66" text-anchor="middle" font-size="12">ff</text>
     <text class="d-mut" x="75" y="97" text-anchor="middle" font-size="9">REX.W</text>
     <text class="d-mut" x="147" y="97" text-anchor="middle" font-size="9">opcode</text>
     <text class="d-mut" x="219" y="97" text-anchor="middle" font-size="9">ModR/M</text>
     <line class="d-line" x1="256" y1="86" x2="542" y2="86" />
-    <text class="d-mut" x="399" y="99" text-anchor="middle" font-size="9">immédiat 1 (little-endian, 4 octets)</text>
+    <text class="d-mut" x="399" y="99" text-anchor="middle" font-size="9">immédiat -1 (4 octets, signe étendu)</text>
     <text class="d-mut" x="75" y="120" text-anchor="middle" font-size="8">opérande 64 bits</text>
     <text class="d-mut" x="147" y="120" text-anchor="middle" font-size="8">mov r/m, imm</text>
     <text class="d-mut" x="219" y="120" text-anchor="middle" font-size="8">cible = rax</text>
@@ -151,7 +154,7 @@ readelf -S prog          # les sections : .text, .data, .bss...
 readelf -l prog          # les segments : ce que le noyau charge en memoire</code></pre></figure>
 <p class="code-caption">Trois vues du même binaire&nbsp;: en-tête, sections (vue de l'éditeur de liens), segments (vue du chargeur).</p>
 
-<p>Deux découpages cohabitent. Les <strong>sections</strong> servent à l'outillage (l'éditeur de liens, le débogueur)&nbsp;: <code>.text</code> contient le code, <code>.data</code> les données initialisées, <code>.bss</code> les données à zéro, <code>.rodata</code> les constantes en lecture seule. Les <strong>segments</strong> servent au noyau quand il charge le programme&nbsp;: il regroupe les sections par droits d'accès (lecture, écriture, exécution). C'est exactement le découpage que tu déclarais avec <code>section .text</code> et <code>section .data</code> depuis la leçon 2.</p>
+<p>Deux découpages cohabitent. Les <strong>sections</strong> servent à l'outillage (l'éditeur de liens, le débogueur)&nbsp;: <code>.text</code> contient le code, <code>.data</code> les données initialisées, <code>.bss</code> les données à zéro, <code>.rodata</code> les constantes en lecture seule. Les <strong>segments</strong> servent au noyau quand il charge le programme&nbsp;: il regroupe les sections par droits d'accès (lecture, écriture, exécution). C'est exactement le découpage que tu déclarais avec <code>section .text</code> et <code>section .data</code> depuis les leçons 1 et 3.</p>
 
 <figure class="code-block" data-file="rappel.asm"><pre><code class="language-nasm">section .data            ; -&gt; finira dans un segment lecture/ecriture
 msg:    db "Salut", 10
@@ -356,7 +359,7 @@ cat /proc/self/maps | grep stack
 <script type="application/json" data-exos>
 [
 {"type":"text","accept":[".text"],"placeholder":"La section qui contient le CODE exécutable : .…","hints":["Les chaînes vont plutôt dans .data / .rodata.","Le code machine a sa propre section.","Point + « texte » en anglais."],"link":{"href":"lecon-10.html","label":"Revoir les sections ELF"}},
-{"type":"text","accept":["48","0x48"],"placeholder":"L'octet du préfixe REX.W (en hexadécimal) marquant l'opération 64 bits","hints":["Il précède un mov rax,... mais pas un mov eax,...","Deux chiffres hexadécimaux.","0x4 suivi de 8."],"link":{"href":"lecon-10.html","label":"Revoir REX.W"}},
+{"type":"text","accept":["48","0x48"],"placeholder":"L'octet du préfixe REX.W (en hexadécimal) marquant l'opération 64 bits","hints":["Il précède un mov rax, rbx, mais pas un mov eax, ebx.","Deux chiffres hexadécimaux.","0x4 suivi de 8."],"link":{"href":"lecon-10.html","label":"Revoir REX.W"}},
 null
 ]
 </script>
@@ -375,15 +378,17 @@ readelf -S prog | grep -E "\.text|\.data|\.rodata"
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Désassemble le <code>.text</code> de ton binaire et retrouve les octets d'un <code>mov rax, ...</code>. Vérifie la présence du préfixe REX.W <code>48</code> en tête. Puis explique pourquoi un <code>mov eax, ...</code> (registre 32 bits) n'aurait <em>pas</em> ce préfixe.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-bash">objdump -d -M intel prog
 
-# Exemple de sortie pour «&nbsp;mov rax, 1&nbsp;» :
-#   401000:  48 c7 c0 01 00 00 00   mov  rax, 0x1
+# Exemple de sortie pour «&nbsp;mov rax, -1&nbsp;» :
+#   401000:  48 c7 c0 ff ff ff ff   mov  rax, 0xffffffffffffffff
 #            ^^                       prefixe REX.W  -&gt; operande 64 bits
 #
 # Pour «&nbsp;mov eax, 1&nbsp;» :
 #   401007:  b8 01 00 00 00         mov  eax, 0x1
 #            ^^ pas de 48          -&gt; eax fait deja 32 bits par defaut en
 #                                    mode long, REX.W est inutile (et ecrire
-#                                    sur eax met d'office a zero le haut de rax).</code></pre></figure></details></div>
+#                                    sur eax met d'office a zero le haut de rax).
+# Attention : NASM ecrit mov rax, 1 comme mov eax, 1 (b8 01 00 00 00) ;
+# pour voir le 48, prends mov rax, -1 ou mov rax, rbx (48 89 d8).</code></pre></figure></details></div>
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Sans rien exploiter (purement défensif), dessine la pile d'une fonction qui possède un tableau local de 16 octets, puis explique en commentaire&nbsp;: (a) où se trouve l'adresse de retour par rapport au tableau, (b) à partir de combien d'octets écrits un débordement commence à corrompre des données de contrôle, (c) ce qu'un canari changerait à ce scénario.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="solution"><pre><code class="language-nasm">; Pile pendant la fonction (adresses CROISSANTES vers le haut) :
 ;
