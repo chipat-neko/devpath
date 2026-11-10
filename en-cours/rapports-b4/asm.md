@@ -404,7 +404,7 @@ côté un bloc asm ») reste faux, et le glossaire le dément désormais. La phr
 et reste juste.
 
 **Indicateurs tenus** : la nouvelle bonne réponse a été simulée avant d'être posée
-(`essai.js`, avec l'option `"bonne": true`). Elle garde la même longueur de rang (118 →
+(`essai.js`, avec l'option `"bonne": true`). Elle garde son rang de longueur (112 →
 116 caractères, toujours la plus courte), le minimum de mots (22), 3 mots exclusifs de 9
 lettres et plus (supprimer, fusionner, opérandes), une virgule, une négation, k = 0 et
 w = 7. Le mot « déplace », dont dépend le distracteur 1, reste dans la page (glossaire).
