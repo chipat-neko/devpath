@@ -225,3 +225,94 @@ de millions de dollars par an » (`lecon-14`), le Sudoku « en quelques millisec
   chiffres du site que cite `pages/doc/lecon-03.html`** (S3, S4, ancienne clause : 9 contrôles de
   `verif-normatif` les attendent à jour), une fois toutes les branches B4 fusionnées, puisque chaque
   cours clos les déplace.
+
+## Reprise du lexique (après fusion)
+
+Reprise faite sur `b4/prolog` à partir de `d6cd961` (master après les neuf fusions), copie en LF.
+Seul l'indice lexical restait ouvert : aucune question exploitable, mais **cinq retournées** — la
+variante PROPORTION y désignait un distracteur seul, si bien que l'écarter rendait 33,3 % — et huit
+questions à mettre en forme.
+
+### Avant / après
+
+| Indicateur | Avant (`d6cd961`) | Après |
+| --- | --- | --- |
+| lexique `--liste=prolog` (exploitables / retournées / à mettre en forme) | **0 / 5 / 8** | **0 / 0 / 0** |
+| PROPORTION, désignation unique (couverture / rendement / réussite globale) | 9,3 % / 0,0 % / 22,7 % | 0,0 % / — / 25,0 % |
+| PROPORTION, lecture RESTREINDRE (couverture / rendement / réussite globale) | 14,8 % / 0,0 % / 21,3 % | 0,0 % / — / 25,0 % |
+| la plus longue | 25,0 % | 25,0 % |
+| pire indice | 26,9 % (la DEUXIÈME plus longue) | inchangé |
+| rangs | 14 / 14 / 13 / 13 | inchangés |
+| questions trahies par 5 indices ou plus | 0 | 0 |
+| mot fétiche / tics de lot | 0 / 0 | 0 / 0 |
+| biais inverse (directe / inverse) | 25,0 % / 25,0 % | inchangé |
+| intrus lexical DÉFAUT / EXCÈS (direct / inverse) | 23,6 / 25,5 · 24,5 / 25,2 | inchangés |
+| explications orphelines | — | 0 (`--depuis=d6cd961 --travail`) |
+| atteintes à l'intouchable (`mesure-qcm-intouchable.js prolog d6cd961`) | — | **0** (10 distracteurs réécrits) |
+| `verif-html.js` | 0 | 0 |
+
+`controle.js --ref=d6cd961` : 8 questions bougent, et seulement sur `w` (5) ou `k` (3) ; **aucune
+des 44 stratégies ne désigne d'autres options qu'avant**. Chaque candidat a été passé avant
+écriture à une sonde (`scratchpad/prolog-sonde/cand2.js`) qui recalcule les 44 stratégies, `w`, `k`,
+les mots exclusifs de 9 lettres et l'intrus lexical de la question.
+
+### Ce qui a été fait, question par question
+
+Deux leviers : retoucher un distracteur pour que les quatre options portent autant de mots longs que
+la bonne (règle du w), ou faire entrer dans le corps les mots étrangers PARTAGÉS par les quatre
+options, pour que les quatre passent à k = 0.
+
+- `lecon-07` q1 (la coupure), retournée, w 9/9/10/7 → 9/9/9/9 : le distracteur « supprime » perd
+  « arrête » au profit de « fige » (« elle fige toute action et tout retour arrière… ») ; le
+  distracteur « inverse » finit sur « retournant Prolog à la toute première clause » au lieu de
+  « sur les choix déjà faits ». ⚠️ Avec 121 caractères au plus (rang gardé) et 23 mots au moins
+  (`ECARTER la moins bavarde`), aucune des 40 variantes de la première moitié de phrase ne tenait ;
+  c'est la fin de phrase qu'il fallait changer.
+- `lecon-07` q3 (monde clos), retournée : les quatre options partageaient les trois mêmes mots
+  étrangers (`l'idée`, `partir`, `suppose`). Fermée par le **corps** (phrase 1 ci-dessous), aucune
+  option touchée.
+- `lecon-08` q1 (générer-et-tester), w 8/9/7/9 → 8 : « ensuite » remplacé par « à leur tour »,
+  « le plus petit » par « les plus petits », « chaque test valide » par « chaque test prévu ».
+- `lecon-10` q2 (bagof / setof) : les quatre options partageaient `retire`. Fermée par le **corps**
+  (phrase 2), aucune option touchée.
+- `lecon-10` q3 (`Qui^`), w 6/8/8/6 → 6 : « CLASSER ET regrouper … un regroupement par personne »
+  devient « TRIER ET regrouper … donc un classement par Qui » ; « ADDITIONNER … un effectif par
+  personne » devient « TOTALISER … alors un total par Qui ». Les deux gardent 128 caractères (leur
+  égalité de longueur est dans la mesure) et chacune garde un mot exclusif de 9 lettres et plus
+  (`le mot technique exclusif` ne tranche sur aucune question du cours).
+- `lecon-11` q1 (`:- dynamic`), retournée, w 8/8/9/6 → 8 : « statique et immuable même vide »
+  devient « figé et immuable même s'il est vide » ; « (clauses/faits) … même une fois vide »
+  devient « (clauses/règles) … rendre ensuite interrogeable même vide ».
+- `lecon-14` q12 (assertz), retournée : `l'exécution` (trois options) et `exécution` (une) fermées
+  par le **corps** (phrase 3), aucune option touchée.
+- `lecon-14` q14 (CLP(FD)), retournée, w 6/7/6/6 → 6 : « énumère toutes les variables » devient
+  « énumère une à une les variables ».
+
+### Phrases ajoutées au corps
+
+Toutes **exécutées** sous SWI-Prolog 10.0.2 (`D:\outils-b4\prolog\swipl\bin\swipl.exe`), essais dans
+`D:\outils-b4\prolog\essais-lexique\`.
+
+1. `lecon-07`, après l'exemple `vegetarien/1` : « Le résultat dépend donc de ce que contient la
+   base : Prolog suppose qu'elle est complète, et c'est toute l'idée du monde clos. Ajoute le fait
+   `mange_viande(ana).` et, à partir de là, `vegetarien(ana)` échoue. » — `monde.pl` : avant,
+   `vegetarien(ana)` réussit ; après `assertz(mange_viande(ana))`, il échoue.
+2. `lecon-10`, après « setof/3 ajoute un service » : « Son tri est celui de `sort/2`, qui retire lui
+   aussi les doublons ; pour trier une liste en les gardant, on utilise `msort/2`. » — `tri.pl` :
+   `sort([the, cafe, the], S)` donne `[cafe,the]`, `msort` donne `[cafe,the,the]`,
+   `setof(B, Q^aime(Q, B), L)` donne `[cafe,chocolat,the]` là où `findall` donne
+   `[the,cafe,cafe,chocolat,the]`. Le manuel livré avec SWI-Prolog
+   (`doc/Manual/allsolutions.html`) le dit : setof/3 « sorts the result using sort/2 », et le
+   source `boot/bags.pl` appelle bien `sort/2`.
+3. `lecon-14`, après le moteur à mémoïsation : « Les réponses ajoutées par `assertz/1` ne vivent
+   qu'en mémoire, le temps de l'exécution : le fichier source n'est pas modifié, et chaque nouvelle
+   exécution repart d'une base de réponses vide. » — `memoire.pl`, lancé deux fois : les deux
+   exécutions partent de « aucune reponse/2 », et l'empreinte SHA-1 du fichier est la même avant et
+   après.
+
+### Ce qui reste
+
+- Lexique : rien (0 / 0 / 0).
+- Rien d'autre n'a bougé ; les points « Ce qui reste » de la passe B4 ci-dessus restent valables,
+  dont l'I18 attendu (`quiz-index.js` et `search-index.js` à régénérer : trois corps de leçon ont
+  changé).
