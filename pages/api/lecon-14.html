@@ -203,7 +203,7 @@ Content-Type: application/problem+json
 <div class="callout callout--tip"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10c.7.7 1 1.3 1 2h6c0-.7.3-1.3 1-2a6 6 0 0 0-4-10Z" /></svg><div class="callout__body"><p class="callout__title">Astuce — un gestionnaire d'erreurs central</p><p>Ne bricole pas la réponse d'erreur dans chaque route. Centralise : une fonction unique attrape les exceptions (validation, ressource absente, droit refusé) et les traduit en <code>problem+json</code>. Le reste du code se contente de <em>lever</em> l'erreur métier ; la <strong>forme</strong> de la réponse reste garantie partout.</p></div></div>
 
 <h2>Étape 4 — Documenter et notifier</h2>
-<p>On décrit l'API en <strong>OpenAPI</strong> (leçon 10) : la spec sert de documentation interactive <em>et</em> de base aux tests de contrat. Et on émet un <strong>webhook</strong> (leçon 12) <code>tache.terminee</code> pour prévenir les services abonnés — signé, idempotent, avec accusé <code>2xx</code>.</p>
+<p>On décrit l'API en <strong>OpenAPI</strong> (anciennement Swagger, leçon 10) : la spec sert de documentation interactive <em>et</em> de base aux tests de contrat. Et on émet un <strong>webhook</strong> (leçon 12) <code>tache.terminee</code> pour prévenir les services abonnés — signé, idempotent, avec accusé <code>2xx</code>.</p>
 <figure class="code-block" data-file="openapi.yaml"><pre><code class="language-http">paths:
   /taches:
     get:
@@ -221,7 +221,7 @@ Content-Type: application/problem+json
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z" /><path d="M12 9v5M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège — n'attends pas l'accusé du webhook pour répondre</p><p>Le webhook part vers un service tiers que tu ne contrôles pas&nbsp;: s'il est lent ou injoignable, il ne doit <strong>pas</strong> bloquer la réponse à ton client. Émets l'événement dans une <strong>file d'attente</strong>, réponds tout de suite au client (le <code>200</code> du <code>PUT</code>), puis confie l'envoi — et ses <strong>réessais</strong> en cas d'échec — à un travailleur en arrière-plan. Un webhook synchrone, c'est la latence d'un inconnu greffée sur chacune de tes requêtes.</p></div></div>
 
 <h2>Étape 5 — Tester l'ensemble</h2>
-<p>On verrouille le contrat avec quelques <strong>tests d'intégration</strong> (leçon 13) : le chemin heureux et les refus.</p>
+<p>On verrouille le contrat avec quelques <strong>tests d'intégration</strong> (leçon 13) : le chemin heureux et les refus. Un test de contrat valide en plus chaque réponse contre le schéma OpenAPI.</p>
 <figure class="code-block" data-file="taches.test.js"><pre><code class="language-javascript">test("POST puis GET : la tâche créée est lisible", async () => {
   const creation = await request(app).post("/taches")
     .set("Authorization", "Bearer " + jetonDeTest)
@@ -288,9 +288,9 @@ test("POST sans jeton → 401 ; texte vide → 422", async () => {
 
 <script type="application/json" data-quiz>
 [
-  {"q":"Dans l'API de tâches, quel statut renvoie un POST /taches réussi ?","a":["201 Created, avec un en-tête Location vers la nouvelle ressource","200 OK sans corps","204 No Content","404 Not Found"],"correct":0,"explain":"La création renvoie 201 et indique où lire la ressource créée via l'en-tête Location."},
-  {"q":"Pourquoi renvoyer toutes les erreurs au format Problem Details ?","a":["Pour que le client n'ait qu'un seul format d'erreur à gérer, de la validation à la panne","Pour chiffrer les réponses","Pour accélérer la base de données","Parce que REST l'interdit autrement"],"correct":0,"explain":"Un format d'erreur unique et cohérent (application/problem+json) évite au client une gymnastique par type d'erreur."},
-  {"q":"Quel événement de l'API déclenche un webhook dans ce projet ?","a":["Une tâche marquée terminée (tache.terminee)","Chaque GET /taches","Le démarrage du serveur","La lecture de la documentation"],"correct":0,"explain":"Le webhook notifie les services abonnés lors d'un événement métier, ici l'achèvement d'une tâche — sans qu'ils aient à interroger l'API."}
+  {"q":"Dans l'API de tâches, quel statut renvoie un POST /taches réussi ?","a":["201 Created, avec un en-tête Location vers la nouvelle ressource","200 OK, avec la nouvelle ressource entière pour corps et sans en-tête Location","204 No Content, avec un en-tête Location vers la nouvelle ressource","302 Found, avec un en-tête Location qui pointe vers la nouvelle ressource"],"correct":0,"explain":"La création renvoie 201 et indique où lire la ressource créée via l'en-tête Location."},
+  {"q":"Pourquoi renvoyer toutes les erreurs au format Problem Details ?","a":["Pour que le client n'ait qu'un seul format d'erreur à gérer, de la validation à la panne","Pour que le serveur n'ait qu'un statut à gérer, le même 200 au même format pour la validation et la panne","Pour que le client n'ait plus à lire de code de retour, la validation et la panne étant au format JSON","Pour que le serveur n'ait qu'un format à produire pour la validation comme la panne, la page HTML"],"correct":0,"explain":"Un format d'erreur unique et cohérent (application/problem+json) évite au client une gymnastique par type d'erreur."},
+  {"q":"Quel événement de l'API déclenche un webhook dans ce projet ?","a":["Une tâche marquée terminée (tache.terminee)","Une tâche créée par POST (tache.creation)","Une tâche lue par un client abonné (tache.lecture)","Une tâche ôtée de la liste (tache.delete)"],"correct":0,"explain":"Le webhook notifie les services abonnés lors d'un événement métier, ici l'achèvement d'une tâche — sans qu'ils aient à interroger l'API."}
 ]
 </script>
 
@@ -349,18 +349,18 @@ X-Signature: sha256=…
 
 <script type="application/json" data-quiz-bilan>
 [
-  {"q":"Autour de quoi REST organise-t-il une API ?","a":["Des ressources (URL) et des verbes HTTP","Des fonctions RPC nommées","Des fichiers SQL","Des sockets bruts"],"correct":0,"explain":"/taches, /taches/1… manipulées par GET, POST…"},
+  {"q":"Autour de quoi REST organise-t-il une API ?","a":["Des ressources (URL) et des verbes HTTP","Des appels (RPC) de fonction sur des ressources","Des bases (SQL) et des requêtes de lecture","Des flux (TCP) bruts et très longs"],"correct":0,"explain":"/taches, /taches/1… manipulées par GET, POST…"},
   {"q":"Quel verbe LIT une ressource ?","a":["GET","POST","PUT","DELETE"],"correct":0,"explain":"GET ne doit rien modifier."},
-  {"q":"Quel verbe CRÉE une ressource (et renvoie 201) ?","a":["POST","GET","HEAD","OPTIONS"],"correct":0,"explain":"201 Created confirme la création."},
-  {"q":"Quel verbe SUPPRIME une ressource (souvent 204) ?","a":["DELETE","REMOVE","POST","GET"],"correct":0,"explain":"204 No Content : succès sans corps."},
+  {"q":"Quel verbe CRÉE une ressource (et renvoie 201) ?","a":["POST","GET","HEAD","DELETE"],"correct":0,"explain":"201 Created confirme la création."},
+  {"q":"Quel verbe SUPPRIME une ressource (souvent 204) ?","a":["DELETE","PATCH","POST","GET"],"correct":0,"explain":"204 No Content : succès sans corps."},
   {"q":"Quel statut signale une ressource introuvable ?","a":["404","200","500","301"],"correct":0,"explain":"Not Found."},
-  {"q":"Quel statut signale « non authentifié » ?","a":["401 Unauthorized","200 OK","404 Not Found","500 Server Error"],"correct":0,"explain":"403 = authentifié mais interdit."},
-  {"q":"Quel format d'échange est le plus courant pour une API ?","a":["JSON","HTML","CSV (obligatoire)","XML (obligatoire)"],"correct":0,"explain":"Léger et lisible par tous les langages."},
-  {"q":"Quelle famille de statuts signale une erreur du SERVEUR ?","a":["Les 5xx (ex. 500)","Les 4xx","Les 2xx","Les 3xx"],"correct":0,"explain":"4xx = erreur du client ; 5xx = du serveur."},
-  {"q":"Comment décrit-on formellement une API pour la documenter et la tester ?","a":["Avec une spécification OpenAPI (Swagger)","Avec un simple fichier texte libre","Avec une capture d'écran","Ce n'est pas possible"],"correct":0,"explain":"OpenAPI décrit routes, paramètres et schémas ; elle sert de doc interactive et de base aux tests de contrat."},
-  {"q":"Quel format standard utilise-t-on pour un corps d'erreur ?","a":["Problem Details (application/problem+json, RFC 9457)","Toujours du HTML","Un code de statut sans corps","Un format propre à chaque route"],"correct":0,"explain":"Problem Details normalise les erreurs : type, title, status, detail, instance + extensions."},
-  {"q":"Qu'est-ce qu'un webhook ?","a":["Une notification HTTP que l'API envoie à une URL abonnée quand un événement survient","Une requête que le client répète en boucle","Un cache de réponses","Un format de base de données"],"correct":0,"explain":"Le webhook inverse le polling : le serveur prévient le client, au lieu d'être interrogé sans cesse."},
-  {"q":"Quel test attrape un champ qui disparaît alors que le statut reste 200 ?","a":["Un test de contrat (validation contre le schéma OpenAPI)","Un test qui vérifie seulement status === 200","Un test de charge","Aucun test ne le peut"],"correct":0,"explain":"Le test de contrat valide la forme complète de la réponse, pas seulement le code de statut."}
+  {"q":"Quel statut signale « non authentifié » ?","a":["401 Unauthorized","403 Forbidden","400 Bad Request","404 Not Found"],"correct":0,"explain":"403 = authentifié mais interdit."},
+  {"q":"Quel format d'échange est le plus courant pour une API ?","a":["JSON","HTML","CSV","XML"],"correct":0,"explain":"Léger et lisible par tous les langages."},
+  {"q":"Quelle famille de statuts signale une erreur du SERVEUR ?","a":["Les 5xx (ex. 500)","Les 4xx (ex. 404)","Les 2xx (ex. 201)","Les 3xx (ex. 301)"],"correct":0,"explain":"4xx = erreur du client ; 5xx = du serveur."},
+  {"q":"Comment décrit-on formellement une API pour la documenter et la tester ?","a":["Avec une spécification OpenAPI (Swagger)","Avec un texte libre (notes en vrac)","Avec une image (PNG ou JPEG)","Avec une spécification de base (schéma SQL)"],"correct":0,"explain":"OpenAPI décrit routes, paramètres et schémas ; elle sert de doc interactive et de base aux tests de contrat."},
+  {"q":"Quel format standard utilise-t-on pour un corps d'erreur ?","a":["Problem Details (application/problem+json, RFC 9457)","Error Details (application/error+json, RFC 7231 de 2014)","HTML Fault Page (application/html+xml, RFC 9110)","Status Body (application/status+json, RFC 9110 de 2022)"],"correct":0,"explain":"Problem Details normalise les erreurs : type, title, status, detail, instance + extensions."},
+  {"q":"Qu'est-ce qu'un webhook ?","a":["Une notification HTTP que l'API envoie à une URL abonnée quand un événement survient","Une requête HTTP que le client renvoie sans cesse vers l'API pour voir quand un événement survient","Une notification HTTP que la page ouvre dans un popup quand un événement survient côté client","Une copie en cache de la réponse de l'API que le serveur fait quand un événement survient en base"],"correct":0,"explain":"Le webhook inverse le polling : le serveur prévient le client, au lieu d'être interrogé sans cesse."},
+  {"q":"Quel test attrape un champ qui disparaît alors que le statut reste 200 ?","a":["Un test de contrat (validation contre le schéma OpenAPI)","Un test de latence (mille requêtes de suite sur une route)","Un test de code (vérifie que le code renvoyé vaut bien 200)","Un test de fonction (validation du code qui forme la réponse)"],"correct":0,"explain":"Le test de contrat valide la forme complète de la réponse, pas seulement le code de statut."}
 ]
 </script>
 
