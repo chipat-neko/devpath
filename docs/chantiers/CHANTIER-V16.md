@@ -966,7 +966,12 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       deux fois (`doc/lecon-03` s'est repérimé : **5 349 → 5 301**, 87,6 % → **86,9 %**) ;
       `verif-normatif` **60/60** ; `verif.js --rapide` **26 étapes tout vert (78,8 s)** ; `verif-html`
       **0** ; `verif-donnees` **0 erreur** ; cliquet refigé (**4 cours traités**), épreuve **6/6**.
-- [ ] **B4 · Les cours suivants, par lots.** Jusqu'à la cible fixée en B1.
+- [x] **B4 · Les cours suivants, par lots.** Jusqu'à la cible fixée en B1. **COCHÉ le 2026-11-11** :
+      les 30 cours du périmètre fixé par Noah le 2026-09-15 sont clos (les 9 derniers en parallèle,
+      voir « LES NEUF DERNIERS COURS » en fin de case). **Mesure globale sur les 30 cours (1 775
+      questions)** : « la plus longue » **93,3 % → 25,3 %** (référence `afbf039` du 2026-09-10 :
+      1 657 questions devinables), la stratégie la plus forte des 44 à **26,0 %** (« écarter les
+      deux extrêmes »), chaque cours entre **23,7 % et 26,3 %** à la longueur.
 
       **CADRAGE MESURÉ le 2026-09-04, après la clôture de B3** — le classement est fait par
       **nocivité réelle** (questions devinables = questions × taux), pas par taux seul : traiter un
@@ -9472,7 +9477,129 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       fautives. ⚠️ Pascal ne s'exécute pas sur cette machine à ce jour (aucun `fpc` installé) :
       chercher un compilateur portable hors git avant d'écrire la consigne, comme pour `dart`.
 
-- [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
+      ---
+
+      **LES NEUF DERNIERS COURS — 61ᵉ à 69ᵉ, traités EN PARALLÈLE (2026-11-10 et 11), session
+      interactive, autonomie à l'arrêt.** Demande de Noah : « lance plusieurs agents en même temps
+      pour continuer le travail de l'autonomie (5 à 10) ; ils travaillent tous de leur côté sans
+      intervenir sur la branche principale ; c'est toi, à la fin, qui relies les branches avec une
+      passe de vérification ».
+
+      **L'ORGANISATION.** Un agent par cours, chacun dans sa copie de travail git
+      (`D:/test-claude-b4/<cours>`, branche `b4/<cours>`, partie de `a6a45f2`), avec une consigne
+      commune (méthode B4 entière : préparation, vague, dosage, relecture par contradiction,
+      correction, contre-relecture, rapport). **Règle de fusion** : un agent ne modifie que
+      `pages/<cours>/**`, `scratchpad/CONSIGNE-<COURS>.md` et `en-cours/rapports-b4/<cours>.md` ;
+      jamais le plan, les index `js/*`, les références de cliquets, les pages dérivées : l'orchestrateur
+      les refait une seule fois, à la fin. Chaque rapport de passe est versionné dans
+      **`en-cours/rapports-b4/<cours>.md`** — c'est là qu'est le détail, ce compte rendu n'en garde
+      que l'essentiel. ⚠️ **L'isolation automatique en copie de travail de l'outil Agent a échoué
+      9 fois sur 9** (casse du lecteur, `d:` contre `D:`) : copies créées à la main. ⚠️ **Le réglage
+      système `core.autocrlf=true` a extrait toutes les copies en CRLF** : les commits sont restés
+      en LF, mais `verif.js` lancé DANS une copie y signalait 4 à 6 étapes à tort (`moteurs`,
+      `maths`, `rj-cpp`, `doc-ref`, `requete`, et `etudes` que trois agents ont cru « déjà rouge
+      sur master » — **faux : la base `a6a45f2`, mesurée par l'orchestrateur, est à 53/53**).
+      Parade pour la suite : toute commande git qui écrit des fichiers passe
+      `-c core.autocrlf=false` (fusions comprises).
+
+      | rang | cours | « la plus longue » | pire des 44 stratégies | bonnes réponses / explain corrigés | exécuté sous |
+      |---:|---|---:|---|---:|---|
+      | 61ᵉ | `asm` | 87,7 → **24,6 %** | 26,3 % (écarter les deux extrêmes) | 1 | NASM 3.02 + chargeur .NET (le code tourne sur le processeur) |
+      | 62ᵉ | `linux` | 94,5 → **25,4 %** | 27,3 % (la plus dense) | 1 | Git Bash pour `ls`, `tar`, `find`, `kill` ; le reste par la source |
+      | 63ᵉ | `objc` | 95,8 → **24,5 %** | 27,6 % (la plus détaillée) | 2 | **rien** (documentation Apple, norme C) |
+      | 64ᵉ | `vb` | 88,1 → **25,4 %** | 27,1 % (la seule qui nie) | 3 | dotnet 10 (VB.NET) ; VBA par la documentation |
+      | 65ᵉ | `pascal` | 90,4 → **23,7 %** | 26,6 % (la TROISIÈME plus longue) | 1 | Free Pascal 3.2.2 portable, 66 programmes compilés |
+      | 66ᵉ | `prolog` | 96,3 → **25,0 %** | 26,9 % (la DEUXIÈME plus longue) | 5 | SWI-Prolog 10.0.2, 322 requêtes |
+      | 67ᵉ | `cobol` | 98,7 → **24,5 %** | 26,5 % (la DEUXIÈME plus longue) | 1 | GnuCOBOL 3.2 (paquets MSYS2 vérifiés SHA256), ≈ 45 programmes |
+      | 68ᵉ | `api` | 89,9 → **24,6 %** | 26,3 % (la plus dense) | 4 | Chrome sans fenêtre + deux serveurs Node (CORS) ; RFC 9110 |
+      | 69ᵉ | `fsharp` | 96,8 → **24,5 %** | 26,4 % (la plus dense) | 1 | dotnet 10 (F#), FsCheck |
+
+      Les outils installés pour exécuter vivent hors du dépôt, dans `D:\outils-b4\<cours>\`.
+      Sur les neuf cours : 0 question trahie par 5 indices ou plus, 0 tic de lot, 0 mot fétiche,
+      biais inverse sans alerte (`mesure-biais-inverse`, tous entre 20,0 et 25,9 %), 0 explication
+      orpheline, lexique **0 / 0 / 0** partout (après la reprise ci-dessous). Atteintes à
+      l'intouchable : **19, toutes délibérées et prouvées** (`mesure-qcm-intouchable <cours>
+      a6a45f2`, comptes identiques à ceux que chaque agent avait déclarés).
+
+      **LES FAUTES DE FOND, les plus nettes** (le détail est dans chaque rapport) :
+      - **Huit bonnes réponses prouvées fausses**, plus cinq explications : `linux` (cron place la tâche dans le HOME du
+        compte : code de cronie, `chdir(homedir)`) ; `objc` (une chaîne C entre guillemets
+        SIMPLES ; le bridging header « dans les deux sens ») ; `prolog` (sans cas de base, une
+        récursion ne « déborde » pas forcément : elle peut échouer ou boucler) ; `api` (CORS : le
+        danger n'est pas `*`, que le navigateur refuse avec des cookies, mais l'origine renvoyée
+        en écho avec `Allow-Credentials` — exécuté sous Chrome ; « 400 réservé à la requête
+        illisible » contredit la RFC 9110 §15.5.1) ; `fsharp` (FsCheck essaie **100** cas par
+        défaut, pas « des centaines » — exécuté) ; `asm` (`volatile` n'empêche ni de DÉPLACER ni
+        de DUPLIQUER un bloc asm : manuel GCC, Extended Asm, §6.11.2.1 — trouvé à la reprise,
+        corrigé aussi dans le schéma, l'antisèche, le glossaire et un placeholder) ; et des
+        explications fausses corrigées dans `pascal` (lire après la fin d'un fichier texte ne lève
+        aucune erreur), `cobol` (SEARCH exige `INDEXED BY`), `vb` (trois, après exécution).
+      - **Du code donné en modèle qui ne compilait pas** : `vb` (BC30542, BC36641), `cobol`
+        (`MESSAGE` et `CODE` sont des mots réservés), `pascal` (`try … except … finally` en un
+        bloc), `fsharp` (`multiplier 1.20`, FS0001) ; un exercice `cobol` qui bouclait sans fin
+        (statut 46) ; un projet fil rouge `api` dont les `PUT` commettaient les deux pièges que
+        le cours dénonce.
+      - **Des corps qui disaient faux** : `systemctl disable` « arrête » un service ; `nonatomic`
+        par défaut ; `push rdi` qui « aligne » la pile (un niveau sur deux désaligné, exécuté) ;
+        `writeln` d'un énuméré qui afficherait un nombre ; « échoue » confondu avec « lève une
+        erreur » à six endroits de `prolog`.
+      - **Des distracteurs VRAIS au départ** : 4 en `pascal`, 3 en `objc`, 1 en `prolog`
+        (`|` est une disjonction sous SWI-Prolog 10), 1 en `fsharp` (devenu vrai avec F# 9).
+      - **Contre-relectures** : 3 corrections fautives sur 20 (`asm`), 2/34 (`linux`), 4/27
+        (`objc`), 7/33 (`vb`), 4/46 (`pascal`), 3/49 (`prolog`), 3/36 (`fsharp`), 1/28 (`api`,
+        relue par l'agent lui-même, sans relecteur indépendant — dit dans son rapport).
+
+      **LES REPRISES DEMANDÉES PAR L'ORCHESTRATEUR** (la passe de vérification a refusé de
+      clore en l'état) :
+      - **`api`, le dosage** : l'agent avait laissé « la plus dense » à **42,1 %** et « la moins
+        bavarde » à **39,2 %**. Relancé, il a calé à 38,6 / 34,8 % (contexte presque plein) ; un
+        agent neuf a fini : **26,3 % et 25,4 %**, sans rien rouvrir, avec une seule phrase de
+        corps (« un en-tête `Location` pointant vers la tâche créée », `lecon-14`).
+      - **Le lexique, que le cliquet aurait verrouillé en régression** : refigé tel quel,
+        `verif-qcm-lexique --ecrire` aurait gelé `asm` STRICTE restreint 12,9 → 19,8 % et `cobol`
+        PROPORTION 31,6 → 50,0 %. Mesuré par `mesure-lexique-qcm --liste` : **`asm` 18
+        exploitables / 25 retournées / 36 à mettre en forme**, `cobol` 2 / 1 / 3, `prolog`
+        0 / 5 / 8. Ancienne référence remise, un commit intermédiaire (`d6cd961`), puis deux
+        agents sur des copies avancées et repassées en LF : **0 / 0 / 0 partout**. `asm` :
+        62 distracteurs retouchés et **14 phrases de corps**, celles sur registres, drapeaux et
+        encodage exécutées sous NASM ; `cobol` : 2 phrases (exécutées sous GnuCOBOL) ; `prolog` :
+        3 phrases (exécutées sous SWI-Prolog). `controle.js` : aucun indicateur déplacé.
+      - **Deux distracteurs de remplissage** vus en relisant un échantillon (2 questions par
+        cours, tirées au hasard) : `linux` `lecon-01` q1 (« (distro, kernel, système, base,
+        socle) ») et `asm` `lecon-15` q11 (« Mémoïsation + mémorisation des résultats ») —
+        réécrits sans déplacer un indicateur.
+
+      **CLÔTURE (2026-11-11)** : 9 fusions `--no-ff` sans conflit, puis 4 fusions de reprise
+      (`cobol`, `prolog`, `linux`, `asm` ; la reprise d'`api` était déjà dans sa fusion), toutes contrôlées avant fusion
+      (périmètre, 0 BOM, 0 CR, 0 chargement externe, blocs JSON valides). Cliquets refigés :
+      `verif-qcm-biais.js --ecrire`, les neuf cours marqués `traite` (**68 cours**) ;
+      `verif-qcm-lexique.js --ecrire` (aucune régression, neuf progrès). `tools/doc/gen.js`,
+      assembleurs `etude-inconnu` / `etude-recherche` et `build-index --write --fresh
+      --only=quiz,flashcards,search,antiseches,searchlite,pieges` : **point fixe**, stable au tour
+      suivant. ⚠️ Sans `--only`, `build-index` ne régénère que `quiz` et `flashcards` : I18 l'a
+      rappelé (8 erreurs) au premier tour. `verif.js --rapide` **53 étapes vertes (219,1 s)**,
+      code 0 ; `verif-rendu` sur les **25 pages** touchées par les reprises et les pages
+      dérivées : **150 mesures, 0 erreur, 0 avertissement** ; `verif-html` **0** ;
+      `verif-donnees` **0 erreur** (3 avertissements anciens : I17, I19, I25) ; 0 CR, 0 BOM.
+      **Site : 6 167 questions, réussite « la plus longue » 39,0 % → 33,5 %
+      (`qcm-biais-reference.json`), 68 cours traités ; les 30 cours du périmètre sont clos, B4
+      est coché.** Le taux du site reste au-dessus de 25 % à dessein : les 19 cours écartés le
+      2026-09-15 (947 questions) n'ont pas été touchés.
+
+      **CE QUI RESTE, SIGNALÉ ET NON CORRIGÉ** (non prouvé, ou hors B4) :
+      - `asm` : l'**intrus lexical** en lecture inverse reste à **30,3 et 29,5 %** (seuil 28 %),
+        car le fermer rouvrirait le lexique ou le mot technique exclusif sur presque toutes les questions ;
+        cinq imprécisions dans des bonnes réponses ou explain (dont l'explain du bilan q10 sur le
+        préfixe `48`) ; 11 questions hors de leur fenêtre de longueur, toutes dès le départ.
+      - `vb` : l'intrus lexical inverse à **28,0 %**, exactement au seuil ; `lecon-07` exo 3
+        demande `WorksheetFunction.Sum`, que la page n'enseigne pas.
+      - `pascal` : `lecon-07` dit le pointeur `p` sur la pile (c'est une variable globale) ;
+        `lecon-13` appelle `c.Retirer`, que la classe ne définit pas.
+      - `fsharp` : `lecon-12` q2, bonne réponse datée par F# 9 (non touchée) ; `objc`, `linux`,
+        `vb` : quelques bonnes réponses simplificatrices, non prouvées fausses.
+      - Partout : des exercices dont la réponse se lit dans l'énoncé visible (convention du site
+        entier, à trancher hors B4).
+ : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
 ---
