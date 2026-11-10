@@ -9599,7 +9599,8 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
         `vb` : quelques bonnes réponses simplificatrices, non prouvées fausses.
       - Partout : des exercices dont la réponse se lit dans l'énoncé visible (convention du site
         entier, à trancher hors B4).
- : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
+
+- [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
 
 ---
