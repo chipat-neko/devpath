@@ -241,3 +241,204 @@ du dépôt principal comptait `k` en mots **distincts** alors que `mesure-lexiqu
   `cpp/lecon-01.html`), `maths` (58 divergents, `pages/maths` en CRLF), `requete` NON MESURÉ
   (« fin de JUGE_SQL introuvable » : motif de fin de ligne). À rejouer sur la branche fusionnée,
   en LF, pour le confirmer — je ne l'ai pas prouvé étape par étape.
+
+## Reprise du lexique (après fusion)
+
+Reprise du 2026-11-10 au 2026-11-11, même branche `b4/asm`, partie de `d6cd961` (master après les neuf
+fusions). Seul l'indice lexical restait loin des autres cours clos ; tout le reste devait
+rester en place. Quatre commits : `a2e3e42` (leçons 02 à 05), `6110ccd` (06, 07, 09, 10),
+`cfd42af` (11, 12, 13), `01b6ab7` (14, 15, fenêtres de longueur, relecture), puis ce
+rapport. Aucune modification hors de `pages/asm/**`, de `scratchpad/CONSIGNE-ASM.md` (une
+section « Reprise du lexique » ajoutée) et de ce rapport.
+
+### Avant / après
+
+Commandes : `node tools/mesure-lexique-qcm.js --liste=asm` et `--seul=asm`,
+`node tools/verif-qcm-lexique.js`, `node tools/mesure-biais-qcm.js --seul=asm`,
+`node tools/plan-rangs-qcm.js asm`, `node tools/mesure-mot-fetiche.js asm`,
+`node tools/mesure-tics-lot.js asm`, `node tools/mesure-biais-inverse.js asm`,
+`node tools/mesure-mot-question.js asm`, `node tools/mesure-explain-orpheline.js
+--depuis=d6cd961 --seul=asm --travail`, `node tools/mesure-qcm-intouchable.js asm d6cd961`,
+`node tools/verif-html.js`. Sorties brutes : `scratchpad/asm-lex/depart/` et
+`scratchpad/asm-lex/final/` (locales).
+
+| | départ (`d6cd961`) | **arrivée** |
+|---|---:|---:|
+| lexique : exploitables / retournées / à mettre en forme | 18 / 25 / 36 | **0 / 0 / 0** |
+| STRICTE / PROPORTION / INVERSE, désignation unique (couverture) | 14,0 / 40,4 / 33,3 % | **0,0 / 0,0 / 0,0 %** |
+| idem, lecture RESTREINDRE (couverture ; rendement) | 28,1 % ; 19,8 / 24,3 / 4,4 % | **0,0 %** ; — / — / — |
+| `verif-qcm-lexique` pour `asm` | régression : STRICTE/restr. 12,9 → 19,8 % (et PROPORTION/restr. 18,9 → 24,3 %, masquée : l'outil ne cite que la première) | **plus de régression** (seul reste « progressé sans que le gain soit figé », attendu) |
+| la plus longue (réussite / sans ex aequo) | 24,6 / 22,8 % | **24,6 / 22,8 %** |
+| pire des 44 stratégies | 26,9 % (la moins bavarde) | **26,3 %** (écarter les deux extrêmes) |
+| la moins bavarde | 26,9 % | **26,0 %** |
+| questions trahies par 0–2 / 3–4 / 5+ indices | 49 / 8 / 0 | **50 / 7 / 0** |
+| plan de rangs : questions à retoucher / caractères | 12 / 67 | **11 / 63** |
+| tics de lot / mots fétiches / biais inverse (alertes) | 0 / 0 / 0 | **0 / 0 / 0** |
+| explications orphelines / atteintes à l'intouchable | 0 / 0 | **0 / 0** (62 distracteurs réécrits depuis `d6cd961`, 155 depuis `a6a45f2`) |
+| intrus lexical DEFAUT direct / inverse | 12,7 / 30,6 % | 12,7 / **30,3 %** |
+| intrus lexical EXCES direct / inverse | 21,5 / 30,0 % | 21,6 / **29,5 %** |
+| `verif-html` | 0 | **0** (1 629 fichiers) |
+
+**Garde-fou crédit par crédit.** `controle.js` signale toute désignation qui bouge, même
+entre deux distracteurs ; une nouvelle sonde, `scratchpad/asm-lex/essai.js`, applique les
+retouches en mémoire (options **et** phrases de corps) et compare le **crédit** de chacune
+des 44 stratégies, question par question, plus le lexique et l'intrus lexical. Bilan sur
+toute la reprise (`essai.js --ref=d6cd961`) : **un seul crédit a changé**, la moins bavarde
+sur `lecon-04` q2 (1 → 0,5), ce qui baisse la pire stratégie de 26,9 à 26,0 %. Les
+désignations déplacées que montre `controle.js --ref=d6cd961` (28, sur les 36 questions
+traitées) se font toutes entre distracteurs, sauf celle-là, et laissent chaque crédit à
+l'identique.
+
+### Méthode
+
+Trois façons de fermer, choisies question par question (36 questions) :
+- **k / k / k / k, w égal** (sans toucher au corps) quand les distracteurs n'étaient qu'à
+  un ou deux mots de la règle : 14 questions (`lecon-02` q2, `lecon-03` q1, `lecon-04` q2,
+  `lecon-05` q2, `lecon-06` q2, `lecon-07` q2, `lecon-09` q2, `lecon-11` q1, `lecon-12` q2,
+  `lecon-15` q4, q12, q13, q14, q15) ;
+- **faire entrer les mots dans le corps** (k = 0 ; un mot de moins de 6 lettres redevient
+  alors libre) quand la bonne réponse portait des mots que la page enseigne sous une autre
+  forme, ou quand une phrase vraie corrigeait directement le contresens d'un distracteur :
+  17 questions ;
+- **remplacer le seul mot étranger d'un distracteur** quand la bonne réponse était déjà à
+  k = 0 : 5 questions (`lecon-09` q1, `lecon-11` q2, `lecon-13` q3, `lecon-14` q1,
+  `lecon-15` q5).
+
+Quatre contraintes sont tombées à chaque essai et ont été tenues explicitement : le
+**mot technique exclusif** se compte (chaque distracteur doit garder autant de mots de 9
+lettres exclusifs qu'avant : `lecon-04` q2, `lecon-06` q2, `lecon-07` q2, `lecon-09` q2,
+`lecon-13` q1, `lecon-14` q2, `lecon-15` q4) ; l'**écho** de l'énoncé (« passe »,
+« valeurs », « sqrt », « niveau » ont été refusés) ; la **négation** (« un seul pas » et
+« non signé » ont ouvert « la seule qui nie », la perte de « ne conserve plus » aussi) ; les
+**égalités de longueur** qui portent un crédit (`lecon-10` q3 : trois distracteurs à 149
+caractères, gardés à 149).
+
+### Phrases ajoutées au corps
+
+Quatorze phrases et, dans `lecon-15`, une liste de quatre puces de récapitulation,
+toutes vraies et utiles à l'apprenant ; celles qui décrivent un registre, un drapeau ou un encodage sont
+**exécutées** (NASM 3.02 + `asmrun`, `D:\outils-b4\asm\essai\lex02.asm`, `lex03.asm`,
+`lex07.asm`, `lex10.asm`).
+
+| page | phrase (résumée) | preuve |
+|---|---|---|
+| `lecon-02` | après `mov rax, -1`, `mov eax, 5` donne `rax = 5` et non `0xFFFFFFFF00000005` ; `mov al, 5` ne change que l'octet bas, les autres bits restent à 1 | **exécuté** : `rax = 0x5`, puis `0xFFFFFFFFFFFFFF05` |
+| `lecon-03` | `sub rax, rbx` avec 3 et 5 emprunte : CF passe à 1 | **exécuté** : CF = 1 |
+| `lecon-03` | `jg` interprète les valeurs comme signées, regarde SF, OF et ZF et ignore CF ; `ja` et `jb` regardent CF (et ZF pour `ja`) | **exécuté** : RFLAGS imposé par `popfq` (CF = 1, CF = 0, ZF = 1, SF = 1), `setg` / `seta` / `setb` lus : 1/0/1, 1/1/0, 0/0/0, 0/1/0 |
+| `lecon-06` | la convention confie le 4e argument à `r10` parce que `syscall` écrase immédiatement `rcx` (adresse de retour) et `r11` (RFLAGS) | manuel Intel, SYSCALL ; **non exécuté** (un `syscall` sous Windows appelle le noyau NT) |
+| `lecon-07` | avec l'octet `0x9C`, `movsx` donne `0xFFFFFF9C` (−100), `movzx` donnerait 156 | **exécuté** : `ecx = 0xFFFFFF9C`, `eax = 0x9C` |
+| `lecon-10` | l'encodage dépend de l'instruction et de ses opérandes ; REX (`0x40` à `0x4F`) signale l'usage des registres 64 bits ou étendus (`r8` à `r15`) | **listing NASM** : `48 89 D8`, `89 D8`, `41 89 C0`, `49 83 C7 01` |
+| `lecon-10` | l'adresse de retour stockée sur la pile, écrasée, fait que `ret` détourne l'exécution vers une adresse choisie | **exécuté** : une fonction écrase `[rsp]`, `ret` arrive à la cible (`r12 = 0xBAD`) |
+| `lecon-10` | `.data` et `.bss` finissent d'ordinaire dans un même segment LOAD | disposition standard de `ld` ; **non exécuté** (ni `ld` ni `readelf`) |
+| `lecon-11` | l'adresse de `x` peut être un registre : `x/s $rdi` affiche la chaîne pointée par `rdi` | manuel de GDB ; **non exécuté** |
+| `lecon-12` | pour `sqrt`, il manque le plus souvent `-lm` : le prototype de `<math.h>` ne fournit pas la définition | prolonge la phrase précédente de la page ; **non exécuté** |
+| `lecon-13` | un saut conditionnel introduit une branche à prédire, le `cmov` n'en introduit aucune | reformule la phrase qui précède |
+| `lecon-13` | ce n'est pas de la mémoïsation : rien n'est gardé d'un appel à l'autre, 25 est calculé à la compilation | la page montre `mov eax, 25 ; ret` |
+| `lecon-14` | sans `volatile`, gcc compile le bloc ; l'optimiseur peut le supprimer ou le fusionner, `volatile` sert à l'en empêcher | manuel GCC (Extended Asm, Volatile) et le cas réel de la page ; **non exécuté** |
+| `lecon-14` | `volatile` ne peut pas interdire le réordonnancement matériel à l'exécution | même cas réel (`rdtsc` restait bruité) ; **non exécuté** |
+| `lecon-15` | récapitulatif avant le quiz bilan : `call`/`ret` et `syscall`/`sysret` ; `stepi`, `nexti`, `continue`, `finish` ; `objdump -d` et l'hexadécimal ; `.text`, `.rodata`, `.data`, `.bss` | manuels Intel, GDB, binutils ; leçons 6, 10, 11, 12 ; **non exécuté** |
+
+### Distracteurs
+
+62 distracteurs retouchés mot à mot (13 + 16 + 15 + 18 par lot), aucune bonne réponse,
+aucun `explain`, aucun énoncé touché. Deux retouches demandées en plus :
+- `lecon-15` q14 (bilan q11) : la redite « Mémoïsation + mémorisation des résultats +
+  lecture du cache mémoire » devient « Mémoïsation + table des résultats en mémoire vive +
+  accès instantané » ; même redite corrigée dans `lecon-13` q1 (« Mémoïsation sur carre,
+  puis évaluation des résultats (9 et 16), puis recopie »).
+- Les distracteurs que la reprise avait poussés hors de la fenêtre de longueur sont
+  resserrés (`lecon-06` q2, `lecon-11` q1 — déjà hors fenêtre au départ —, `lecon-12` q3,
+  `lecon-14` q2, `lecon-15` q5 et q12).
+
+**Relecture en contradicteur, deux prises sur mes propres retouches** : `lecon-13` q2
+« Il ne fait aucune comparaison » était vrai au pied de la lettre (`cmov` ne compare pas,
+il lit les drapeaux), remplacé par « Il ne suppose aucune comparaison » ; `lecon-14` q2
+« alors que l'optimiseur ne déplace pas non plus » était mal construit, devenu « ne
+déplace pas de son côté ».
+
+### Signalé, non touché
+
+- **`lecon-14` q2, bonne réponse** : « empêcher l'optimiseur de supprimer, dupliquer ou
+  déplacer le bloc ». Le manuel de GCC (Extended Asm, § Volatile) dit que le compilateur
+  peut encore déplacer un asm `volatile` par rapport au code voisin, et (§ sur `%=`) qu'il
+  peut dupliquer un bloc asm en optimisant. Le tableau de la page (« ne pas supprimer ni
+  déplacer le bloc ») et le schéma (« ne me déplace pas ») disent la même chose. Non
+  exécuté (pas de gcc) : à trancher par l'orchestrateur. Ma phrase ajoutée ne promet que
+  « supprimer ou fusionner ». **Tranché par l'orchestrateur : bonne réponse fausse,
+  corrigée — voir la section suivante.**
+
+### Bonne réponse prouvée fausse et corrigée : `lecon-14` q2 (« volatile » sur `rdtsc`)
+
+**C'est la seule atteinte délibérée à l'intouchable du cours** (`node
+tools/mesure-qcm-intouchable.js asm d6cd961` : « ATTEINTES A L'INTOUCHABLE : 1 », cette
+bonne réponse, rien d'autre). L'`explain` est juste et reste tel quel.
+
+**Preuve, par la documentation** (non exécuté : pas de gcc sur cette machine). Source :
+manuel de GCC, page « Extended Asm »
+(https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html), § 6.11.2.1 « Volatile » :
+- « GCC's optimizers sometimes discard asm statements if they determine there is no need
+  for the output variables. Using the volatile qualifier disables these optimizations. »
+- « Note that the compiler can move even volatile asm instructions relative to other
+  code, including across jump instructions. »
+- « Under certain circumstances, GCC may duplicate (or remove duplicates of) your
+  assembly code when optimizing. »
+- exemple `rdtsc` : avec `volatile`, « They do not move it out of loops or omit it on the
+  assumption that the result from a previous call is still valid. »
+
+`volatile` empêche donc de **supprimer** le bloc, de **fusionner** deux exécutions
+(réutiliser un résultat précédent) et de le **sortir d'une boucle** ; il n'empêche ni de le
+**déplacer** par rapport au code voisin, ni de le **dupliquer**.
+
+| endroit (`pages/asm/lecon-14.html`) | avant | après |
+|---|---|---|
+| QCM q2, bonne réponse | Pour empêcher l'optimiseur de supprimer, dupliquer ou déplacer le bloc dont l'effet n'est pas dans ses opérandes | **Pour empêcher l'optimiseur de supprimer le bloc ou de fusionner ses appels, car l'effet n'est pas dans ses opérandes** |
+| schéma de l'asm étendu (texte SVG ; l'`aria-label` ne le répète pas) | « volatile » = ne me supprime pas, ne me déplace pas | « volatile » = ne me supprime pas, ne me fusionne pas |
+| antisèche | ne pas supprimer ni déplacer le bloc | ne pas supprimer le bloc ni fusionner ses appels |
+| glossaire | interdit à l'optimiseur de supprimer, dupliquer ou déplacer le bloc | interdit de supprimer le bloc, de fusionner ses appels ou de le sortir d'une boucle ; « Elle ne fige pas sa place : gcc déplace parfois un bloc `volatile` par rapport au code voisin, et peut aussi le dupliquer. » |
+| exercice, placeholder | empêche l'optimiseur de supprimer/déplacer un bloc asm | empêche l'optimiseur de supprimer un bloc asm ou de fusionner ses appels (ne contient pas la réponse « volatile » ; `exos-tous.js` : 0 fuite) |
+
+Recherche des autres occurrences (`déplac`, `dupliqu`, `réordonn` près de `volatile` dans
+`pages/asm/`) : aucune autre. Le distracteur 1 de q2 (« l'optimiseur ne déplace pas de son
+côté un bloc asm ») reste faux, et le glossaire le dément désormais. La phrase du cas réel
+(« `volatile` ne peut pas interdire ce réordonnancement matériel ») porte sur le processeur
+et reste juste.
+
+**Indicateurs tenus** : la nouvelle bonne réponse a été simulée avant d'être posée
+(`essai.js`, avec l'option `"bonne": true`). Elle garde son rang de longueur (112 →
+116 caractères, toujours la plus courte), le minimum de mots (22), 3 mots exclusifs de 9
+lettres et plus (supprimer, fusionner, opérandes), une virgule, une négation, k = 0 et
+w = 7. Le mot « déplace », dont dépend le distracteur 1, reste dans la page (glossaire).
+`node scratchpad/asm-sonde/controle.js --ref=116f108` : **0 question dont un indicateur a
+bougé** ; lexique 0 / 0 / 0 ; aucun crédit changé ; `verif-html` 0.
+
+**Intrus lexical (facultatif), non tenté** : le fermer demande de déplacer des dizaines de
+mots de 5 lettres et plus sur presque toutes les questions (`mesure-mot-question --plan`),
+et chaque mot déplacé rouvre le k du lexique, le mot exclusif ou l'écho.
+
+### Ce qui reste
+
+- **Intrus lexical** (`mesure-mot-question`), hors du périmètre de cette reprise : les
+  deux lectures inverses restent au-dessus du seuil de 28 % (DEFAUT 30,3 %, EXCES 29,5 %),
+  0 question sûre. Elles ont un peu baissé (30,6 et 30,0 % au départ).
+- **Fenêtre de longueur** : 11 questions à retoucher selon `plan-rangs-qcm` (63
+  caractères), toutes présentes au départ sauf `lecon-14` q2, dont le distracteur 3 était
+  déjà hors fenêtre (152 caractères, 150 aujourd'hui, borne 145).
+- Le non-exécuté listé dans le tableau des phrases.
+- À la clôture (orchestrateur) : régénérer les index, refiger les cliquets `qcmbiai` et
+  `qcmlexi` (la référence de `asm` peut passer `traite` et `traiteRestreint`).
+
+### `node tools/verif.js --rapide` après la reprise (217,2 s, sortie dans `scratchpad/asm-lex/final/verif-rapide.txt`)
+
+48 étapes vertes sur 53 jouées (dont `qcmbiai`, `lexique`, `exemple`, `maths`, `moteurs`,
+`requete` : les signalements CRLF de la passe précédente ont disparu avec la copie en LF).
+Cinq signalent, toutes attendues ou dérivées :
+- `qcmlexi` : « 9 cours ont progressé sans que le gain soit figé » (attendu) ; `asm`
+  n'y figure plus comme régression ;
+- `donnees` (I18) : index périmés, à régénérer par l'orchestrateur (`build-index --write
+  --fresh`) : `quiz-index.js` (+101 o), `search-index.js` (+372 o) et `pieges-data.js`
+  (+2 461 o), parce que trois des phrases ajoutées prolongent un encadré « Piège
+  fréquent » indexé (`lecon-02` eax, `lecon-03` sauts signés, `lecon-10` sections et
+  segments) ;
+- `etudes`, `etude-6` et `normatf` : pages dérivées qui publient des mesures du site
+  (première divergence de `etudes` ligne 226, sortie de `mesure-langages.js`) ; à
+  réassembler à la clôture.
