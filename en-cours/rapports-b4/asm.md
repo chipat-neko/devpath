@@ -364,7 +364,56 @@ déplace pas de son côté ».
   peut dupliquer un bloc asm en optimisant. Le tableau de la page (« ne pas supprimer ni
   déplacer le bloc ») et le schéma (« ne me déplace pas ») disent la même chose. Non
   exécuté (pas de gcc) : à trancher par l'orchestrateur. Ma phrase ajoutée ne promet que
-  « supprimer ou fusionner ».
+  « supprimer ou fusionner ». **Tranché par l'orchestrateur : bonne réponse fausse,
+  corrigée — voir la section suivante.**
+
+### Bonne réponse prouvée fausse et corrigée : `lecon-14` q2 (« volatile » sur `rdtsc`)
+
+**C'est la seule atteinte délibérée à l'intouchable du cours** (`node
+tools/mesure-qcm-intouchable.js asm d6cd961` : « ATTEINTES A L'INTOUCHABLE : 1 », cette
+bonne réponse, rien d'autre). L'`explain` est juste et reste tel quel.
+
+**Preuve, par la documentation** (non exécuté : pas de gcc sur cette machine). Source :
+manuel de GCC, page « Extended Asm »
+(https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html), § 6.11.2.1 « Volatile » :
+- « GCC's optimizers sometimes discard asm statements if they determine there is no need
+  for the output variables. Using the volatile qualifier disables these optimizations. »
+- « Note that the compiler can move even volatile asm instructions relative to other
+  code, including across jump instructions. »
+- « Under certain circumstances, GCC may duplicate (or remove duplicates of) your
+  assembly code when optimizing. »
+- exemple `rdtsc` : avec `volatile`, « They do not move it out of loops or omit it on the
+  assumption that the result from a previous call is still valid. »
+
+`volatile` empêche donc de **supprimer** le bloc, de **fusionner** deux exécutions
+(réutiliser un résultat précédent) et de le **sortir d'une boucle** ; il n'empêche ni de le
+**déplacer** par rapport au code voisin, ni de le **dupliquer**.
+
+| endroit (`pages/asm/lecon-14.html`) | avant | après |
+|---|---|---|
+| QCM q2, bonne réponse | Pour empêcher l'optimiseur de supprimer, dupliquer ou déplacer le bloc dont l'effet n'est pas dans ses opérandes | **Pour empêcher l'optimiseur de supprimer le bloc ou de fusionner ses appels, car l'effet n'est pas dans ses opérandes** |
+| schéma de l'asm étendu (texte SVG ; l'`aria-label` ne le répète pas) | « volatile » = ne me supprime pas, ne me déplace pas | « volatile » = ne me supprime pas, ne me fusionne pas |
+| antisèche | ne pas supprimer ni déplacer le bloc | ne pas supprimer le bloc ni fusionner ses appels |
+| glossaire | interdit à l'optimiseur de supprimer, dupliquer ou déplacer le bloc | interdit de supprimer le bloc, de fusionner ses appels ou de le sortir d'une boucle ; « Elle ne fige pas sa place : gcc déplace parfois un bloc `volatile` par rapport au code voisin, et peut aussi le dupliquer. » |
+| exercice, placeholder | empêche l'optimiseur de supprimer/déplacer un bloc asm | empêche l'optimiseur de supprimer un bloc asm ou de fusionner ses appels (ne contient pas la réponse « volatile » ; `exos-tous.js` : 0 fuite) |
+
+Recherche des autres occurrences (`déplac`, `dupliqu`, `réordonn` près de `volatile` dans
+`pages/asm/`) : aucune autre. Le distracteur 1 de q2 (« l'optimiseur ne déplace pas de son
+côté un bloc asm ») reste faux, et le glossaire le dément désormais. La phrase du cas réel
+(« `volatile` ne peut pas interdire ce réordonnancement matériel ») porte sur le processeur
+et reste juste.
+
+**Indicateurs tenus** : la nouvelle bonne réponse a été simulée avant d'être posée
+(`essai.js`, avec l'option `"bonne": true`). Elle garde la même longueur de rang (118 →
+116 caractères, toujours la plus courte), le minimum de mots (22), 3 mots exclusifs de 9
+lettres et plus (supprimer, fusionner, opérandes), une virgule, une négation, k = 0 et
+w = 7. Le mot « déplace », dont dépend le distracteur 1, reste dans la page (glossaire).
+`node scratchpad/asm-sonde/controle.js --ref=116f108` : **0 question dont un indicateur a
+bougé** ; lexique 0 / 0 / 0 ; aucun crédit changé ; `verif-html` 0.
+
+**Intrus lexical (facultatif), non tenté** : le fermer demande de déplacer des dizaines de
+mots de 5 lettres et plus sur presque toutes les questions (`mesure-mot-question --plan`),
+et chaque mot déplacé rouvre le k du lexique, le mot exclusif ou l'écho.
 
 ### Ce qui reste
 

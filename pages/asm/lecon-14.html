@@ -114,7 +114,7 @@
     <text class="d-mut" x="560" y="128" text-anchor="middle" font-size="8">ce qu'on abîme</text>
     <line class="d-line" x1="160" y1="78" x2="178" y2="78" /><line class="d-line" x1="320" y1="78" x2="338" y2="78" /><line class="d-line" x1="480" y1="78" x2="498" y2="78" />
     <text class="d-mut" x="320" y="166" text-anchor="middle" font-size="8.5">%0 = 1re sortie, %1 = 1re entrée après elle… (numérotés dans l'ordre d'apparition)</text>
-    <text class="d-accent" x="320" y="184" text-anchor="middle" font-size="8">« volatile » = ne me supprime pas, ne me déplace pas</text>
+    <text class="d-accent" x="320" y="184" text-anchor="middle" font-size="8">« volatile » = ne me supprime pas, ne me fusionne pas</text>
   </svg>
   <figcaption>L'asm étendu&nbsp;: quatre zones séparées par <code>:</code>. Les opérandes sont numérotés <code>%0</code>, <code>%1</code>… dans l'ordre (sorties puis entrées). Le compilateur choisit les registres&nbsp;; toi, tu décris seulement les <em>contraintes</em>.</figcaption>
 </figure>
@@ -186,7 +186,7 @@ asm ("add %1, %0"       /* %0 += %1  (syntaxe AT&amp;T par défaut) */
       <tr><td><code>"r"</code> · <code>"m"</code> · <code>"i"</code></td><td>registre · mémoire · immédiat</td></tr>
       <tr><td><code>"=r"</code> · <code>"+r"</code></td><td>sortie (écrit) · lu-écrit</td></tr>
       <tr><td><code>"a"</code>, <code>"d"</code>, <code>"c"</code></td><td>registre précis (rax, rdx, rcx)</td></tr>
-      <tr><td><code>volatile</code></td><td>ne pas supprimer ni déplacer le bloc</td></tr>
+      <tr><td><code>volatile</code></td><td>ne pas supprimer le bloc ni fusionner ses appels</td></tr>
       <tr><td><code>"cc"</code> · <code>"memory"</code></td><td>clobber des drapeaux · de la mémoire</td></tr>
       <tr><td>Callee-saved</td><td><code>rbx rbp r12–r15</code> à restituer</td></tr>
     </tbody>
@@ -200,7 +200,7 @@ asm ("add %1, %0"       /* %0 += %1  (syntaxe AT&amp;T par défaut) */
   <dt>Template</dt><dd>La chaîne des instructions, où <code>%0</code>, <code>%1</code>… désignent les opérandes dans l'ordre (sorties d'abord, puis entrées).</dd>
   <dt>Contrainte</dt><dd>Code décrivant l'emplacement autorisé d'un opérande (<code>r</code> registre, <code>m</code> mémoire, <code>i</code> immédiat) et sa direction (<code>=</code>, <code>+</code>).</dd>
   <dt>Clobber</dt><dd>Liste de ce que l'asm modifie <em>en plus</em> des sorties&nbsp;: registres, drapeaux (<code>"cc"</code>), mémoire (<code>"memory"</code>). Indispensable à la correction.</dd>
-  <dt><code>volatile</code> (sur asm)</dt><dd>Marque qui interdit à l'optimiseur de supprimer, dupliquer ou déplacer le bloc — nécessaire quand l'asm a un effet non visible dans ses opérandes.</dd>
+  <dt><code>volatile</code> (sur asm)</dt><dd>Marque qui interdit à l'optimiseur de supprimer le bloc, de fusionner ses appels ou de le sortir d'une boucle — nécessaire quand l'asm a un effet non visible dans ses opérandes. Elle ne fige pas sa place&nbsp;: gcc déplace parfois un bloc <code>volatile</code> par rapport au code voisin, et peut aussi le dupliquer.</dd>
   <dt>ABI</dt><dd>Convention binaire (System&nbsp;V ici)&nbsp;: passage des arguments, registres préservés, alignement de pile — le contrat des appels croisés.</dd>
   <dt>Registre préservé (<em>callee-saved</em>)</dt><dd>Registre (<code>rbx</code>, <code>rbp</code>, <code>r12–r15</code>) que la fonction appelée doit rendre intact&nbsp;; par opposition aux <em>caller-saved</em>, volatils.</dd>
   <dt>Intrinsèque</dt><dd>Fonction spéciale du compilateur exposant une instruction machine (ex. <code>__builtin_popcount</code>, <code>&lt;immintrin.h&gt;</code>)&nbsp;: portable et comprise par l'optimiseur, à préférer à l'inline asm.</dd>
@@ -219,7 +219,7 @@ asm ("add %1, %0"       /* %0 += %1  (syntaxe AT&amp;T par défaut) */
 <script type="application/json" data-quiz>
 [
   {"q":"Dans un asm étendu « asm(template : sorties : entrées : clobbers) », que contient la zone des clobbers ?","a":["Ce que l'asm modifie en plus des sorties : registres, drapeaux (\"cc\"), mémoire (\"memory\")","Ce que l'asm préserve hors des sorties : registres, drapeaux (\"cc\"), mémoire (\"memory\")","Le lieu du code en plus des sorties : fichier, ligne (\"12\"), octet (\"40\")","Les noms C pour printf après les sorties : registres, valeurs (\"%d\"), texte (\"%s\")"],"correct":0,"explain":"Les clobbers déclarent au compilateur tout ce que le bloc abîme hors de ses sorties. Oublier « cc » (drapeaux) ou « memory » (accès mémoire) laisse l'optimiseur faire de fausses hypothèses → corruption silencieuse à -O2."},
-  {"q":"Pourquoi met-on « volatile » sur asm(\"rdtsc\" ...) ?","a":["Pour empêcher l'optimiseur de supprimer, dupliquer ou déplacer le bloc dont l'effet n'est pas dans ses opérandes","Pour interdire au CPU de réordonner le bloc à l'exécution, alors que l'optimiseur ne déplace pas de son côté un bloc asm","Pour respecter la règle qui rend ce mot indispensable sur tout asm, sans quoi gcc ne compile pas un bloc qui modifie des registres","Pour dire que le bloc modifie directement la mémoire, si bien que l'optimiseur ne garde plus ses valeurs en registre et doit les restituer entièrement"],"correct":0,"explain":"rdtsc renvoie une valeur différente à chaque appel : son effet n'est pas déductible de ses opérandes. Sans volatile, l'optimiseur peut le juger « pur » et fusionner deux lectures ou le supprimer. volatile l'interdit."},
+  {"q":"Pourquoi met-on « volatile » sur asm(\"rdtsc\" ...) ?","a":["Pour empêcher l'optimiseur de supprimer le bloc ou de fusionner ses appels, car l'effet n'est pas dans ses opérandes","Pour interdire au CPU de réordonner le bloc à l'exécution, alors que l'optimiseur ne déplace pas de son côté un bloc asm","Pour respecter la règle qui rend ce mot indispensable sur tout asm, sans quoi gcc ne compile pas un bloc qui modifie des registres","Pour dire que le bloc modifie directement la mémoire, si bien que l'optimiseur ne garde plus ses valeurs en registre et doit les restituer entièrement"],"correct":0,"explain":"rdtsc renvoie une valeur différente à chaque appel : son effet n'est pas déductible de ses opérandes. Sans volatile, l'optimiseur peut le juger « pur » et fusionner deux lectures ou le supprimer. volatile l'interdit."},
   {"q":"Selon l'ABI System V (x86-64), quels registres la fonction APPELÉE doit-elle restituer intacts ?","a":["rbx, rbp, r12 à r15 (callee-saved)","rax, rdx, r8 à r11 (caller-saved)","rdi, rsi, rdx à r9 (arguments)","rax, rbx, r10 à r15 (tous les préservés)"],"correct":0,"explain":"Les registres callee-saved (rbx, rbp, r12–r15) doivent être sauvegardés puis restaurés par la fonction appelée si elle les utilise. Les caller-saved (rax, rcx, rdx, rsi, rdi, r8–r11) sont volatils : c'est à l'appelant de les préserver."}
 ]
 </script>
@@ -227,7 +227,7 @@ asm ("add %1, %0"       /* %0 += %1  (syntaxe AT&amp;T par défaut) */
 <h2>Exercices</h2>
 <script type="application/json" data-exos>
 [
-  {"type":"text","accept":["volatile"],"placeholder":"Le mot-clé qui empêche l'optimiseur de supprimer/déplacer un bloc asm","hints":["Huit lettres, aussi un qualificatif C.","« asm ______ (...) ».","Même mot que pour une variable qui change « toute seule »."],"link":{"href":"lecon-14.html","label":"Revoir « Un cas concret : rdtsc »"}},
+  {"type":"text","accept":["volatile"],"placeholder":"Le mot-clé qui empêche l'optimiseur de supprimer un bloc asm ou de fusionner ses appels","hints":["Huit lettres, aussi un qualificatif C.","« asm ______ (...) ».","Même mot que pour une variable qui change « toute seule »."],"link":{"href":"lecon-14.html","label":"Revoir « Un cas concret : rdtsc »"}},
   {"type":"text","accept":["memory","\"memory\""],"placeholder":"Le clobber à ajouter quand ton asm touche la mémoire","hints":["Un mot anglais entre guillemets.","À côté de \"cc\" (drapeaux).","« m______ »"],"link":{"href":"lecon-14.html","label":"Revoir « Les contraintes »"}},
   {"type":"text","accept":["intrinsèque","intrinseque","intrinsic","builtin","__builtin"],"placeholder":"Ce qu'il vaut mieux utiliser que l'inline asm quand il existe","hints":["Fonction spéciale du compilateur, portable.","Ex : __builtin_popcount, <immintrin.h>.","L'optimiseur la comprend."],"link":{"href":"lecon-14.html","label":"Revoir « Respecter l'ABI »"}}
 ]
