@@ -252,26 +252,28 @@ begin
     Close(f);
   end;
 end.</code></pre></figure>
-<p>En Delphi, on préfère le mécanisme d'exceptions. La clause <code>try … except</code> attrape l'erreur, et surtout <code>finally</code> garantit que le fichier est <strong>toujours refermé</strong>, même si une exception survient en cours de route.</p>
+<p>En Delphi, on préfère le mécanisme d'exceptions. La clause <code>try … except</code> attrape l'erreur, et un <code>try … finally</code> imbriqué garantit que le fichier est <strong>toujours refermé</strong>, même si une exception survient en cours de route&nbsp;: Delphi n'accepte pas <code>except</code> et <code>finally</code> dans le même bloc.</p>
 <figure class="code-block" data-file="fichiers.pas"><pre><code class="language-pascal">var
   f : TextFile;
 begin
   AssignFile(f, 'donnees.txt');
   try
     Reset(f);
-    { … lecture … }
+    try
+      { … lecture … }
+    finally
+      CloseFile(f);             { refermé quoi qu'il arrive }
+    end;
   except
     on E: Exception do
       Writeln('Erreur : ', E.Message);
-  finally
-    CloseFile(f);               { refermé quoi qu'il arrive }
   end;
 end.</code></pre></figure>
 
-<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Ne jamais <strong>lire au-delà de <code>Eof</code></strong>&nbsp;: appeler <code>Read</code> alors que le fichier est fini déclenche une erreur d'E/S. Vérifie toujours <code>while not Eof(f) do</code> <em>avant</em> de lire. Autre piège symétrique&nbsp;: oublier <code>Close</code>. Sur un fichier écrit avec <code>Rewrite</code>, les dernières lignes restent dans un tampon en mémoire&nbsp;; sans <code>Close</code>, elles ne sont jamais écrites sur le disque et sont perdues.</p></div></div>
+<div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p>Ne jamais <strong>lire au-delà de <code>Eof</code></strong>&nbsp;: sur un fichier typé, <code>Read</code> déclenche alors une erreur d'E/S (erreur 100)&nbsp;; sur un fichier texte, <code>Readln</code> ne signale rien et rend une chaîne vide, un piège silencieux. Vérifie toujours <code>while not Eof(f) do</code> <em>avant</em> de lire. Autre piège symétrique&nbsp;: oublier <code>Close</code>. Sur un fichier écrit avec <code>Rewrite</code>, les dernières lignes restent dans un tampon en mémoire&nbsp;; sans <code>Close</code>, elles ne sont jamais écrites sur le disque et sont perdues.</p></div></div>
 
 <h2>Pour aller plus loin</h2>
-<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le fichier typé <code>file of record</code> est l'ancêtre direct des <em>bases de données</em>&nbsp;: des enregistrements de taille fixe, adressables par index — c'est déjà l'idée d'une table. Delphi propose aussi les <strong>flux</strong> (<code>TFileStream</code>, <code>TStringList</code>) et la sérialisation en JSON ou XML pour des formats modernes et portables. Comprendre <code>Seek</code> et les blocs de taille fixe t'aide à saisir ce que fait vraiment un moteur de base de données quand il «&nbsp;va chercher la ligne&nbsp;n&nbsp;».</p></div></div>
+<div class="callout callout--more"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v14M5 10l7 7 7-7M5 21h14" /></svg><div class="callout__body"><p class="callout__title">Pour aller plus loin</p><p>Le fichier typé <code>file of record</code> est l'ancêtre direct des <em>bases de données</em>&nbsp;: des enregistrements de taille fixe, adressables par index — c'est déjà l'idée d'une table. Delphi propose aussi les <strong>flux</strong> (<code>TFileStream</code>), les listes de chaînes (<code>TStringList</code>) et la sérialisation en JSON ou XML pour des formats modernes et portables. Comprendre <code>Seek</code> et les blocs de taille fixe t'aide à saisir ce que fait vraiment un moteur de base de données quand il «&nbsp;va chercher la ligne&nbsp;n&nbsp;».</p></div></div>
 
 <figure class="cheat-table">
   <table>
@@ -316,7 +318,7 @@ end.</code></pre></figure>
 <script type="application/json" data-quiz>
 [
   {"q":"Quel mode d'ouverture ajoute à la fin d'un fichier texte existant sans le détruire ?","a":["Rewrite : il ouvre en écriture pour conserver le contenu existant","Reset : il passe en écriture à la suite du texte","Append : il ouvre pour ajouter après le contenu existant","Seek : il place le curseur en fin de fichier"],"correct":2,"explain":"Append ouvre un fichier texte existant en écriture et place le curseur à la fin : les Writeln suivants prolongent le contenu. Rewrite, lui, écraserait tout ; Reset n'ouvre qu'en lecture."},
-  {"q":"Qu'est-ce que Eof(f) permet de faire lors d'une lecture ?","a":["Savoir si la fin du fichier est atteinte, pour arrêter la boucle de lecture","Déplacer le curseur en fin de texte, pour relancer aussitôt la boucle de lecture","Compter les blocs restants du fichier, pour dimensionner la boucle de lecture","Inscrire la marque finale du disque, pour clore la boucle de lecture"],"correct":0,"explain":"Eof (End Of File) renvoie true quand il n'y a plus rien à lire. La boucle « while not Eof(f) do Readln(f, x) » lit jusqu'au bout sans jamais lire au-delà de la fin, ce qui provoquerait une erreur d'E/S."},
+  {"q":"Qu'est-ce que Eof(f) permet de faire lors d'une lecture ?","a":["Savoir si la fin du fichier est atteinte, pour arrêter la boucle de lecture","Déplacer le curseur en fin de texte, pour relancer aussitôt la boucle de lecture","Compter les blocs restants du disque, pour dimensionner la boucle de lecture","Inscrire la marque finale du fichier, pour clore la boucle de lecture"],"correct":0,"explain":"Eof (End Of File) renvoie true quand il n'y a plus rien à lire. La boucle « while not Eof(f) do Readln(f, x) » lit jusqu'au bout sans jamais lire au-delà de la fin, où Readln ne rendrait plus que des valeurs vides."},
   {"q":"Quel avantage un fichier typé (file of) offre-t-il par rapport à un fichier texte ?","a":["Le rendu lisible : Write(f, p) écrit des lignes pour le Bloc-notes","L'accès direct : Seek(f, n) saute au bloc n sans lire les précédents","La taille libre : Write(f, s) range des blocs de taille variable","Le premier bloc : Append(f, n) place tout ajout avant les précédents"],"correct":1,"explain":"Les enregistrements d'un fichier typé ont une taille fixe, donc on peut calculer la position du bloc n et y sauter directement avec Seek. Un fichier texte, séquentiel, se lit obligatoirement du début à la fin."},
   {"q":"Pourquoi faut-il toujours appeler Close (ou CloseFile) après avoir écrit avec Rewrite ?","a":["Pour vider le tampon sur le disque : sans Close, les dernières écritures peuvent être perdues","Pour créer le fichier sur le disque : sans Close, les écritures restent liées au nom enregistré par Assign","Pour que le programme compile : sans Close, une erreur nette identifie alors tout fichier à refermer","Pour bien refermer la fenêtre de commandes : sans Close, le programme reste figé sur place jusqu'au message final"],"correct":0,"explain":"Les écritures passent par un tampon en mémoire. Close (ou CloseFile en Delphi) force ce tampon à être écrit sur le disque et libère le fichier. L'oublier, c'est risquer de perdre les dernières lignes. Un bloc try…finally CloseFile(f) garantit qu'on n'oublie pas."}
 ]
