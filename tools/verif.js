@@ -22,17 +22,17 @@
    faux — 53 annoncees sans option pour 71, 40 en rapide pour 53, 62 en complet pour 81 :
    un compteur ecrit a la main dans un commentaire se perime a chaque etape ajoutee.
    Pour le relire d'une commande : node tools/verif-chaine-declaree.js.)
-     node tools/verif.js            # 71 etapes, plusieurs minutes (le rendu pilote Chrome)
-     node tools/verif.js --rapide   # 53 etapes, ~200 s : tout ce qui coute 10 s ou moins,
+     node tools/verif.js            # 72 etapes, plusieurs minutes (le rendu pilote Chrome)
+     node tools/verif.js --rapide   # 54 etapes, ~200 s : tout ce qui coute 10 s ou moins,
                                     #   plus les controles de fond ; il IMPRIME les etapes
                                     #   qu'il ne joue pas (voir l'arbitrage plus bas)
-     node tools/verif.js --complet  # 82 etapes, plusieurs heures : le rendu balaie 256 pages,
+     node tools/verif.js --complet  # 83 etapes, plusieurs heures : le rendu balaie 256 pages,
                                     #   la fraicheur est lue A L'AFFICHAGE, les verificateurs
                                     #   sont mis a l epreuve par des fautes injectees, et le
                                     #   bouton « Tester » est clique sur 75 pages
-     node tools/verif.js --strict   # 71 etapes, code 1 des qu'un outil signale quoi que ce soit
+     node tools/verif.js --strict   # 72 etapes, code 1 des qu'un outil signale quoi que ce soit
      node tools/verif.js --lister   # la liste des etapes du mode demande, sans rien lancer
-     node tools/verif.js --mutations  # les 17 epreuves par injection, et rien d'autre : elles
+     node tools/verif.js --mutations  # les 19 epreuves par injection, et rien d'autre : elles
                                     #   MODIFIENT des fichiers avant de les restaurer, et le mode
                                     #   verifie lui-meme que le depot ressort comme il est entre
 
