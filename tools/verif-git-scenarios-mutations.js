@@ -34,6 +34,15 @@ var SOURCE = path.join(RACINE, "js", "git-scenarios.js");
 var OUTIL = path.join(RACINE, "tools", "verif-git-scenarios.js");
 var original = fs.readFileSync(SOURCE, "utf8");
 
+/* ⚠️ LES FINS DE LIGNE (chantier V18, point A6). Les fautes qui portent sur plusieurs
+   lignes écrivaient leur motif avec un simple "\n" : sur un `js/git-scenarios.js` en CRLF
+   (clone frais, ou `git checkout` avec `core.autocrlf=true`), elles tombaient « MOTIF
+   INTROUVABLE » — 8 sur 30 (les fautes 3, 8, 9, 10, 11, 16, 27 et 30), mesuré sur un
+   clone frais en CRLF. Le motif est désormais cherché (et compté, pour la règle du motif
+   unique) quelles que soient les fins de ligne, et la faute posée avec celles du fichier
+   (`lib/motif-souple.js`). */
+var souple = require("./lib/motif-souple.js");
+
 var MUTATIONS = [
   /* --- les objectifs : le cœur du dispositif ------------------------------- */
   { nom: "objectif inverse : « n'est plus indexe » devient « est indexe »",
@@ -144,20 +153,36 @@ var detectees = 0, ratees = [];
 
 console.log("Contre-epreuve de verif-git-scenarios.js : " + MUTATIONS.length + " fautes injectees.\n");
 
+/* LE TÉMOIN (chantier V18, point A6). Une faute compte « détectée » dès que le code de
+   sortie n'est pas nul. Un vérificateur déjà rouge sur les scénarios INTACTS — par
+   exemple parce qu'il lirait mal un fichier en CRLF — ferait donc passer toutes les
+   fautes pour vues sans en avoir vu une seule. On le lance d'abord sur une copie intacte,
+   posée exactement comme les copies mutées : il doit être vert, sinon rien n'est mesuré. */
+var cheminTemoin = path.join(dossier, "git-scenarios-0.js");
+fs.writeFileSync(cheminTemoin, original, "utf8");
+var temoin = cp.spawnSync(process.execPath, [OUTIL, "--scenarios=" + cheminTemoin, "--vite"], { encoding: "utf8" });
+if (temoin.status !== 0) {
+  console.log("  Le vérificateur n'est PAS vert sur les scénarios intacts (code " + temoin.status + ") :");
+  console.log(((temoin.stdout || "") + (temoin.stderr || "")).split("\n").slice(-12).join("\n"));
+  try { fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 3 }); } catch (e) { /* rien */ }
+  process.exit(2);
+}
+console.log("  [témoin] scénarios intacts : vérificateur VERT — la mesure a un sens\n");
+
 MUTATIONS.forEach(function (m, i) {
-  if (original.indexOf(m.de) === -1) {
+  if (!souple.trouve(original, m.de)) {
     ratees.push({ nom: m.nom, pourquoi: "motif introuvable (mutation caduque : le code a change)" });
     console.log("  " + (i + 1) + ". " + m.nom + " → MOTIF INTROUVABLE");
     return;
   }
   /* ⚠️ Un motif present DEUX fois muterait la premiere occurrence venue : la
      mutation ne serait plus celle qu'on croit decrire. */
-  if (original.split(m.de).length > 2) {
+  if (souple.occurrences(original, m.de) > 1) {
     ratees.push({ nom: m.nom, pourquoi: "motif present plusieurs fois (mutation ambigue)" });
     console.log("  " + (i + 1) + ". " + m.nom + " → MOTIF AMBIGU");
     return;
   }
-  var mute = original.replace(m.de, m.a);
+  var mute = souple.remplace(original, m.de, m.a);
   var chemin = path.join(dossier, "git-scenarios-" + (i + 1) + ".js");
   fs.writeFileSync(chemin, mute, "utf8");
   var res = cp.spawnSync(process.execPath, [OUTIL, "--scenarios=" + chemin, "--vite"], { encoding: "utf8" });

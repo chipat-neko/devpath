@@ -26,6 +26,14 @@ var SOURCE = path.join(RACINE, "js", "git-graphe.js");
 var OUTIL = path.join(RACINE, "tools", "verif-git-graphe.js");
 var original = fs.readFileSync(SOURCE, "utf8");
 
+/* ⚠️ LES FINS DE LIGNE (chantier V18, point A6). Les fautes qui portent sur plusieurs
+   lignes écrivaient leur motif avec un simple "\n" : sur un `js/git-graphe.js` en CRLF
+   (clone frais, ou `git checkout` avec `core.autocrlf=true`), elles tombaient « MOTIF
+   INTROUVABLE » — 11 sur 29 (les fautes 3, 4, 5, 7, 9, 10, 12, 15, 18, 19 et 28), mesuré
+   sur un clone frais en CRLF. Le motif est désormais cherché quelles que soient les fins
+   de ligne, et la faute posée avec celles du fichier (`lib/motif-souple.js`). */
+var souple = require("./lib/motif-souple.js");
+
 var MUTATIONS = [
   /* --- l'ordre des lignes -------------------------------------------------- */
   { nom: "topo : depiler par le mauvais bout (file au lieu de pile)",
@@ -131,13 +139,29 @@ var detectees = 0, ratees = [];
 
 console.log("Contre-epreuve de verif-git-graphe.js : " + MUTATIONS.length + " fautes injectees.\n");
 
+/* LE TÉMOIN (chantier V18, point A6). Une faute compte « détectée » dès que le code de
+   sortie n'est pas nul. Un vérificateur déjà rouge sur le graphe INTACT — par exemple
+   parce qu'il lirait mal un fichier en CRLF — ferait donc passer toutes les fautes pour
+   vues sans en avoir vu une seule. On le lance d'abord sur une copie intacte, posée
+   exactement comme les copies mutées : il doit être vert, sinon rien n'est mesuré. */
+var cheminTemoin = path.join(dossier, "git-graphe-0.js");
+fs.writeFileSync(cheminTemoin, original, "utf8");
+var temoin = cp.spawnSync(process.execPath, [OUTIL, "--graphe=" + cheminTemoin, "--vite"], { encoding: "utf8" });
+if (temoin.status !== 0) {
+  console.log("  Le vérificateur n'est PAS vert sur le graphe intact (code " + temoin.status + ") :");
+  console.log(((temoin.stdout || "") + (temoin.stderr || "")).split("\n").slice(-12).join("\n"));
+  try { fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 3 }); } catch (e) { /* rien */ }
+  process.exit(2);
+}
+console.log("  [témoin] graphe intact : vérificateur VERT — la mesure a un sens\n");
+
 MUTATIONS.forEach(function (m, i) {
-  if (original.indexOf(m.de) === -1) {
+  if (!souple.trouve(original, m.de)) {
     ratees.push({ nom: m.nom, pourquoi: "motif introuvable (mutation caduque : le code a change)" });
     console.log("  " + (i + 1) + ". " + m.nom + " → MOTIF INTROUVABLE");
     return;
   }
-  var mute = original.replace(m.de, m.a);
+  var mute = souple.remplace(original, m.de, m.a);
   var chemin = path.join(dossier, "git-graphe-" + (i + 1) + ".js");
   fs.writeFileSync(chemin, mute, "utf8");
   var res = cp.spawnSync(process.execPath, [OUTIL, "--graphe=" + chemin, "--vite"], { encoding: "utf8" });

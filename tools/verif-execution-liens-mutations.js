@@ -63,6 +63,17 @@ var MUTATIONS = [
 ];
 
 var original = fs.readFileSync(CIBLE, "utf8");
+
+/* ⚠️ LES FINS DE LIGNE (chantier V18, point A6). Trois des huit fautes portent sur DEUX
+   lignes et écrivaient leur motif avec un simple "\n". Sur un `js/lecon.js` en CRLF (un
+   clone frais, ou tout `git checkout` avec `core.autocrlf=true`), elles ne se posaient
+   plus : mesure sur un clone frais en CRLF, 5 fautes vues et 3 « NON APPLICABLE » (les
+   fautes 3, 6 et 7), code 1. Même parade que `verif-execution-mutations.js` et
+   `preuves/execution-ancres-mutations.js`, désormais commune : `lib/motif-souple.js`
+   cherche le motif quelles que soient les fins de ligne et injecte la faute avec celles
+   du fichier ; l'original est restauré à l'octet près. */
+var souple = require("./lib/motif-souple.js");
+
 function restaurer() { try { fs.writeFileSync(CIBLE, original, "utf8"); } catch (e) { /* rien */ } }
 process.on("exit", restaurer);
 process.on("SIGINT", function () { restaurer(); process.exit(2); });
@@ -90,12 +101,12 @@ console.log("[temoin] sans mutation : verificateur VERT — la mesure a un sens\
 
 var vues = 0, ratees = [], impossibles = [];
 MUTATIONS.forEach(function (m, i) {
-  if (original.indexOf(m.de) === -1) {
+  if (!souple.trouve(original, m.de)) {
     impossibles.push(m.nom);
     console.log("[" + (i + 1) + "/" + MUTATIONS.length + "] " + m.nom + " : NON APPLICABLE");
     return;
   }
-  fs.writeFileSync(CIBLE, original.replace(m.de, m.vers), "utf8");
+  fs.writeFileSync(CIBLE, souple.remplace(original, m.de, m.vers), "utf8");
   var r = lancerVerif();
   restaurer();
   if (r.code === 1) { vues++; console.log("[" + (i + 1) + "/" + MUTATIONS.length + "] " + m.nom + " : VUE"); }
