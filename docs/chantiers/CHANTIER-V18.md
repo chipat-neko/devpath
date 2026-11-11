@@ -96,38 +96,224 @@ Le V17 l'a appris à ses dépens : corriger le contenu avec des instruments qui 
 produire du travail qui ne se voit pas. Les deux outils écrits pour le V16 et restés **hors du
 dépôt** sont exactement ceux dont les phases B et C auront besoin.
 
-- [ ] **A1 · La sonde qui joue les QCM entre dans la chaîne.** Pendant B5 du V16, une sonde a joué
+- [x] **A1 · La sonde qui joue les QCM entre dans la chaîne.** Pendant B5 du V16, une sonde a joué
       les 6 167 questions dans Chrome et relu `syntaxe-quiz` — puis elle est restée dans le dossier
       de travail de l'agent : `scratchpad/v16-parallele/b5e2/joue-qcm.js` (hors git ; si elle a
       disparu, la réécrire d'après `en-cours/rapports-v16/b5e2.md`). La ramener dans
       `tools/preuves/`, la brancher dans `--complet`, et lui écrire son épreuve par injection : une
       bonne réponse qui ne compte pas, un score qui ne s'enregistre pas, une option en double —
       chacune doit la faire rougir. Citer sa durée et le nombre de questions jouées.
-- [ ] **A2 · L'épreuve par mutations de D2 entre dans `--mutations`.** Script de travail
+
+      **COCHÉ le 2026-11-11** (agent `v18/a1`, fusion `e6be571`). Rapport : `en-cours/rapports-v18/a1.md`.
+      La sonde de B5 était intacte ; elle est ramenée en `tools/preuves/joue-qcm.js` et **durcie** :
+      `file://` sans `--allow-file-access-from-files` et DNS coupé (comme l'apprenant), rechargement
+      attendu sur un **état** et non 300 ms, aucune option affichée en double, options affichées =
+      options du bloc, score parfait relu **après rechargement**, aucun échec d'écriture de
+      `SyntaxeStore`. Étape `joueqcm` de `--complet` (6 Chrome).
+
+      **Passe complète : 1 540 pages, 1 639 QCM, 6 167 questions (5 056 de leçon, 1 111 de bilan),
+      0 défaut, 2 806,8 s, code 0** — jouée avec 4 Chrome sur une machine chargée par cinq autres
+      agents. Sans Chrome : code 2.
+
+      Épreuve `tools/preuves/joue-qcm-mutations.js` (dans `--mutations`) : **10 fautes**, dont les
+      trois du plan (bonne réponse qui ne compte pas, score non enregistré dans `syntaxe-quiz`, option
+      en double) ; chaque faute doit rougir la sonde **en la nommant**. 10 / 10 en LF (114,5 à
+      302,3 s), 10 / 10 sur les mêmes fichiers en CRLF. « Deux distracteurs identiques » : la sonde de
+      B5 rendait 0, la nouvelle 1.
+      **Par le mode, après la fusion** (`verif.js --mutations`, passage complet, machine au repos) :
+      `joueqcm` **OK, 10 / 10, 54,6 s**. Dans `--complet` après la fusion : étape `joueqcm` **OK en
+      574,3 s** avec ses 6 Chrome, machine au repos (« 1639 QCM joués, 6167 questions, chacune deux
+      fois »).
+
+      **Reste** : sous la charge des six agents, `sanschr` a rendu 1 — `verif-interpreteur.js` met
+      92,3 s à dire NON MESURÉ et `chrome-absent.js` le tue à 60 s (intermittent de charge, non
+      corrigé ; **OK en 8,1 s** au repos dans `--complet`) ; 19 profils Chrome de la sonde étaient
+      restés dans le dossier temporaire (effacés à la main).
+
+- [x] **A2 · L'épreuve par mutations de D2 entre dans `--mutations`.** Script de travail
       `scratchpad/v16-parallele/d/mutations-d2.js` (9 fautes sur 9 au V16). Le ramener dans
       `tools/`, l'ajouter à la liste des épreuves de `verif.js --mutations`, et le rejouer par ce mode.
-- [ ] **A3 · Les domaines interdits ont un contrôle.** Aucun contrôle statique ne cherche
+
+      **COCHÉ le 2026-11-11** (agent `v18/a2`, fusion `28f5307`). Rapport : `en-cours/rapports-v18/a2.md`.
+      Ramenée en `tools/preuves/encarts-decodeur-git-mutations.js`, sans dépendance au scratchpad ;
+      entrée `encarts` de `--mutations`. Les **9 fautes** du V16 dans `js/lecon.js`. Une faute n'est
+      « vue » que si la preuve **imprime son message** (sous charge, `decodeur-lecons` et
+      `git-graphe` rougissaient sans faute) ; jusqu'à 5 tentatives ; témoin rouge 5 fois → code 2,
+      jamais 0. Fautes posées à sec sur LF **et** CRLF avant tout lancement.
+
+      Lancée directement sous la charge de six agents : **9 / 9, code 0, cinq fois** (698,2 · 615,5 ·
+      695,5 · 818,3 · 771,4 s ; la deuxième sur `js/lecon.js` en CRLF), une fois code 2 (témoin
+      `git-graphe` rouge 5 fois : l'intermittent de A5, corrigé depuis). Épreuve de l'épreuve
+      (`--controle`) : la faute invisible passe inaperçue, le motif absent est « non applicable »,
+      un rouge pour une autre raison et un message interdit restent « non vus » — code 1, attendu.
+      **Par le mode, après la fusion** (passage complet de `--mutations`, machine au repos) :
+      `encarts` **OK, 9 / 9, 207,3 s**.
+
+      **Reste** : `decodeur-lecons.js` n'attend que 5 s l'encart d'une leçon (4 témoins rouges sans
+      faute sous charge : `dec-lec` de `--complet` peut rougir de même ; au repos, OK en 21,5 s) ; `mth-prg` est sorti une
+      fois NON MESURÉ sous charge, vert seul juste après.
+
+- [x] **A3 · Les domaines interdits ont un contrôle.** Aucun contrôle statique ne cherche
       `cdnjs.cloudflare.com`, `fonts.googleapis.com` et `fonts.gstatic.com` dans les 1 540 leçons,
       et la sonde réseau range les deux derniers dans son bruit Google. Écrire le contrôle (balises
       et attributs **réels** seulement : `html/lecon-25` et `html/lecon-35` les citent à dessein, en
       texte ou en code échappé), le mettre dans `--rapide`, et sortir `fonts.*` du bruit de
       `tools/preuves/sonde-clic-reseau.js`. Épreuve : une `<link>` réelle vers chaque domaine,
       injectée dans une leçon, doit rougir les deux contrôles.
-- [ ] **A4 · La sonde Python cesse d'être intermittente.** `py-lec` laisse parfois 3 blocs sans
+
+      **COCHÉ le 2026-11-11** (agent `v18/a3`, fusion `cf18731`). Rapport : `en-cours/rapports-v18/a3.md`.
+      `tools/verif-domaines-interdits.js`, étape `domaine` dans **tous** les modes : il lit les
+      **2 001** fichiers que le site sert comme le navigateur les lit (balises et attributs réels,
+      scripts exécutables, CSS, liens des données JSON) ; il **lit puis écarte** les 6 mentions de
+      `html/lecon-25` (×5) et `html/lecon-35` (×1). 0,7 s au repos, code 0.
+
+      **La sonde réseau avait deux trous**, mesurés avant d'être fermés : `fonts.*` étaient dans le
+      bruit Google, et une connexion **au chargement** de la page était imprimée puis oubliée — une
+      `<link>` réelle vers chacun des trois domaines la laissait **verte** (épreuve contre la sonde
+      d'origine : 10 / 13, code 1). Corrigée : les trois domaines ne sont jamais du bruit, et toute
+      connexion hors bruit au chargement fait échouer (`BRUIT_MACHINE` inchangé). Sonde complète sans
+      injection : verte trois fois (140,1 · 144,5 · 169,2 s), 0 connexion au chargement sur 13 pages.
+
+      Épreuve `tools/verif-domaines-interdits-mutations.js` : 3 `<link>` réelles (les **deux**
+      contrôles doivent rougir et nommer le domaine), 7 autres formes pour le statique, 4 témoins
+      négatifs qui restent verts — **13 / 13, 4 / 4, code 0, 154,2 s**. Dans la forme de la chaîne
+      (`--strict --seules=…`) : `clic-net` et `domaine` SIGNALE avec la `<link>`, OK sans.
+      **Par le mode, après la fusion** : `domaine` **OK, 13 / 13, 4 témoins verts, 51,5 s**. Dans
+      `--complet` : `domaine` OK en 0,5 s, `clic-net` OK en 112,8 s ; dans `--rapide`, `domaine` OK.
+
+      **Reste** : le statique ne voit ni une URL calculée, ni un hôte en `%xx`, ni un mot coupé par
+      une entité ; la sonde ne voit pas un `dns-prefetch` (aucune connexion) et ne visite que 13
+      pages ; `tools/preuves/git-commandes.js:82` sort en 1 au lieu de 2 quand Chrome ne démarre pas
+      (SIGNALE au lieu de NON MESURÉ).
+
+- [x] **A4 · La sonde Python cesse d'être intermittente.** `py-lec` laisse parfois 3 blocs sans
       sortie en 20 s quand la machine est chargée, jamais les mêmes ; 5 passages verts sur 5 au
       repos. Lu dans `tools/preuves/python-lecon.js` : elle passe au bloc suivant dès la **première
       ligne** de sortie, sans attendre la fin du bloc précédent. Établir la cause **sous charge**
       (la sonde lancée pendant un `--complet`), corriger, et prouver : 0 « MOTEUR KO » sur au moins
       5 passages sous charge, et un bloc qui ne démarre vraiment pas rougit toujours.
-- [ ] **A5 · Les deux autres intermittents.** `verif-rendu` sur `bdd/lecon-01`, et le premier
+
+      **COCHÉ le 2026-11-11** (agent `v18/a4`, fusion `7df2975`). Rapport : `en-cours/rapports-v18/a4.md`.
+      **La cause n'était pas celle que le plan supposait.** La sonde attendait **1 500 ms** après la
+      navigation puis ouvrait les `<details>` : quand la page arrivait plus tard, les solutions
+      restaient repliées, et un bloc replié exécuté (`textContent` = « Console PythonTrue ») a un
+      `innerText` vide, lu « MOTEUR KO ». Les blocs signalés au V16 (`lecon-03` 12-14, `lecon-15` 10,
+      12, 14) sont **exactement** les blocs placés dans un `<details>`. Pire, quand la page arrivait
+      après 1 800 ms, la leçon était **sautée** et la sonde sortait en 0 : sur 36 passages mesurés de
+      l'ancienne sonde, **un seul** avait cliqué les 43 blocs.
+
+      Reproduit sous charge (page ralentie ×1,5 par `Emulation.setCPUThrottlingRate`, CPU 52,9 à
+      71,2 %) : **3 KO sur 8 passages**, signature identique. Corrigé (attente d'un état, sortie en 2
+      si rien n'est mesuré) : **0 KO sur 25 passages mesurés** sous trois charges, 43 blocs, 42 sorties
+      et l'exception voulue à chaque fois. Épreuves : Pyodide retiré → 43 KO, code 1 ; moteur muet →
+      code 1 ; page sans bloc → code 2.
+
+      **Un vrai défaut du site, trouvé en passant et corrigé** (`js/runner.js`) : deux blocs Python
+      lancés à 400 ms d'écart — la console de B affichait la sortie de A, et celle de B était perdue.
+      Chaque lancement porte désormais son numéro et n'écoute que ses messages ; le Worker les exécute
+      l'un après l'autre. Ancien runner remis → la course rougit ; runner corrigé → OK.
+
+      **Trouvé à la fusion, et corrigé (`65a8ff1`)** : la nouvelle sonde attendait sa page par
+      `location.href === url`. Chrome écrit la lettre du lecteur en **majuscule** ; `url` gardait
+      celle du dossier courant, et celui de l'éditeur est `d:\test-claude`. Depuis là, la sonde
+      rendait **NON MESURÉ à chaque passage, même sans faute** (« la page n'a pas atteint son état
+      chargé en 60 s », code 2) — l'agent ne pouvait pas le voir, sa copie s'appelait
+      `D:\test-claude-v18-a4`. C'est le passage de `--mutations` qui l'a montré : l'épreuve `chaine`
+      sortait en 2 (« py-lec NON MESURÉE, 61,7 s »). Comparaison désormais sans la casse : depuis
+      `d:\` sans faute, 43 blocs, course OK, code 0 ; faute « moteur vide » vue en 6,5 s ; depuis
+      `D:/`, toujours code 0. Seul outil du dépôt à comparer `location.href` à l'identique (grep).
+      Dans `--complet`, lancé depuis `d:\` : `py-lec` **OK en 12,0 s**.
+
+      **Reste** : même course côté SQL, démontrée, non corrigée ; un bloc mis en file voit son
+      minuteur de 15 s partir dès l'envoi ; `EXO_PY_WORKER_SRC` de `js/lecon.js` non examiné ; sous
+      100 % de CPU, Chrome n'écrit pas son port en 30 s (`tools/lib/port-chrome.js`).
+
+- [x] **A5 · Les deux autres intermittents.** `verif-rendu` sur `bdd/lecon-01`, et le premier
       chargement de `tools/preuves/git-graphe.js`, échouent parfois puis passent seuls. Reproduire,
       isoler la cause, corriger — ou, si la cause est hors du site, l'établir par un témoin qui a la
       forme exacte du cas, et l'écrire.
-- [ ] **A6 · Les épreuves tiennent sur un arbre en CRLF.** Au F1 du V16, deux fautes de
+
+      **COCHÉ le 2026-11-11** (agent `v18/a5`, fusion `b709926`). Rapport : `en-cours/rapports-v18/a5.md`.
+      **`git-graphe`, premier chargement** : 2 échecs sur 10 (« la page n'a ni champ de saisie ni
+      formulaire »). Cause : le pilote jouait ~400 ms après la navigation ; un témoin de même forme l'a
+      vu jouer sur une page encore en `readyState: "loading"`. Le pilote attend désormais `complete`
+      (le pilote voisin de D4 avait déjà cette garde) : **0 échec sur 10**. Épreuves : `git-bac.js`
+      retiré ou champ renommé → code 1 ; sans faute → 0.
+
+      **`verif-rendu` sur `bdd/lecon-01`** : 0 erreur sur 10 passages, mais **19 mesures sur 60** prises
+      sur une page non stabilisée — la condition du faux +317 px du V16. Sous charge, Chrome retarde
+      les sous-ressources de cette page de 1,9 à 5,1 s (25 navigations sur 48) ; bissection hors du
+      site : le retard persiste sans aucun script du site, sans icône ni polices. Faux rouge reproduit
+      à volonté sur une page témoin lente (ancien outil `+505 px`, code 1 ; nouveau, 0 erreur).
+      L'outil attend `complete` (20 s, `--plafond=`), puis une page non chargée devient une erreur
+      « chargement » au lieu d'un débordement inventé : **10 passages, 0 erreur, 0 mesure non
+      stabilisée**. Un vrai débordement injecté rougit toujours.
+
+      **Troisième intermittent** : `git-graphe`, 1 passage sur 33, deux volets muets (141,5 s) ; la
+      cause reste inconnue, mais l'outil imprime désormais la raison et la durée (éprouvé).
+
+      Dans `--complet` après la fusion : `rendu` **OK en 1 617,3 s** (256 pages), les deux `gitgraf`
+      OK (20,3 s et 8,7 s).
+
+      **Reste** : le mécanisme interne de Chrome n'est pas isolé ; `preuve-hors-reseau.js` réutilise
+      toujours le même profil Chrome (piste non prouvée) ; `verif-rendu.js` prend son port par
+      `9222 + pid % 500`, et 9222 est occupé sur cette machine (fifine Genie).
+
+- [x] **A6 · Les épreuves tiennent sur un arbre en CRLF.** Au F1 du V16, deux fautes de
       `execution-ancres-mutations.js` ne se posaient plus parce que `js/execution.js` était en CRLF.
       80 fichiers suivis sont dans ce cas sur le disque, et un clone frais met **tout** le site en
       CRLF. Faire un clone frais hors du dépôt (avec `core.autocrlf=true`), y rejouer les 16 épreuves
       de `--mutations`, et exiger « 0 non applicable » partout. Corriger chaque motif qui ne tient pas.
+
+      **COCHÉ le 2026-11-11** (agent `v18/a6`, fusion `ec5e188`). Rapport : `en-cours/rapports-v18/a6.md`.
+      Clone frais en CRLF (`core.autocrlf=true`), les 16 épreuves rejouées : **toutes leurs fautes
+      vues, 0 non applicable, 0 non mesurée** ; chaque épreuve corrigée rejouée verte aussi en LF.
+      Avant (`13164d9`) : `vexlien` 5 / 8 (3 non applicables), `git-scen` 22 / 30, `mth-inj` code 2
+      (0 / 13), et **34 fautes sur 153** dont le motif tient sur plusieurs lignes ne se posaient plus.
+
+      Corrigé : un module commun `tools/lib/motif-souple.js` (au lieu d'une troisième copie de la
+      parade) ; un **témoin** dans les quatre épreuves git, qui n'en avaient pas ; **neuf outils** qui
+      rougissaient ou se taisaient sur CRLF, lus désormais en LF (`maths/verite/lib.js` : 58 contrôles
+      sur 237 divergeaient sur des leçons intactes ; `verif-sql-exos` sortait en 2 et `verif-chaine`
+      le comptait comme une faute vue ; `build-index` I18 ; `build-sources-worker` ; `verif-doc` ;
+      `verif-normatif` ; `rejoue-cpp` ; `mesure-langages`). Et **`mth-chif` était vide depuis V16/E2**,
+      sans rapport avec le CRLF : la durée d'en-tête rendait son vérificateur rouge sur la page intacte.
+
+      **Un chiffre faux publié** : `pages/etude-inconnu.html` affichait 6 566,0 Ko de code — la mesure
+      comptait les `\r` (6 563,7 Ko en LF, 6 732,0 Ko en CRLF). Page réassemblée par son outil, index
+      de recherche régénéré (une entrée). C'est ce chiffre qui rougissait `etudes` et `etude-6` dans les
+      copies LF des cinq autres agents — trouvé par A1, A2, A3, A4 et A5 chacun de son côté.
+
+      `git-cmd` a duré 82,6 min avec son nouveau témoin, sous charge : son plafond propre passe de 75 à
+      120 min (`8e8dadd`).
+      **Passage complet de `verif.js --mutations` après la fusion des six branches**, machine au
+      repos : **18 épreuves sur 19 OK en 7 131,8 s**, dépôt propre en sortie (`git-cmd` 2 436,5 s,
+      `vexancr` 1 251,7 s, `vexec` 1 102,4 s, `git-scen` 642,6 s, `git-graf` 443,0 s). La 19ᵉ,
+      `chaine`, NON MESURÉE : c'était la sonde Python de A4 (voir A4) ; après la correction,
+      `--mutations --seul=verif-chaine-mutations` : **OK, 9 / 9, 95,5 s**. Libellés `vues` remis
+      d'après l'exécution : `verdict` 9 / 9 (et non 6 / 6), `mth-chif` 5 / 5.
+
+      **Reste** : `verif-chaine` n'a pas de témoin intégré (fait une fois à la main) ; `--strict` et
+      `--complet` jamais joués sur un clone **entièrement** en CRLF ; `vexec` injecte encore en CRLF
+      dans un fichier LF (sans effet sur JS) ; 77 fichiers en CRLF et 2 à fins mêlées sur le disque
+      du dépôt principal — les renormaliser, ou poser un `.gitattributes eol=lf`, est une décision
+      de Noah.
+
+**PHASE A CLOSE le 2026-11-11 — six agents en parallèle, une branche `v18/a<N>` chacun, puis fusion et
+passe de vérification par l'orchestrateur.** Cinq des six agents ont trouvé, chacun de son côté, le
+même rouge hérité (`etudes`, `etude-6` sur toute copie LF) : A6 l'a soldé. Après la fusion, sur
+master :
+
+| mode | résultat |
+|---|---|
+| `--rapide` | **54 / 54, code 0, 172,6 s** |
+| `--mutations` | 18 / 19 OK en 7 131,8 s, dépôt propre ; `chaine` NON MESURÉE → cause trouvée (la sonde Python de A4 et la casse du lecteur), corrigée, rejouée **OK en 95,5 s** |
+| `--complet` | **83 / 83, toutes mesurées, code 0, 4 347,6 s** — vert d'un seul passage, ce qu'il n'avait pas été au F1 du V16 |
+
+`--strict` n'a pas été rejoué à part : ses 72 étapes sont toutes parmi les 83 de `--complet`
+(listes comparées par `--lister`), et toutes y sont OK. Les journaux et scripts de travail des six
+agents sont rangés dans `scratchpad/v18-parallele/a<N>/` (ignoré par git) ; leurs rapports citent
+encore l'ancien chemin `D:\test-claude-v18-a<N>\scratchpad\…`.
 
 ---
 

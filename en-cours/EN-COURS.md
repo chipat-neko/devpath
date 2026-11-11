@@ -21,6 +21,12 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 > traités, le code compte à part dans les durées, et quatre thèmes sont pris (« Cas réel »,
 > outils, fraîcheur, liens et rendu). En tête : **vérifier les 1 500 « Cas réel »**, dont quatre se
 > sont révélés inventés. Relancée, l'autonomie le prendra d'elle-même.
+>
+> **✅ PHASE A DU V18 CLOSE (2026-11-11), 6 cases sur 61.** Six agents en parallèle, une branche
+> `v18/a<N>` chacun, puis fusion et passe de vérification. Après la fusion : `--rapide` 54/54,
+> `--complet` **83/83 vert d'un seul passage** (4 347,6 s), `--mutations` 19/19 (18 dans le passage
+> complet, `chaine` rejouée après une correction trouvée par ce passage). Un rapport par agent dans
+> [`rapports-v18/`](rapports-v18/). **Prochaine case : B1** (inventaire des « Cas réel »).
 
 ---
 
@@ -52,7 +58,7 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 | CHANTIER-V15 — comprendre ce qu'on ne voit pas | ✅ 32/32 |
 | CHANTIER-V17 — les garde-fous qui mentent | ✅ 80/80 |
 | CHANTIER-V16 — consolider ce que les quatre chantiers ont laissé derrière | ✅ 22/22 (clos le 2026-11-11) |
-| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **0/61 — plan courant** (écrit le 2026-11-11) |
+| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **6/61 — plan courant** (écrit le 2026-11-11 ; phase A close le même jour) |
 
 **Le V18 est le plan courant.** Ses phases, dans l'ordre : **A** les instruments d'abord (6 cases :
 la sonde des QCM et l'épreuve de D2 entrent dans la chaîne, contrôle des domaines interdits, sondes
@@ -169,7 +175,7 @@ Depuis F1, cette restauration écrit les octets de l'index, en LF (`-c core.auto
   `github.com/chipat-neko/devpath` est une **sauvegarde**, le site n'est pas publié.
 - **Ne jamais écrire un calcul de tête** : le faire tourner, et citer le chiffre obtenu.
 
-Outils à lancer : `node tools/verif.js --rapide` (≈ 4 min, 53 étapes), `node tools/verif-html.js`,
+Outils à lancer : `node tools/verif.js --rapide` (≈ 3 min, 54 étapes), `node tools/verif-html.js`,
 `node tools/verif-donnees.js`, `node tools/verif-rendu.js` (pilote Chrome), `node tools/build-index.js`
 (comparaison par défaut, `--write` pour écrire).
 
@@ -177,19 +183,25 @@ Outils à lancer : `node tools/verif.js --rapide` (≈ 4 min, 53 étapes), `node
 
 ## 6. État des vérifications, et points connus
 
-- **`node tools/verif.js --rapide` : 53 étapes sur 53 vertes, code de sortie 0, 159,5 s** (mesuré
-  le 2026-11-11, à la clôture du V16). Les cliquets de biais (68 cours traités) et de lexique sont
-  verts.
-- **Les modes longs (F1 du V16)** : `--strict` 1 624,7 s, `--complet` 5 576,3 s, `--mutations`
-  6 512,6 s. Aucun n'a été vert d'un seul passage ; chaque signalement est expliqué et rejoué vert
-  (détail dans le F1 du plan). **Aucun passage complet n'a été refait après les corrections**
-  (≈ 4 h 25) : le premier qui le fera saura si `--mutations` est enfin vert d'un seul passage.
-  Avec les plafonds propres de `git-cmd` (75 min) et `vexancr` (40 min), il dure environ 2 h 25.
-- **Intermittent connu** : `py-lec` (la sonde Python) laisse parfois 3 blocs sans sortie quand la
-  machine est chargée, jamais les mêmes. Au repos : 5 passages verts sur 5.
+- **`node tools/verif.js --rapide` : 54 étapes sur 54 vertes, code de sortie 0, 172,6 s** (mesuré
+  le 2026-11-11, après la fusion de la phase A du V18 ; l'étape neuve `domaine` cherche les trois
+  domaines interdits dans les 2 001 fichiers servis). Les cliquets de biais et de lexique sont verts.
+- **Les modes longs, après la fusion de la phase A du V18 (2026-11-11)** : `--complet` **83 étapes
+  sur 83, vert d'un seul passage, 4 347,6 s** (dont `joueqcm`, les 6 167 questions jouées dans
+  Chrome, 574,3 s). `--mutations` (19 épreuves, plafonds propres `git-cmd` 120 min et `vexancr`
+  40 min) : 18 OK d'un passage en 7 131,8 s ; la 19ᵉ, `chaine`, a révélé que la sonde Python ne
+  mesurait rien depuis `d:\test-claude` (casse de la lettre du lecteur), corrigée puis rejouée OK.
+  `--strict` (72 étapes) n'a pas été rejoué à part : toutes ses étapes sont dans `--complet`.
+- **Plus d'intermittent connu sur `py-lec`** : la cause était une attente fixe de 1 500 ms (A4 du
+  V18), et la course entre deux blocs Python lancés coup sur coup était un vrai défaut du site,
+  corrigé dans `js/runner.js`. La même course existe côté SQL, non corrigée.
 - **Bruit connu** : Chrome ouvre de lui-même des connexions vers `image-cdn.spotifycdn.com` sur
   cette machine (prouvé sur une page vide hors du site). La sonde réseau range ce nom exact dans son
-  bruit, avec la preuve écrite à côté.
+  bruit, avec la preuve écrite à côté. Depuis A3 du V18, elle compte aussi les connexions **au
+  chargement** de la page, et les trois domaines interdits ne sont **jamais** du bruit.
+- **Fins de ligne** : 77 fichiers suivis sont en CRLF et 2 à fins mêlées sur le disque de ce dépôt
+  (index en LF). Les épreuves et les outils y tiennent désormais (A6 du V18) ; renormaliser le
+  disque ou poser un `.gitattributes eol=lf` reste une décision de Noah.
 - `.autonomie/epreuve-reset.ps1` : **82 cas conformes, 0 en échec** depuis le 2026-09-29 (les tests
   de dates ont une référence fixe au lieu de dépendre du jour où on les lance).
 - Pendant qu'une passe réécrit un cours, `verif-donnees` peut signaler des index périmés
