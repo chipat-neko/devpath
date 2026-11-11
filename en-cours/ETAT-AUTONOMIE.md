@@ -1,6 +1,6 @@
 ﻿# Etat de l'autonomie
 
-Releve du **2026-11-11 09:44**. Ce fichier est reecrit a chaque controle : s'il est vieux, c'est que le controle ne tourne plus.
+Releve du **2026-11-11 10:44**. Ce fichier est reecrit a chaque controle : s'il est vieux, c'est que le controle ne tourne plus.
 
 ## SAIN
 
@@ -11,7 +11,7 @@ Releve du **2026-11-11 09:44**. Ce fichier est reecrit a chaque controle : s'il 
 | tache | DESACTIVEE |
 | passe en cours | non |
 | prochain reveil | 11/11/2026 11:15:42 |
-| derniere trace | 2026-09-30 14:10  (il y a 1003.6 h) |
+| derniere trace | 2026-09-30 14:10  (il y a 1004.6 h) |
 | usage hebdomadaire | 29 % |
 | pause decidee | aucune |
 | cases restantes | **0** |

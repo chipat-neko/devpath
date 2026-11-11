@@ -181,7 +181,7 @@ $rapport = Join-Path $proj 'docs\audits\VERIF-FINALE.md'
 # son chemin RELATIF a $proj, parce que tous les lecteurs de cette liste (Get-PlanCourant,
 # lib-reset.ps1, tools\sante-autonomie.ps1) font Join-Path $proj $nom. Le jeton
 # @@PLAN@@ du prompt recoit donc le chemin complet, et d:\test-claude\@@PLAN@@ reste juste.
-$CHAINE = @('docs\chantiers\CHANTIER-V12.md', 'docs\chantiers\CHANTIER-V13.md', 'docs\chantiers\CHANTIER-V14.md', 'docs\chantiers\CHANTIER-V15.md', 'docs\chantiers\CHANTIER-V17.md', 'docs\chantiers\CHANTIER-V16.md')
+$CHAINE = @('docs\chantiers\CHANTIER-V12.md', 'docs\chantiers\CHANTIER-V13.md', 'docs\chantiers\CHANTIER-V14.md', 'docs\chantiers\CHANTIER-V15.md', 'docs\chantiers\CHANTIER-V17.md', 'docs\chantiers\CHANTIER-V16.md', 'docs\chantiers\CHANTIER-V18.md')
 
 # Renvoie le premier plan de la chaine qui a encore une case a cocher, ou $null
 # si tout est fini.

@@ -14,8 +14,13 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 > **✅ LES 13 AUTRES CASES DU V16 ONT SUIVI LE MÊME CHEMIN (2026-11-11).** Cinq agents sur cinq
 > branches `v16/<nom>` (B5 et E2, C1, C2 et E1, C3, D1 et D2), fusion vérifiée, puis F1 à F4 par
 > l'orchestrateur. Un rapport par branche dans [`rapports-v16/`](rapports-v16/). **V16 est clos,
-> 22 cases sur 22, et c'est le dernier plan de la chaîne** : il n'y a plus de plan suivant. La
-> liste de ce qui reste est le F4.
+> 22 cases sur 22.**
+>
+> **🆕 LE CHANTIER-V18 EST ÉCRIT (2026-11-11), 61 cases, et ajouté à la fin de `$CHAINE`.** Il
+> reprend le F4 du V16 avec les décisions de Noah du même jour : les 19 cours de QCM écartés sont
+> traités, le code compte à part dans les durées, et quatre thèmes sont pris (« Cas réel »,
+> outils, fraîcheur, liens et rendu). En tête : **vérifier les 1 500 « Cas réel »**, dont quatre se
+> sont révélés inventés. Relancée, l'autonomie le prendra d'elle-même.
 
 ---
 
@@ -46,13 +51,17 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 | CHANTIER-V14 — faire écrire du code, et le corriger | ✅ 38/38 |
 | CHANTIER-V15 — comprendre ce qu'on ne voit pas | ✅ 32/32 |
 | CHANTIER-V17 — les garde-fous qui mentent | ✅ 80/80 |
-| **CHANTIER-V16 — consolider ce que les quatre chantiers ont laissé derrière** | ✅ 22/22 (clos le 2026-11-11) |
+| CHANTIER-V16 — consolider ce que les quatre chantiers ont laissé derrière | ✅ 22/22 (clos le 2026-11-11) |
+| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **0/61 — plan courant** (écrit le 2026-11-11) |
 
-**La dernière case du V16 est cochée (2026-11-11).** Si l'autonomie est relancée sans nouveau plan,
-le wrapper lancera donc une **passe de sécurité** (rapport dans `docs/audits/VERIF-FINALE.md`), puis
-s'éteindra si le verdict est VERT. **C'est le dernier plan de la
-chaîne** (`$CHAINE` dans `.autonomie/autonomie.ps1`) : pour que l'autonomie reprenne du travail,
-il faudra d'abord écrire un CHANTIER-V18. Sa matière naturelle est le F4 du V16.
+**Le V18 est le plan courant.** Ses phases, dans l'ordre : **A** les instruments d'abord (6 cases :
+la sonde des QCM et l'épreuve de D2 entrent dans la chaîne, contrôle des domaines interdits, sondes
+intermittentes, épreuves rejouées sur un arbre en CRLF) · **B** les « Cas réel » (13 : inventaire,
+échantillon de 150 vérifiés à la source, règle et garde-fou, 9 lots de cours) · **C** les QCM des
+22 cours restants (25) · **D** les durées, code compté à part (4) · **E** la fraîcheur (5) · **F**
+les liens et le rendu (5) · **G** le contrôle final (3), dont les quatre modes de `verif.js` verts
+**d'un seul passage chacun**. Quand sa dernière case sera cochée, le wrapper lancera la **passe de
+sécurité** (`docs/audits/VERIF-FINALE.md`) puis s'éteindra si le verdict est VERT.
 
 ---
 
@@ -195,7 +204,7 @@ test-claude/
 ├── README.md, index.html, sw.js   (sw.js doit rester à la racine : un service worker ne sert que son dossier)
 ├── en-cours/          ce fichier + ETAT-AUTONOMIE.md (réécrit chaque heure)
 ├── docs/
-│   ├── chantiers/     CHANTIER-V4 à V17 (le V16, clos, est le dernier plan de la chaîne)
+│   ├── chantiers/     CHANTIER-V4 à V18 (le V18 est le plan courant)
 │   ├── audits/        audits, inventaire du 2026-08-20, VERIF-FINALE.md, resultat.md
 │   ├── enrichissements/  ENRICHISSEMENT 1 à 3, NOUVEAUX-COURS (méthode d'ajout d'un cours), GROS-PROJETS…
 │   └── reference/     DESIGN_SYSTEM.md, paramettre.md, rap_peda.md
