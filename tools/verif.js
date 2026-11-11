@@ -310,6 +310,17 @@ var ETAPES = [
      fetch/WebSocket/caches avec toute resolution de nom detournee vers un port local, et exige
      ZERO connexion. Pas de reference a tenir a jour : le seul chiffre acceptable est 0. */
   { nom: "clic-net", fichier: "preuves/sonde-clic-reseau.js", args: [], quoi: "aucun bouton Tester ne lance de connexion sortante", lent: true, pourquoiLent: "il ouvre 13 Chrome et clique 27 blocs" },
+  /* LES TROIS DOMAINES INTERDITS, ENFIN CHERCHÉS PARTOUT (2026-11-11, point A3 du chantier V18).
+     La règle fondatrice interdit toute URL vers cdnjs.cloudflare.com, fonts.googleapis.com et
+     fonts.gstatic.com, et AUCUN contrôle statique ne la vérifiait : verif-rendu ne voit que les
+     pages qu'il affiche, et la sonde clic-net, qui ne visite que 13 pages, rangeait les deux
+     domaines de polices dans son bruit Google. Celui-ci lit tout ce que le site sert (2 001
+     fichiers) comme le navigateur le lit : seuls les balises et attributs RÉELS, les scripts
+     exécutables, les feuilles de style et les liens des données JSON comptent ; le texte et le
+     code échappé de html/lecon-25 et html/lecon-35, qui en parlent à dessein, sont lus puis
+     écartés. Épreuve : verif-domaines-interdits-mutations.js (10 fautes, 4 témoins négatifs).
+     0,7 s mesurées au repos : tous les modes. */
+  { nom: "domaine", fichier: "verif-domaines-interdits.js", args: [], quoi: "aucune référence réelle à cdnjs.cloudflare.com, fonts.googleapis.com, fonts.gstatic.com" },
   /* Les quatre suivants gardent le cours de maths, le seul du site ou une erreur est
      invisible a la relecture. Ils comblent chacun un angle mort de verif-exemples. */
   { nom: "mth-acc", fichier: "maths/module-5/verif-accept.js", args: [], quoi: "la valeur attendue d'un exercice est celle qu'affiche sa solution" },
@@ -866,6 +877,15 @@ if (flag("mutations")) {
     { nom: "mth-inj ", fichier: "maths/preuve-injection.js", vues: "13 / 13" },
     { nom: "chaine  ", fichier: "verif-chaine-mutations.js", vues: "9 / 9" },
     { nom: "vexlien ", fichier: "verif-execution-liens-mutations.js", vues: "8 / 8" },
+    /* Ajoutée le 2026-11-11 (point A3 du chantier V18). Elle éprouve DEUX contrôles : le
+       statique `verif-domaines-interdits.js` et la sonde `clic-net`. Une <link> réelle vers
+       chacun des trois domaines interdits, posée dans pages/js/lecon-12.html (lue dans la
+       liste de la sonde), doit les faire rougir tous les deux ; sept autres formes de
+       référence (script src, @import, url(//...), chaîne JS, balise non échappée, entités,
+       lien JSON) font rougir le statique ; quatre témoins négatifs (code échappé, prose,
+       indice JSON, commentaire) doivent le laisser VERT. Avant la correction de la sonde,
+       elle rendait 10 / 13 : la sonde ne voyait aucune des trois <link>. 150,3 et 154,2 s. */
+    { nom: "domaine ", fichier: "verif-domaines-interdits-mutations.js", vues: "13 / 13" },
     { nom: "git-mod ", fichier: "verif-git-modele-mutations.js", vues: "29 / 29" },
     { nom: "git-graf", fichier: "verif-git-graphe-mutations.js", vues: "29 / 29" },
     { nom: "git-scen", fichier: "verif-git-scenarios-mutations.js", vues: "30 / 30" },

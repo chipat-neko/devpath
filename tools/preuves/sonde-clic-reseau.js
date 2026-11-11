@@ -17,6 +17,10 @@
  * ouvre elle-même. Chaque tentative de connexion est donc comptée, d'où qu'elle vienne (page,
  * Worker, service worker), et RIEN ne sort de la machine : le port est mort côté protocole.
  * Le bruit de fond de Chrome est mesuré AVANT le premier clic et retiré.
+ * Depuis le point A3 du chantier V18 (2026-11-11), une connexion HORS BRUIT ouverte au
+ * chargement de la page, avant tout clic, fait échouer comme celle d'un clic, et les trois
+ * domaines interdits (cdnjs.cloudflare.com, fonts.googleapis.com, fonts.gstatic.com) ne sont
+ * plus jamais comptés comme du bruit.
  *
  *   node tools/preuves/sonde-clic-reseau.js pages/js/lecon-24.html#1 pages/js/lecon-24.html#2 …
  *   node tools/preuves/sonde-clic-reseau.js --liste       (les blocs réseau relevés par
@@ -194,8 +198,18 @@ var BRUIT_SYSTEME = /^(wpad|localhost|\(connexion sans données\)|inconnu|TLS \(
    domaine (le mot « Spotify » n'y figure qu'en texte). On ne range donc dans le bruit que CE
    nom exact, ni le domaine ni un motif : toute autre connexion continue de faire échouer. */
 var BRUIT_MACHINE = /^image-cdn\.spotifycdn\.com$/i;
+/* ⚠️ LES TROIS DOMAINES INTERDITS NE SONT JAMAIS DU BRUIT (2026-11-11, point A3 du chantier
+   V18). La règle Google ci-dessus couvre `googleapis.com` et `gstatic.com`, donc aussi
+   `fonts.googleapis.com` et `fonts.gstatic.com` : deux domaines que la règle fondatrice du
+   site INTERDIT. Mesure faite avant cette ligne (verif-domaines-interdits-mutations.js) : une
+   `<link>` réelle vers l'un d'eux, posée dans pages/js/lecon-12.html, n'était même pas
+   imprimée, et la sonde sortait en 0. Ils sont donc retirés du bruit, et eux seuls : le reste
+   de la règle Google, BRUIT_SYSTEME et BRUIT_MACHINE sont inchangés. `cdnjs.cloudflare.com`
+   n'a jamais été dans le bruit ; il est nommé ici pour que la règle soit lisible d'un coup. */
+var INTERDITS = /(^|\.)(cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)$/i;
 function estDuBruit(nom) {
   var n = String(nom).replace(/ \(SNI\)$/, '');
+  if (INTERDITS.test(n)) return false;
   return BRUIT.test(n) || BRUIT_SYSTEME.test(n) || BRUIT_MACHINE.test(n);
 }
 
@@ -225,6 +239,7 @@ CIBLES.forEach(function (c) {
               ' bloc(s), Chrome headless, file://');
   console.log('  toute résolution de nom est renvoyée vers 127.0.0.1:' + piege.port + ' (rien ne sort de la machine)\n');
   var n = 0, blocs = 0, avecReseau = 0, totalConnexions = 0, bruitTotal = 0, noms = {};
+  var auChargement = 0, pagesAuChargement = 0, pagesMesurees = 0;
   for (var page of Object.keys(parPage)) {
     var profil = profilNeuf(++n);
     var proc = cp.spawn(CHROME, ['--headless=new', '--disable-gpu', '--no-first-run',
@@ -255,7 +270,20 @@ CIBLES.forEach(function (c) {
     var horsBruitAvant = connexionsAvant.filter(function (c) { return !estDuBruit(c.nom); });
     console.log('=== ' + page + ' ===  (avant tout clic : ' + bruit + ' connexion(s), dont ' +
                 horsBruitAvant.length + ' hors bruit navigateur)');
-    horsBruitAvant.forEach(function (c) { console.log('  ⚠ AU CHARGEMENT DE LA PAGE → ' + c.nom); });
+    /* ⚠️ UNE CONNEXION AU CHARGEMENT EST UNE CONNEXION (2026-11-11, point A3 du chantier V18).
+       Jusqu'ici ces lignes étaient IMPRIMÉES puis oubliées : seules les connexions qui suivent
+       un clic comptaient dans le verdict. Mesure faite avant ce correctif : une `<link>` vers
+       cdnjs.cloudflare.com posée dans le <head> de pages/js/lecon-12.html sortait ici deux
+       fois (« ⚠ AU CHARGEMENT DE LA PAGE → cdnjs.cloudflare.com (SNI) »), et la sonde
+       rendait quand même « OK », code 0. Le site promet qu'AUCUNE page ne parle au réseau, pas
+       seulement ses boutons : une connexion hors bruit avant tout clic fait donc échouer. */
+    horsBruitAvant.forEach(function (c) {
+      console.log('  ⚠ AU CHARGEMENT DE LA PAGE → ' + c.nom);
+      noms[c.nom] = (noms[c.nom] || 0) + 1;
+    });
+    auChargement += horsBruitAvant.length;
+    if (horsBruitAvant.length) pagesAuChargement++;
+    pagesMesurees++;
     for (var rang of parPage[page]) {
       blocs++;
       connexions.length = 0;
@@ -299,6 +327,7 @@ CIBLES.forEach(function (c) {
   console.log('  blocs cliqués ................... ' + blocs);
   console.log('  blocs qui appellent le réseau ... ' + avecReseau);
   console.log('  connexions sortantes tentées .... ' + totalConnexions);
+  console.log('  connexions au chargement ........ ' + auChargement + ' (avant tout clic, sur ' + pagesAuChargement + ' page(s))');
   console.log('  bruit de fond du navigateur ..... ' + bruitTotal + ' (hors clic, toutes pages)');
   Object.keys(noms).sort().forEach(function (k) { console.log('      ' + k + '  ×' + noms[k]); });
   piege.srv.close();
@@ -308,11 +337,13 @@ CIBLES.forEach(function (c) {
      sortante au clic dément cette promesse, et c'est exactement ce qui a été mesuré avant la
      coupure du point B2b-16 (8 connexions, 4 blocs). Zéro attendu, sans référence à tenir à
      jour : tout autre chiffre est une régression. */
-  if (totalConnexions > 0) {
+  if (totalConnexions > 0 || auChargement > 0) {
     console.log('ÉCHEC : ' + totalConnexions + ' connexion(s) sortante(s) depuis ' + avecReseau +
-                ' bloc(s). Le site ne doit en tenter AUCUNE.');
+                ' bloc(s), et ' + auChargement + ' au chargement de ' + pagesAuChargement +
+                ' page(s). Le site ne doit en tenter AUCUNE.');
     process.exit(1);
   }
-  console.log('OK : aucune connexion sortante sur ' + blocs + ' bloc(s) cliqué(s).');
+  console.log('OK : aucune connexion sortante sur ' + blocs + ' bloc(s) cliqué(s), ni au chargement de ' +
+              pagesMesurees + ' page(s).');
   process.exit(0);
 })();
