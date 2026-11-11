@@ -83,10 +83,23 @@ function entete(c) {
     '   d origine ; un ecart sort en code 1. */\n';
 }
 
+/* ⚠️ LES FINS DE LIGNE (chantier V18, point A6). Un clone frais avec `core.autocrlf=true`
+   extrait les sources des moteurs en CRLF, alors que l'index — et donc la chaîne générée —
+   les garde en LF. Le contrôle rendait 4 écarts sur un clone intact (« SQLJS_SRC : 46535
+   caractères, attendu 46721 »…), si bien que la faute `moteurs` de
+   `verif-chaine-mutations.js` y était « vue » sans rien prouver ; et `--write` lancé sur un
+   tel arbre aurait fabriqué des chaînes en « \r\n », un fichier généré différent de l'index.
+   CRLF et LF sont le même code JavaScript (le moteur normalise même les gabarits `...`) :
+   on lit donc chaque source en LF, pour générer comme pour contrôler. Une vraie dérive du
+   code reste un écart. */
+function lireSource(fichier) {
+  return fs.readFileSync(fichier, 'utf8').replace(/\r\n/g, '\n');
+}
+
 function construire(c) {
   var corps = entete(c);
   c.parts.forEach(function (p) {
-    var txt = fs.readFileSync(p.fichier, 'utf8');
+    var txt = lireSource(p.fichier);
     corps += 'self.' + p.nom + '=' + chaineJS(txt) + ';\n';
   });
   return corps;
@@ -125,7 +138,7 @@ CIBLES.forEach(function (c) {
   }
   console.log(path.relative(RACINE, c.sortie) + '  (' + fs.statSync(c.sortie).size + ' octets)');
   c.parts.forEach(function (p) {
-    var attendu = fs.readFileSync(p.fichier, 'utf8');
+    var attendu = lireSource(p.fichier);
     var obtenu = lu[p.nom];
     var ok = obtenu === attendu;
     if (!ok) ecarts++;

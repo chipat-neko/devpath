@@ -161,7 +161,7 @@ var choisies = MUTATIONS.filter(function (m) {
 console.log('verif-chaine-mutations.js — ' + choisies.length + ' mutation(s)' +
             (RAPIDE ? ' (mode rapide : celles qui pilotent Chrome sont sautées)' : '') + '\n');
 
-var vues = 0, survivantes = [];
+var vues = 0, survivantes = [], nonMesurees = [];
 choisies.forEach(function (m) {
   if (DEJA_MODIFIES.indexOf(m.fichier) !== -1) {
     survivantes.push(m.id + ' — ' + m.fichier + ' était DÉJÀ modifié : on ne mute pas par-dessus un travail en cours');
@@ -207,9 +207,18 @@ choisies.forEach(function (m) {
   restaurer();
 
   var s = ((Date.now() - t0) / 1000).toFixed(1);
-  if (code !== 0) {
+  /* ⚠️ « VUE » veut dire CODE 1, et rien d'autre (chantier V18, point A6). Les outils
+     du projet rendent trois états : 0 rien à signaler, 1 une faute trouvée, 2 RIEN N'A
+     PU ÊTRE MESURÉ. Cette épreuve comptait « VUE » tout code non nul : sur un clone frais
+     en CRLF, `verif-sql-exos.js` ne retrouvait plus le juge SQL dans `js/lecon.js` et
+     sortait en 2 en 0,1 s, et la faute `requete` était annoncée vue sans qu'aucun
+     résultat ait été comparé. Un code autre que 0 et 1 est donc « NON MESURÉE ». */
+  if (code === 1) {
     vues++;
     console.log('  ' + pad(m.id) + ' VUE   (code ' + code + ', ' + s + ' s) — ' + m.quoi);
+  } else if (code !== 0) {
+    nonMesurees.push(m.id + ' — ' + m.outil + ' a rendu le code ' + code + " : il n'a rien pu mesurer, la faute n'est pas prouvée vue");
+    console.log('  ' + pad(m.id) + ' ✗ NON MESURÉE (code ' + code + ', ' + s + ' s) — ' + m.outil + " n'a rien pu mesurer : " + m.quoi);
   } else {
     survivantes.push(m.id + ' — ' + m.outil + ' est resté VERT sur : ' + m.quoi);
     console.log('  ' + pad(m.id) + ' ⚠ SURVIVANTE (' + s + ' s) — ' + m.outil + " n'a rien vu : " + m.quoi);
@@ -220,8 +229,9 @@ function pad(s) { while (s.length < 8) s += ' '; return s; }
 
 console.log('\n--- bilan ---');
 console.log('  mutations injectées : ' + choisies.length + '  ·  VUES : ' + vues +
-            '  ·  survivantes : ' + survivantes.length);
+            '  ·  survivantes : ' + survivantes.length + '  ·  non mesurées : ' + nonMesurees.length);
 survivantes.forEach(function (l) { console.log('   ⚠ ' + l); });
+nonMesurees.forEach(function (l) { console.log('   ✗ ' + l); });
 
 var APRES = propre();
 if (APRES !== AVANT) {
@@ -230,4 +240,6 @@ if (APRES !== AVANT) {
   process.exit(1);
 }
 console.log('  arbre de travail : identique à avant la mesure (aucune mutation laissée)');
-process.exit(survivantes.length ? 1 : 0);
+/* 1 si une faute est passée ; 2 si aucune n'est passée mais qu'au moins une n'a pas pu être
+   mesurée (même convention que les outils qu'elle éprouve) ; 0 si toutes ont été vues. */
+process.exit(survivantes.length ? 1 : nonMesurees.length ? 2 : 0);

@@ -21,6 +21,14 @@ var SOURCE = path.join(RACINE, "js", "git-modele.js");
 var OUTIL = path.join(RACINE, "tools", "verif-git-modele.js");
 var original = fs.readFileSync(SOURCE, "utf8");
 
+/* ⚠️ LES FINS DE LIGNE (chantier V18, point A6). Deux fautes portent sur deux lignes et
+   écrivaient leur motif avec un simple "\n" : sur un `js/git-modele.js` en CRLF (clone
+   frais, ou `git checkout` avec `core.autocrlf=true`), elles tombaient « MOTIF
+   INTROUVABLE » — les fautes 4 et 19, mesuré sur un clone frais en CRLF. Le motif est
+   désormais cherché quelles que soient les fins de ligne, et la faute posée avec celles
+   du fichier (`lib/motif-souple.js`). */
+var souple = require("./lib/motif-souple.js");
+
 var MUTATIONS = [
   {
     nom: "SHA-1 : une rotation de 29 au lieu de 30",
@@ -174,13 +182,29 @@ var detectees = 0, ratees = [];
 
 console.log("Contre-epreuve de verif-git-modele.js : " + MUTATIONS.length + " fautes injectees.\n");
 
+/* LE TÉMOIN (chantier V18, point A6). Une faute compte « détectée » dès que le code de
+   sortie n'est pas nul. Un vérificateur déjà rouge sur le modèle INTACT — par exemple
+   parce qu'il lirait mal un fichier en CRLF — ferait donc passer toutes les fautes pour
+   vues sans en avoir vu une seule. On le lance d'abord sur une copie intacte, posée
+   exactement comme les copies mutées : il doit être vert, sinon rien n'est mesuré. */
+var cheminTemoin = path.join(dossier, "modele-0.js");
+fs.writeFileSync(cheminTemoin, original, "utf8");
+var temoin = cp.spawnSync(process.execPath, [OUTIL, "--modele=" + cheminTemoin], { encoding: "utf8" });
+if (temoin.status !== 0) {
+  console.log("  Le vérificateur n'est PAS vert sur le modèle intact (code " + temoin.status + ") :");
+  console.log(((temoin.stdout || "") + (temoin.stderr || "")).split("\n").slice(-12).join("\n"));
+  try { fs.rmSync(dossier, { recursive: true, force: true }); } catch (e) { /* rien */ }
+  process.exit(2);
+}
+console.log("  [témoin] modèle intact : vérificateur VERT — la mesure a un sens\n");
+
 MUTATIONS.forEach(function (m, i) {
-  if (original.indexOf(m.de) === -1) {
+  if (!souple.trouve(original, m.de)) {
     ratees.push({ nom: m.nom, pourquoi: "motif introuvable dans le modele (mutation caduque)" });
     console.log("  " + (i + 1) + ". " + m.nom + " → MOTIF INTROUVABLE");
     return;
   }
-  var mute = original.replace(m.de, m.a);
+  var mute = souple.remplace(original, m.de, m.a);
   var chemin = path.join(dossier, "modele-" + (i + 1) + ".js");
   fs.writeFileSync(chemin, mute, "utf8");
   var res = cp.spawnSync(process.execPath, [OUTIL, "--modele=" + chemin], { encoding: "utf8" });

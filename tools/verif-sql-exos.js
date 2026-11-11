@@ -49,13 +49,20 @@ function jugeDuSite() {
     console.log('verif-sql-exos.js — JUGE_SQL introuvable dans js/lecon.js : moteur déplacé ou renommé.');
     process.exit(2);
   }
-  /* La fonction s'arrête à sa propre accolade fermante de premier niveau. */
-  var j = src.indexOf('\n  }\n', i);
-  if (j < 0) {
+  /* La fonction s'arrête à sa propre accolade fermante de premier niveau.
+     ⚠️ QUELLES QUE SOIENT LES FINS DE LIGNE (chantier V18, point A6). La fin était
+     cherchée avec '\n  }\n' : sur un `js/lecon.js` en CRLF (clone frais, `core.autocrlf`
+     à `true`), elle n'existait pas, et l'outil sortait en 2 sans rien mesurer. L'épreuve
+     `verif-chaine-mutations.js` comptait alors sa faute `requete` « VUE » (code 2 en
+     0,1 s), sans qu'aucun résultat SQL ait été comparé. */
+  var fin = /\r?\n  \}\r?\n/g;
+  fin.lastIndex = i;
+  var mf = fin.exec(src);
+  if (!mf) {
     console.log('verif-sql-exos.js — fin de JUGE_SQL introuvable.');
     process.exit(2);
   }
-  var corps = src.slice(i, j + 4);
+  var corps = src.slice(i, mf.index + mf[0].length);
   var ctx = {};
   vm.createContext(ctx);
   vm.runInContext(corps + '\n', ctx);

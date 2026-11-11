@@ -41,6 +41,18 @@ const PAGES = path.join(RACINE, 'pages');
 // leçons retombe sur celui que la page d'accueil publie.
 const TAILLE_REDIRECTION = 4096;
 
+// ⚠️ LES FINS DE LIGNE (chantier V18, point A6). La mesure comptait les « \r » des blocs de
+// code comme du code. Même commit, trois disques, trois chiffres : 6563,7 Ko sur une copie
+// toute en LF, 6732,0 Ko sur un clone frais en CRLF (`core.autocrlf=true`), et 6566,0 Ko —
+// le chiffre PUBLIÉ — sur le dépôt de travail, où des leçons étaient restées en CRLF (55,
+// plus 2 à fins mêlées, au relevé du 2026-11-11). La page affirmait donc un chiffre gonflé
+// par le hasard du disque, et
+// `preuves/etude-inconnu.js` comme `verif-etudes.js` rougissaient sur tout arbre en LF.
+// Chaque leçon est désormais lue en LF : la mesure ne dépend plus que du contenu.
+function lireLecon(fichier) {
+  return fs.readFileSync(fichier, 'utf8').replace(/\r\n/g, '\n');
+}
+
 function estRedirection(html) {
   return html.length < TAILLE_REDIRECTION &&
     /<meta[^>]*http-equiv\s*=\s*["']refresh["']/i.test(html);
@@ -55,7 +67,7 @@ function listerLecons() {
     for (const f of fs.readdirSync(dir)) {
       if (!/^lecon-\d+\.html$/.test(f)) continue;
       const complet = path.join(dir, f);
-      if (estRedirection(fs.readFileSync(complet, 'utf8'))) { redirections++; continue; }
+      if (estRedirection(lireLecon(complet))) { redirections++; continue; }
       out.push(complet);
     }
   }
@@ -75,7 +87,7 @@ function decode(s) {
 const RE_BLOC = /<code class="language-([a-z0-9+#_-]+)"[^>]*>([\s\S]*?)<\/code>/g;
 
 function blocsDe(fichier) {
-  const html = fs.readFileSync(fichier, 'utf8');
+  const html = lireLecon(fichier);
   const out = [];
   let m;
   RE_BLOC.lastIndex = 0;

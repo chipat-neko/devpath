@@ -44,9 +44,14 @@ function dech(s) {
     .replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&');
 }
 
-const page = fs.existsSync(PAGE) ? fs.readFileSync(PAGE, 'utf8') : null;
+/* ⚠️ LES FINS DE LIGNE (chantier V18, point A6). Sur un clone frais avec
+   `core.autocrlf=true`, la page et la référence sont en CRLF : la référence gardait un
+   « \r » final (« écart de 1 caractères »), et chaque sortie publiée, lue avec ses « \r »,
+   différait de la sortie de l'exécution (« publié 31 lignes, obtenu 31 ») — quatre échecs
+   sur un arbre intact. On lit les deux comme le navigateur lit une page : en LF. */
+const page = fs.existsSync(PAGE) ? fs.readFileSync(PAGE, 'utf8').replace(/\r\n/g, '\n') : null;
 const visible = page ? dech(page.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ') : '';
-const spec = fs.readFileSync(REF, 'utf8').replace(/\n+$/, '');
+const spec = fs.readFileSync(REF, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '');
 
 /* ---- 1. le document publié est le fichier de référence -------------------- */
 console.log('1. Le document publié ⇄ tools/doc/reference/quiz-format.txt');
