@@ -151,8 +151,15 @@ function get(url) {
     await envoyer('Page.navigate', { url: url });
     /* L'ÉTAT ATTENDU : la bonne page, chargée, avec tous les blocs Python du fichier, et
        le runner passé sur chacun de ceux qui ont une barre d'outils (il pose
-       `data-runner` sur tout bloc qu'il examine, bouton ou non). */
-    var msCharge = await attendreEtat('location.href === ' + JSON.stringify(url) +
+       `data-runner` sur tout bloc qu'il examine, bouton ou non).
+       ⚠️ L'ADRESSE SE COMPARE SANS LA CASSE (2026-11-11, fusion de la phase A du V18).
+       Chrome écrit la lettre du lecteur en MAJUSCULE dans `location.href`, alors que `url`
+       garde celle du dossier courant. Lancée depuis `d:\test-claude` (le dossier de l'éditeur),
+       la sonde ne voyait donc JAMAIS sa page prête : NON MESURÉ, code 2, en 60 s, sur l'arbre
+       intact comme avec la faute « moteur vide » de verif-chaine-mutations.js. Mesuré : depuis
+       `D:/test-claude`, code 1 en 6,4 s sur cette faute ; depuis `d:\test-claude`, code 2 en
+       60,7 s. Un chemin Windows ne distingue pas la casse : la comparaison non plus. */
+    var msCharge = await attendreEtat('location.href.toLowerCase() === ' + JSON.stringify(url.toLowerCase()) +
       ' && document.readyState === "complete"' +
       ' && document.querySelectorAll("code.language-python").length >= ' + attendus +
       ' && Array.prototype.every.call(document.querySelectorAll(".code-block"), function (b) {' +
