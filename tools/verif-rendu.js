@@ -36,6 +36,7 @@
      node tools/verif-rendu.js --tout           # toutes les pages de premier niveau
      node tools/verif-rendu.js --pages=a,b      # pages precises (chemins relatifs)
      node tools/verif-rendu.js --attente=2500    # delai avant mesure (page qui charge a la demande)
+     node tools/verif-rendu.js --plafond=20000   # attente maximale de l'etat « complete » (ms)
      node tools/verif-rendu.js --largeurs=320,1280
      node tools/verif-rendu.js --themes=light,dark
      node tools/verif-rendu.js --strict         # sort en code 1 des le premier AVERTISSEMENT
@@ -62,6 +63,13 @@ var ROOT = path.resolve(opt("root", path.join(__dirname, "..")));
    donnees) ont besoin de plus, sinon on mesure une page encore vide et le vert
    ne prouve rien. */
 var ATTENTE = Math.max(200, parseInt(opt("attente", "700"), 10) || 700);
+/* Les deux plafonds de l'attente d'ETAT (point A5 du chantier V18, detail dans la boucle de
+   mesure) : jusqu'a 20 s pour que le document soit `complete` -- le plus long blocage releve
+   sous charge le 2026-11-11 est de 7 195 ms --, puis 3 s pour que la largeur et les polices se
+   posent. `--plafond=` ne sert qu'a eprouver l'outil (une page lente doit le faire rougir
+   en « chargement », jamais en debordement). */
+var PLAFOND_CHARGEMENT = Math.max(1000, parseInt(opt("plafond", "20000"), 10) || 20000);
+var PLAFOND_STABLE = 3000;
 var STRICT = flag("strict");
 var TOUT = flag("tout");
 var LARGEURS = opt("largeurs", "320,375,1280").split(",").map(Number).filter(Boolean);
@@ -509,7 +517,7 @@ async function mesurerFocus(envoyer, maxTab) {
 }
 
 /* ------------------------------------------------------------------ rapport */
-var RAPPORT = { pages: 0, erreurs: [], avertissements: [], mesures: 0, attentesSupp: 0, nonStabilisees: [] };
+var RAPPORT = { pages: 0, erreurs: [], avertissements: [], mesures: 0, attentesSupp: 0, nonStabilisees: [], nonChargees: [] };
 function erreur(page, categorie, texte) {
   RAPPORT.erreurs.push({ page: page, cat: categorie, texte: texte });
 }
@@ -655,18 +663,39 @@ function avertir(page, categorie, texte) {
            depassement de delai compte comme une erreur).
            La mise en page est donc consideree comme faite quand la largeur de defilement
            est IDENTIQUE sur deux releves consecutifs, que le document est `complete` et que
-           les polices sont chargees -- ce que `document.fonts.status` sait dire. Plafond a
-           3 s : au-dela, on mesure quand meme mais la page est NOMMEE comme non stabilisee,
-           parce qu'un instrument doit dire quand il n'a pas conclu. */
-        var largeurVue = -1, stable = false, tours = 0;
-        for (tours = 0; tours < 20; tours++) {
+           les polices sont chargees -- ce que `document.fonts.status` sait dire.
+           ⚠️ DEUX PLAFONDS, PAS UN (chantier V18, point A5). L'unique plafond de 3 s (20
+           releves) faisait mesurer une page qui n'avait PAS FINI DE CHARGER, et la sonde
+           l'accusait de ce qu'elle voyait : `bdd/lecon-01` [320 px, sombre] a rendu
+           « +317 px — code.language-sql » au V16, puis 0 erreur rejouee seule. Mesure du
+           2026-11-11 : sous charge, Chrome retarde de 1,9 a 5,1 s TOUTES les sous-ressources
+           de cette lecon quand on la recharge (25 navigations sur 48 ; 7,2 s au pire sur une
+           variante sans runner.js) : le document reste `loading`, sans aucune feuille de
+           style, et le fil principal repond. 19 combinaisons sur 60
+           « non stabilisees » en 10 passages sur cette seule page. Sans `components.css`,
+           un `<pre>` ne defile plus dans son cadre : il deborde pour de faux. Le blocage
+           ne vient d'aucun script du site (il demeure quand on les retire tous). D'ou :
+             - attendre l'etat `complete` jusqu'a PLAFOND_CHARGEMENT (20 s par defaut) ;
+             - une fois `complete`, laisser PLAFOND_STABLE (3 s, l'ancien budget) a la
+               largeur et aux polices pour se poser ; au-dela, on mesure quand meme et la
+               combinaison est NOMMEE « non stabilisee », comme avant ;
+             - une page qui n'a PAS atteint `complete` n'est PAS mesuree : c'est une
+               erreur « chargement », qui dit ce qui s'est passe, au lieu d'un debordement
+               ou d'un contraste qu'elle n'a pas. */
+        var largeurVue = -1, stable = false, charge = false, tours = 0;
+        var tDebutEtat = Date.now(), tCharge = 0;
+        for (tours = 0; ; tours++) {
           var et = await envoyer("Runtime.evaluate", {
             expression: "(function(){var d=document.documentElement;return [d.scrollWidth," +
               "document.readyState==='complete'?1:0,(document.fonts&&document.fonts.status==='loaded')?1:0];})()",
             returnByValue: true,
           });
           var val = ((et.result || {}).value) || [];
+          charge = !!val[1];
+          if (charge && !tCharge) tCharge = Date.now();
           if (val[0] === largeurVue && val[1] && val[2]) { stable = true; break; }
+          if (!charge && Date.now() - tDebutEtat >= PLAFOND_CHARGEMENT) break;
+          if (charge && Date.now() - tCharge >= PLAFOND_STABLE) break;
           largeurVue = val[0];
           await attendre(150);
         }
@@ -676,7 +705,15 @@ function avertir(page, categorie, texte) {
            rien -- premier jet ecrit puis corrige par la mesure elle-meme, qui annoncait
            « 6 mesures sur 6 » pour une page qui n'en demandait aucune. */
         if (tours > 1) RAPPORT.attentesSupp++;
-        if (!stable) RAPPORT.nonStabilisees.push(rel + " [" + larg + "px/" + theme + "]");
+        var ctx = rel + " [" + larg + "px/" + theme + "]";
+        if (!charge) {
+          RAPPORT.nonChargees.push(ctx);
+          erreur(ctx, "chargement", "la page n'a pas atteint l'etat « complete » en " +
+            (PLAFOND_CHARGEMENT / 1000) + " s : rien n'a ete mesure a cette combinaison " +
+            "(mesuree en plein chargement, elle serait accusee de defauts qu'elle n'a pas)");
+          continue;
+        }
+        if (!stable) RAPPORT.nonStabilisees.push(ctx);
 
         var out = await envoyer("Runtime.evaluate", {
           expression: "(" + SONDE.toString() + ")()",
@@ -687,7 +724,6 @@ function avertir(page, categorie, texte) {
         var v = (out.result || {}).value;
         if (!v) { avertir(rel, "sonde", "aucune mesure a " + larg + "px/" + theme); continue; }
 
-        var ctx = rel + " [" + larg + "px/" + theme + "]";
         if (v.debordement) {
           erreur(ctx, "debordement", "+" + v.debordement.de + " px — " + (v.debordement.coupables.join(" · ") || "cause non isolee"));
         }
@@ -735,9 +771,14 @@ function avertir(page, categorie, texte) {
   console.log("  mesures ayant demande une attente SUPPLEMENTAIRE : " + RAPPORT.attentesSupp +
               "  (la duree fixe de " + ATTENTE + " ms n'y suffisait pas)");
   if (RAPPORT.nonStabilisees.length) {
-    console.log("  ⚠ NON STABILISEES apres 3 s (mesurees quand meme, verdict a prendre avec prudence) : " +
+    console.log("  ⚠ NON STABILISEES 3 s apres la fin du chargement (mesurees quand meme, verdict a prendre avec prudence) : " +
                 RAPPORT.nonStabilisees.length);
     RAPPORT.nonStabilisees.slice(0, 10).forEach(function (x) { console.log("      · " + x); });
+  }
+  if (RAPPORT.nonChargees.length) {
+    console.log("  ✗ NON CHARGEES apres " + (PLAFOND_CHARGEMENT / 1000) + " s (NON mesurees, comptees en erreur « chargement ») : " +
+                RAPPORT.nonChargees.length);
+    RAPPORT.nonChargees.slice(0, 10).forEach(function (x) { console.log("      · " + x); });
   }
 
   var ge = grouper(RAPPORT.erreurs);

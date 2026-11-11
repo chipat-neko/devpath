@@ -14,6 +14,18 @@
    ============================================================================= */
 (function () {
   if (window.__preuveD3) return window.__preuveD3 === "en cours" ? null : window.__preuveD3;
+  /* ⚠️ ON ATTEND UN ÉTAT, PAS UNE DURÉE (chantier V18, point A5). preuve-hors-reseau.js
+     évalue cette expression 400 ms après `Page.navigate`, et elle jouait la session dès
+     ce premier appel, même sur une page pas encore construite : elle figeait alors
+     « la page n'a ni champ de saisie ni formulaire », une valeur non nulle qui arrête
+     l'attente. Mesuré : 2 échecs sur 10 passages, en 409 et 416 ms ; un témoin qui
+     note l'état au moment du jeu a vu `readyState: "loading"` et aucun `#bac-saisie`,
+     document âgé de 638 ms. Les scripts de la page sont en `defer` : à « complete »,
+     `init()` de js/git-bac.js a posé ses écouteurs. On rend donc `null` (« pas prêt »)
+     tant que le document n'est pas CETTE page à l'état « complete », comme le fait
+     déjà le pilote des situations (git-scenarios-pilote.js). Une page réellement
+     cassée échoue toujours : une fois prête, il lui manque le champ ou le SVG. */
+  if (document.readyState !== "complete" || !/\/git-bac-a-sable\.html$/.test(location.pathname)) return null;
   window.__preuveD3 = "en cours";
   try {
     var saisie = document.getElementById("bac-saisie");

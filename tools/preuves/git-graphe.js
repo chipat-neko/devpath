@@ -196,8 +196,28 @@ var MESURE_ENCART = "(function(){"
   + "return JSON.stringify({encarts:document.querySelectorAll('.lesson-bac-git').length,"
   + "href:a?a.getAttribute('href'):'',resolu:a?a.href:''});})()";
 
+/* ⚠️ UN VOLET QUI RENONCE DIT POURQUOI (chantier V18, point A5). Sur 33 passages de
+   cet outil ou les volets ont tourne, sous la charge de cinq autres agents, un seul a
+   vu deux volets finir en « aucune mesure rendue » (141,5 s au lieu de ~35) ; lancer
+   Chrome y coutait de 1,1 a 13,0 s par volet (mediane 5,1 s). Rien ne permettait d'en
+   savoir plus : la sortie de preuve-hors-reseau.js etait jetee. Or elle sait la
+   raison : attente EXPIREE, Chrome qui n'a pas ecrit son port, Chrome qui n'a pas
+   repondu. On garde donc ces lignes-la, et la duree du volet ; le verdict, lui, ne
+   change pas (toujours rouge). Seules les lignes que preuve-hors-reseau.js ECRIT
+   LUI-MEME sont retenues : la sortie contient aussi le texte de la page, ou « porte »
+   et « rapport » feraient du bruit. */
+function raisonBrute(brut, ms) {
+  var l = String(brut).split(/\r?\n/).filter(function (x) {
+    return /^\s*(attente « |échecs de chargement|requêtes DISTANTES: [1-9])|^Chrome n'a pas|NON MESUR/.test(x);
+  }).map(function (x) {
+    x = x.trim().replace(/^attente « [\s\S]* » : /, "attente : ");
+    return x.length > 170 ? x.slice(0, 60) + " [...] " + x.slice(-100) : x;
+  });
+  return "aucune mesure rendue en " + ms + " ms — " + (l.length ? l.join(" // ") : "preuve-hors-reseau.js n'a rien dit");
+}
+
 function volet(page, attendu) {
-  var brut;
+  var brut, t0 = Date.now();
   try {
     brut = cp.execFileSync(process.execPath, [
       path.join(RACINE, "tools", "preuve-hors-reseau.js"), page,
@@ -207,7 +227,7 @@ function volet(page, attendu) {
     brut = (e.stdout || "") + (e.stderr || "");
   }
   var mm = /attente[\s\S]*?:\s*(\{[\s\S]*?\})\s+en\s+\d+\s*ms/.exec(brut);
-  if (!mm) return { page: page, erreur: "aucune mesure rendue" };
+  if (!mm) return { page: page, erreur: raisonBrute(brut, Date.now() - t0) };
   var v;
   try { v = JSON.parse(mm[1]); } catch (e) { return { page: page, erreur: "mesure illisible" }; }
   var pb = [];
