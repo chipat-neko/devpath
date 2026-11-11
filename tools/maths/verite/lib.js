@@ -25,8 +25,15 @@ function chemin(n) {
   return path.join(PAGES, 'lecon-' + String(n).padStart(2, '0') + '.html');
 }
 
+/* ⚠️ LES FINS DE LIGNE (chantier V18, point A6). Les contrôles cherchent leurs valeurs
+   avec des ancres de ligne (`$` en mode multiligne), qui ne s'arrêtent pas devant un
+   « \r ». Sur un clone frais en CRLF (`core.autocrlf=true`), quatre des six groupes
+   rougissaient donc sur des leçons INTACTES, et `preuve-injection.js` refusait à bon
+   droit de conclure (code 2). Le navigateur, lui, normalise CRLF en LF dès la lecture
+   du HTML : on lit donc la page comme il la lit. Seule la LECTURE est normalisée ;
+   la page sur le disque n'est jamais réécrite ici. */
 function html(n) {
-  return fs.readFileSync(chemin(n), 'utf8');
+  return fs.readFileSync(chemin(n), 'utf8').replace(/\r\n?/g, '\n');
 }
 
 /* Les entités que le générateur pose dans un bloc de code, et elles seules. */
