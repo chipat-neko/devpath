@@ -429,6 +429,16 @@ function toJs(globalName, arr, trailingNewline) {
    exactement le cas mesure le 2026-09-08 : quiz-index.js perime de 18 212 octets
    et 71 entrees fausses, avec I18 vert. On les accumule ici. */
 var staleAll = [];
+/* ⚠️ LES FINS DE LIGNE (chantier V18, point A6). Un index publié tient sur UNE ligne
+   (JSON.stringify échappe tout saut de ligne) suivie d'un saut final. Sur un clone frais
+   avec `core.autocrlf=true`, ce saut est « \r\n » : I18 de `verif-donnees.js` rendait
+   « search-index.js (publie 4274347 o, regenere 4274346 o, ecart -1 o) », idem pour
+   search-lite.js, sur un arbre INTACT — et la faute `donnees` de
+   `verif-chaine-mutations.js` y était « vue » par un outil déjà rouge. Le fichier publié
+   est donc lu en LF pour la comparaison ; l'écriture, elle, reste en LF. */
+function lirePublie(target) {
+  return fs.existsSync(target) ? fs.readFileSync(target, "utf8").replace(/\r\n/g, "\n") : "";
+}
 function noteDivergence(fileName, same, before, text) {
   if (same) return;
   staleAll.push(fileName + " (publie " + before.length + " o, regenere " + text.length +
@@ -437,7 +447,7 @@ function noteDivergence(fileName, same, before, text) {
 function emit(fileName, globalName, arr, trailingNewline, oldCount) {
   var target = path.join(OUT, fileName);
   var text = toJs(globalName, arr, trailingNewline);
-  var before = fs.existsSync(target) ? fs.readFileSync(target, "utf8") : "";
+  var before = lirePublie(target);
   var same = before === text;
   noteDivergence(fileName, same, before, text);
   console.log(
@@ -462,7 +472,7 @@ function emit(fileName, globalName, arr, trailingNewline, oldCount) {
 function emitObject(fileName, globalName, obj, count) {
   var target = path.join(OUT, fileName);
   var text = toJs(globalName, obj, true);
-  var before = fs.existsSync(target) ? fs.readFileSync(target, "utf8") : "";
+  var before = lirePublie(target);
   var same = before === text;
   noteDivergence(fileName, same, before, text);
   console.log(
