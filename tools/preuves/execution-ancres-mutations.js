@@ -64,6 +64,25 @@ var MUTATIONS = [
 ];
 
 var original = fs.readFileSync(CIBLE, "utf8");
+
+/* ⚠️ LES FINS DE LIGNE (2026-11-11, F1 du chantier V16). Deux des cinq fautes portent sur
+   DEUX lignes et ecrivaient leur motif avec un simple "\n". Or `js/execution.js` est en CRLF
+   sur ce disque (`core.autocrlf` vaut `true`, et tout `git checkout` le reecrit ainsi) : les
+   deux motifs ne trouvaient plus rien, et l'epreuve les classait « NON APPLICABLE » depuis
+   des semaines, si bien qu'elle sortait en 1 sans qu'aucune faute soit passee. C'est le
+   defaut deja corrige le 2026-09-10 dans `verif-execution-mutations.js`, l'epreuve soeur ;
+   on reprend la meme parade : chercher le motif quelles que soient les fins de ligne,
+   injecter avec celles du fichier, et restaurer l'original a l'octet pres. */
+var NL = /\r\n/.test(original) ? "\r\n" : "\n";
+function motifSouple(texte) {
+  return new RegExp(texte.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\r?\n/g, "\\r?\\n"));
+}
+function trouve(mu) { return motifSouple(mu.de).test(original); }
+function applique(mu) {
+  var vers = mu.vers.replace(/\r?\n/g, NL);
+  return original.replace(motifSouple(mu.de), function () { return vers; });
+}
+
 function restaurer() {
   try { fs.writeFileSync(CIBLE, original, "utf8"); } catch (e) { /* rien */ }
 }
@@ -95,12 +114,12 @@ console.log("[temoin] sans mutation : preuve VERTE — la mesure a un sens\n");
 var vues = 0, ratees = [], impossibles = [];
 MUTATIONS.forEach(function (mu, i) {
   var tete = "[" + (i + 1) + "/" + MUTATIONS.length + "] " + mu.nom;
-  if (original.indexOf(mu.de) === -1) {
+  if (!trouve(mu)) {
     impossibles.push(mu.nom + " (le texte a muter n'existe plus dans js/execution.js)");
     console.log(tete + " : NON APPLICABLE");
     return;
   }
-  fs.writeFileSync(CIBLE, original.replace(mu.de, mu.vers), "utf8");
+  fs.writeFileSync(CIBLE, applique(mu), "utf8");
   var r = lancerPreuve();
   restaurer();
   if (fs.readFileSync(CIBLE, "utf8") !== original) {

@@ -183,9 +183,20 @@ var BRUIT = /(^|\.)(google\.com|googleapis\.com|gstatic\.com|googleusercontent\.
 /* `wpad` est la découverte de proxy de Windows, déclenchée par la pile réseau et non par la
    page ; les connexions muettes et les paquets illisibles ne portent aucun nom de leçon. */
 var BRUIT_SYSTEME = /^(wpad|localhost|\(connexion sans données\)|inconnu|TLS \(nom illisible\))$/i;
+/* ⚠️ UN NOM EXACT, ET SA PREUVE (2026-11-11, F1 du chantier V16). `image-cdn.spotifycdn.com`
+   est sorti dans 3 passages de cette sonde sur 4, toujours deux connexions par Chrome touché,
+   sur des pages différentes à chaque fois, et souvent AVANT tout clic. Épreuve témoin : les
+   mêmes options de Chrome, le même piège, 13 Chrome successifs sur une page VIDE écrite hors
+   du site → 8 connexions vers ce nom, deux fois de suite (et toujours 8 avec les fonctions
+   média de Chrome désactivées). Seul ce Chrome connaît le port du piège, tiré au hasard :
+   c'est donc lui qui les ouvre, sans aucune page du site, sur une machine où l'application
+   Spotify tourne. Le mécanisme n'est pas identifié. Le site ne contient aucune URL de ce
+   domaine (le mot « Spotify » n'y figure qu'en texte). On ne range donc dans le bruit que CE
+   nom exact, ni le domaine ni un motif : toute autre connexion continue de faire échouer. */
+var BRUIT_MACHINE = /^image-cdn\.spotifycdn\.com$/i;
 function estDuBruit(nom) {
   var n = String(nom).replace(/ \(SNI\)$/, '');
-  return BRUIT.test(n) || BRUIT_SYSTEME.test(n);
+  return BRUIT.test(n) || BRUIT_SYSTEME.test(n) || BRUIT_MACHINE.test(n);
 }
 
 function ouvrirPiege() {

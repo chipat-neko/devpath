@@ -869,9 +869,14 @@ if (flag("mutations")) {
     { nom: "git-mod ", fichier: "verif-git-modele-mutations.js", vues: "29 / 29" },
     { nom: "git-graf", fichier: "verif-git-graphe-mutations.js", vues: "29 / 29" },
     { nom: "git-scen", fichier: "verif-git-scenarios-mutations.js", vues: "30 / 30" },
-    { nom: "vexec   ", fichier: "verif-execution-mutations.js", vues: "11 / 12 — un angle mort connu" },
-    { nom: "git-cmd ", fichier: "verif-git-commandes-mutations.js", vues: "?" },
-    { nom: "vexancr ", fichier: "preuves/execution-ancres-mutations.js", vues: "?" },
+    { nom: "vexec   ", fichier: "verif-execution-mutations.js", vues: "12 / 12" },
+    /* `minutes` : un plafond PROPRE, plancher du plafond commun (`--minutes=N` ne peut que le
+       relever). Ajoute le 2026-11-11 (F1 du V16) apres mesure : `git-cmd` rend 57 / 57 en
+       3 243,8 s seule, `vexancr` 5 / 5 en 1 277,9 s. Sous le plafond commun de 25 min, la
+       premiere EXPIRAIT a chaque passage complet (deja vu au V17), et la seconde le frole :
+       le mode ne pouvait jamais etre vert d'un seul passage. */
+    { nom: "git-cmd ", fichier: "verif-git-commandes-mutations.js", vues: "57 / 57", minutes: 75 },
+    { nom: "vexancr ", fichier: "preuves/execution-ancres-mutations.js", vues: "5 / 5", minutes: 40 },
   ];
 
   var argSeul = (args.filter(function (a) { return a.indexOf("--seul=") === 0; })[0] || "").slice(7);
@@ -939,7 +944,11 @@ if (flag("mutations")) {
     console.log("      ^ si l'un d'eux n'est PAS de vous, c'est la trace d'un passage interrompu :");
     console.log("        une faute injectee y est peut-etre restee. Verifier avant de commiter.");
   }
-  console.log("  plafond par epreuve : " + argMin + " min\n");
+  function plafondDe(e) { return Math.max(PLAFOND, (e.minutes || 0) * 60 * 1000); }
+  var propres = EPREUVES.filter(function (e) { return plafondDe(e) > PLAFOND; })
+    .map(function (e) { return e.nom.trim() + " " + (plafondDe(e) / 60000) + " min"; });
+  console.log("  plafond par epreuve : " + argMin + " min" +
+    (propres.length ? " (plafond propre : " + propres.join(", ") + ")" : "") + "\n");
 
   var bilan = [];
   var t0Total = Date.now();
@@ -951,7 +960,7 @@ if (flag("mutations")) {
     reference = etatDepot() || reference;
     var t0 = Date.now();
     var r = cp.spawnSync(process.execPath, [path.join(TOOLS, e.fichier)], {
-      encoding: "utf8", cwd: RACINE, timeout: PLAFOND, killSignal: "SIGKILL",
+      encoding: "utf8", cwd: RACINE, timeout: plafondDe(e), killSignal: "SIGKILL",
       maxBuffer: 64 * 1024 * 1024,
     });
     var duree = ((Date.now() - t0) / 1000).toFixed(1);
@@ -963,7 +972,13 @@ if (flag("mutations")) {
     traces.forEach(function (l) {
       var f = cheminDe(l);
       if (/^\?\?/.test(l)) return;                       /* un fichier NOUVEAU n'est pas une trace a effacer */
-      var g = cp.spawnSync("git", ["checkout", "--", f], { cwd: RACINE, encoding: "utf8" });
+      /* `-c core.autocrlf=false` (2026-11-11, F1 du V16) : le reglage systeme vaut `true`, et un
+         simple `git checkout` RECRIVAIT le fichier restaure en CRLF, alors que l'index le garde
+         en LF (mesure : `en-cours/EN-COURS.md` modifie puis restaure -> 185 CR ; avec l'option
+         -> 0 CR, et `git status` propre dans les deux cas). Un fichier passe en CRLF fait taire
+         les epreuves dont un motif porte sur deux lignes (cf. `execution-ancres-mutations.js`).
+         On restaure les octets de l'index, tels quels. */
+      var g = cp.spawnSync("git", ["-c", "core.autocrlf=false", "checkout", "--", f], { cwd: RACINE, encoding: "utf8" });
       restaures.push(f + (g.status === 0 ? "" : " (ECHEC)"));
     });
     var expire = r.error && r.error.code === "ETIMEDOUT";
