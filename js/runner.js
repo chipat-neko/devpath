@@ -976,6 +976,12 @@
      évalue le code et affecte les données. Voir tools/build-sources-worker.js. */
   var PY_WORKER_SRC = [
     "var ready = null;",
+    /* LES LANCEMENTS PASSENT L'UN APRÈS L'AUTRE, et chaque message porte le numéro
+       (`tour`) du lancement qui l'émet (point A4 du chantier V18, voir runPython). La
+       file garantit qu'un programme qui attend (`runPythonAsync`) ne voit pas un autre
+       lancement remplacer sa sortie standard en cours de route : ses lignes portent
+       toujours son numéro. */
+    "var file = Promise.resolve();",
     "self.onmessage = function (ev) {",
     "  var d = ev.data || {};",
     "  if (d.type === 'load') {",
@@ -999,20 +1005,22 @@
     "    return;",
     "  }",
     "  if (d.type === 'run') {",
-    "    Promise.resolve(ready).then(function (py) {",
-    "      py.setStdout({ batched: function (s) { self.postMessage({ type: 'out', level: 'log', text: s }); } });",
-    "      py.setStderr({ batched: function (s) { self.postMessage({ type: 'out', level: 'error', text: s }); } });",
-    "      return py.runPythonAsync(d.code).then(",
-    "        function () { self.postMessage({ type: 'done' }); },",
-    "        function (err) { self.postMessage({ type: 'out', level: 'error', text: (err && err.message) ? String(err.message) : String(err) }); self.postMessage({ type: 'done' }); }",
-    "      );",
-    "    });",
+    "    var tour = d.tour;",
+    "    var sortie = function (level, text) { self.postMessage({ type: 'out', tour: tour, level: level, text: text }); };",
+    "    var fini = function () { self.postMessage({ type: 'done', tour: tour }); };",
+    "    file = file.then(function () { return ready; }).then(function (py) {",
+    "      py.setStdout({ batched: function (s) { sortie('log', s); } });",
+    "      py.setStderr({ batched: function (s) { sortie('error', s); } });",
+    "      return py.runPythonAsync(d.code).then(fini,",
+    "        function (err) { sortie('error', (err && err.message) ? String(err.message) : String(err)); fini(); });",
+    "    }).catch(function (e) { sortie('error', String((e && e.message) || e)); fini(); });",
     "  }",
     "};",
   ].join("\n");
 
   var pyWorker = null; // Worker Pyodide partagé (chargé une fois)
   var pyLoaded = false;
+  var pyTour = 0; // numéro du dernier lancement Python (voir runPython)
 
   /* ------------------------------------------------------- SQL (sql.js) */
   /* Marqueurs d'un AUTRE moteur que SQLite. Deux candidats ont été écartés après
@@ -1996,9 +2004,19 @@
     }
 
     runBtn.classList.add("is-running");
+    /* ⚠️ CHAQUE LANCEMENT A SON NUMÉRO, ET N'ÉCOUTE QUE LE SIEN (point A4 du chantier
+       V18, 2026-11-11). Le Worker est partagé, et chaque lancement lui ajoute un
+       écouteur, retiré à son `done`. Sans numéro, chaque écouteur prenait TOUS les
+       messages : l'apprenant qui lançait un deuxième bloc pendant que le premier
+       tournait encore voyait dans la console du second la fin de la sortie du premier,
+       puis le `done` du premier fermait aussi le second — dont la vraie sortie arrivait
+       ensuite sans plus personne pour l'afficher. Mesuré dans Chrome, deux clics à
+       400 ms d'écart : console du bloc B = « A fin », et « B seul » perdu. Même chose
+       pour deux clics pendant « Démarrage de Python… » : les deux reçoivent `ready`. */
     var finished = false,
       sawOut = false,
-      timer = null;
+      timer = null,
+      monTour = ++pyTour;
 
     function finish() {
       if (finished) return;
@@ -2026,7 +2044,7 @@
     }
     function startRun() {
       out.innerHTML = '<p class="runner-output__head">Console Python</p>';
-      pyWorker.postMessage({ type: "run", code: codeStr });
+      pyWorker.postMessage({ type: "run", code: codeStr, tour: monTour });
       timer = setTimeout(function () {
         line("error", "⏱ Exécution interrompue après 15 s (boucle infinie ?).");
         killWorker();
@@ -2035,6 +2053,9 @@
     }
     function onMsg(ev) {
       var d = ev.data || {};
+      /* La sortie et la fin d'un AUTRE lancement ne regardent pas cette console.
+         `ready` et `fatal` concernent l'interpréteur, donc tous ceux qui l'attendent. */
+      if ((d.type === "out" || d.type === "done") && d.tour !== monTour) return;
       if (d.type === "fatal") {
         fatal(d.text);
       } else if (d.type === "ready") {
