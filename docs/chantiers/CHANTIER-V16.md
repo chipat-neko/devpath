@@ -9600,8 +9600,42 @@ contenu — mais à **étoffer les distracteurs** pour qu'ils soient plausibles.
       - Partout : des exercices dont la réponse se lit dans l'énoncé visible (convention du site
         entier, à trancher hors B4).
 
-- [ ] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
+- [x] **B5 · Contrôle : le QCM reste-t-il correct ?** Les scores enregistrés (`syntaxe-quiz`) et les
       QCM bilan doivent continuer de fonctionner. Régénérer `quiz-index.js` une seule fois, à la fin.
+
+      **COCHÉ le 2026-11-11 pour ce que dit la case** (agent `b5e2` sur sa branche, fusion `78b5e5c` ;
+      rapport `en-cours/rapports-v16/b5e2.md`). **0 score orphelin.**
+
+      - **Ce qu'un score garde** : il est rangé par cours, par fichier de leçon et par sorte (QCM de
+        leçon ou bilan), avec le nombre de questions et la **position** des questions ratées. Aucun
+        texte d'option n'y figure. Un score survit donc à une réécriture tant que le nombre et l'ordre
+        des questions tiennent.
+      - **Mesuré du commit d'avant B4 (`c358191`) à aujourd'hui** : 1 540 leçons et 1 639 blocs QCM,
+        aucun disparu ; **6 167 questions comparées une à une** : aucun nombre de questions changé,
+        aucune bonne réponse déplacée. B4 a réécrit 13 767 distracteurs, corrigé 86 bonnes réponses et
+        reformulé 23 énoncés, tous restés à leur place.
+      - **Dans Chrome** : `verif-stockage` **25/25** ; une sonde de l'agent sème un score « d'avant »,
+        vérifie qu'il est relu, joue toutes les bonnes réponses puis tous les distracteurs, et relit le
+        stockage — **99 bilans et 1 540 QCM de leçon passent, soit les 6 167 questions**. `verif-clic`
+        (512/512) ne joue aucun QCM, et aucune preuve de `tools/preuves/` n'en jouait : c'était un trou.
+      - **Seule perte, assumée** : l'examen blanc et la révision espacée retrouvent une question **par
+        son énoncé**. Les 23 énoncés reformulés perdent donc leur historique, sans erreur affichée.
+        Laissé ainsi : ce sont des questions qui étaient fausses ou mal écrites, il vaut mieux les
+        reposer comme neuves.
+      - **Un défaut trouvé dans un vérificateur, et corrigé** : `tools/maths/module-5/verif-bilan.js`
+        déclarait à tort **48 bilans sur 99** en échec. Il choisissait l'option qui *contient* le texte
+        visé (« 1 » attrapait « -1 »), et attendait 2,6 s fixes au lieu d'attendre que la page soit
+        prête. Après correction : **99/99**, et il dit toujours « non » sur une page sabotée et sur une
+        page sans bilan.
+      - **`quiz-index.js` régénéré une seule fois**, à la clôture de la phase parallèle, avec les cinq
+        autres index (`build-index --write --fresh --only=…`, point fixe au 3ᵉ tour).
+
+      ⚠️ **Non traité ici — les points que d'autres comptes rendus ont renvoyés à B5** : les deux
+      défauts de `ux` (l'énoncé de `lecon-08` q2 sans point d'interrogation ; le bilan q6 qui rejoue
+      `lecon-04` q4), les trois indices que nos outils ne voient pas (l'intention prêtée au moteur,
+      les tics rhétoriques, les absolus sous-estimés par notre motif), et le sort de `distribue`,
+      `neurones` et `offensive`, nés conformes en V13 et jamais audités. Ils dépassent ce que dit la
+      case et sont reportés en F4, tels quels.
 
 ---
 
@@ -9615,36 +9649,238 @@ que le F5 nomme sont mesurés à **0 marque** : `nodejs`, `typescript`, `vue`, `
 ⚠️ **La réserve écrite par le V15 tient toujours** : la calibration ne vaut que pour `react`. Ne pas
 appliquer un détecteur automatique à l'aveugle — il signalerait deux pages sur trois à tort.
 
-- [ ] **C1 · Les trois cours les plus périssables** (`nodejs`, `typescript`, `vue`).
-- [ ] **C2 · Les trois suivants** (`graphql`, `sass`, `data-eng`).
-- [ ] **C3 · Les trois cours d'IA** (`ml`, `llm`, `dataviz`) — les plus exposés au vieillissement.
-- [ ] **C4 · Bilan de la fraîcheur.** Combien de cours marqués, combien de marques, et
+**Méthode commune à C1, C2 et C3 (2026-11-11)** : trois agents en parallèle, chacun sur sa branche
+(`v16/c1`, `v16/c2e1`, `v16/c3`), fusionnées puis vérifiées par l'orchestrateur. Chaque leçon a été
+**lue en entier**, sans aucun détecteur. Chaque affirmation retenue est soit **vérifiée le jour même
+sur une source officielle** (ou par exécution), et datée `2026-11-11`, soit **datée par git**
+(`git log -S`). Une date git n'est qu'une **borne** : `2026-08-02` est le premier commit du dépôt, la
+phrase peut être plus ancienne. Les marques sont posées par `tools/fraicheur/appliquer.js`, depuis
+des lots versionnés dans `tools/fraicheur/releves/<cours>-lot-2026-11-11.json`. Rapports :
+`en-cours/rapports-v16/{c1,c2e1,c3}.md`.
+
+- [x] **C1 · Les trois cours les plus périssables** (`nodejs`, `typescript`, `vue`).
+
+      **COCHÉ le 2026-11-11.** **0 → 77 marques** : `nodejs` 41 (22 pages sur 28), `typescript` 21
+      (13 sur 21), `vue` 15 (9 sur 15). **57 datées du jour (74 %), 20 par git.** Aucune page au-delà
+      de 4 marques.
+
+      **15 textes corrigés sur 12 pages**, dont : Node exécute un `.ts` sans drapeau depuis 22.18 et
+      23.6, en effaçant les types sans les vérifier (exécuté sous Node 24.16) ; les décorateurs
+      **ramenés du stade 3 au stade 2.7 le 2026-05-19** (notes du TC39) ; **à partir de Node 27, chaque
+      version majeure devient LTS**, la règle « pair = LTS » ne tient plus ; `require()` charge l'ESM
+      depuis 22.12 et 20.19 (exécuté) ; `node:sqlite` est « release candidate », pas stable ; l'OWASP
+      place Argon2id avant bcrypt ; Drizzle dépasse Prisma en téléchargements ; `pkg` est archivé
+      depuis janvier 2024 ; Stripe répond 200, pas 201.
+      **Une faute prouvée dans un QCM** : `typescript/lecon-13` q1 disait des décorateurs « norme
+      récente ». Corrigé à l'identique dans les quatre options, sans créer d'indice. La même faute
+      était dans `pages/js/lecon-54.html`, hors de la case : **corrigée par l'orchestrateur**
+      (`42aa95c`), avec une marque.
+
+      **Non marqué, exprès** : les faits de compatibilité datés (« depuis Node 18… »), les faits
+      historiques, les nombres de démonstration, le code. **Reste** : les 20 marques datées par git, à
+      vérifier sur une source ; `nodejs/lecon-15` (« s'épuie », et `pg` présenté comme pilote
+      « officiel ») ; le code des leçons Express est écrit pour Express 4 alors que `npm install
+      express` installe la 5.
+- [x] **C2 · Les trois suivants** (`graphql`, `sass`, `data-eng`).
+
+      **COCHÉ le 2026-11-11.** **0 → 63 marques** : `graphql` 20 (10 pages sur 11), `sass` 20
+      (11 sur 14), `data-eng` 23 (12 sur 14). **29 datées du jour (46,0 %), 34 par git** — `data-eng`
+      surtout (20 sur 23, datées du commit qui a créé le cours).
+
+      **12 textes corrigés**, chacun avec sa source, dont : GitHub a retiré son explorateur GraphQL
+      en novembre 2025 ; `@defer`/`@stream` absents de la spécification GraphQL de septembre 2025 ;
+      Bootstrap 5.3.8, dernière stable, est encore en `@import` (le passage à `@use` est en 6.0 alpha) ;
+      Bulma 1.0.4 se configure autrement que ce que la leçon montrait (vérifié en compilant) ; Redshift
+      a `TRY_CAST` et `QUALIFY`. **Un QCM corrigé, faute prouvée** : dans `sass/lecon-06` q1, l'`explain`
+      disait l'opérateur `/` « retiré ». Dart Sass 1.108.1 divise encore, avec un avertissement, et le
+      retrait est annoncé pour la 2.0.0. **L'orchestrateur a vu ensuite qu'un distracteur de la même
+      question était devenu VRAI** (`10/4` compile en `2.5`) : réécrit pour être faux (`a47919b`).
+
+      **Reste** : les 34 marques datées par git ; le périssable des `cours.html` et des blocs JSON,
+      non marquables (voir C4).
+- [x] **C3 · Les trois cours d'IA** (`ml`, `llm`, `dataviz`) — les plus exposés au vieillissement.
+
+      **COCHÉ le 2026-11-11.** **0 → 31 marques** : `llm` 15 (10 pages sur 13), `ml` 9 (6 sur 13),
+      `dataviz` 7 (7 sur 15). **13 datées du jour (42 %), 18 par git (58 %).** Au plus 3 marques par page.
+
+      **4 textes corrigés**, dont : matplotlib offre depuis la 3.11 un raccourci pour les barres
+      groupées (`ax.grouped_bar`) ; scikit-optimize est archivé depuis février 2024 ; MMLU, HumanEval
+      et GSM8K sont saturés (AI Index 2025) ; « ¾ de mot par token » est la règle **anglaise**
+      d'OpenAI. Le français se découpe plus fin : **1,79 token par mot, mesuré** sur la prose des
+      13 leçons de `llm` avec le tokenizer de Qwen2.5.
+      **Trois renvois internes faux dans `dataviz`**, trouvés à la lecture, hors de la case : corrigés
+      par l'orchestrateur (`42aa95c`) — `lecon-04` (leçon 8 → 11), `lecon-08` (6 → 5), `lecon-11` (8 → 9).
+
+      **Reste** : les 18 marques datées par git, en priorité la domination du RAG, « LLM-as-judge
+      standard » et le « 80 % » sans provenance de `ml/lecon-01` ; la règle « ¾ de mot » encore sans
+      langue dans deux glossaires de `llm`.
+- [x] **C4 · Bilan de la fraîcheur.** Combien de cours marqués, combien de marques, et
       **projection dans le temps** (`--date=AAAA-MM-JJ`) pour vérifier que les seuils d'âge se
       déclenchent bien. Dire aussi ce qui reste non marqué et pourquoi.
+
+      **COCHÉ le 2026-11-11**, mesuré sur master après la fusion des trois branches
+      (`node tools/verif-fraicheur.js`).
+
+      | | avant (V15) | après C1-C3 |
+      |---|---:|---:|
+      | cours marqués | **6 sur 94** | **16 sur 94** |
+      | pages marquées | — | **176** sur 1 798 lues |
+      | marques | 149 | **321** |
+      | marques datées du jour | 0 | **100** |
+
+      Par cours (marques) : `react` 52, `nodejs` 41, `docker` 27, `data-eng` 23, `cloud` 22,
+      `typescript` 21, `graphql` 20, `sass` 20, `cicd` 18, `kubernetes` 17, `vue` 15, `llm` 15,
+      `iac` 13, `ml` 9, `dataviz` 7, `js` 1 (la marque posée sur `lecon-54` par l'orchestrateur).
+      Le 16ᵉ cours, `js`, n'était pas visé : il est marqué parce que la correction de C1 y a été
+      reportée.
+
+      **Projection dans le temps** (`--strict --date=…`), pour vérifier que les seuils se déclenchent :
+
+      | date simulée | résultat |
+      |---|---|
+      | 2027-06-01 | rien à signaler |
+      | 2027-11-12 | **120 avertissements** (les marques de 12 mois datées du 2026-11-11 passent « à relire ») |
+      | 2028-06-01 | **240 avertissements** |
+      | 2029-01-01 | **190 erreurs et 69 avertissements** |
+
+      Les seuils se déclenchent dans l'ordre attendu : rien avant l'échéance, puis l'avertissement,
+      puis l'erreur. La marque la plus ancienne est `graphql/lecon-03`, arrêtée au 2026-08-02.
+
+      **Ce qui reste non marqué, et pourquoi** :
+      - **221 marques sur 321 ne sont pas vérifiées aujourd'hui** : les 149 du V15, et 72 des 172
+        posées par C1 à C3, datées par git. La date git est une borne : l'âge réel est **au moins**
+        celui que le vérificateur affiche, ce qui le rend prudent, pas faux.
+      - **Les pages `cours.html`** n'ont pas d'`<article class="prose">` : `initFraicheur()` n'y
+        construit pas le bilan de fin de page, et la convention interdit une marque visible au seul
+        survol. Plusieurs portent pourtant du périssable (« TypeScript est la norme de fait »,
+        « l'ELT domine »…). Il faudrait d'abord y héberger le bilan.
+      - **Les blocs JSON** (QCM, exercices) ne peuvent pas porter de marque. Un QCM dont la réponse
+        vieillit n'est daté que par la marque de l'encadré voisin, quand il y en a une.
+      - **Les 78 autres cours** : non visés par ce chantier. La réserve du V15 tient : pas de
+        détecteur automatique, une lecture humaine par cours.
 
 ---
 
 ## PHASE D — Les liens qui manquent
 
-- [ ] **D1 · Le visualiseur, relié là où il sert.** Le F5 annonce 41 leçons qui expliquent la pile
+- [x] **D1 · Le visualiseur, relié là où il sert.** Le F5 annonce 41 leçons qui expliquent la pile
       d'appels sans y mener ; B6 en avait retenu 19 sur 42 candidates, mesurées **par le titre** et
       non par le corps. **Les deux mesures ne portent pas sur le même ensemble : commencer par les
       réconcilier**, puis relier ce qui le mérite. Le lien est posé par `js/lecon.js`
       (table `TITRES_VISUALISEUR`), pas en dur dans les leçons.
-- [ ] **D2 · Le décodeur d'erreurs et le bac à sable Git.** Même question pour eux : combien de
+
+      **COCHÉ le 2026-11-11** (agent `d` sur sa branche, fusion `75273ab` ; rapport
+      `en-cours/rapports-v16/d.md`). **19 → 43 leçons reliées, 53 → 87 liens.**
+
+      **La réconciliation, faite d'abord** : les « 41 » du F5 viennent d'un `grep "pile d'appels"` sur
+      le **corps** (48 leçons, moins les 7 déjà reliées). Les « 42 » de B6 viennent du **titre** : le
+      script de B6 n'avait pas été gardé, l'agent l'a **reconstruit**. Il rend 42 aux trois commits
+      et contient les 19 leçons liées et les 3 témoins. Les deux ensembles ne se recouvrent qu'en
+      partie : chaque candidate a été jugée une à une, avec une règle écrite. Résultat : 24 leçons
+      reliées, dont **9 des « 41 »** ; les 32 autres restent sans lien, chacune avec sa raison.
+      Le visualiseur n'a **aucun exemple d'exception** : 9 leçons sur la remontée d'une exception,
+      dans 8 langages, ne peuvent donc pas y mener.
+
+      **Un défaut de l'encart existant, corrigé** : la mise en garde « ce n'est pas ton langage »
+      se décidait par cours. Or `algo` et `compilation` écrivent leur code en JavaScript : l'encart
+      leur affirmait le contraire depuis B6. Elle dit aussi désormais « le mécanisme est le même »
+      au lieu de « la pile et les portées se comportent de la même façon », faux pour l'assembleur.
+
+      **Preuves** : `verif-execution-liens` ouvre les 43 leçons dans Chrome, **87 liens, 18 mises en
+      garde, 6 témoins négatifs, 0 problème** ; son épreuve par mutations voit **8 fautes sur 8** ;
+      `execution-ancres` déroule **26 exemples sur 26** par leur ancre. Libellé de l'étape `vexlien`
+      dans `verif.js` mis à jour par l'orchestrateur (19 → 43 leçons, 53 → 87 liens).
+      **Conséquence relevée à la clôture** : les tables ajoutées font passer `js/lecon.js` de 2 051 à
+      **2 192 lignes**. L'étude nº 2, « Entrer dans un fichier de 2051 lignes », refusait de
+      s'assembler : constante mise à jour, page réassemblée (titre, carte : 73 % du fichier dans les
+      fonctions au lieu de 77 %), et la carte du hub des études corrigée. Sa description longue
+      disait même « 2 019 lignes », périmée depuis avant ce chantier : aucun contrôle ne la relit.
+- [x] **D2 · Le décodeur d'erreurs et le bac à sable Git.** Même question pour eux : combien de
       leçons parlent d'un message d'erreur ou d'une commande Git sans mener à l'outil qui les fait
       manipuler ? Mesurer, puis relier.
+
+      **COCHÉ le 2026-11-11** (même agent, même fusion). Mesure faite **sur le corps** des leçons
+      (prose et blocs de code).
+
+      | | avant | après |
+      |---|---:|---:|
+      | leçons menant au décodeur d'erreurs | **31** | **44** (13 hors index, 25 messages listés) |
+      | leçons menant au bac à sable Git | **24** (le cours `git` seul) | **26** |
+
+      Deux tables neuves dans `js/lecon.js` (`DECODEUR_AUSSI`, `BAC_GIT_AILLEURS`), et deux preuves
+      déjà dans la chaîne étendues pour les relire : `tools/preuves/decodeur-lecons.js` confronte
+      chaque gabarit recopié à `js/erreurs-data.js` ; `tools/preuves/git-graphe.js` confronte la
+      phrase affichée au dictionnaire des commandes. Une table qu'aucun outil ne relit serait
+      exactement l'outil hors chaîne que ce chantier traque.
+
+      **Reste** : le décodeur ne couvre que 4 langages, alors que **142 leçons** écrivent un nom
+      d'erreur, beaucoup en Ruby, C#, Java, PHP ou Kotlin ; trois fiches gagneraient une seconde cause
+      (`js-stack`, `js-not-defined`, `sh-command-not-found`) ; le bac à sable n'a pas de dépôt
+      distant, donc 9 leçons sur `clone`/`push` ne peuvent pas y mener ; l'épreuve par mutations de D2
+      (9 fautes sur 9) est restée un script de travail, hors de `--mutations`.
 
 ---
 
 ## PHASE E — Les manques de contenu
 
-- [ ] **E1 · La leçon maigre.** `sass/lecon-09.html` : quatre critères sous la médiane du site
+- [x] **E1 · La leçon maigre.** `sass/lecon-09.html` : quatre critères sous la médiane du site
       (schémas, encadrés, glossaire, mots). L'amener au standard.
-- [ ] **E2 · Le rythme des durées.** **13 cours sur 90** sont hors du facteur 2 autour de la médiane
+
+      **COCHÉ le 2026-11-11** (agent `c2e1`, fusion `0711f09`). Mesuré avec les expressions de
+      `tools/verif-contenu.js` :
+
+      | critère | médiane du site | avant | après |
+      |---|---:|---:|---:|
+      | schémas SVG | 3 | **2** | **3** |
+      | encadrés | 5 | **3** (2 types) | **6** (4 types) |
+      | glossaire (`<dt>`) | 8 | **7** | **9** |
+      | mots visibles | 2 180 | **2 129** | **3 428** |
+
+      Trois sections neuves, sans redire les leçons 12 et 14 : générer les *custom properties* depuis
+      une map (contrastes WCAG **calculés**, pas estimés) ; le jeton oublié qui ne prévient pas, et la
+      garde `map.has-key` + `@error` ; suivre `prefers-color-scheme`, avec un schéma des six cas.
+      **Chaque bloc SCSS compile avec Dart Sass 1.108.1**, le CSS publié est identique à la sortie du
+      compilateur, et la cascade des six cas a été relevée dans Chrome. `verif-contenu --maigres` :
+      2 leçons maigres → **1** (`os/lecon-04`, hors de la case). Les schémas sont **à** la médiane, pas
+      au-dessus : le standard dit « 1 à 3 », un quatrième aurait été du remplissage.
+- [x] **E2 · Le rythme des durées.** **13 cours sur 90** sont hors du facteur 2 autour de la médiane
       de 54 mots/minute, de `powershell` à 26 jusqu'au plus rapide. Recalculer les durées annoncées
       sur la base du contenu réel. **Attention** : la clé des durées est `lessonDurations`, et un
       cours a un identifiant différent de son dossier (`javascript` vs `js`) — piège déjà rencontré.
+
+      **COCHÉ le 2026-11-11** (agent `b5e2`, fusion `78b5e5c`). **13 cours hors du facteur 2 → 0** ;
+      l'écart entre cours passe de 26-371 à **28-101 mots/minute**.
+
+      **La règle**, appliquée aux seules **171 leçons** des 13 cours hors bande :
+      **durée = max(20, arrondi(mots visibles ÷ 54))** minutes, avec la mesure exacte de
+      `verif-contenu.js`. Le plancher de 20 min n'a jamais servi. Le total d'un cours n'est écrit
+      nulle part à la main : `data.js` le calcule. Le repli `hours` de chaque fiche a été aligné
+      (il était déjà faux pour 5 de ces cours).
+
+      | cours | avant | après | | cours | avant | après |
+      |---|---:|---:|---|---|---:|---:|
+      | `powershell` | 14 h | **7 h** | | `distribue` | 16 h | **44 h** |
+      | `julia` | 14 h | **7 h** | | `compilation` | 16 h | **50 h** |
+      | `stats` | 10 h | **19 h** | | `doc` | 3 h | **11 h** |
+      | `mobile` | 9 h | **18 h** | | `maths` | 12 h | **43 h** |
+      | `data-eng` | 9 h | **18 h** | | `offensive` | 8 h | **34 h** |
+      | `equipe` | 8 h | **18 h** | | `crypto` | 6 h | **43 h** |
+      | `bdd` | 9 h | **22 h** | | **site** | **1 050 h** | **1 252 h** |
+
+      **La durée est écrite à deux endroits** : `lessonDurations` dans `js/data.js`, et l'en-tête
+      « ~N min » de chaque leçon, en dur. L'agent a changé les deux : les 1 540 en-têtes concordent
+      maintenant avec `data.js`. Avant, une seule leçon divergeait : `compilation/lecon-10`, 90 contre
+      80. **Trouvé à la fusion** : les 4 leçons de `doc` sont produites par `tools/doc/gen.js`, qui
+      lit sa durée dans `tools/doc/meta.json` (45 et 50). Sans correction, le premier réassemblage
+      aurait remis 45 et 50 dans les pages, contre 131 à 185 dans `data.js`, et **aucun contrôle ne
+      l'aurait vu**. `meta.json` est corrigé.
+
+      ⚠️ **À savoir avant d'en tirer une conclusion** : la mesure compte **le code comme de la prose**.
+      Le code fait 66 % des mots visibles de `crypto`, 57 % de `maths` et 34 % d'`offensive`, pour
+      une médiane de 16 % sur les cours. `compilation` annonce donc maintenant plus que `javascript`
+      (39 h). Si ces durées paraissent trop hautes, c'est **la mesure** qu'il faut changer (compter
+      le code en lignes, par exemple), pour les 90 cours et dans `verif-contenu.js`, pas la règle.
+      `fortran` (27,9) et `cobol` (28,1) frôlent la borne basse de 27.
 
 ---
 

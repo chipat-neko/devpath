@@ -6,7 +6,7 @@
    `verif-execution.js` pilote les 26 exemples par le SELECTEUR : il ouvre la
    page une fois, puis change la valeur d'un `<select>`. C'est le chemin de
    quelqu'un qui est deja sur la page. Ce n'est PAS le chemin de l'apprenant :
-   les 19 lecons liees au visualiseur pointent vers `execution.html#<id>`, donc
+   les 43 lecons liees au visualiseur pointent vers `execution.html#<id>`, donc
    l'apprenant arrive par une ANCRE, sur une page qui vient de se charger.
 
    Ce chemin-la passe par un autre code (`chargerAncre()`), il depend de l'ordre

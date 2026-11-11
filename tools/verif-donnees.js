@@ -88,6 +88,10 @@
  *                             taille de window.QUIZ_BANK). Une marque de source
  *                             inconnue est une erreur. Le hero de l'examen
  *                             annonçait 3000 questions pour 6151 (V17-C4).
+ *   I28 en-tête ⇄ durations : le « ~N min » écrit dans l'en-tête de chaque leçon
+ *                             vaut sa durée dans durations (js/data.js). Rien ne
+ *                             les confrontait : compilation/lecon-10 disait 90 et
+ *                             80, et tools/doc/gen.js aurait remis 45 min (V16-E2).
  *
  * USAGE
  * -----
@@ -1238,6 +1242,36 @@ Object.keys(LESSONS).forEach((id) => {
     }
   });
   if (!marques) c.warn('aucune annonce marquée data-mesure dans les pages transverses — surveillance impossible');
+})();
+
+/* ============================ I28 durée de l'en-tête ⇄ durations (V16-E2) === */
+/* La durée d'une leçon est écrite à DEUX endroits : `lessonDurations` dans
+   js/data.js, que lisent la page de cours, le catalogue et l'accueil, et le
+   « ~N min » de l'en-tête de la leçon, écrit en dur. Rien ne les confrontait.
+   compilation/lecon-10 annonçait ainsi 90 min dans sa page et 80 dans data.js.
+   Au recalcul de E2, les 4 leçons de `doc` — produites par tools/doc/gen.js,
+   qui lit sa durée dans tools/doc/meta.json — seraient revenues à 45 et 50 min
+   au premier réassemblage, contre 131 à 185 dans data.js, sans que rien rougisse. */
+(function () {
+  const c = check('I28', 'durée de l\'en-tête ⇄ durations');
+  const re = /<span class="duration">[\s\S]*?~\s*(\d+)\s*min\s*<\/span>/;
+  let lues = 0;
+  Object.keys(LESSONS).forEach((id) => {
+    const d = DURATIONS[id] || {};
+    LESSONS[id].files.forEach((f) => {
+      const nom = LESSONS[id].dir + '/' + f;
+      let src;
+      try { src = fs.readFileSync(path.join(PAGES, LESSONS[id].dir, f), 'utf8'); } catch (e) { return; } // I6 signale le fichier absent
+      const m = re.exec(src);
+      if (!m) { c.err(nom + ' : aucun « ~N min » dans l\'en-tête de la leçon'); return; }
+      lues++;
+      const ecrit = parseInt(m[1], 10);
+      if (typeof d[f] === 'number' && ecrit !== d[f]) {
+        c.err(nom + ' : l\'en-tête annonce « ~' + ecrit + ' min », durations[' + id + '] dit ' + d[f]);
+      }
+    });
+  });
+  if (!lues) c.err('aucune durée lue dans les en-têtes : le motif ne reconnaît plus l\'en-tête des leçons');
 })();
 
 /* ================================================================ sortie */

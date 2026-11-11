@@ -574,7 +574,7 @@ if (!RAPIDE) {
   /* LE VISUALISEUR (phase B) n'etait dans AUCUN mode de cette chaine : ni --strict
      ni --complet ne l'ouvraient. Trois preuves l'eprouvent, et elles entrent ici.
      La premiere pilote les 26 exemples par le SELECTEUR ; la deuxieme verifie que
-     les 19 lecons liees menent vraiment quelque part ; la troisieme, la seule qui
+     les 43 lecons liees menent vraiment quelque part ; la troisieme, la seule qui
      suive le chemin REEL de l'apprenant, ouvre la page a neuf sur execution.html#<id>
      et deroule chaque exemple jusqu'au dernier pas, reseau coupe. */
   ETAPES.push({
@@ -588,7 +588,7 @@ if (!RAPIDE) {
     nom: "vexlien",
     fichier: "verif-execution-liens.js",
     args: [],
-    quoi: "visualiseur : les 19 lecons liees, leurs 53 liens et 6 temoins negatifs",
+    quoi: "visualiseur : les 43 lecons liees, leurs 87 liens et 6 temoins negatifs",
     lent: true,
   });
   ETAPES.push({
