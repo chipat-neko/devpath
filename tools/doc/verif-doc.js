@@ -46,12 +46,17 @@ function dech(s) {
 }
 
 const { source, fn: slugify } = lib.slugifyDuSite();
-const refTexte = fs.readFileSync(REF, 'utf8').replace(/\n+$/, '');
-const page = fs.existsSync(PAGE) ? fs.readFileSync(PAGE, 'utf8') : null;
+/* ⚠️ LES FINS DE LIGNE (chantier V18, point A6). Sur un clone frais avec
+   `core.autocrlf=true`, la page, le fichier de référence et `js/lecon.js` sont en CRLF :
+   `/\n+$/` laissait un « \r » final, et le contrôle 5 rendait « écart de 1 caractères »
+   sur un arbre intact. On lit les trois comme le navigateur lit une page : en LF (le code
+   de `slugify` aussi, sans quoi le contrôle 1 comparerait du CRLF à du LF). */
+const refTexte = fs.readFileSync(REF, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '');
+const page = fs.existsSync(PAGE) ? fs.readFileSync(PAGE, 'utf8').replace(/\r\n/g, '\n') : null;
 
 /* ---- 1. le code publié est celui du site ---------------------------------- */
 console.log('1. Le code publié est celui de js/lecon.js');
-const attendu = source.split('\n').map((l, i) => (i === 0 ? l : l.replace(/^ {2}/, ''))).join('\n');
+const attendu = source.replace(/\r\n/g, '\n').split('\n').map((l, i) => (i === 0 ? l : l.replace(/^ {2}/, ''))).join('\n');
 if (!page) {
   verdict(false, 'pages/doc/lecon-01.html existe', 'page absente');
 } else {

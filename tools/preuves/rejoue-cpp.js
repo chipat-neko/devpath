@@ -164,7 +164,11 @@ var RE_TETE = /^\s*\/\/\s*Sortie\s*:(.*)$/;
 var RE_COM = /^\s*\/\/\s?/;
 
 function sortieAffirmee(lecon, motif) {
-  var t = fs.readFileSync(RACINE + '/pages/cpp/lecon-' + lecon + '.html', 'utf8'), m;
+  /* ⚠️ LES FINS DE LIGNE (chantier V18, point A6). Sur un clone frais en CRLF, chaque ligne
+     gardait son « \r » après split('\n') : RE_TETE (« (.*)$ ») ne reconnaissait plus aucune
+     tête « // Sortie : », et chaque bloc était déclaré « introuvable » sur un arbre intact.
+     On lit la page comme le navigateur : en LF. */
+  var t = fs.readFileSync(RACINE + '/pages/cpp/lecon-' + lecon + '.html', 'utf8').replace(/\r\n/g, '\n'), m;
   RE.lastIndex = 0;
   while ((m = RE.exec(t))) {
     if (m[1] !== 'cpp') continue;
