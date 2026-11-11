@@ -931,8 +931,11 @@ if (flag("mutations")) {
        relever). Ajoute le 2026-11-11 (F1 du V16) apres mesure : `git-cmd` rend 57 / 57 en
        3 243,8 s seule, `vexancr` 5 / 5 en 1 277,9 s. Sous le plafond commun de 25 min, la
        premiere EXPIRAIT a chaque passage complet (deja vu au V17), et la seconde le frole :
-       le mode ne pouvait jamais etre vert d'un seul passage. */
-    { nom: "git-cmd ", fichier: "verif-git-commandes-mutations.js", vues: "57 / 57", minutes: 75 },
+       le mode ne pouvait jamais etre vert d'un seul passage.
+       2026-11-11, point A6 du V18 : `git-cmd` joue desormais un TEMOIN (son verificateur sur
+       une copie intacte) avant ses 57 fautes, et a dure 4 957,4 s (82,6 min) puis 4 925,6 s
+       sous la charge de six agents. Le plafond de 75 min l'aurait compte expire : porte a 120. */
+    { nom: "git-cmd ", fichier: "verif-git-commandes-mutations.js", vues: "57 / 57", minutes: 120 },
     { nom: "vexancr ", fichier: "preuves/execution-ancres-mutations.js", vues: "5 / 5", minutes: 40 },
   ];
 
