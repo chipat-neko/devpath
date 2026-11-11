@@ -1931,12 +1931,37 @@
      la syntaxe diffère, le mécanisme est le même. Une leçon Pascal qui
      renverrait vers du JavaScript sans le dire serait un piège.
 
+     CE QUE LE CHANTIER V16 (POINT D1) A AJOUTÉ, ET COMMENT
+     Deux mesures se contredisaient : B6 avait choisi par le TITRE (42
+     leçons), le bilan F5 du V15 comptait le CORPS (« pile d'appels » dans
+     48 leçons, dont 41 sans lien). Elles ne portaient pas sur le même
+     ensemble — 9 leçons seulement en commun. Réconciliées, elles donnaient
+     69 candidates, toutes lues ; une mesure par densité dans le corps
+     (fermetures, boucle d'événements, portée, récursion) en a donné 84
+     autres. Règle appliquée : le CORPS doit traiter, dans une section, ce
+     que l'exemple montre, et le langage doit avoir le même mécanisme pour ce
+     qu'il montre. Restent écartées, entre autres : les exceptions qui
+     remontent la pile (aucun exemple ne le montre), les traces affichées par
+     un outil (débogueur, profileur), la récursion terminale optimisée
+     (JavaScript ne l'a pas : l'exemple dirait le contraire de la leçon), et
+     l'asynchrone à threads ou à coroutines. Décisions et raisons :
+     `en-cours/rapports-v16/d.md`.
+
+     FAMILLE_JS liste les cours dont le CODE est du JavaScript, et pas
+     seulement ceux qui l'enseignent : `algo` et `compilation` écrivent tout
+     leur code en JavaScript, et la leçon de débogage de `vscode` débogue du
+     JavaScript. Avant D1, l'encart de `algo/lecon-02` et de
+     `compilation/lecon-08` leur affirmait que « la syntaxe diffère de ce
+     cours » : c'était faux.
+
      ⚠️ Les titres des exemples sont recopiés ici (comme SCENARIOS_GIT plus
      haut) : une leçon ne charge pas `js/execution-exemples.js` pour trois
      libellés. `tools/verif-execution-liens.js` exige que cette table et le
      fichier des exemples coïncident, sinon une leçon renverrait vers un
-     exemple qui n'existe plus — et la page s'ouvrirait très bien quand même. */
-  var FAMILLE_JS = ["js", "js-avance", "javascript", "nodejs", "typescript", "react", "vue", "projets-js"];
+     exemple qui n'existe plus — et la page s'ouvrirait très bien quand même.
+     ⚠️ Pas de commentaire DANS les deux tables : cet outil les lit comme du
+     JSON. */
+  var FAMILLE_JS = ["js", "js-avance", "javascript", "nodejs", "typescript", "react", "vue", "projets-js", "algo", "compilation", "vscode"];
 
   var VISUALISEUR = {
     "js/lecon-12": ["async-ordre", "async-await"],
@@ -1957,7 +1982,31 @@
     "perl/lecon-07": ["portee-chainee", "portee-bloc"],
     "swift/lecon-04": ["fermeture-compteur", "portee-chainee"],
     "dart/lecon-04": ["fermeture-compteur", "portee-chainee"],
-    "groovy/lecon-04": ["fermeture-compteur", "let-vs-var"]
+    "groovy/lecon-04": ["fermeture-compteur", "let-vs-var"],
+    "js/lecon-06": ["fonctions", "portee-bloc"],
+    "js/lecon-30": ["fonctions", "statistiques"],
+    "js/lecon-34": ["async-ordre", "async-microtaches-dabord", "async-minuteurs"],
+    "js/lecon-49": ["fermeture-compteur"],
+    "js/lecon-51": ["fermeture-compteur"],
+    "js/lecon-63": ["async-rejet"],
+    "algo/lecon-08": ["factorielle"],
+    "algo/lecon-10": ["arbre"],
+    "algo/lecon-12": ["arbre"],
+    "algo/lecon-14": ["fibonacci"],
+    "compilation/lecon-10": ["arbre"],
+    "vscode/lecon-06": ["fonctions"],
+    "c/lecon-04": ["fonctions", "factorielle", "recursion-sans-fin"],
+    "asm/lecon-04": ["fonctions", "factorielle"],
+    "ocaml/lecon-03": ["recursion-somme", "recursion-sans-fin"],
+    "dart/lecon-07": ["async-ordre", "async-microtaches-dabord", "async-await"],
+    "go/lecon-02": ["fermeture-compteur"],
+    "lua/lecon-08": ["fermeture-compteur"],
+    "lua/lecon-14": ["fermeture-compteur"],
+    "lua/lecon-16": ["fermeture-compteur"],
+    "lisp/lecon-06": ["fermeture-compteur"],
+    "lisp/lecon-07": ["portee-chainee"],
+    "lisp/lecon-09": ["fermeture-compteur"],
+    "lisp/lecon-12": ["fermeture-compteur"]
   };
 
   var TITRES_VISUALISEUR = {
@@ -1971,12 +2020,15 @@
     "async-then-promesse": "Le piège : rendre une promesse dans un then",
     "factorielle": "Factorielle : la pile monte, puis redescend",
     "fermeture-compteur": "Une fermeture : la variable survit à la fonction",
+    "fibonacci": "Fibonacci : le même calcul, refait encore et encore",
+    "fonctions": "Une fonction qui en appelle une autre",
     "hanoi": "Les tours de Hanoï",
     "let-vs-var": "Le piège : `var` dans une boucle",
     "portee-bloc": "Un bloc, une portée",
     "portee-chainee": "Où un nom est-il cherché ?",
     "recursion-somme": "La récursivité la plus simple",
     "recursion-sans-fin": "Quand la récursivité ne s'arrête pas",
+    "statistiques": "Un programme plus long que l'écran",
     "this-impose": "Imposer `this` avec call, apply et bind",
     "this-methode": "`this` : méthode, fonction nue, fonction fléchée",
     "zone-morte": "Utiliser une variable avant de la déclarer"
@@ -2019,8 +2071,11 @@
     var p = document.createElement("p");
     if (FAMILLE_JS.indexOf(cours) === -1) {
       p.className = "lesson-vex__note";
+      /* Formulée pour TOUTES les leçons reliées hors JavaScript : depuis D1, elles
+         vont de l'assembleur (des cadres, aucune portée) à la boucle d'événements
+         de Dart. On ne promet donc que ce qui a été vérifié leçon par leçon. */
       p.textContent = "Le visualiseur exécute du JavaScript : la syntaxe diffère de ce cours, "
-        + "le mécanisme est le même — la pile d'appels et les portées se comportent de la même façon.";
+        + "mais le mécanisme que montrent ces exemples est le même.";
     } else {
       p.textContent = "La pile d'appels, les variables de chaque portée et ce qui a été affiché, "
         + "à chaque pas. On avance, on recule, on recommence.";
