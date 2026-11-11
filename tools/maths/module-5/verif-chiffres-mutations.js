@@ -16,6 +16,22 @@ const FAUTES = [
   ['<strong>44&nbsp;722</strong> lignes', '<strong>45&nbsp;000</strong> lignes', 'un seuil arrondi'],
 ];
 
+/* LE TÉMOIN (chantier V18, point A6). Une faute compte « vue » dès que le vérificateur
+   sort en erreur. Sans témoin, un vérificateur déjà rouge sur la page INTACTE fait donc
+   passer les cinq fautes pour vues sans en avoir vu une seule : c'est ce qui est arrivé du
+   2026-11-11 (recalcul des durées, V16/E2) au point A6 du V18, la durée d'en-tête
+   « ~352 min » étant lue comme un chiffre sans source. La page intacte est donc posée
+   exactement comme les pages mutées, et le vérificateur doit y être vert. */
+fs.writeFileSync(COPIE, original, 'utf8');
+try { execFileSync('node', ['tools/maths/module-5/verif-chiffres.js', COPIE], { encoding: 'utf8' }); }
+catch (e) {
+  fs.unlinkSync(COPIE);
+  console.log('TÉMOIN ROUGE : le vérificateur échoue sur la page INTACTE — rien ne peut être conclu.');
+  console.log(String(e.stdout || '').split('\n').filter(Boolean).slice(-4).join('\n'));
+  process.exit(2);
+}
+console.log('0. témoin : page intacte, vérificateur VERT — la mesure a un sens');
+
 let vues = 0;
 FAUTES.forEach(function (f, i) {
   const [avant, apres, quoi] = f;

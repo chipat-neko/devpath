@@ -85,6 +85,13 @@ for (const page of pages) {
 
   /* 3. la PROSE : tout sauf les blocs de code, les scripts et les attributs */
   let prose = html
+    /* La DURÉE d'en-tête (« ~352 min ») n'est pas un chiffre de la prose : c'est une
+       métadonnée calculée par l'outil des durées sur le contenu de la page, et elle change
+       à chaque recalcul. Depuis le recalcul du 2026-11-11 (V16/E2, f5c2f19), elle rendait
+       ce contrôle ROUGE sur les pages 12 et 13 intactes (« 352 », « 321 » sans source) —
+       si bien que l'épreuve `verif-chiffres-mutations.js`, qui n'avait pas de témoin,
+       comptait ses cinq fautes « vues » sans en avoir vu une seule (point A6 du V18). */
+    .replace(/<span class="duration">[\s\S]*?<\/span>/g, ' ')
     .replace(/<figure class="code-block"[\s\S]*?<\/figure>/g, ' ')
     .replace(/<script[\s\S]*?<\/script>/g, ' ')
     .replace(/<svg[\s\S]*?<\/svg>/g, ' ')
