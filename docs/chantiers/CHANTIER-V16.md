@@ -9873,7 +9873,9 @@ des lots versionnés dans `tools/fraicheur/releves/<cours>-lot-2026-11-11.json`.
       80. **Trouvé à la fusion** : les 4 leçons de `doc` sont produites par `tools/doc/gen.js`, qui
       lit sa durée dans `tools/doc/meta.json` (45 et 50). Sans correction, le premier réassemblage
       aurait remis 45 et 50 dans les pages, contre 131 à 185 dans `data.js`, et **aucun contrôle ne
-      l'aurait vu**. `meta.json` est corrigé.
+      l'aurait vu**. `meta.json` est corrigé, et le trou est fermé : **I28**, nouveau contrôle de
+      `verif-donnees.js`, confronte l'en-tête de chaque leçon à `data.js` (éprouvé : une durée
+      faussée dans `doc/lecon-02` rend le code 1, la page remise rend 0).
 
       ⚠️ **À savoir avant d'en tirer une conclusion** : la mesure compte **le code comme de la prose**.
       Le code fait 66 % des mots visibles de `crypto`, 57 % de `maths` et 34 % d'`offensive`, pour
@@ -9886,13 +9888,200 @@ des lots versionnés dans `tools/fraicheur/releves/<cours>-lot-2026-11-11.json`.
 
 ## PHASE F — Contrôle final
 
-- [ ] **F1 · Les vérificateurs, tous modes.** `--rapide`, `--complet`, `--strict` et le nouveau
+- [x] **F1 · Les vérificateurs, tous modes.** `--rapide`, `--complet`, `--strict` et le nouveau
       `--mutations`, tous verts. Citer la durée de chacun.
-- [ ] **F2 · Le garde-fou de A5 fonctionne.** Ajouter un vérificateur bidon hors chaîne : le
+
+      **COCHÉ le 2026-11-11, avec une réserve écrite en tête : aucun des quatre modes n'a été
+      vert d'un seul passage, sauf `--rapide`.** Les quatre modes ont été lancés l'un après l'autre
+      sur le dépôt de `740ab22`. Chaque signalement a ensuite été
+      trié et, selon sa cause, corrigé ou rejoué seul. Toutes les étapes ont aujourd'hui une mesure
+      verte. Les rejeux sont nommés plus bas ; aucun passage complet n'a été refait après les
+      corrections (≈ 4 h 25 de plus, calculé sur les durées du jour).
+
+      | mode | étapes | durée | verdict du passage | après tri |
+      |---|---:|---:|---|---|
+      | `--rapide` | 53 | **281,4 s** | **vert**, code 0 | — |
+      | `--strict` | 71 | **1 624,7 s** | 3 signalements : `contenu`, `clic-net`, `py-lec` | **vert** (voir 1, 2, 3) |
+      | `--complet` | 81 | **5 576,3 s** | 1 signalement : `clic-net` | **vert** (voir 2) |
+      | `--mutations` | 16 épreuves | **6 512,6 s** | 13 OK ; `qcmbiai` SALE, `git-cmd` EXPIRE, `vexancr` SIGNALE | **vert**, épreuve par épreuve (voir 4, 5, 6) |
+
+      **1. `contenu` (`--strict`) — une vraie régression, venue de B4, corrigée.** Quatre leçons
+      tombaient sous le critère « Cas réel » (0 sur 1 exigé) : `tests/lecon-11`, `tests/lecon-12`,
+      `tests/lecon-14`, `observabilite/lecon-06`. B4 leur avait retiré l'étiquette **parce que leurs
+      histoires étaient inventées** : elles s'appellent désormais « Scénario type » ou « Cas d'école »,
+      et c'est honnête. Chacune reçoit à la place un **vrai cas, daté et sourcé**, qui ne dit que ce
+      que la source dit :
+      - `tests/lecon-11` (charge) : la prévente *Eras* de Ticketmaster, 15/11/2022 — 3,5 milliards
+        de requêtes, quatre fois le record précédent, vente du 18/11 annulée (Ticketmaster,
+        « The Eras Tour Onsale Explained », 19/11/2022) ;
+      - `tests/lecon-12` (contrat) : *Mars Climate Orbiter*, perdue le 23/09/1999 — la spécification
+        d'interface exigeait des N·s, `SM_FORCES` écrivait des lbf·s (NASA, rapport de phase I du
+        bureau d'enquête, 10/11/1999) ;
+      - `tests/lecon-14` (legacy) : Knight Capital, 01/08/2012 — Power Peg abandonné en 2003 et non
+        re-testé en 2005, drapeau réutilisé, un serveur sur huit oublié, plus de 4 millions
+        d'exécutions en 45 min, plus de 460 M$ de perte (SEC, ordonnance 34-70694, 16/10/2013) ;
+      - `observabilite/lecon-06` : la panne de Facebook, 04/10/2021 — la perte du DNS « a cassé
+        beaucoup des outils internes » qui auraient servi à enquêter (Facebook Engineering,
+        05/10/2021).
+
+      Les deux PDF (SEC, NASA) ont été lus localement (`pypdf`), l'outil de lecture du web ne les
+      ouvrant pas. **Effet de bord mesuré et réparé** : deux mots des encadrés, « envoie » et
+      « oublie », se trouvaient aussi dans des options de QCM (`tests/lecon-12` q2,
+      `tests/lecon-14` q16). En entrant dans la page, ils cessaient d'y être « étrangers », et le
+      cliquet lexical rougissait (`tests`, PROPORTION/restr. 0,0 → 16,7 %). Ils sont remplacés par
+      « émet » et « omet », sous le seuil de 6 lettres de l'outil. L'état lexical de `tests` est
+      revenu **identique à celui de HEAD** (0 question exploitable ; la seule « à mettre en
+      forme », `lecon-14` q12, l'était déjà). `verif-contenu --strict` : code 0. Les deux cliquets
+      QCM : code 0. Le point fixe des pages dérivées est atteint au tour 3.
+
+      **Une question en suspens, et c'est la plus importante de ce point** : le site compte
+      **1 500** titres d'encadré « Cas réel », et les **1 540 leçons** en portent au moins un. B4 a prouvé que quatre étaient inventés, **en passant**.
+      Combien d'autres le sont ? Aucun outil ne le sait, et le critère de `verif-contenu` (« le
+      mot est-il présent ? ») les compte tous comme bons.
+
+      **2. `clic-net` (`--strict` et `--complet`) — c'est Chrome sur cette machine, pas le site ;
+      la sonde est corrigée par une exception d'UN nom exact, avec sa preuve.** La sonde a vu
+      des connexions vers `image-cdn.spotifycdn.com`, et rien d'autre : **8 depuis 4 blocs** en
+      `--strict`, **4 depuis 2 blocs** en `--complet`, plus d'autres au chargement des pages, avant
+      tout clic. Elles tombent sur des pages **différentes** d'un passage à l'autre : six pages en
+      `--strict` (`js/lecon-12` et `-24`, `projets-js/lecon-13` et `-14`, `nodejs/lecon-20`,
+      `wasm/lecon-03`), trois en `--complet` (`js/lecon-36` et `-63`, `html/lecon-42`), **aucune
+      en commun**. Le site ne contient **aucune URL** vers Spotify : le mot n'apparaît qu'en
+      texte, dans `<strong>`, dans trois leçons (`html/lecon-42`, `projets-js/lecon-03` et `-22`),
+      et comme jeton de `js/search-index.js`.
+
+      Une première épreuve témoin (un seul Chrome, 100 s, page vide) n'avait rien vu, et la sonde
+      rejouée seule avait rendu 0 connexion : j'ai d'abord conclu à un incident passager, et écrit
+      ici qu'on n'ajouterait pas ce nom au bruit. **C'était faux** : à la clôture, la sonde
+      `--strict` a de nouveau échoué sur le même nom (`js/lecon-36`, `-47`, `-63`), donc **3
+      passages sur 4**. Seconde épreuve témoin, dans les conditions exactes de la sonde
+      (`scratchpad/temoin-spotify-13.js` de la session) : **13 Chrome successifs**, profil neuf
+      pour chacun, mêmes options, même piège, **page vide hors du site** → **8 connexions vers
+      `image-cdn.spotifycdn.com`** (Chrome n° 1, 2, 4, 12, deux chacun). Rejouée avec les
+      fonctions média de Chrome désactivées (`HardwareMediaKeyHandling`, `GlobalMediaControls`,
+      `MediaSessionService`) : **toujours 8**. Le port du piège est tiré au hasard et seul ce
+      Chrome le connaît : c'est **Chrome lui-même** qui ouvre ces connexions, sans aucune page du
+      site, sur une machine où l'application Spotify tourne. Le mécanisme n'est pas identifié.
+
+      **Corrigé dans `tools/preuves/sonde-clic-reseau.js`** : la sonde range dans le bruit **ce
+      nom exact et lui seul** (`BRUIT_MACHINE`), avec la preuve écrite à côté. Ni le domaine, ni
+      un motif : vérifié à sec, `evil.spotifycdn.com`, `spotifycdn.com`, `api.spotify.com` et
+      `image-cdn.spotifycdn.com.attaquant.net` restent des connexions qui font échouer. Le bruit
+      reste compté et affiché. Après correction, `verif.js --strict --seules=sonde-clic-reseau`
+      rend **OK deux fois de suite** (115,4 et 114,2 s).
+
+      **Angle mort vu en passant, plus ancien que F1** : la règle Google de la même liste de bruit
+      couvre aussi `fonts.googleapis.com` et `fonts.gstatic.com`, deux domaines **interdits** par
+      les règles du site. La sonde ne les verrait donc pas. `verif-rendu` signale toute requête
+      distante, mais seulement sur les pages qu'il affiche (≈ 229), et **aucun contrôle statique
+      ne cherche ces domaines dans les 1 540 leçons**. Recherche du jour : aucune balise réelle ;
+      `html/lecon-25` et `html/lecon-35` les citent en texte ou en code échappé, à dessein.
+
+      **3. `py-lec` (`--strict`) — intermittent sous charge, vert au repos.** Trois blocs Python
+      restent sans aucune sortie pendant les 20 s d'attente de la sonde, **jamais les mêmes** :
+      `python/lecon-15` blocs 10, 12, 14 en `--strict` (après les étapes lourdes) ;
+      `python/lecon-03` blocs 12 à 14 au rejeu, juste après les 54 min de `git-cmd` ; aucun en
+      `--complet`. Ce n'est donc pas le contenu. **Cinq passages de suite, machine au repos : 5
+      verts, 43 blocs, 42 sorties** (l'exception de `python/lecon-15` bloc 2 est voulue), 32 à
+      34 s chacun. C'est le schéma déjà noté au V17. Cause non isolée : délai trop court sous
+      charge, ou sonde qui passe au bloc suivant dès la première ligne de sortie sans attendre la
+      fin du précédent (lu dans `tools/preuves/python-lecon.js`, non prouvé).
+
+      **4. `qcmbiai` SALE (`--mutations`) — ma faute.** J'ai modifié `en-cours/EN-COURS.md`
+      pendant l'épreuve ; le mode l'a vu, l'a restauré (`git checkout`) et a compté l'épreuve
+      « SALE », **comme il le doit**. Rejouée seule : **OK en 34,7 s**, témoin vert.
+
+      **5. `git-cmd` EXPIRE (`--mutations`) — une épreuve plus longue que le plafond.** Coupée au
+      plafond de 25 min. Rejouée seule avec un plafond de 60 min : **57 fautes sur 57 vues, en
+      3 243,8 s** (54 min). Le V17 avait vu la même chose : le mode `--mutations` ne pouvait
+      **jamais** être vert d'un passage avec cette épreuve. **Corrigé** : deux épreuves portent
+      désormais un plafond propre, `git-cmd` 75 min et `vexancr` 40 min (voir 6), et
+      `--minutes=N` ne peut que le relever. Calcul vérifié à sec (`--minutes=25` → 75 et 40 min ;
+      `--minutes=90` → 90 min partout), et le mode éprouvé de bout en bout sur deux épreuves
+      courtes (`verdict`, `mth-chif` : code 0, dépôt propre à la sortie).
+
+      **6. `vexancr` SIGNALE (`--mutations`) — une épreuve devenue aveugle à moitié, sans rien
+      dire, corrigée.** Lancée directement, elle donne le détail : 3 fautes vues, **0 passée
+      inaperçue, 2 « NON APPLICABLES »**. Le texte à muter « n'existe plus dans
+      `js/execution.js` »… alors qu'il y est, mot pour mot. Mais `js/execution.js` est en **CRLF**
+      sur ce disque (349 CR ; l'index est en LF), et les deux fautes qui portent sur deux lignes
+      cherchaient un simple `\n`. **C'est exactement le défaut corrigé le 2026-09-10 dans l'épreuve
+      sœur `verif-execution-mutations.js`**. `execution-ancres-mutations.js`, écrite une semaine
+      plus tôt, n'avait jamais reçu la parade. Elle la reçoit : motif cherché quelles que soient
+      les fins de ligne, faute injectée avec celles du fichier, original restauré à l'octet près.
+      Vérifié à sec sur les deux formes (`scratchpad/vexancr-motifs.js` de la session) : avant,
+      les fautes 1 et 2 ne se posaient pas sur le CRLF ; après, les 5 se posent sur les deux.
+      **Rejouée par `verif.js --mutations --seul=execution-ancres` : 5 fautes sur 5 vues, OK en
+      1 277,9 s**, dépôt propre à la sortie. Ses deux fautes réparées tournent désormais pour de
+      bon : la durée passe de 793 à 1 278 s, au ras du plafond commun de 25 min (1 500 s), d'où
+      son plafond propre.
+
+      **7. Trouvé en cherchant le 6 : la restauration de `--mutations` réécrivait en CRLF.**
+      `verif.js` restaurait un fichier par `git checkout -- <f>`. Avec `core.autocrlf=true`, le
+      fichier revient en CRLF alors que l'index le garde en LF. Mesuré sur `en-cours/EN-COURS.md`
+      modifié puis restauré : **185 CR** ; avec `-c core.autocrlf=false` : **0 CR**. `git status`
+      est propre dans les deux cas, ce qui rend la chose invisible. **Corrigé** (ligne de
+      restauration de `verif.js`). Pour mémoire, au moment de la mesure, **80 fichiers suivis** étaient en CRLF sur
+      ce disque alors que l'index les garde en LF : 75 dataient de juin à septembre, et 5 d'aujourd'hui (dont
+      `EN-COURS.md`, restauré par `qcmbiai`). Ils ne sont pas réécrits : git ne voit aucune
+      différence, et une épreuve doit tenir sur les deux formes, puisqu'un clone frais met tout le
+      site en CRLF.
+
+      **Durées comparées.** Le passage `--mutations` complet coûte **108 min** (82 au V17). Les
+      épreuves longues sont 1,4 à 1,6 fois plus lentes qu'au relevé d'A1 (`git-mod` 1,64,
+      `git-graf` 1,51, `git-scen` 1,43). Avec les deux plafonds
+      propres, un passage complet qui irait au bout durerait **8 728 s, soit 2 h 25** (calcul :
+      le passage du jour, où les durées coupées ou incomplètes sont remplacées par celles des
+      rejeux).
+- [x] **F2 · Le garde-fou de A5 fonctionne.** Ajouter un vérificateur bidon hors chaîne : le
       contrôle doit échouer. Le retirer : il doit repasser au vert.
-- [ ] **F3 · Mesure globale.** Vérificateurs dans la chaîne : **24 hors chaîne au départ**, combien
+
+      **COCHÉ le 2026-11-11.** `node tools/verif-chaine-declaree.js`, code de sortie relevé à chaque
+      pas (et non lu au travers d'un `tail`) :
+
+      | état | code |
+      |---|:---:|
+      | dépôt normal | **0** |
+      | `tools/verif-bidon-f2.js` créé, dans aucun mode, non déclaré | **1** — « [non declare] tools/verif-bidon-f2.js » |
+      | bidon retiré | **0** |
+      | `tools/maths/verif-bidon-f2.js`, dans un **sous-dossier** | **1** — le garde-fou regarde bien `tools/**` |
+      | bidon retiré | **0** |
+
+      Le recensement du jour : 110 outils soumis au garde-fou ; **95 dans un mode, 15 hors chaîne,
+      tous déclarés avec leur raison**. `--rapide` lance 53 étapes, la chaîne sans option 71,
+      `--complet` 81, `--strict` 71, `--mutations` 16.
+- [x] **F3 · Mesure globale.** Vérificateurs dans la chaîne : **24 hors chaîne au départ**, combien
       à l'arrivée ? Biais des QCM : **88,8 % au départ**. Cours marqués en fraîcheur : **6 sur 94**
       au départ.
+
+      **COCHÉ le 2026-11-11.** Chaque chiffre est remesuré le jour même, avec la définition du
+      départ.
+
+      | | départ (2026-09-03) | arrivée (2026-11-11) |
+      |---|---:|---:|
+      | vérificateurs (`verif-*.js`) hors de la chaîne **sans raison écrite** | **24** | **0** |
+      | vérificateurs hors chaîne, **déclarés** avec leur raison | — | **7** (sur 53) |
+      | bonne réponse **strictement** la plus longue | **5 462 sur 6 151 — 88,8 %** | **2 023 sur 6 151 — 32,9 %** |
+      | réussite de « toujours la plus longue » | **89,6 %** | **33,5 %** (hasard : 25 %) |
+      | cours portant une marque de fraîcheur | **6 sur 94** | **16 sur 94** (321 marques) |
+
+      - **Les 7 vérificateurs restés dehors, et pourquoi** (`tools/hors-chaine.json`) :
+        `verif-liste-alternatives.js` ne peut pas rougir ; les trois `maths/module-{3,4,5}/verif-chiffres.js`
+        sont des utilitaires paramétrés, appelés par l'épreuve par injection ; les deux
+        `maths/module-{3,4}/verif-cours-progression.js` ont des attentes figées sur un état révolu du
+        cours ; `anciens/verif-lecon.js` est archivé. `verif-clic.js`, dehors au point A5 parce qu'il
+        ne terminait pas, est entré dans `--complet`.
+      - **Le biais des QCM** : 68 cours sur 90 sont traités et verrouillés par les deux cliquets.
+        Le taux du site reste au-dessus du hasard à dessein : les **19 cours écartés le 2026-09-15**
+        n'ont pas été touchés, et 3 cours nés conformes en V13 (`distribue`, `neurones`,
+        `offensive`) ne sont pas marqués. La stratégie la plus forte du site est « la plus
+        détaillée », à 34,7 %. Calcul :
+        `scratchpad/f3-longueur.js` (longueur en caractères sur `window.QUIZ_BANK`), recoupé par
+        `mesure-biais-qcm.js` (même 33,5 %, et 32,9 % « sans ex aequo »).
+      - **La dette notée ici le 2026-09-08** — brancher l'outil des explications orphelines et lui
+        écrire son épreuve — **est soldée depuis `275d8d6`** : `verif-explain-orpheline.js` est dans la
+        chaîne (étape `explorp`, hors `--rapide` à cause de ses ~37 s), et
+        `verif-explain-orpheline-mutations.js` voit **4 fautes sur 4** dans `--mutations`.
 
       **DETTE SOLDÉE PAR AVANCE (2026-09-08) — l'explication orpheline.** Le compte rendu de
       `kotlin` réclamait ici « un contrôle *l'`explain` ne cite pas une option absente*, bon
@@ -9906,8 +10095,102 @@ des lots versionnés dans `tools/fraicheur/releves/<cours>-lot-2026-11-11.json`.
       au motif employé et **ne sont pas mesurés** : mieux vaut ne rien mesurer que mesurer contre
       la mauvaise référence. **Reste à faire ici : brancher l'outil dans la chaîne** (il rend un
       code de sortie 1) et lui écrire son épreuve par mutation, comme les autres cliquets.
-- [ ] **F4 · Ce qui n'a pas été fait.** Lister et expliquer, sans arrondir — comme l'a fait le F5
+- [x] **F4 · Ce qui n'a pas été fait.** Lister et expliquer, sans arrondir — comme l'a fait le F5
       du V15, dont ce chantier entier est issu.
+
+      **COCHÉ le 2026-11-11.** Rassemblé depuis les comptes rendus de B4 à F3 et les six rapports
+      de `en-cours/rapports-v16/` et `en-cours/rapports-b4/`. Rien n'est arrondi ; ce qui n'a pas été
+      mesuré est dit tel.
+
+      **1. Le défaut de fond de ce chantier s'est reproduit une fois — c'est le premier point à
+      reprendre.** Aucun outil de la chaîne ne **joue** un QCM : `verif-clic` (512/512) clique les
+      boutons « Tester », et aucune preuve de `tools/preuves/` ne répond à une question. La seule
+      sonde qui joue les 6 167 questions dans Chrome et relit `syntaxe-quiz` a été écrite pour B5…
+      **dans le dossier de travail de l'agent**, hors du dépôt. C'est exactement « l'outil hors
+      chaîne » que le F5 du V15 dénonçait. La faire entrer dans `tools/preuves/`, dans `--complet`,
+      avec une épreuve qui prouve qu'elle sait échouer.
+
+      **2. Les QCM (phase B).**
+      - **19 cours écartés le 2026-09-15** (947 questions) : jamais touchés. C'est pourquoi le site
+        reste à 33,5 % et non à 25 %.
+      - **`distribue`, `neurones`, `offensive`** : nés conformes en V13, jamais audités, non marqués
+        `traite`. La mesure du jour (`mesure-qcm-longueurs`) montre un **biais inversé** :
+        `distribue`, bonne réponse la plus courte **39,1 %** (la plus longue 7,2 %, 19 distracteurs
+        hors fourchette) ; `offensive`, la plus courte **42,0 %** et la plus longue 37,7 %
+        (36 hors fourchette). Ils ne sont donc pas « nés conformes » au sens d'aujourd'hui.
+      - **Trois indices que nos outils ne voient pas**, trouvés par les relecteurs de B4 : l'intention
+        prêtée au moteur (30,1 % sur un lot), les tics rhétoriques (38,8 % sur un lot), les absolus que
+        notre motif sous-estime (34,7 % sur un lot). Mesurés sur des lots, **jamais sur le site**.
+      - **`ux`** : l'énoncé de `lecon-08` q2 sans point d'interrogation ; le bilan q6 qui rejoue
+        `lecon-04` q4 au lieu de vérifier.
+      - **Restes de B4, non prouvés fautifs ou hors B4** : l'intrus lexical inverse d'`asm` (30,3 et
+        29,5 %, seuil 28 %) et de `vb` (28,0 %) ; cinq imprécisions d'`asm` ; deux erreurs de code de
+        `pascal` (`lecon-07`, `lecon-13`) ; `fsharp/lecon-12` q2 datée par F# 9 ; des exercices dont
+        la réponse se lit dans l'énoncé visible, sur tout le site.
+      - **23 énoncés reformulés** perdent leur historique dans l'examen blanc et la révision
+        espacée, qui retrouvent une question par son énoncé. Assumé, pas corrigé.
+
+      **3. La fraîcheur (phase C).**
+      - **221 marques sur 321 ne sont pas vérifiées sur une source** : les 149 du V15 et 72 des
+        172 posées en C1-C4, datées par git. La date git est une borne inférieure de l'âge.
+      - **78 cours sur 94 n'ont pas été lus.** La réserve du V15 tient : pas de détecteur
+        automatique.
+      - **Les `cours.html` et les blocs JSON** ne peuvent pas porter de marque. Il faudrait héberger
+        le bilan de fin de page sur les `cours.html`.
+      - **Vu à la lecture, non corrigé** : `nodejs/lecon-15` (« s'épuie », que corriger rouvrirait
+        l'indice lexical d'une question, et `pg` présenté comme pilote « officiel ») ; le code des
+        leçons Express écrit pour Express 4 alors que `npm install express` installe la 5 ;
+        « ≈ ¾ de mot » sans langue dans deux glossaires de `llm` ; le « 80 % » sans provenance de
+        `ml/lecon-01`.
+
+      **4. Les liens (phase D).**
+      - **Visualiseur** : 32 des « 41 » du F5 restent sans lien, chacune avec sa raison. Le
+        visualiseur n'a **aucun exemple d'exception** : 9 leçons sur la remontée d'une exception,
+        dans 8 langages, ne peuvent pas y mener. La mesure de B6 a été **reconstruite**, pas retrouvée.
+      - **Décodeur** : il couvre 4 langages, alors que **142 leçons** écrivent un nom d'erreur. Trois
+        fiches gagneraient une seconde cause (`js-stack`, `js-not-defined`, `sh-command-not-found`).
+        Le lien ne pré-remplit pas le message : la page n'a pas d'ancre par erreur.
+      - **Bac à sable Git** : pas de dépôt distant, donc 9 leçons sur `clone` et `push` ne peuvent
+        pas y mener.
+      - **L'épreuve par mutations de D2** (9 fautes sur 9) est restée un script de travail, hors de
+        `--mutations` : second exemple, plus petit, du point 1.
+      - **Le hub des études** : la description longue d'une carte (« 2 019 lignes ») n'est relue par
+        aucun contrôle ; seule la formule courte l'est.
+
+      **5. Le contenu (phase E).**
+      - **E2 compte le code comme de la prose.** D'où `crypto` à 43 h et `compilation` à 50 h, plus
+        que `javascript` (39 h). Décider s'il faut changer la mesure, pour les 90 cours, est une
+        décision éditoriale qui n'a pas été prise. `fortran` (27,9) et `cobol` (28,1) frôlent la
+        borne basse de 27.
+      - **`os/lecon-04`** reste maigre (`verif-contenu --maigres`), hors de la case E1.
+      - Fermé au passage : l'en-tête « ~N min » d'une leçon et `js/data.js` n'étaient confrontés par
+        rien. **I28**, ajouté à `verif-donnees.js`, le fait ; éprouvé (code 1 sur une durée faussée,
+        0 après remise).
+
+      **6. Le rendu, des défauts antérieurs à ce chantier, vus et non corrigés.**
+      `powershell/lecon-08` déborde de 9 px à 320 px de large ; `js/lecon-34` de 11 px, cause non
+      isolée ; un mot rouge de `julia/lecon-14` est illisible en thème sombre. Deux contrôles pilotant
+      Chrome échouent par intermittence puis passent seuls (`verif-rendu` sur `bdd/lecon-01`, le
+      premier chargement de `tools/preuves/git-graphe.js`) : cause inconnue.
+
+      **7. Ajouté par F1 (détail et mesures dans F1 ci-dessus).**
+      - **Les « Cas réel » inventés.** Quatre l'étaient, trouvés **en passant** par B4. Le site
+        compte **1 500** titres d'encadré « Cas réel », et le critère de `verif-contenu` ne regarde
+        que la présence du mot. Combien d'autres sont inventés ? Aucun outil ne le sait.
+      - **`py-lec` intermittent sous charge** : 3 blocs sans sortie en 20 s, jamais les mêmes ; 5
+        passages verts sur 5 au repos. Cause non isolée (délai, ou sonde qui n'attend pas la fin
+        du bloc précédent).
+      - **Les connexions vers `image-cdn.spotifycdn.com`** vues par `clic-net` : ouvertes par Chrome
+        lui-même (prouvé sur une page vide hors du site), rangées dans le bruit par leur **nom
+        exact**. Le mécanisme n'est pas identifié.
+      - **Les domaines interdits** (`cdnjs.cloudflare.com`, `fonts.googleapis.com`,
+        `fonts.gstatic.com`) n'ont **aucun contrôle statique** sur les 1 540 leçons, et la sonde
+        réseau range les deux derniers dans son bruit Google. Un contrôle bon marché à écrire.
+      - **Aucun passage complet** des modes longs n'a été refait après les corrections de F1
+        (≈ 4 h 25). Le premier à le faire saura si `--mutations` est enfin vert d'un seul passage.
+      - **80 fichiers suivis en CRLF sur le disque** alors que l'index les garde en LF. Sans
+        conséquence pour git ; une épreuve qui cherche un motif sur deux lignes doit tenir sur les
+        deux formes, ce que F1 a vérifié pour `vexancr` et `vexec`, pas pour les autres.
 
 ---
 

@@ -10,6 +10,12 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 > parallèle**, en session interactive : un agent par cours, chacun sur sa branche `b4/<cours>`,
 > puis fusion et passe de vérification par l'orchestrateur. Détail : plan V16, § « LES NEUF
 > DERNIERS COURS », et un rapport par cours dans [`rapports-b4/`](rapports-b4/).
+>
+> **✅ LES 13 AUTRES CASES DU V16 ONT SUIVI LE MÊME CHEMIN (2026-11-11).** Cinq agents sur cinq
+> branches `v16/<nom>` (B5 et E2, C1, C2 et E1, C3, D1 et D2), fusion vérifiée, puis F1 à F4 par
+> l'orchestrateur. Un rapport par branche dans [`rapports-v16/`](rapports-v16/). **V16 est clos,
+> 22 cases sur 22, et c'est le dernier plan de la chaîne** : il n'y a plus de plan suivant. La
+> liste de ce qui reste est le F4.
 
 ---
 
@@ -40,10 +46,13 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 | CHANTIER-V14 — faire écrire du code, et le corriger | ✅ 38/38 |
 | CHANTIER-V15 — comprendre ce qu'on ne voit pas | ✅ 32/32 |
 | CHANTIER-V17 — les garde-fous qui mentent | ✅ 80/80 |
-| **CHANTIER-V16 — consolider ce que les quatre chantiers ont laissé derrière** | 🟠 **9/22 — plan courant** (B4 coché le 2026-11-11 ; suivant : B5) |
+| **CHANTIER-V16 — consolider ce que les quatre chantiers ont laissé derrière** | ✅ 22/22 (clos le 2026-11-11) |
 
-Quand la dernière case du V16 est cochée, le wrapper lance une **passe de sécurité** (rapport dans
-`docs/audits/VERIF-FINALE.md`) puis s'éteint si le verdict est VERT.
+**La dernière case du V16 est cochée (2026-11-11).** Si l'autonomie est relancée sans nouveau plan,
+le wrapper lancera donc une **passe de sécurité** (rapport dans `docs/audits/VERIF-FINALE.md`), puis
+s'éteindra si le verdict est VERT. **C'est le dernier plan de la
+chaîne** (`$CHAINE` dans `.autonomie/autonomie.ps1`) : pour que l'autonomie reprenne du travail,
+il faudra d'abord écrire un CHANTIER-V18. Sa matière naturelle est le F4 du V16.
 
 ---
 
@@ -91,11 +100,6 @@ dans `D:\outils-b4\<cours>\` (Free Pascal, SWI-Prolog, GnuCOBOL, NASM).
 quelques bonnes réponses simplificatrices non prouvées fausses, et des exercices dont la réponse
 se lit dans l'énoncé (convention du site entier).
 
-### Le prochain point : B5
-
-Contrôler que les QCM restent corrects (scores `syntaxe-quiz`, QCM bilan) et régénérer
-`quiz-index.js` une fois, à la fin — c'est déjà fait par la clôture de B4, à vérifier.
-
 ### Les leçons qui coûtent cher si on les oublie
 
 Elles sont détaillées cours par cours dans le plan et dans `scratchpad/CONSIGNE-*.md` /
@@ -115,23 +119,32 @@ Elles sont détaillées cours par cours dans le plan et dans `scratchpad/CONSIGN
 
 ---
 
-## 4. Après B4 : les 13 autres cases du V16
+## 4. Après B4 : les 13 autres cases du V16, faites le 2026-11-11
 
-| Case | Ce qu'il faut faire |
+| Case | Résultat |
 |---|---|
-| **B5** | Contrôler que les QCM restent corrects (scores `syntaxe-quiz`, QCM bilan) ; régénérer `quiz-index.js` une fois, à la fin. |
-| **C1** | Marques de fraîcheur sur `nodejs`, `typescript`, `vue`. |
-| **C2** | Idem sur `graphql`, `sass`, `data-eng`. |
-| **C3** | Idem sur les cours d'IA `ml`, `llm`, `dataviz`. |
-| **C4** | Bilan de la fraîcheur, avec projection dans le temps (`--date=AAAA-MM-JJ`). |
-| **D1** | Relier le visualiseur de pile d'appels aux leçons qui en parlent (table `TITRES_VISUALISEUR` de `js/lecon.js`) — réconcilier d'abord les deux mesures (41 contre 19/42). |
-| **D2** | Même travail pour le décodeur d'erreurs et le bac à sable Git. |
-| **E1** | Amener `sass/lecon-09.html` au standard (4 critères sous la médiane). |
-| **E2** | Recalculer les durées annoncées des 13 cours hors du facteur 2 (clé `lessonDurations` ; piège `javascript` ≠ dossier `js`). |
-| **F1** | Tous les modes de `tools/verif.js` verts, avec leur durée. |
-| **F2** | Prouver que le garde-fou hors chaîne rougit sur un vérificateur bidon. |
-| **F3** | Mesure globale de fin (vérificateurs hors chaîne, biais des QCM, fraîcheur) ; brancher `mesure-explain-orpheline.js` dans la chaîne. |
-| **F4** | Lister ce qui n'a pas été fait, sans arrondir. |
+| **B5** | **0 score orphelin** : les 6 167 questions comparées une à une à l'état d'avant B4, puis jouées dans Chrome. Un vérificateur qui jugeait à tort 48 bilans sur 99 en échec corrigé (99/99). |
+| **C1 à C3** | Fraîcheur : `nodejs` 41 marques, `typescript` 21, `vue` 15, `graphql` 20, `sass` 20, `data-eng` 23, `llm` 15, `ml` 9, `dataviz` 7. **31 passages corrigés** (devenus faux, plus une erreur de fait), dont deux QCM (décorateurs ramenés au stade 2.7 du TC39 en mai 2026 ; l'opérateur `/` de Sass déprécié, pas retiré). |
+| **C4** | **6 → 16 cours marqués sur 94, 149 → 321 marques**, dont 100 vérifiées le jour même. Projection : premiers avertissements le 2027-11-12, premières erreurs avant le 2029-01-01. |
+| **D1** | Visualiseur de pile : **19 → 43 leçons reliées, 53 → 87 liens.** |
+| **D2** | Décodeur d'erreurs : **31 → 44 leçons** ; bac à sable Git : **24 → 26**. |
+| **E1** | `sass/lecon-09` au standard : 2 129 → 3 428 mots, 3 schémas, 6 encadrés, 9 termes ; chaque bloc SCSS compilé. |
+| **E2** | Durées : **13 cours hors du facteur 2 → 0.** ⚠️ La mesure compte le code comme de la prose : `crypto` passe de 6 h à 43 h, `compilation` de 16 h à 50 h. Si c'est trop, c'est la mesure qu'il faut changer. |
+| **F1** | Les quatre modes passés. `--rapide` est vert d'un seul passage (53 étapes, 281,4 s ; 159,5 s à la clôture). `--strict` (71 étapes, 1 624,7 s), `--complet` (81, 5 576,3 s) et `--mutations` (16, 6 512,6 s) **n'ont jamais été verts d'un seul passage** : chaque signalement a été trié, puis corrigé ou rejoué vert. Corrigés en route : **4 « Cas réel » inventés remplacés par des cas sourcés** (une régression venue de B4), une épreuve à moitié aveugle (`vexancr`, à cause des fins de ligne CRLF), la restauration de `--mutations` qui réécrivait en CRLF, deux plafonds trop courts (`git-cmd`, `vexancr`), et une sonde réseau qui prenait un bruit de Chrome pour une faute du site. |
+| **F2** | Le garde-fou rougit sur un vérificateur bidon, même dans un sous-dossier, et repasse au vert. |
+| **F3** | Vérificateurs hors chaîne sans raison : **24 → 0**. Bonne réponse strictement la plus longue : **88,8 % → 32,9 %**. Fraîcheur : **6 → 16 cours**. |
+| **F4** | La liste de ce qui reste, dans le plan. En tête : la sonde qui joue les QCM dans Chrome est restée hors de la chaîne. |
+
+**Ajouté à la clôture** : le contrôle **I28** de `verif-donnees.js`. La durée d'une leçon est
+écrite à deux endroits, l'en-tête de la page et `js/data.js`, et rien ne les confrontait. Sans
+lui, le réassemblage des pages `doc` aurait remis 45 min là où `data.js` en dit 131 à 185.
+
+⚠️ **Piège mesuré le 2026-11-11 : ne modifier AUCUN fichier du dépôt pendant `verif.js
+--mutations`.** Après chaque épreuve, ce mode remet à la version commitée (`git checkout --`) tout
+fichier modifié pendant l'épreuve : c'est sa garantie qu'aucune faute injectée ne reste. Une
+modification d'`EN-COURS.md` faite à ce moment-là a été effacée, et l'épreuve `qcmbiai` comptée
+« SALE » alors qu'elle n'y était pour rien. Préparer ses écrits hors du dépôt, et les poser après.
+Depuis F1, cette restauration écrit les octets de l'index, en LF (`-c core.autocrlf=false`).
 
 ---
 
@@ -155,10 +168,19 @@ Outils à lancer : `node tools/verif.js --rapide` (≈ 4 min, 53 étapes), `node
 
 ## 6. État des vérifications, et points connus
 
-- **`node tools/verif.js --rapide` : 53 étapes sur 53 vertes, code de sortie 0, 219,1 s** (mesuré
-  le 2026-11-11, à la clôture de B4). Les cliquets de biais (68 cours traités) et de lexique sont
-  refigés, `verif-donnees` ne remonte aucune erreur, `verif-rendu` est à 0 erreur sur les 25 pages
-  touchées en dernier.
+- **`node tools/verif.js --rapide` : 53 étapes sur 53 vertes, code de sortie 0, 159,5 s** (mesuré
+  le 2026-11-11, à la clôture du V16). Les cliquets de biais (68 cours traités) et de lexique sont
+  verts.
+- **Les modes longs (F1 du V16)** : `--strict` 1 624,7 s, `--complet` 5 576,3 s, `--mutations`
+  6 512,6 s. Aucun n'a été vert d'un seul passage ; chaque signalement est expliqué et rejoué vert
+  (détail dans le F1 du plan). **Aucun passage complet n'a été refait après les corrections**
+  (≈ 4 h 25) : le premier qui le fera saura si `--mutations` est enfin vert d'un seul passage.
+  Avec les plafonds propres de `git-cmd` (75 min) et `vexancr` (40 min), il dure environ 2 h 25.
+- **Intermittent connu** : `py-lec` (la sonde Python) laisse parfois 3 blocs sans sortie quand la
+  machine est chargée, jamais les mêmes. Au repos : 5 passages verts sur 5.
+- **Bruit connu** : Chrome ouvre de lui-même des connexions vers `image-cdn.spotifycdn.com` sur
+  cette machine (prouvé sur une page vide hors du site). La sonde réseau range ce nom exact dans son
+  bruit, avec la preuve écrite à côté.
 - `.autonomie/epreuve-reset.ps1` : **82 cas conformes, 0 en échec** depuis le 2026-09-29 (les tests
   de dates ont une référence fixe au lieu de dépendre du jour où on les lance).
 - Pendant qu'une passe réécrit un cours, `verif-donnees` peut signaler des index périmés
@@ -173,7 +195,7 @@ test-claude/
 ├── README.md, index.html, sw.js   (sw.js doit rester à la racine : un service worker ne sert que son dossier)
 ├── en-cours/          ce fichier + ETAT-AUTONOMIE.md (réécrit chaque heure)
 ├── docs/
-│   ├── chantiers/     CHANTIER-V4 à V17 (le V16 est le plan courant)
+│   ├── chantiers/     CHANTIER-V4 à V17 (le V16, clos, est le dernier plan de la chaîne)
 │   ├── audits/        audits, inventaire du 2026-08-20, VERIF-FINALE.md, resultat.md
 │   ├── enrichissements/  ENRICHISSEMENT 1 à 3, NOUVEAUX-COURS (méthode d'ajout d'un cours), GROS-PROJETS…
 │   └── reference/     DESIGN_SYSTEM.md, paramettre.md, rap_peda.md
