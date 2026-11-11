@@ -54,10 +54,13 @@ function connecter(wsUrl) {
       'Connection: Upgrade\r\nSec-WebSocket-Key: ' + key + '\r\nSec-WebSocket-Version: 13\r\n\r\n');
   });
   var buf = Buffer.alloc(0), hs = false, id = 0, attentes = {};
+  /* La poignée de main doit être faite avant la première trame : une trame écrite
+     avant elle partirait AVANT la requête d'Upgrade, et sa réponse n'arriverait jamais. */
+  var ouvert = new Promise(function (r) { sock.once('ouvert', r); });
   sock.on('error', function () { /* Chrome coupe la socket en sortant */ });
   sock.on('data', function (chunk) {
     buf = Buffer.concat([buf, chunk]);
-    if (!hs) { var i = buf.indexOf('\r\n\r\n'); if (i < 0) return; hs = true; buf = buf.slice(i + 4); }
+    if (!hs) { var i = buf.indexOf('\r\n\r\n'); if (i < 0) return; hs = true; buf = buf.slice(i + 4); sock.emit('ouvert'); }
     while (buf.length >= 2) {
       var len = buf[1] & 127, off = 2;
       if (len === 126) { len = buf.readUInt16BE(2); off = 4; }
@@ -71,6 +74,7 @@ function connecter(wsUrl) {
   });
   return {
     sock: sock,
+    ouvert: ouvert,
     evaluer: function (expr) {
       return new Promise(function (r) {
         var msg = Buffer.from(JSON.stringify({ id: ++id, method: 'Runtime.evaluate', params: { expression: expr, returnByValue: true, awaitPromise: true } }));
@@ -89,26 +93,55 @@ function connecter(wsUrl) {
 
 /* Cocher la bonne option de chaque question, en la retrouvant par son TEXTE :
    lecon.js mélange les options à l'affichage, donc l'ordre du JSON ne vaut plus.
-   On lit le JSON de la page, on en tire le libellé attendu, et on clique dessus. */
+   On lit le JSON de la page, on en tire le libellé attendu, et on clique dessus.
+   ⚠️ Le texte doit être ÉGAL, pas CONTENU (V16/B5, 2026-11-11). Avec `indexOf`, le
+   libellé « = » désignait aussi l'option « := », « 1 » l'option « -1 », « fun »
+   l'option « func » : sur 22 des 99 bilans du site, une passe cochait au hasard du
+   mélange l'option qui CONTIENT le libellé visé — la bonne réponse dans la passe des
+   distracteurs (« 1/12 » au lieu de 0), un distracteur dans celle des bonnes (« 11/12 »).
+   Les deux pages par défaut n'ont aucune de ces paires : le défaut ne se voyait pas. */
 function sonde(justes) {
   return "(function () {" +
     " var bloc = document.querySelector('script[data-quiz-bilan]');" +
     " if (!bloc) return { erreur: 'aucun bloc data-quiz-bilan' };" +
     " var data = JSON.parse(bloc.textContent);" +
     /* justes = true  -> le libellé de la bonne réponse
-       justes = false -> celui d'un distracteur, le premier qui n'est pas la bonne */
-    " var vise = data.map(function (q) { return " + (justes ? "q.a[q.correct]" : "q.a[(q.correct + 1) % q.a.length]") + "; });" +
+       justes = false -> celui d'un distracteur, le premier qui n'est pas la bonne
+       (`correct` absent vaut 0, comme dans lecon.js) */
+    " var vise = data.map(function (q) { var c = q.correct || 0; return " + (justes ? "q.a[c]" : "q.a[(c + 1) % q.a.length]") + "; });" +
     " var cartes = Array.from(document.querySelectorAll('.quiz-bilan .quiz__q'));" +
     " var res = { questions: cartes.length, attendues: vise.length, cliques: 0, introuvables: [] };" +
     " cartes.forEach(function (c, i) {" +
     "   var opts = Array.from(c.querySelectorAll('button, label, li'));" +
-    "   var cible = opts.filter(function (o) { return o.textContent.replace(/\\s+/g, ' ').trim().indexOf(vise[i].replace(/\\s+/g, ' ').trim()) >= 0; })[0];" +
+    "   var cible = opts.filter(function (o) { return o.textContent.replace(/\\s+/g, ' ').trim() === String(vise[i]).replace(/\\s+/g, ' ').trim(); })[0];" +
     "   if (!cible) { res.introuvables.push(i + 1); return; }" +
     "   cible.click(); res.cliques++;" +
     " });" +
     " res.texte = document.body.textContent.replace(/\\s+/g, ' ');" +
     " return res;" +
     "})()";
+}
+
+/* Attendre un ÉTAT, jamais une durée (V16/B5, 2026-11-11). L'outil attendait 2,6 s
+   après l'ouverture puis 2,6 s après le rechargement : joué sur les 99 bilans du site,
+   16 pages ont répondu « aucun bloc data-quiz-bilan » et 18 un témoin négatif illisible,
+   dont `maths/lecon-13`, sa propre page par défaut ; relancées, d'autres pages tombaient
+   à leur place. La page est prête quand elle est chargée ET que le bilan a rendu autant
+   de questions que son bloc en déclare ; après un rechargement, il faut en plus que ce
+   soit le NOUVEAU document (l'ancien porte une marque posée juste avant). Au-delà de
+   15 s on mesure quand même : la sonde dira ce qui manque (bloc absent, questions non
+   rendues), ce n'est jamais un « OK » par défaut. */
+var PRET = "(function () {" +
+  " if (document.readyState !== 'complete' || window.__verifBilanAncien) return false;" +
+  " var b = document.querySelector('script[data-quiz-bilan]'); if (!b) return false;" +
+  " try { return document.querySelectorAll('.quiz-bilan .quiz__q').length === JSON.parse(b.textContent).length; }" +
+  " catch (e) { return false; } })()";
+async function attendrePret(cdp) {
+  for (var k = 0; k < 150; k++) {
+    if (await cdp.evaluer(PRET)) return true;
+    await attendre(100);
+  }
+  return false;
 }
 
 /* Le score affiché, lu dans le texte de la page, pour un dénominateur donné. */
@@ -142,12 +175,13 @@ function scoreLu(texte, sur) {
     }
     if (!cible) { proc.kill(); console.log('  ' + page + ' : Chrome n a pas ouvert la page'); pbs++; continue; }
     var cdp = connecter(cible.webSocketDebuggerUrl);
-    await attendre(2600);
+    await cdp.ouvert;
+    await attendrePret(cdp);
     var vu = await cdp.evaluer(sonde(true));
 
     /* Passe inverse : on recharge, et on coche un distracteur partout. */
-    await cdp.evaluer('localStorage.clear(); location.reload(); "rechargé"');
-    await attendre(2600);
+    await cdp.evaluer('window.__verifBilanAncien = true; localStorage.clear(); location.reload(); "rechargé"');
+    await attendrePret(cdp);
     var faux = await cdp.evaluer(sonde(false));
 
     proc.kill();
