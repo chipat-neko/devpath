@@ -872,8 +872,8 @@ if (flag("mutations")) {
        regression historique sur une vraie etape `sautable` : avant ce point, un
        code 2 y etait converti en 0 et la chaine annoncait « tout est vert » pour
        une etape qui n'avait rien regarde. */
-    { nom: "verdict ", fichier: "verif-verdict-mutations.js", vues: "6 / 6" },
-    { nom: "mth-chif", fichier: "maths/module-5/verif-chiffres-mutations.js", vues: "toutes" },
+    { nom: "verdict ", fichier: "verif-verdict-mutations.js", vues: "9 / 9" },
+    { nom: "mth-chif", fichier: "maths/module-5/verif-chiffres-mutations.js", vues: "5 / 5" },
     /* 7 depuis B4 : le 7e cas eprouve « l'incise entre parentheses », entree dans
        EXPLOITABLES le 2026-09-04. Une branche de verificateur que rien n'eprouve
        ne vaut pas mieux qu'un verificateur absent. */
