@@ -26,13 +26,13 @@
      node tools/verif.js --rapide   # 53 etapes, ~200 s : tout ce qui coute 10 s ou moins,
                                     #   plus les controles de fond ; il IMPRIME les etapes
                                     #   qu'il ne joue pas (voir l'arbitrage plus bas)
-     node tools/verif.js --complet  # 81 etapes, plusieurs heures : le rendu balaie 256 pages,
+     node tools/verif.js --complet  # 82 etapes, plusieurs heures : le rendu balaie 256 pages,
                                     #   la fraicheur est lue A L'AFFICHAGE, les verificateurs
                                     #   sont mis a l epreuve par des fautes injectees, et le
                                     #   bouton « Tester » est clique sur 75 pages
      node tools/verif.js --strict   # 71 etapes, code 1 des qu'un outil signale quoi que ce soit
      node tools/verif.js --lister   # la liste des etapes du mode demande, sans rien lancer
-     node tools/verif.js --mutations  # les 16 epreuves par injection, et rien d'autre : elles
+     node tools/verif.js --mutations  # les 17 epreuves par injection, et rien d'autre : elles
                                     #   MODIFIENT des fichiers avant de les restaurer, et le mode
                                     #   verifie lui-meme que le depot ressort comme il est entre
 
@@ -709,7 +709,7 @@ if (!RAPIDE) {
     nom: "sanschr",
     fichier: "preuves/chrome-absent.js",
     args: [],
-    quoi: "sans Chrome, les 30 outils qui le pilotent disent-ils NON MESURE plutot que OK",
+    quoi: "sans Chrome, les 31 outils qui le pilotent disent-ils NON MESURE plutot que OK",
   });
 }
 /* ⚠️ LA SEULE ETAPE QUI JUGE LES AUTRES, et elle n'est jouee qu'en mode --complet
@@ -813,6 +813,25 @@ if (COMPLET) {
     lent: true,
     pourquoiLent: "il ouvre 75 pages dans Chrome, une par une",
   });
+  /* LES QCM DU SITE JOUÉS POUR DE VRAI (point A1 du chantier V18). Aucun mode ne jouait un
+     QCM de leçon : `mth-bil` ne joue que deux bilans de maths et ne lit pas le stockage. La
+     sonde écrite au B5 du V16 était restée hors du dépôt. Pour chaque bloc data-quiz et
+     data-quiz-bilan, dans Chrome, en file:// et DNS coupé : un score d'avant semé puis relu,
+     les bonnes réponses cochées par leur TEXTE (N / N exigé, et {best: N, total: N} dans
+     syntaxe-quiz), le score parfait relu après rechargement, puis un distracteur partout
+     (0 / N et toutes les questions notées ratées) ; aucune option affichée en double, aucune
+     exception. Son épreuve par injection (`preuves/joue-qcm-mutations.js`, dans
+     `--mutations`) pose dix fautes dans le moteur et ses données : dix vues. Passe mesurée
+     le 2026-11-11 : 1 540 pages, 1 639 QCM, 6 167 questions, 0 défaut, 2 806,8 s avec
+     4 Chrome sur une machine chargée par d'autres sondes ; ici elle tourne avec 6. */
+  ETAPES.push({
+    nom: "joueqcm",
+    fichier: "preuves/joue-qcm.js",
+    args: [],
+    quoi: "chaque QCM du site joué dans Chrome : bonnes réponses comptées, score enregistré et relu, 0 / N noté",
+    lent: true,
+    pourquoiLent: "il ouvre un Chrome par page à QCM et joue chaque question deux fois",
+  });
 }
 
 /* =========================================================================== *
@@ -886,6 +905,12 @@ if (flag("mutations")) {
        indice JSON, commentaire) doivent le laisser VERT. Avant la correction de la sonde,
        elle rendait 10 / 13 : la sonde ne voyait aucune des trois <link>. 150,3 et 154,2 s. */
     { nom: "domaine ", fichier: "verif-domaines-interdits-mutations.js", vues: "13 / 13" },
+    /* Ajoutée le 2026-11-11 (point A1 du V18) avec la sonde qui joue les QCM. Dix fautes, dont
+       les trois du plan : une bonne réponse qui ne compte pas, un score qui ne s'enregistre pas
+       dans syntaxe-quiz, une option en double. Chaque faute doit rougir la sonde EN NOMMANT la
+       faute visée ; deux distracteurs identiques dans les données, que la sonde de B5 n'aurait
+       pas vus, en font partie. Durée mesurée : 114,5 à 302,3 s selon la charge de la machine. */
+    { nom: "joueqcm ", fichier: "preuves/joue-qcm-mutations.js", vues: "10 / 10" },
     { nom: "git-mod ", fichier: "verif-git-modele-mutations.js", vues: "29 / 29" },
     { nom: "git-graf", fichier: "verif-git-graphe-mutations.js", vues: "29 / 29" },
     { nom: "git-scen", fichier: "verif-git-scenarios-mutations.js", vues: "30 / 30" },

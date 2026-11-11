@@ -82,7 +82,10 @@ var CIBLES = [
   { f: "preuves/exos-texte.js", args: ["pages/python/lecon-01.html"] },
   { f: "preuves/python-lecon.js", args: ["pages/python/lecon-01.html"] },
   { f: "preuves/sql-lecon.js", args: ["pages/sql/lecon-01.html"] },
-  { f: "preuves/sonde-clic-reseau.js", args: ["pages/js/lecon-24.html#8"] }
+  { f: "preuves/sonde-clic-reseau.js", args: ["pages/js/lecon-24.html#8"] },
+  /* Point A1 du V18 : la sonde qui joue les QCM. Une page suffit ; sans Chrome elle doit
+     sortir en 2 avant d'en ouvrir aucune. */
+  { f: "preuves/joue-qcm.js", args: ["--pages=pages/js/lecon-01.html"] }
 ];
 
 /* -------------------------------------------------- le lanceur qui aveugle fs */
