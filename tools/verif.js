@@ -32,7 +32,7 @@
                                     #   bouton « Tester » est clique sur 75 pages
      node tools/verif.js --strict   # 71 etapes, code 1 des qu'un outil signale quoi que ce soit
      node tools/verif.js --lister   # la liste des etapes du mode demande, sans rien lancer
-     node tools/verif.js --mutations  # les 16 epreuves par injection, et rien d'autre : elles
+     node tools/verif.js --mutations  # les 17 epreuves par injection, et rien d'autre : elles
                                     #   MODIFIENT des fichiers avant de les restaurer, et le mode
                                     #   verifie lui-meme que le depot ressort comme il est entre
 
@@ -869,6 +869,18 @@ if (flag("mutations")) {
     { nom: "git-mod ", fichier: "verif-git-modele-mutations.js", vues: "29 / 29" },
     { nom: "git-graf", fichier: "verif-git-graphe-mutations.js", vues: "29 / 29" },
     { nom: "git-scen", fichier: "verif-git-scenarios-mutations.js", vues: "30 / 30" },
+    /* Ajoutée le 2026-11-11 (chantier V18, point A2). C'était le script de travail du point D2
+       du V16 (9 / 9 en 455 s, hors du dépôt, lancé par rien). Elle casse dans `js/lecon.js` les
+       encarts du décodeur et du bac à sable Git, et exige que `preuves/decodeur-lecons.js` ou
+       `preuves/git-graphe.js` NOMME la faute : un code 1 sans le message attendu ne compte pas,
+       car les deux preuves rougissent aussi sans faute quand la machine est chargée (le pilote du
+       bac à sable lit son formulaire 400 ms après la navigation : point A5 ; le décodeur n'attend
+       un encart que 5 s). Jusqu'à 5 tentatives par témoin et par faute ; un témoin rouge 5 fois
+       de suite la fait sortir en 2 (NON MESURE), jamais en 0. Fautes posées à sec sur LF et CRLF
+       avant tout lancement. Mesures, lancée directement pendant que cinq autres agents faisaient
+       tourner Chrome : 6 passages complets, 5 à 9 / 9 (de 615,5 à 818,3 s, dont un sur
+       `js/lecon.js` en CRLF), 1 en code 2 (témoin `git-graphe` rouge 5 fois sur la course A5). */
+    { nom: "encarts ", fichier: "preuves/encarts-decodeur-git-mutations.js", vues: "9 / 9" },
     { nom: "vexec   ", fichier: "verif-execution-mutations.js", vues: "12 / 12" },
     /* `minutes` : un plafond PROPRE, plancher du plafond commun (`--minutes=N` ne peut que le
        relever). Ajoute le 2026-11-11 (F1 du V16) apres mesure : `git-cmd` rend 57 / 57 en
