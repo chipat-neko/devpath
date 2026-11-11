@@ -1803,15 +1803,72 @@
      Une leçon qui enseigne une notion dont l'erreur est fréquente doit le dire, et
      mener au décodeur. La liste vient de `js/erreurs-index.js`, un index DÉRIVÉ du
      fichier de données et chargé par les seules leçons concernées (31 sur 1 523) : le
-     reste du site ne charge rien. Sans cet index, la fonction ne fait rien du tout. */
+     reste du site ne charge rien. Sans cet index, la fonction ne fait rien du tout —
+     sauf pour les leçons de la table qui suit. */
+
+  /* LES LEÇONS QUI ÉCRIVENT UN MESSAGE SANS ÊTRE CELLE QUE LE DÉCODEUR CITE
+     (chantier V16, point D2). L'index ne connaît qu'UNE leçon par erreur : celle
+     qui enseigne la notion. Mesuré par le corps : 35 autres leçons écrivent un
+     message que le décodeur reconnaît (par son propre motif) sans y mener. Lues
+     une à une, 13 le font dans une section qui en parle vraiment, pour la cause
+     que la fiche donne : elles sont ici. Écartées : un message d'un autre langage
+     au texte identique (Ruby, Perl, Lua, C), ou une cause que la fiche ne
+     connaît pas (récursion finie mais trop profonde, variable locale lue hors de
+     sa fonction, `document` dans Node…) — un lien vers le mauvais remède vaut
+     moins que pas de lien. Décisions et raisons : `en-cours/rapports-v16/d.md`.
+     Ces pages ne chargent pas l'index : la table est ici, sur le modèle du
+     visualiseur plus bas, et les gabarits y sont RECOPIÉS. Elle ne joue que si
+     l'index ne connaît pas la leçon. `tools/preuves/decodeur-lecons.js` exige
+     que chaque gabarit soit celui de `js/erreurs-data.js`, qu'aucune de ces
+     leçons ne soit aussi dans l'index, puis ouvre chacune dans Chrome.
+     ⚠️ JSON strict dans les deux tables (clés entre guillemets, ni virgule finale
+     ni commentaire) : l'outil les lit avec JSON.parse. */
+  var DECODEUR_AUSSI = {
+    "algo/lecon-08": ["js-undefined-prop"],
+    "bash/lecon-06": ["sh-unbound"],
+    "bash/lecon-12": ["sh-fin-de-fichier"],
+    "compilation/lecon-01": ["js-parenthese", "js-undefined-prop"],
+    "compilation/lecon-02": ["js-not-defined", "js-undefined-prop", "js-const", "js-deja-declaree"],
+    "compilation/lecon-08": ["js-stack"],
+    "doc/lecon-02": ["js-not-defined", "js-undefined-prop", "js-not-a-function", "js-const", "js-not-iterable", "js-stack", "js-json-simple", "js-tofixed"],
+    "doc/lecon-04": ["js-undefined-prop", "js-not-a-function"],
+    "js/lecon-06": ["js-tdz"],
+    "js/lecon-30": ["js-undefined-prop"],
+    "maths/lecon-03": ["js-undefined-prop"],
+    "patterns/lecon-04": ["js-stack"],
+    "typescript/lecon-19": ["js-map-objet"]
+  };
+  var GABARITS_DECODEUR = {
+    "js-const": "TypeError: Assignment to constant variable.",
+    "js-deja-declaree": "SyntaxError: Identifier '…' has already been declared",
+    "js-json-simple": "SyntaxError: Expected property name or '}' in JSON at position … (line … column …)",
+    "js-map-objet": "TypeError: ….map is not a function",
+    "js-not-a-function": "TypeError: ….… is not a function",
+    "js-not-defined": "ReferenceError: … is not defined",
+    "js-not-iterable": "TypeError: … is not iterable",
+    "js-parenthese": "SyntaxError: missing ) after argument list",
+    "js-stack": "RangeError: Maximum call stack size exceeded",
+    "js-tdz": "ReferenceError: Cannot access '…' before initialization",
+    "js-tofixed": "RangeError: toFixed() digits argument must be between 0 and 100",
+    "js-undefined-prop": "TypeError: Cannot read properties of undefined (reading '…')",
+    "sh-fin-de-fichier": "syntax error: unexpected end of file from `…' command on line …",
+    "sh-unbound": "…: unbound variable"
+  };
+
   function initDecodeur() {
-    var index = window.ERREURS_INDEX;
-    if (!index) return;
     /* La clé est le chemin de la leçon relatif à `pages/` — « js/lecon-02.html ». On le
        reconstruit depuis l'URL courante plutôt que de l'inscrire dans chaque page. */
     var parts = location.pathname.split("/").filter(Boolean);
     var cle = parts.slice(-2).join("/");
-    var liste = index[cle];
+    var index = window.ERREURS_INDEX;
+    var liste = index ? index[cle] : null;
+    /* Hors de l'index : la table D2. Une leçon que l'index connaît ne change donc pas de
+       comportement — `tools/preuves/decodeur-lecons.js` le vérifie en vidant l'index de
+       force sur une leçon citée : l'encart doit disparaître. */
+    if (!liste || !liste.length) {
+      var ids = DECODEUR_AUSSI[cle.replace(/\.html$/, "")];
+      liste = ids ? ids.map(function (id) { return { id: id, gabarit: GABARITS_DECODEUR[id] || id }; }) : null;
+    }
     if (!liste || !liste.length) return;
     var prose = document.querySelector(".prose");
     if (!prose) return;
@@ -1868,10 +1925,29 @@
     "un-seul-commit": "Tu ne veux qu'UN commit d'une autre branche"
   };
 
+  /* LE BAC À SABLE HORS DU COURS `git` (chantier V16, point D2). Mesuré par le
+     corps : 15 leçons d'autres cours écrivent une commande que le bac à sable
+     exécute. 2 l'enseignent vraiment ; les 13 autres la citent comme exemple
+     (les sous-commandes d'un outil en ligne de commande, l'algorithme de diff)
+     ou s'appuient sur ce qu'il ne simule pas (blame, push, demande de fusion).
+     Pas de situation guidée pour elles : aucune ne reprend ce qu'elles
+     expliquent. Hors du cours, l'encart dit ce que le bac à sable fait et ne
+     fait pas — ces leçons enseignent aussi `git push` — et les deux listes qui
+     forment cette phrase sont confrontées au vrai dictionnaire des commandes
+     (`js/git-commandes.js`) par `tools/preuves/git-graphe.js`, qui ouvre aussi
+     chacune de ces leçons dans Chrome. */
+  var BAC_GIT_AILLEURS = ["vscode/lecon-04", "equipe/lecon-07"];
+  var BAC_GIT_EXECUTE = ["add", "commit", "status", "log", "diff", "branch", "switch", "merge", "rebase", "reset", "revert"];
+  var BAC_GIT_NE_SIMULE_PAS = ["push", "pull", "clone", "blame", "bisect"];
+
   function initBacGit() {
     var parts = location.pathname.split("/").filter(Boolean);
-    if (parts.length < 2 || parts[parts.length - 2] !== "git") return;
-    if (!/^lecon-/.test(parts[parts.length - 1])) return;
+    if (parts.length < 2) return;
+    var cours = parts[parts.length - 2];
+    var lecon = parts[parts.length - 1].replace(/\.html$/, "");
+    var ailleurs = cours !== "git" && BAC_GIT_AILLEURS.indexOf(cours + "/" + lecon) !== -1;
+    if (cours !== "git" && !ailleurs) return;
+    if (!/^lecon-/.test(lecon)) return;
     var prose = document.querySelector(".prose");
     if (!prose || prose.querySelector(".lesson-bac-git")) return;
     var box = document.createElement("aside");
@@ -1883,12 +1959,22 @@
       + "Ouvrir le bac à sable Git →</a></p>"
       + "<p>Un vrai dépôt, dans cette page&nbsp;: les empreintes sont calculées comme "
       + "Git les calcule, et le graphe se redessine à chaque commande.</p>";
+    if (ailleurs) {
+      var limites = document.createElement("p");
+      limites.textContent = "Il exécute les commandes locales (" + BAC_GIT_EXECUTE.join(", ")
+        + "…). En revanche, il n'a pas de dépôt distant, et "
+        + BAC_GIT_NE_SIMULE_PAS.slice(0, -1).join(", ") + " et "
+        + BAC_GIT_NE_SIMULE_PAS[BAC_GIT_NE_SIMULE_PAS.length - 1] + " n'y sont pas simulés.";
+      box.appendChild(limites);
+    }
 
     /* ⚠️ Les liens vers les SITUATIONS sont construits en DOM, pas en innerHTML :
        le titre vient d'une table, et le jour où quelqu'un y écrira un chevron,
        il doit rester un chevron. Le lien porte l'ancre `#scenario-<id>`, que
-       `js/git-bac.js` lit au chargement pour ouvrir la situation directement. */
-    var lies = SCENARIOS_GIT[parts[parts.length - 1].replace(/\.html$/, "")] || [];
+       `js/git-bac.js` lit au chargement pour ouvrir la situation directement.
+       Hors du cours `git`, aucune situation : la table SCENARIOS_GIT est indexée
+       par leçon DU COURS, et `lecon-07` d'un autre cours n'est pas `git/lecon-07`. */
+    var lies = ailleurs ? [] : (SCENARIOS_GIT[lecon] || []);
     if (lies.length) {
       var intro = document.createElement("p");
       intro.className = "lesson-erreurs__titre";
