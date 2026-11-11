@@ -1803,15 +1803,72 @@
      Une leçon qui enseigne une notion dont l'erreur est fréquente doit le dire, et
      mener au décodeur. La liste vient de `js/erreurs-index.js`, un index DÉRIVÉ du
      fichier de données et chargé par les seules leçons concernées (31 sur 1 523) : le
-     reste du site ne charge rien. Sans cet index, la fonction ne fait rien du tout. */
+     reste du site ne charge rien. Sans cet index, la fonction ne fait rien du tout —
+     sauf pour les leçons de la table qui suit. */
+
+  /* LES LEÇONS QUI ÉCRIVENT UN MESSAGE SANS ÊTRE CELLE QUE LE DÉCODEUR CITE
+     (chantier V16, point D2). L'index ne connaît qu'UNE leçon par erreur : celle
+     qui enseigne la notion. Mesuré par le corps : 35 autres leçons écrivent un
+     message que le décodeur reconnaît (par son propre motif) sans y mener. Lues
+     une à une, 13 le font dans une section qui en parle vraiment, pour la cause
+     que la fiche donne : elles sont ici. Écartées : un message d'un autre langage
+     au texte identique (Ruby, Perl, Lua, C), ou une cause que la fiche ne
+     connaît pas (récursion finie mais trop profonde, variable locale lue hors de
+     sa fonction, `document` dans Node…) — un lien vers le mauvais remède vaut
+     moins que pas de lien. Décisions et raisons : `en-cours/rapports-v16/d.md`.
+     Ces pages ne chargent pas l'index : la table est ici, sur le modèle du
+     visualiseur plus bas, et les gabarits y sont RECOPIÉS. Elle ne joue que si
+     l'index ne connaît pas la leçon. `tools/preuves/decodeur-lecons.js` exige
+     que chaque gabarit soit celui de `js/erreurs-data.js`, qu'aucune de ces
+     leçons ne soit aussi dans l'index, puis ouvre chacune dans Chrome.
+     ⚠️ JSON strict dans les deux tables (clés entre guillemets, ni virgule finale
+     ni commentaire) : l'outil les lit avec JSON.parse. */
+  var DECODEUR_AUSSI = {
+    "algo/lecon-08": ["js-undefined-prop"],
+    "bash/lecon-06": ["sh-unbound"],
+    "bash/lecon-12": ["sh-fin-de-fichier"],
+    "compilation/lecon-01": ["js-parenthese", "js-undefined-prop"],
+    "compilation/lecon-02": ["js-not-defined", "js-undefined-prop", "js-const", "js-deja-declaree"],
+    "compilation/lecon-08": ["js-stack"],
+    "doc/lecon-02": ["js-not-defined", "js-undefined-prop", "js-not-a-function", "js-const", "js-not-iterable", "js-stack", "js-json-simple", "js-tofixed"],
+    "doc/lecon-04": ["js-undefined-prop", "js-not-a-function"],
+    "js/lecon-06": ["js-tdz"],
+    "js/lecon-30": ["js-undefined-prop"],
+    "maths/lecon-03": ["js-undefined-prop"],
+    "patterns/lecon-04": ["js-stack"],
+    "typescript/lecon-19": ["js-map-objet"]
+  };
+  var GABARITS_DECODEUR = {
+    "js-const": "TypeError: Assignment to constant variable.",
+    "js-deja-declaree": "SyntaxError: Identifier '…' has already been declared",
+    "js-json-simple": "SyntaxError: Expected property name or '}' in JSON at position … (line … column …)",
+    "js-map-objet": "TypeError: ….map is not a function",
+    "js-not-a-function": "TypeError: ….… is not a function",
+    "js-not-defined": "ReferenceError: … is not defined",
+    "js-not-iterable": "TypeError: … is not iterable",
+    "js-parenthese": "SyntaxError: missing ) after argument list",
+    "js-stack": "RangeError: Maximum call stack size exceeded",
+    "js-tdz": "ReferenceError: Cannot access '…' before initialization",
+    "js-tofixed": "RangeError: toFixed() digits argument must be between 0 and 100",
+    "js-undefined-prop": "TypeError: Cannot read properties of undefined (reading '…')",
+    "sh-fin-de-fichier": "syntax error: unexpected end of file from `…' command on line …",
+    "sh-unbound": "…: unbound variable"
+  };
+
   function initDecodeur() {
-    var index = window.ERREURS_INDEX;
-    if (!index) return;
     /* La clé est le chemin de la leçon relatif à `pages/` — « js/lecon-02.html ». On le
        reconstruit depuis l'URL courante plutôt que de l'inscrire dans chaque page. */
     var parts = location.pathname.split("/").filter(Boolean);
     var cle = parts.slice(-2).join("/");
-    var liste = index[cle];
+    var index = window.ERREURS_INDEX;
+    var liste = index ? index[cle] : null;
+    /* Hors de l'index : la table D2. Une leçon que l'index connaît ne change donc pas de
+       comportement — `tools/preuves/decodeur-lecons.js` le vérifie en vidant l'index de
+       force sur une leçon citée : l'encart doit disparaître. */
+    if (!liste || !liste.length) {
+      var ids = DECODEUR_AUSSI[cle.replace(/\.html$/, "")];
+      liste = ids ? ids.map(function (id) { return { id: id, gabarit: GABARITS_DECODEUR[id] || id }; }) : null;
+    }
     if (!liste || !liste.length) return;
     var prose = document.querySelector(".prose");
     if (!prose) return;
@@ -1868,10 +1925,29 @@
     "un-seul-commit": "Tu ne veux qu'UN commit d'une autre branche"
   };
 
+  /* LE BAC À SABLE HORS DU COURS `git` (chantier V16, point D2). Mesuré par le
+     corps : 15 leçons d'autres cours écrivent une commande que le bac à sable
+     exécute. 2 l'enseignent vraiment ; les 13 autres la citent comme exemple
+     (les sous-commandes d'un outil en ligne de commande, l'algorithme de diff)
+     ou s'appuient sur ce qu'il ne simule pas (blame, push, demande de fusion).
+     Pas de situation guidée pour elles : aucune ne reprend ce qu'elles
+     expliquent. Hors du cours, l'encart dit ce que le bac à sable fait et ne
+     fait pas — ces leçons enseignent aussi `git push` — et les deux listes qui
+     forment cette phrase sont confrontées au vrai dictionnaire des commandes
+     (`js/git-commandes.js`) par `tools/preuves/git-graphe.js`, qui ouvre aussi
+     chacune de ces leçons dans Chrome. */
+  var BAC_GIT_AILLEURS = ["vscode/lecon-04", "equipe/lecon-07"];
+  var BAC_GIT_EXECUTE = ["add", "commit", "status", "log", "diff", "branch", "switch", "merge", "rebase", "reset", "revert"];
+  var BAC_GIT_NE_SIMULE_PAS = ["push", "pull", "clone", "blame", "bisect"];
+
   function initBacGit() {
     var parts = location.pathname.split("/").filter(Boolean);
-    if (parts.length < 2 || parts[parts.length - 2] !== "git") return;
-    if (!/^lecon-/.test(parts[parts.length - 1])) return;
+    if (parts.length < 2) return;
+    var cours = parts[parts.length - 2];
+    var lecon = parts[parts.length - 1].replace(/\.html$/, "");
+    var ailleurs = cours !== "git" && BAC_GIT_AILLEURS.indexOf(cours + "/" + lecon) !== -1;
+    if (cours !== "git" && !ailleurs) return;
+    if (!/^lecon-/.test(lecon)) return;
     var prose = document.querySelector(".prose");
     if (!prose || prose.querySelector(".lesson-bac-git")) return;
     var box = document.createElement("aside");
@@ -1883,12 +1959,22 @@
       + "Ouvrir le bac à sable Git →</a></p>"
       + "<p>Un vrai dépôt, dans cette page&nbsp;: les empreintes sont calculées comme "
       + "Git les calcule, et le graphe se redessine à chaque commande.</p>";
+    if (ailleurs) {
+      var limites = document.createElement("p");
+      limites.textContent = "Il exécute les commandes locales (" + BAC_GIT_EXECUTE.join(", ")
+        + "…). En revanche, il n'a pas de dépôt distant, et "
+        + BAC_GIT_NE_SIMULE_PAS.slice(0, -1).join(", ") + " et "
+        + BAC_GIT_NE_SIMULE_PAS[BAC_GIT_NE_SIMULE_PAS.length - 1] + " n'y sont pas simulés.";
+      box.appendChild(limites);
+    }
 
     /* ⚠️ Les liens vers les SITUATIONS sont construits en DOM, pas en innerHTML :
        le titre vient d'une table, et le jour où quelqu'un y écrira un chevron,
        il doit rester un chevron. Le lien porte l'ancre `#scenario-<id>`, que
-       `js/git-bac.js` lit au chargement pour ouvrir la situation directement. */
-    var lies = SCENARIOS_GIT[parts[parts.length - 1].replace(/\.html$/, "")] || [];
+       `js/git-bac.js` lit au chargement pour ouvrir la situation directement.
+       Hors du cours `git`, aucune situation : la table SCENARIOS_GIT est indexée
+       par leçon DU COURS, et `lecon-07` d'un autre cours n'est pas `git/lecon-07`. */
+    var lies = ailleurs ? [] : (SCENARIOS_GIT[lecon] || []);
     if (lies.length) {
       var intro = document.createElement("p");
       intro.className = "lesson-erreurs__titre";
@@ -1931,12 +2017,37 @@
      la syntaxe diffère, le mécanisme est le même. Une leçon Pascal qui
      renverrait vers du JavaScript sans le dire serait un piège.
 
+     CE QUE LE CHANTIER V16 (POINT D1) A AJOUTÉ, ET COMMENT
+     Deux mesures se contredisaient : B6 avait choisi par le TITRE (42
+     leçons), le bilan F5 du V15 comptait le CORPS (« pile d'appels » dans
+     48 leçons, dont 41 sans lien). Elles ne portaient pas sur le même
+     ensemble — 9 leçons seulement en commun. Réconciliées, elles donnaient
+     69 candidates, toutes lues ; une mesure par densité dans le corps
+     (fermetures, boucle d'événements, portée, récursion) en a donné 84
+     autres. Règle appliquée : le CORPS doit traiter, dans une section, ce
+     que l'exemple montre, et le langage doit avoir le même mécanisme pour ce
+     qu'il montre. Restent écartées, entre autres : les exceptions qui
+     remontent la pile (aucun exemple ne le montre), les traces affichées par
+     un outil (débogueur, profileur), la récursion terminale optimisée
+     (JavaScript ne l'a pas : l'exemple dirait le contraire de la leçon), et
+     l'asynchrone à threads ou à coroutines. Décisions et raisons :
+     `en-cours/rapports-v16/d.md`.
+
+     FAMILLE_JS liste les cours dont le CODE est du JavaScript, et pas
+     seulement ceux qui l'enseignent : `algo` et `compilation` écrivent tout
+     leur code en JavaScript, et la leçon de débogage de `vscode` débogue du
+     JavaScript. Avant D1, l'encart de `algo/lecon-02` et de
+     `compilation/lecon-08` leur affirmait que « la syntaxe diffère de ce
+     cours » : c'était faux.
+
      ⚠️ Les titres des exemples sont recopiés ici (comme SCENARIOS_GIT plus
      haut) : une leçon ne charge pas `js/execution-exemples.js` pour trois
      libellés. `tools/verif-execution-liens.js` exige que cette table et le
      fichier des exemples coïncident, sinon une leçon renverrait vers un
-     exemple qui n'existe plus — et la page s'ouvrirait très bien quand même. */
-  var FAMILLE_JS = ["js", "js-avance", "javascript", "nodejs", "typescript", "react", "vue", "projets-js"];
+     exemple qui n'existe plus — et la page s'ouvrirait très bien quand même.
+     ⚠️ Pas de commentaire DANS les deux tables : cet outil les lit comme du
+     JSON. */
+  var FAMILLE_JS = ["js", "js-avance", "javascript", "nodejs", "typescript", "react", "vue", "projets-js", "algo", "compilation", "vscode"];
 
   var VISUALISEUR = {
     "js/lecon-12": ["async-ordre", "async-await"],
@@ -1957,7 +2068,31 @@
     "perl/lecon-07": ["portee-chainee", "portee-bloc"],
     "swift/lecon-04": ["fermeture-compteur", "portee-chainee"],
     "dart/lecon-04": ["fermeture-compteur", "portee-chainee"],
-    "groovy/lecon-04": ["fermeture-compteur", "let-vs-var"]
+    "groovy/lecon-04": ["fermeture-compteur", "let-vs-var"],
+    "js/lecon-06": ["fonctions", "portee-bloc"],
+    "js/lecon-30": ["fonctions", "statistiques"],
+    "js/lecon-34": ["async-ordre", "async-microtaches-dabord", "async-minuteurs"],
+    "js/lecon-49": ["fermeture-compteur"],
+    "js/lecon-51": ["fermeture-compteur"],
+    "js/lecon-63": ["async-rejet"],
+    "algo/lecon-08": ["factorielle"],
+    "algo/lecon-10": ["arbre"],
+    "algo/lecon-12": ["arbre"],
+    "algo/lecon-14": ["fibonacci"],
+    "compilation/lecon-10": ["arbre"],
+    "vscode/lecon-06": ["fonctions"],
+    "c/lecon-04": ["fonctions", "factorielle", "recursion-sans-fin"],
+    "asm/lecon-04": ["fonctions", "factorielle"],
+    "ocaml/lecon-03": ["recursion-somme", "recursion-sans-fin"],
+    "dart/lecon-07": ["async-ordre", "async-microtaches-dabord", "async-await"],
+    "go/lecon-02": ["fermeture-compteur"],
+    "lua/lecon-08": ["fermeture-compteur"],
+    "lua/lecon-14": ["fermeture-compteur"],
+    "lua/lecon-16": ["fermeture-compteur"],
+    "lisp/lecon-06": ["fermeture-compteur"],
+    "lisp/lecon-07": ["portee-chainee"],
+    "lisp/lecon-09": ["fermeture-compteur"],
+    "lisp/lecon-12": ["fermeture-compteur"]
   };
 
   var TITRES_VISUALISEUR = {
@@ -1971,12 +2106,15 @@
     "async-then-promesse": "Le piège : rendre une promesse dans un then",
     "factorielle": "Factorielle : la pile monte, puis redescend",
     "fermeture-compteur": "Une fermeture : la variable survit à la fonction",
+    "fibonacci": "Fibonacci : le même calcul, refait encore et encore",
+    "fonctions": "Une fonction qui en appelle une autre",
     "hanoi": "Les tours de Hanoï",
     "let-vs-var": "Le piège : `var` dans une boucle",
     "portee-bloc": "Un bloc, une portée",
     "portee-chainee": "Où un nom est-il cherché ?",
     "recursion-somme": "La récursivité la plus simple",
     "recursion-sans-fin": "Quand la récursivité ne s'arrête pas",
+    "statistiques": "Un programme plus long que l'écran",
     "this-impose": "Imposer `this` avec call, apply et bind",
     "this-methode": "`this` : méthode, fonction nue, fonction fléchée",
     "zone-morte": "Utiliser une variable avant de la déclarer"
@@ -2019,8 +2157,11 @@
     var p = document.createElement("p");
     if (FAMILLE_JS.indexOf(cours) === -1) {
       p.className = "lesson-vex__note";
+      /* Formulée pour TOUTES les leçons reliées hors JavaScript : depuis D1, elles
+         vont de l'assembleur (des cadres, aucune portée) à la boucle d'événements
+         de Dart. On ne promet donc que ce qui a été vérifié leçon par leçon. */
       p.textContent = "Le visualiseur exécute du JavaScript : la syntaxe diffère de ce cours, "
-        + "le mécanisme est le même — la pile d'appels et les portées se comportent de la même façon.";
+        + "mais le mécanisme que montrent ces exemples est le même.";
     } else {
       p.textContent = "La pile d'appels, les variables de chaque portée et ce qui a été affiché, "
         + "à chaque pas. On avance, on recule, on recommence.";

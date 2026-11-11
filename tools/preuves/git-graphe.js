@@ -18,7 +18,8 @@
      · la case « commits abandonnes » les fait reapparaitre apres un
        `reset --hard` qui les a rendus inatteignables ;
      · l'encart des 24 lecons du cours `git` existe, une seule fois, et son lien
-       RELATIF mene a un fichier qui existe ;
+       RELATIF mene a un fichier qui existe ; de meme pour les lecons d'autres
+       cours que la table BAC_GIT_AILLEURS de js/lecon.js y ajoute (V16, D2) ;
      · ZERO requete distante.
 
    Usage : node tools/preuves/git-graphe.js
@@ -221,13 +222,46 @@ function volet(page, attendu) {
   return { page: page, encarts: v.encarts, href: v.href, problemes: pb };
 }
 
+/* Depuis le chantier V16 (point D2), l'encart sort du cours `git` pour les lecons de la
+   table BAC_GIT_AILLEURS de js/lecon.js. La liste est LUE dans le fichier, pas recopiee
+   ici : une lecon ajoutee a la table est ouverte au passage suivant, sans qu'on y pense. */
+var AILLEURS = [], soucisTable = [];
+(function () {
+  var src = fs.readFileSync(path.join(RACINE, "js", "lecon.js"), "utf8");
+  var m = /var BAC_GIT_AILLEURS = (\[[^\]]*\]);/.exec(src);
+  if (!m) { soucisTable.push("js/lecon.js ne declare pas BAC_GIT_AILLEURS"); return; }
+  try { AILLEURS = JSON.parse(m[1]); } catch (e) { soucisTable.push("BAC_GIT_AILLEURS n'est pas du JSON valide"); return; }
+  AILLEURS.forEach(function (cle) {
+    if (/^git\//.test(cle)) soucisTable.push(cle + " : une lecon du cours git n'a rien a faire dans BAC_GIT_AILLEURS");
+    if (!fs.existsSync(path.join(RACINE, "pages", cle + ".html"))) soucisTable.push(cle + " : la lecon n'existe pas sur le disque");
+  });
+  /* Hors du cours, l'encart AFFIRME ce que le bac a sable execute et ce qu'il n'a pas.
+     Deux listes de js/lecon.js forment cette phrase ; on les confronte au vrai
+     dictionnaire des commandes, celui que la page charge. Le jour ou `push` y entrera,
+     la phrase deviendra fausse — et cet outil rougira. */
+  function liste(nom) {
+    var r = new RegExp("var " + nom + " = (\\[[^\\]]*\\]);").exec(src);
+    if (!r) { soucisTable.push("js/lecon.js ne declare pas " + nom); return []; }
+    try { return JSON.parse(r[1]); } catch (e) { soucisTable.push(nom + " n'est pas du JSON valide"); return []; }
+  }
+  liste("BAC_GIT_EXECUTE").forEach(function (c) {
+    if (!Object.prototype.hasOwnProperty.call(GC.commandes, c)) soucisTable.push("l'encart dit que le bac a sable execute « git " + c + " » : il ne la connait pas");
+  });
+  liste("BAC_GIT_NE_SIMULE_PAS").forEach(function (c) {
+    if (Object.prototype.hasOwnProperty.call(GC.commandes, c)) soucisTable.push("l'encart dit que « git " + c + " » n'existe pas dans le bac a sable : elle y existe");
+  });
+})();
+
 console.log("\nL'encart des lecons du cours git (pose a l'execution par js/lecon.js) :");
 var volets = [
   volet("pages/git/lecon-05.html", 1),
   volet("pages/git/lecon-24.html", 1),
   volet("pages/python/lecon-05.html", 0)
-];
-var soucis = 0;
+].concat(AILLEURS.filter(function (cle) {
+  return fs.existsSync(path.join(RACINE, "pages", cle + ".html"));
+}).map(function (cle) { return volet("pages/" + cle + ".html", 1); }));
+var soucis = soucisTable.length;
+soucisTable.forEach(function (s) { console.log("  TABLE BAC_GIT_AILLEURS → " + s); });
 volets.forEach(function (r) {
   if (r.erreur) { console.log("  " + r.page + " → ECHEC : " + r.erreur); soucis++; return; }
   console.log("  " + (r.page + "                        ").slice(0, 28)

@@ -15,6 +15,15 @@
  *   3. sur une leçon NON citée, l'encart n'apparaît PAS — sans quoi on aurait ajouté un
  *      bloc à 1 523 pages sans le vouloir.
  *
+ * DEPUIS LE CHANTIER V16 (POINT D2), une seconde source : la table DECODEUR_AUSSI de
+ * `js/lecon.js`, pour les leçons qui écrivent un message connu SANS être celle que l'index
+ * cite. Ses gabarits sont RECOPIÉS dans GABARITS_DECODEUR, comme les titres du
+ * visualiseur : on exige donc ici que chaque identifiant existe dans `js/erreurs-data.js`,
+ * que chaque gabarit recopié soit le vrai, qu'aucune de ces leçons ne soit aussi dans
+ * l'index (elle porterait deux listes), que la page existe — puis on ouvre chacune et on
+ * lit l'encart : autant d'erreurs que la table, les MÊMES libellés, un lien qui mène au
+ * décodeur. Une table recopiée qu'aucun outil ne relit se périme sans bruit.
+ *
  *   node tools/preuves/decodeur-lecons.js
  * Code de sortie 1 si une leçon manque son encart, si un lien est cassé, ou si une
  * leçon non citée en porte un.
@@ -46,8 +55,40 @@ var CITEES = Object.keys(INDEX).sort();
 var TEMOINS = ['js/lecon-03.html', 'python/lecon-10.html', 'sql/lecon-01.html']
   .filter(function (p) { return !INDEX[p] && fs.existsSync(path.join(RACINE, 'pages', p)); });
 
+/* La seconde source (V16, D2). Les deux tables sont écrites en JSON strict dans
+   js/lecon.js : on les lit sans exécuter le fichier, qui suppose un document. */
+var SRC_LECON = fs.readFileSync(path.join(RACINE, 'js', 'lecon.js'), 'utf8');
+function lireTable(nom) {
+  var i = SRC_LECON.indexOf('var ' + nom + ' = {');
+  if (i < 0) return null;
+  var j = SRC_LECON.indexOf('\n  };', i);
+  try { return JSON.parse(SRC_LECON.slice(SRC_LECON.indexOf('{', i), j + 4)); } catch (e) { return undefined; }
+}
+var DONNEES = {};
+new Function('window', fs.readFileSync(path.join(RACINE, 'js', 'erreurs-data.js'), 'utf8'))(DONNEES);
+var PAR_ID = {};
+(DONNEES.ERREURS || []).forEach(function (e) { PAR_ID[e.id] = e; });
+var AUSSI = lireTable('DECODEUR_AUSSI'), GABARITS = lireTable('GABARITS_DECODEUR');
+var fautesTable = [];
+if (AUSSI === null || GABARITS === null) fautesTable.push('js/lecon.js ne déclare pas DECODEUR_AUSSI et GABARITS_DECODEUR');
+else if (AUSSI === undefined || GABARITS === undefined) fautesTable.push('DECODEUR_AUSSI ou GABARITS_DECODEUR n\'est pas du JSON valide');
+AUSSI = AUSSI || {}; GABARITS = GABARITS || {};
+var LIEES = Object.keys(AUSSI).sort();
+LIEES.forEach(function (cle) {
+  if (INDEX[cle + '.html']) fautesTable.push(cle + ' : déjà dans l\'index du décodeur, la table lui ajouterait une seconde liste');
+  if (!fs.existsSync(path.join(RACINE, 'pages', cle + '.html'))) fautesTable.push(cle + ' : la leçon n\'existe pas sur le disque');
+  if (!AUSSI[cle].length) fautesTable.push(cle + ' : aucune erreur listée');
+  AUSSI[cle].forEach(function (id) {
+    if (!PAR_ID[id]) fautesTable.push(cle + ' : « ' + id + ' » n\'est pas une erreur du décodeur');
+    else if (GABARITS[id] !== PAR_ID[id].gabarit) fautesTable.push('gabarit recopié faux pour « ' + id + ' » : « ' + GABARITS[id] + ' » au lieu de « ' + PAR_ID[id].gabarit + ' »');
+  });
+});
+Object.keys(GABARITS).forEach(function (id) {
+  if (!PAR_ID[id]) fautesTable.push('GABARITS_DECODEUR cite « ' + id + ' », qui n\'est pas une erreur du décodeur');
+});
+
 (async function () {
-  console.log('decodeur-lecons.js — ' + CITEES.length + ' leçon(s) citée(s) + ' + TEMOINS.length + ' témoin(s), file://, DNS coupé\n');
+  console.log('decodeur-lecons.js — ' + CITEES.length + ' leçon(s) citée(s) + ' + LIEES.length + ' reliée(s) hors index + ' + TEMOINS.length + ' témoin(s), file://, DNS coupé\n');
   var profilCh = path.join(RACINE, 'scratchpad', '.chrome-c4');
   portChrome.oublier(profilCh);
   var proc = cp.spawn(CHROME, ['--headless=new', '--remote-debugging-port=0', '--disable-gpu',
@@ -97,6 +138,42 @@ var TEMOINS = ['js/lecon-03.html', 'python/lecon-10.html', 'sql/lecon-01.html']
     if (!fs.existsSync(chemin)) { fautes.push(rel + ' : le lien mène à un fichier INEXISTANT (' + chemin + ')'); continue; }
     ok++;
   }
+
+  /* Les leçons de la table D2. Le sélecteur EXCLUT les encarts du visualiseur et du bac à
+     sable, qui portent aussi la classe `lesson-erreurs` : plusieurs de ces leçons ont les
+     deux, et un encart du décodeur absent laisserait sinon compter les liens de l'autre. */
+  var LIRE_AUSSI = '(function(){var b=document.querySelector(".lesson-erreurs:not(.lesson-vex):not(.lesson-bac-git)");'
+    + 'if(!b)return null;var a=b.querySelector(".lesson-erreurs__lien a");'
+    + 'return JSON.stringify({items:[].slice.call(b.querySelectorAll("li")).map(function(li){return li.textContent;}),'
+    + 'href:a?a.getAttribute("href"):"",url:a?a.href:""});})()';
+  var okAussi = 0;
+  for (var q = 0; q < LIEES.length; q++) {
+    var cleA = LIEES[q];
+    if (!fs.existsSync(path.join(RACINE, 'pages', cleA + '.html'))) continue;
+    await envoyer('Page.navigate', { url: 'file:///' + path.join(RACINE, 'pages', cleA + '.html').replace(/\\/g, '/') });
+    /* On attend la page COMPLÈTE et la note de leçon (posée par js/lecon.js juste avant
+       les encarts) : attendre l'encart lui-même rendrait l'outil incapable de constater
+       son absence. */
+    var pret = false;
+    for (var k2 = 0; k2 < 60 && !pret; k2++) {
+      await dodo(250);
+      pret = await ev('document.readyState === "complete" && !!document.querySelector(".lesson-note")');
+    }
+    var brutA = await ev(LIRE_AUSSI);
+    if (!brutA) { fautes.push(cleA + ' (hors index) : AUCUN encart du décodeur' + (pret ? '' : ' — page jamais prête en 15 s')); continue; }
+    var vuA = JSON.parse(brutA);
+    var attendusA = AUSSI[cleA].map(function (id) { return GABARITS[id]; });
+    if (JSON.stringify(vuA.items) !== JSON.stringify(attendusA)) {
+      fautes.push(cleA + ' (hors index) : l\'encart liste ' + JSON.stringify(vuA.items) + ' au lieu de ' + JSON.stringify(attendusA));
+      continue;
+    }
+    if (vuA.href !== '../decodeur.html') { fautes.push(cleA + ' (hors index) : le lien pointe vers « ' + vuA.href + ' »'); continue; }
+    var cheminA = decodeURIComponent(String(vuA.url).replace(/^file:\/\/\//, '')).replace(/\//g, path.sep);
+    if (!fs.existsSync(cheminA)) { fautes.push(cleA + ' (hors index) : le lien mène à un fichier INEXISTANT (' + cheminA + ')'); continue; }
+    okAussi++;
+  }
+  fautesTable.forEach(function (f) { fautes.push('TABLE D2 : ' + f); });
+
   var temoinsOk = 0;
   for (var j = 0; j < TEMOINS.length; j++) {
     await envoyer('Page.navigate', { url: 'file:///' + path.join(RACINE, 'pages', TEMOINS[j]).replace(/\\/g, '/') });
@@ -131,6 +208,7 @@ var TEMOINS = ['js/lecon-03.html', 'python/lecon-10.html', 'sql/lecon-01.html']
 
   console.log('--- bilan ---');
   console.log('  leçons citées avec encart juste : ' + ok + ' / ' + CITEES.length);
+  console.log('  leçons hors index (table D2)    : ' + okAussi + ' / ' + LIEES.length);
   console.log('  témoins SANS encart ni index    : ' + temoinsOk + ' / ' + TEMOINS.length);
   console.log('  index vidé de force -> pas d\'encart : ' + (logiqueOk ? 'oui' : 'NON'));
   console.log('  requêtes DISTANTES              : ' + distantes.length);
