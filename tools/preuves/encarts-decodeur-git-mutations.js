@@ -31,8 +31,11 @@
       sans aucune faute (vu sous charge, le 2026-11-11, sur un témoin).
       Pourquoi 5 : mesuré le 2026-11-11, machine chargée par cinq autres agents,
       l'intermittent a frappé 1 premier lancement sur 2 au premier passage, et 2 de
-      suite au deuxième (vert au 3e) ; un essai raté coûte 2 à 10 s. Relancer ne
-      peut pas faire passer une faute pour vue : seul son message le peut.
+      suite au deuxième (vert au 3e) ; un essai raté coûte 2 à 20 s. Même à 5, un
+      passage a pris 5 échecs de suite sur le témoin : l'épreuve sort alors en 2
+      (rien de mesuré), jamais en 0 — jusqu'à ce que la course du pilote (A5) soit
+      corrigée. Relancer ne peut pas faire passer une faute pour vue : seul son
+      message le peut.
    2. LES MOTIFS TIENNENT AUX FINS DE LIGNE. Au F1 du V16, deux fautes de
       `execution-ancres-mutations.js` ne se posaient plus parce que le fichier visé
       était passé en CRLF, et un clone frais avec `core.autocrlf=true` met tout le
@@ -49,7 +52,7 @@
    USAGE
      node tools/preuves/encarts-decodeur-git-mutations.js            # l'épreuve
      node tools/preuves/encarts-decodeur-git-mutations.js --a-sec    # pose à sec
-                     (LF et CRLF), sans Chrome, sans rien écrire ; quelques ms
+                     (LF et CRLF), sans Chrome, sans rien écrire
      node tools/preuves/encarts-decodeur-git-mutations.js --seules=6,9
                      # ne jouer que ces fautes (les témoins tournent toujours)
      node tools/preuves/encarts-decodeur-git-mutations.js --controle --seules=10,11,12,13
