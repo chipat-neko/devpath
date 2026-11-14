@@ -81,6 +81,34 @@ Le mojibake **volontaire** des 4 leçons qui enseignent l'encodage (`pages/forma
 `pages/html/lecon-15.html`, `pages/r/lecon-06.html`, `pages/perl/lecon-13.html`) est une exception
 assumée : **ne pas y toucher**.
 
+## ⚠️ La règle des « Cas réel » (B3 du CHANTIER-V18, 2026-11-14)
+Un apprenant qui lit « Cas réel » croit lire un **fait**. Le V16 en a trouvé quatre inventés, et
+l'inventaire du V18 (B1) a compté 1 551 « Cas réel » dont 971 sans sujet identifiable. **Un « Cas
+réel » nomme son sujet, sa date et sa source**, et ne dit **rien** que la source ne dise pas :
+
+```html
+<div class="callout callout--note">…<div class="callout__body">
+  <p class="callout__title">Cas réel — Knight Capital (2012)</p>
+  <p>Le récit, qui ne dit que ce que dit la source…</p>
+  <p class="cas-reel__source">Source : SEC, ordonnance n° 34-70694 visant Knight Capital Americas, 16 octobre 2013.</p>
+</div></div>
+```
+
+- **Sujet et date dans le titre** : `Cas réel — sujet (année ou date)`, séparateur `—`, `–` ou `:`.
+- **La source en dernier paragraphe**, `<p class="cas-reel__source">`, qui commence par « Source : »
+  et nomme un document **daté** (une année), ou porte un **lien** vers lui. Préférer le primaire :
+  post-mortem, blog ou documentation officiels, décision d'un régulateur, article original.
+- Même forme pour une **section** dont l'intertitre `<h2>`/`<h3>` est « Cas réel — … ».
+- **Ce qui ne peut pas être sourcé n'est pas un « Cas réel »** : un récit d'illustration s'appelle
+  « Scénario — … ». Mais le standard exige au moins un cas réel par leçon : remplacer un récit
+  inventé par un **vrai cas sourcé sur la même notion** vaut mieux que le renommer.
+- Contrôle : `node tools/verif-contenu.js --cas-reel` (liste les cas hors de la règle ; code 1 s'il
+  y en a). Avertissement dans le rapport ordinaire jusqu'à la fin des lots du V18, **bloquant**
+  ensuite (B13). Épreuve : `tools/verif-cas-reel-mutations.js`. Inventaire et classement :
+  `node tools/cas-reels/inventaire.js`.
+- ⚠️ Un mot ajouté au corps d'une leçon peut rouvrir l'indice lexical d'un QCM : relancer
+  `verif-qcm-lexique.js` et `verif-qcm-biais.js` après une source ajoutée.
+
 ## Outils de vérification (à lancer après TOUT changement de contenu)
 - `node tools/verif-html.js` — parcours « type navigateur » des 1341 leçons : détecte en <1 s
   toute balise créée par erreur dans un bloc de code (la convention ci-dessus). **Doit rester à 0.**

@@ -27,11 +27,21 @@
      node tools/verif-contenu.js --redondance    # seulement la redondance de prose
      node tools/verif-contenu.js --json          # sortie machine, pour un plan de travail
      node tools/verif-contenu.js --strict        # sort en code 1 des la premiere lecon sous le standard
+     node tools/verif-contenu.js --cas-reel      # seulement les « Cas réel » hors de LA REGLE ;
+                                                 #   code 1 s'il y en a un (B3, puis B13, du V18)
+
+   LA REGLE DES « CAS REEL » (B3 du CHANTIER-V18, 2026-11-14) : un « Cas reel » nomme son
+   SUJET et sa DATE dans son titre (« Cas reel — Knight Capital (2012) ») et se termine par
+   un <p class="cas-reel__source">Source : … (document date, ou lien)</p>. Le jugement est
+   celui de tools/cas-reels/extraction.js, partage avec l'inventaire. AVERTISSEMENT pour
+   l'instant : il ferait echouer des centaines de lecons avant les lots B4 a B12 ; il devient
+   bloquant en B13. Le critere « au moins un cas reel » du standard reste, lui, le mot.
    ============================================================================= */
 "use strict";
 
 var fs = require("fs");
 var path = require("path");
+var CAS = require("./cas-reels/extraction.js");
 
 /* ------------------------------------------------------------------ options */
 var args = process.argv.slice(2);
@@ -158,7 +168,13 @@ function mesurerLecon(abs) {
     if (m) types[m[1]] = (types[m[1]] || 0) + 1;
   });
   var vis = texteVisible(t);
+  /* B3 du V18 : chaque « Cas reel » juge par LA REGLE (sujet, date, source). */
+  var casRegle = CAS.extraire(t).map(function (c) {
+    var j = CAS.conformite(c);
+    return { rang: c.rang, titre: c.titre, conforme: j.conforme, raisons: j.raisons };
+  });
   return {
+    casRegle: casRegle,
     svg: compter(t, /<figure class="diagram"/g),
     casReel: /Cas r[ée]el/i.test(t) ? 1 : 0,
     callouts: callouts.length,
@@ -295,6 +311,30 @@ Object.keys(parCours).forEach(function (id) {
 });
 redondances.sort(function (a, b) { return b.n - a.n; });
 
+/* ------------------------------------------- B3 : la regle des « Cas reel » ---- */
+var CASREGLE = { total: 0, conformes: 0, hors: [], parRaison: {}, parCours: {} };
+lecons.forEach(function (l) {
+  l.casRegle.forEach(function (c) {
+    CASREGLE.total++;
+    var pc = CASREGLE.parCours[l.cours] = CASREGLE.parCours[l.cours] || { total: 0, hors: 0 };
+    pc.total++;
+    if (c.conforme) { CASREGLE.conformes++; return; }
+    pc.hors++;
+    CASREGLE.hors.push({ id: "pages/" + l.dir + "/" + l.file + "#" + c.rang, titre: c.titre, raisons: c.raisons });
+    c.raisons.forEach(function (r) { CASREGLE.parRaison[r] = (CASREGLE.parRaison[r] || 0) + 1; });
+  });
+});
+if (flag("cas-reel")) {
+  console.log("verif-contenu.js --cas-reel — " + CASREGLE.total + " « Cas reel » lus, " + CASREGLE.conformes +
+    " conformes a la regle, " + CASREGLE.hors.length + " hors de la regle" + (COURS_FILTRE ? " (cours " + COURS_FILTRE + ")" : ""));
+  console.log("  regle : titre « Cas reel — sujet (annee) » + <p class=\"cas-reel__source\">Source : … (date ou lien)</p>");
+  Object.keys(CASREGLE.parRaison).sort().forEach(function (r) { console.log("  " + r + " : " + CASREGLE.parRaison[r]); });
+  CASREGLE.hors.forEach(function (h) { console.log("  HORS REGLE  " + h.id + " — " + h.titre.slice(0, 70) + " — " + h.raisons.join(", ")); });
+  if (!CASREGLE.total) { console.log("NON MESURE : aucun « Cas reel » trouve."); process.exit(2); }
+  console.log(CASREGLE.hors.length ? "SIGNALE : " + CASREGLE.hors.length + " « Cas reel » hors de la regle." : "OK : tous les « Cas reel » tiennent la regle.");
+  process.exit(CASREGLE.hors.length ? 1 : 0);
+}
+
 /* ---------------------------------------------------------------- sortie ---- */
 if (JSON_OUT) {
   console.log(JSON.stringify({
@@ -304,6 +344,7 @@ if (JSON_OUT) {
     redondances: redondances,
     biaisQcm: { total: BIAIS.total, plusLongue: BIAIS.plusLongue, net: BIAIS.net, seuil: { ratio: BIAIS_RATIO, diff: BIAIS_DIFF } },
     rythme: { median: Math.round(RYTHME.med), cours: RYTHME.parCours.map(function (r) { return { id: r.id, mpm: Math.round(r.mpm) }; }) },
+    casReel: { total: CASREGLE.total, conformes: CASREGLE.conformes, hors: CASREGLE.hors.length, parRaison: CASREGLE.parRaison },
   }, null, 1));
   process.exit(incompletes.length && STRICT ? 1 : 0);
 }
@@ -373,6 +414,14 @@ if (!flag("maigres") && !flag("redondance") && RYTHME.parCours.length) {
       (r.mpm < bas ? "durees trop GENEREUSES" : "durees trop SERREES"));
   });
   if (hors.length) console.log("  -> calibrage editorial (ni erreur ni urgence) : rapprocher ces durees de ~" + Math.round(med) + " mots/min.");
+}
+
+if (!flag("maigres") && !flag("redondance") && CASREGLE.total) {
+  console.log("\n=== « CAS REEL » ET LEUR REGLE (avertissement, non bloquant — B3 du V18) ===");
+  console.log("  regle : titre « Cas reel — sujet (annee) » + <p class=\"cas-reel__source\">Source : … (date ou lien)</p>");
+  console.log("  " + CASREGLE.total + " « Cas reel » · conformes : " + CASREGLE.conformes + " · hors de la regle : " + CASREGLE.hors.length);
+  Object.keys(CASREGLE.parRaison).sort().forEach(function (r) { console.log("    " + r + " : " + CASREGLE.parRaison[r]); });
+  console.log("  -> detail : node tools/verif-contenu.js --cas-reel ; bloquant a partir de B13.");
 }
 
 console.log("\n" + (incompletes.length ? incompletes.length + " lecon(s) sous le standard" : "Toutes les lecons tiennent le standard") +

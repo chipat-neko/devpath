@@ -47,57 +47,11 @@ function loadGlobal(file, nom) {
 var DATA = loadGlobal("js/data.js", "SITE_DATA");
 if (!DATA || !DATA.content) { console.error("js/data.js illisible"); process.exit(2); }
 
-/* ------------------------------------------------------- texte d'un encadré */
-var ENTITES = { nbsp: " ", amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'", rsquo: "’", lsquo: "‘",
-  laquo: "«", raquo: "»", hellip: "…", mdash: "—", ndash: "–", eacute: "é", egrave: "è", agrave: "à",
-  ccedil: "ç", ecirc: "ê", times: "×", rarr: "→", larr: "←", le: "≤", ge: "≥", ne: "≠", thinsp: " ",
-  euro: "€", deg: "°", middot: "·", rdquo: "”", ldquo: "“", minus: "−" };
-function decoder(s) {
-  return s.replace(/&#x([0-9a-f]+);/gi, function (_, h) { return String.fromCodePoint(parseInt(h, 16)); })
-    .replace(/&#(\d+);/g, function (_, d) { return String.fromCodePoint(parseInt(d, 10)); })
-    .replace(/&([a-z]+);/gi, function (m, n) { return Object.prototype.hasOwnProperty.call(ENTITES, n) ? ENTITES[n] : m; });
-}
-function texte(html) {
-  return decoder(html.replace(/<[^>]*>/g, " ")).replace(/[   ]/g, " ").replace(/\s+/g, " ").trim();
-}
-
-/* Un encadré : <div class="callout callout--X">…<p class="callout__title">TITRE</p>CORPS</div></div>.
-   On part de chaque TITRE, pas de chaque <div> : 23 encadrés ferment par « </div> », saut de
-   ligne, « </div> », et une recherche ancrée sur le <div> laissait l'encadré PRÉCÉDENT avaler
-   le « Cas réel » qui le suit (mesuré : 1 477 trouvés contre 1 500 titres). Le corps s'arrête au
-   premier « </div> » suivi d'un « </div> », quels que soient les blancs entre les deux. */
-var RE_TITRE_P = /<p class="callout__title">([\s\S]*?)<\/p>/g;
-var RE_TITRE_CAS = /^Cas r[ée]el\b/i;
-function encadresDe(html) {
-  var res = [], m;
-  RE_TITRE_P.lastIndex = 0;
-  while ((m = RE_TITRE_P.exec(html))) {
-    var avant = html.slice(Math.max(0, m.index - 2000), m.index);
-    var types = avant.match(/<div class="callout callout--([a-z]+)"/g);
-    var type = types ? /callout--([a-z]+)/.exec(types[types.length - 1])[1] : "?";
-    var suite = html.slice(RE_TITRE_P.lastIndex);
-    var fin = /<\/div>\s*<\/div>/.exec(suite);
-    res.push({ pos: m.index, type: type, titreHtml: m[1], corpsHtml: fin ? suite.slice(0, fin.index) : suite.slice(0, 4000) });
-  }
-  /* L'AUTRE FORME : un intertitre <h2>Cas réel</h2> suivi de sa prose, jusqu'au <h2> suivant.
-     51 leçons (offensive, crypto, neurones…) n'écrivent leur cas réel que sous cette forme ;
-     l'apprenant le lit pareil, il est donc inventorié pareil (type « section »). */
-  /* Le cours de maths l'écrit en <h3> (9 leçons) : un <h3> s'arrête au <h2> ou <h3> suivant. */
-  var RE_H2 = /<h([23])[^>]*>([\s\S]*?)<\/h\1>/g;
-  RE_H2.lastIndex = 0;
-  while ((m = RE_H2.exec(html))) {
-    if (!RE_TITRE_CAS.test(texte(m[2]))) continue;
-    var reste = html.slice(RE_H2.lastIndex);
-    var stop = (m[1] === "2" ? /<h2[\s>]|<\/article>|<\/main>|<nav[\s>]|<footer[\s>]/ :
-                               /<h[23][\s>]|<\/article>|<\/main>|<nav[\s>]|<footer[\s>]/).exec(reste);
-    var corpsH2 = stop ? reste.slice(0, stop.index) : reste.slice(0, 6000);
-    /* Une section qui ENVELOPPE un encadré « Cas réel » est déjà comptée par lui (213 cas
-       mesurés sur 255) : on ne garde que les sections dont le cas réel est la prose même. */
-    if (/<p class="callout__title">\s*Cas r[ée]el/i.test(corpsH2)) continue;
-    res.push({ pos: m.index, type: "section", titreHtml: m[2], corpsHtml: corpsH2 });
-  }
-  return res.sort(function (a, b) { return a.pos - b.pos; });
-}
+/* ------------------------------------------- l'extraction : module partagé */
+/* Le texte des « Cas réel » et leur extraction vivent dans `extraction.js`, que
+   `verif-contenu.js` (la règle de B3) lit aussi : un seul code pour les deux. */
+var EX = require("./extraction.js");
+var texte = EX.texte, RE_TITRE_CAS = EX.RE_TITRE_CAS;
 
 /* ------------------------------------------------------------- le classement */
 /* RÉGLAGE (2026-11-14, B1 du V18) — la première version suivait le plan à la lettre : « suspect
@@ -193,15 +147,9 @@ Object.keys(DATA.content).forEach(function (id) {
       var rel = "pages/" + dir + "/" + l.file;
       var abs = path.join(ROOT, rel);
       if (!fs.existsSync(abs)) return;
-      var html = fs.readFileSync(abs, "utf8").replace(/<script[\s\S]*?<\/script>/gi, "");
-      var rang = 0;
-      encadresDe(html).forEach(function (x) {
-        var titre = texte(x.titreHtml);
-        if (!RE_TITRE_CAS.test(titre)) return;
-        rang++;
-        var corps = texte(x.corpsHtml);
-        var e = { cours: id, fichier: rel, rang: rang, type: x.type, titre: titre, corps: corps };
-        var k = classer(titre, x.corpsHtml, corps);
+      EX.extraire(fs.readFileSync(abs, "utf8")).forEach(function (x) {
+        var e = { cours: id, fichier: rel, rang: x.rang, type: x.type, titre: x.titre, corps: x.corps };
+        var k = classer(x.titre, x.corpsHtml, x.corps);
         Object.keys(k).forEach(function (y) { e[y] = k[y]; });
         encadres.push(e);
       });
@@ -211,6 +159,32 @@ Object.keys(DATA.content).forEach(function (id) {
 
 /* ----------------------------------------------------------------- sortie --- */
 if (flag("json")) { process.stdout.write(JSON.stringify(encadres, null, 1) + "\n"); process.exit(0); }
+
+/* L'ÉCHANTILLON DE B2 : --echantillon=150 --graine=N. Stratifié par cours, répartition
+   proportionnelle (plus forts restes), tirage de Fisher-Yates dans chaque cours avec le
+   générateur mulberry32 amorcé par la graine, cours pris dans l'ordre alphabétique : le même
+   couple (taille, graine) sur le même inventaire redonne le même échantillon (B13 le rejoue). */
+if (opt("echantillon", "")) {
+  var taille = parseInt(opt("echantillon", "150"), 10), graine = parseInt(opt("graine", "0"), 10);
+  var a = graine | 0;
+  var alea = function () { a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  var groupes = {};
+  encadres.forEach(function (e) { (groupes[e.cours] = groupes[e.cours] || []).push(e); });
+  var cles = Object.keys(groupes).sort();
+  var parts = cles.map(function (c) { var q = taille * groupes[c].length / encadres.length; return { c: c, n: Math.floor(q), reste: q - Math.floor(q) }; });
+  var manque = taille - parts.reduce(function (s, p) { return s + p.n; }, 0);
+  parts.slice().sort(function (x, y) { return y.reste - x.reste || (x.c < y.c ? -1 : 1); }).slice(0, manque).forEach(function (p) { p.n++; });
+  var tirage = [];
+  parts.forEach(function (p) {
+    var g = groupes[p.c].slice();
+    for (var i = g.length - 1; i > 0; i--) { var j = Math.floor(alea() * (i + 1)); var x = g[i]; g[i] = g[j]; g[j] = x; }
+    g.slice(0, p.n).forEach(function (e) { tirage.push(e); });
+  });
+  process.stdout.write(JSON.stringify({ taille: taille, graine: graine, inventaire: encadres.length,
+    echantillon: tirage.map(function (e) { return { id: e.fichier + "#" + e.rang, cours: e.cours, fichier: e.fichier, rang: e.rang,
+      suspect: e.suspect, raisons: e.raisons, titre: e.titre, corps: e.corps }; }) }, null, 1) + "\n");
+  process.exit(0);
+}
 
 var parCours = {};
 encadres.forEach(function (e) {

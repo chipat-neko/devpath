@@ -32,7 +32,7 @@
                                     #   bouton « Tester » est clique sur 75 pages
      node tools/verif.js --strict   # 72 etapes, code 1 des qu'un outil signale quoi que ce soit
      node tools/verif.js --lister   # la liste des etapes du mode demande, sans rien lancer
-     node tools/verif.js --mutations  # les 19 epreuves par injection, et rien d'autre : elles
+     node tools/verif.js --mutations  # les 20 epreuves par injection, et rien d'autre : elles
                                     #   MODIFIENT des fichiers avant de les restaurer, et le mode
                                     #   verifie lui-meme que le depot ressort comme il est entre
 
@@ -911,6 +911,16 @@ if (flag("mutations")) {
        faute visée ; deux distracteurs identiques dans les données, que la sonde de B5 n'aurait
        pas vus, en font partie. Durée mesurée : 114,5 à 302,3 s selon la charge de la machine. */
     { nom: "joueqcm ", fichier: "preuves/joue-qcm-mutations.js", vues: "10 / 10" },
+    /* Ajoutée le 2026-11-14 (point B3 du V18) avec LA REGLE des « Cas reel » (sujet et date
+       dans le titre, <p class="cas-reel__source"> datee ou liee), jugee par
+       tools/cas-reels/extraction.js et appliquee par `verif-contenu.js --cas-reel`. Neuf
+       fautes posees sur le cas Knight Capital de pages/tests/lecon-14.html (source retiree,
+       vide, sans date, mal nommee, sortie de l'encadre ; titre sans date, sans sujet ;
+       section sans source ; page en CRLF) doivent chacune le faire signaler AVEC LA RAISON
+       attendue ; quatre temoins negatifs (lien, tiret court, deux-points, section conforme)
+       doivent le laisser conforme. Regle sabotee : 4/9 sans la source, 8/9 sans la date,
+       code 2 quand tout est juge hors regle. 2,0 s. */
+    { nom: "casreel ", fichier: "verif-cas-reel-mutations.js", vues: "9 / 9" },
     { nom: "git-mod ", fichier: "verif-git-modele-mutations.js", vues: "29 / 29" },
     { nom: "git-graf", fichier: "verif-git-graphe-mutations.js", vues: "29 / 29" },
     { nom: "git-scen", fichier: "verif-git-scenarios-mutations.js", vues: "30 / 30" },

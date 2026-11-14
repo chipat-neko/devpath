@@ -412,10 +412,43 @@ notion de la leçon, ne disant que ce que dit la source.
       détail faux — préciser lequel), **INVÉRIFIABLE**, **INVENTÉ**. Donner le taux de chaque
       verdict, **chez les suspects et chez les autres**, avec l'intervalle à 95 %. Ne rien corriger
       ici : c'est une mesure.
-- [ ] **B3 · La règle d'écriture, et son garde-fou (en avertissement).** Écrire la règle : un « Cas
+- [x] **B3 · La règle d'écriture, et son garde-fou (en avertissement).** Écrire la règle : un « Cas
       réel » nomme son **sujet**, sa **date** et sa **source**. Ajouter à `verif-contenu.js` un
       contrôle qui la vérifie, **non bloquant pour l'instant** (il ferait échouer des centaines de
       leçons avant les lots), et l'éprouver par injection. Il deviendra bloquant en B13.
+
+      **COCHÉ le 2026-11-14.** **La règle**, écrite dans `docs/enrichissements/NOUVEAUX-COURS.md`
+      (§ « La règle des « Cas réel » », le document de méthode des rédacteurs) : titre
+      `Cas réel — sujet (année)`, et un dernier paragraphe `<p class="cas-reel__source">Source : …</p>`
+      qui nomme un document **daté** ou porte un **lien** ; même forme pour une section `<h2>`/`<h3>`.
+      Ce qui ne peut pas être sourcé s'appelle « Scénario », mais le standard exige un cas réel par
+      leçon : un vrai cas sourcé sur la même notion vaut mieux qu'un renommage. Style
+      `.cas-reel__source` dans `css/components.css`.
+
+      **Le jugement** vit dans un module commun, `tools/cas-reels/extraction.js`, que lisent
+      l'inventaire de B1 **et** `verif-contenu.js` : un seul code (après bascule, la sortie
+      `--json` de l'inventaire est identique à l'octet, et l'échantillon de B2 aussi). Raisons
+      possibles : « titre sans sujet », « titre sans date », « pas de source », « source vide »,
+      « source sans date ni lien ». `verif-contenu.js` imprime un bilan **en avertissement** dans
+      tous les modes (code 0 en défaut comme en `--strict`) ; `--cas-reel` liste les cas hors de la
+      règle et sort en 1 s'il y en a — c'est la commande que B13 rendra bloquante.
+
+      **État mesuré** : 1 551 « Cas réel », **4 conformes**, 1 547 hors de la règle (pas de source
+      1 547 ; titre sans date 1 520 ; titre sans sujet 953). Les 4 conformes sont les cas sourcés au
+      F1 du V16 (`tests/lecon-11`, `-12`, `-14`, `observabilite/lecon-06`), qui reçoivent leur ligne
+      de source d'après le commit `27e0334` (Ticketmaster 19/11/2022 ; NASA, rapport de phase I,
+      10/11/1999 ; SEC, ordonnance 34-70694, 16/10/2013 ; Facebook Engineering, 05/10/2021).
+
+      **L'épreuve** `tools/verif-cas-reel-mutations.js` (dans `--mutations`, entrée `casreel`) :
+      sur le cas Knight Capital, neuf fautes (source retirée, vidée, sans date ni lien, mal nommée,
+      sortie de l'encadré ; titre sans date, sans sujet ; section sans source ; page en CRLF)
+      doivent chacune faire signaler ce cas **avec la raison attendue** — le cours `tests` a d'autres
+      cas hors règle, donc le code seul ne prouve rien — et quatre témoins négatifs (source par lien,
+      tiret court, deux-points, section conforme) le laisser conforme : **9/9, 4/4, code 0, 2,0 s ;
+      par le mode, OK en 2,1 s**. Épreuve de l'épreuve, règle sabotée : sans l'exigence de source
+      **4/9** (code 1), sans celle de la date **8/9** (code 1), tout jugé hors règle → code 2.
+      Cliquets QCM (lexique, biais) verts après les quatre sources ; point fixe des pages dérivées au
+      tour 3 (`search-index.js`, `etude-recherche.html`) ; `verif.js --rapide` 54/54, 103,7 s.
 - [ ] **B4 · Lot 1** (`javascript`, `python`, `html`, `css`, `react`, `sql`, `java`, `csharp`, `php`, `ruby` — 272 suspects / 350) (cours fixés en B1). **Portée de chaque lot** : tous les encadrés **suspects**
       de B1. Et **tous les encadrés** du lot si B2 a trouvé au moins un INVENTÉ ou un INVÉRIFIABLE
       **hors des suspects**. Pour chacun : vérifier ; INVENTÉ → un cas réel sourcé sur la même
