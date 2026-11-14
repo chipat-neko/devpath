@@ -13,7 +13,7 @@ célèbres que le lot a pris (ceux qu'un autre cours pourrait vouloir).
 | Sujet | Foyer | À remplacer ailleurs (lot qui s'en charge) |
 |---|---|---|
 | Ariane 5, vol 501 (1996) | `ada/lecon-07` | `ada/lecon-09` (B9), `tests/lecon-01` (B11) ; mentions dans `c/lecon-02`, `rust/lecon-02` à relire |
-| Patriot de Dhahran (1991) | `fortran/lecon-02` ou `asm/lecon-09` (à trancher en B7) | l'autre des deux |
+| Patriot de Dhahran (1991) | `asm/lecon-09` (tranché au B7) | `fortran/lecon-02` (B9) |
 | Therac-25 (1985-1987) | `os/lecon-07` | — |
 | GitLab, suppression de la base (2017) | `iac/lecon-05` | `bash/lecon-03`, `bash/lecon-12` (B7) |
 | Cloudflare, ReDoS (2019) | `regex/lecon-06` | mention dans `algo/lecon-18` à relire (B10) |
