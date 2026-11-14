@@ -32,7 +32,7 @@ prouve**.
 
 | | |
 |---|---:|
-| Titres d'encadré « Cas réel » sur le site | **1 500**, dans **1 540 leçons sur 1 540** (chacune en porte au moins un) |
+| Titres d'encadré « Cas réel » sur le site | **1 500**, dans **1 540 leçons sur 1 540** (chacune en porte au moins un) — ⚠️ **corrigé par B1** : les 1 500 encadrés ne sont que dans 1 489 leçons ; avec 51 sections « Cas réel » (`<h2>`/`<h3>`), le site en compte **1 551**, et là chacune des 1 540 leçons en porte au moins un |
 | « Cas réel » prouvés inventés à ce jour | **4** (trouvés par hasard, remplacés par des cas sourcés en F1 du V16) |
 | QCM du site : réussite de « toujours la plus longue » | **33,5 %** sur **6 167** questions (hasard : 25 %) |
 | Les 19 cours écartés de B4 le 2026-09-15 | **947 questions**, dont **831 (87,8 %)** où la plus longue est la bonne |
@@ -326,13 +326,86 @@ un fait réel sourcé (le meilleur cas) ou un « Scénario » honnête ; un fait
 corrigé. Le F1 du V16 a montré la méthode sur quatre leçons : un cas réel sourcé, choisi pour la
 notion de la leçon, ne disant que ce que dit la source.
 
-- [ ] **B1 · Inventaire, et les suspects.** Extraire les 1 500 encadrés (fichier, titre, texte).
+- [x] **B1 · Inventaire, et les suspects.** Extraire les 1 500 encadrés (fichier, titre, texte).
       Classer automatiquement : **SUSPECT** s'il ne porte ni année (`19xx`, `20xx`) ni nom propre
       d'organisation, de produit ou de personne, ou s'il a un sujet générique (« une start-up »,
       « une équipe », « une entreprise », « un développeur »…). Lire 30 encadrés tirés au hasard pour
       **mesurer la précision** de ce classement, et l'ajuster. **Écrire dans ce plan** le nombre de
       suspects par cours et **la composition des lots B4 à B12** : dix cours chacun (le dernier en
       compte neuf ou plus selon le total), du plus suspect au moins suspect.
+
+      **COCHÉ le 2026-11-14.** Outil : `tools/cas-reels/inventaire.js` (ne modifie rien ; `--cours=`,
+      `--json`, `--lots`).
+
+      **L'inventaire : 1 551 « Cas réel » dans les 1 540 leçons**, et non 1 500 : 1 500 encadrés
+      titrés « Cas réel » (dans 1 489 leçons seulement, pas 1 540 comme l'écrivait le constat) **et 51 sections**
+      dont l'intertitre `<h2>`/`<h3>` est « Cas réel » (offensive, crypto, neurones, maths…) — l'apprenant
+      les lit pareil. 213 autres intertitres « Cas réel » ne font qu'envelopper un encadré : comptés
+      une fois. Premier jet de l'extraction : 1 477 encadrés au lieu de 1 500, parce que 23 encadrés
+      ferment par `</div>`, saut de ligne, `</div>` et que l'encadré précédent avalait le suivant ;
+      corrigé (on part de chaque titre), 0 écart avec un `grep` des titres.
+
+      **La précision du classement, mesurée sur trois tirages lus à la main** (jugement : un cas est
+      *identifiable* s'il nomme un sujet réel précis — organisation, produit, personne, événement —
+      qu'une source peut confirmer ; *anonyme* sinon : « une équipe », « un service », un usage général).
+
+      | tirage | rôle | règle | accord | précision des SUSPECT | rappel des anonymes |
+      |---|---|---|---:|---:|---:|
+      | A, graine 20261114, 30 | réglage | celle du plan | 17/30 | 8/9 | **8/20** |
+      | A | réglage | après 1er réglage | 29/30 | 20/21 | 20/20 |
+      | B, graine 20261115, 30 | contrôle, lu à l'aveugle | après 1er réglage | 26/30 | 19/22 | 19/20 |
+      | B | — | après 2e réglage | 28/30 | 20/22 | 20/20 |
+      | **C, graine 20261116, 20** | **neuf, lu à l'aveugle** | **finale** | **18/20** | **11/13** | **11/11** |
+
+      La règle du plan voyait trop peu : les sigles (CRM, CSV, API), les identifiants de code et les
+      libellés d'interface passaient pour des noms propres. **Règle finale** : le code, les citations,
+      les sigles et les noms des langages enseignés ne comptent plus comme noms ; l'année se cherche
+      hors du code ; le sujet est générique s'il **ouvre** l'une des deux premières phrases (« Une équipe
+      livre… », « Sur un site… »). SUSPECT = ni année ni nom, **ou** sujet générique sans année, **ou**
+      sujet générique sans nom. Elle se trompe du côté prudent (deux faux suspects sur 20 au tirage C,
+      aucun anonyme manqué sur les trois tirages). Les rangs jugés anonymes, pour refaire la mesure :
+      A = 1,2,5,6,8,10,11,12,13,14,15,19,20,21,23,24,26,27,28,30 ; B = 1,3,4,5,6,7,8,9,14,16,17,19,21,22,
+      23,24,25,28,29,30 ; C = 1,3,5,7,9,10,12,13,15,16,19 (outil de tirage : mélange de Fisher-Yates,
+      générateur mulberry32, sur l'ordre de `--json`).
+
+      **Résultat : 971 SUSPECTS sur 1 551 (62,6 %).** « Anonyme » ne veut pas dire « inventé » :
+      beaucoup sont des usages généraux vrais (« sur un site marchand, `loading="lazy"`… »), mais aucun
+      ne tient la règle de B3 (sujet, date, source). Vus en lisant, et à traiter dans les lots :
+      `offensive/lecon-01` écrit lui-même « une société **fictive** » sous « Cas réel » ; le cours `stats`
+      met en scène une entreprise fictive, « Orbit » ; plusieurs sections du cours `maths` s'ouvrent
+      sur « Le scénario suivant… » sous un intertitre « Cas réel ».
+
+      Suspects / « Cas réel », par cours (du plus suspect au moins suspect) :
+      `javascript` 49/66 · `python` 40/50 · `html` 30/48 · `css` 27/47 · `react` 24/26 · `sql` 22/24
+      `java` 21/23 · `csharp` 20/23 · `php` 20/21 · `ruby` 19/22 · `nodejs` 18/27 · `go` 18/18
+      `git` 17/24 · `perl` 17/17 · `powershell` 17/17 · `typescript` 16/20 · `zig` 16/19 · `perf-web` 16/17
+      `bdd` 15/15 · `mobile` 15/15 · `kotlin` 14/21 · `lua` 14/20 · `cpp` 13/23 · `rust` 13/22
+      `r` 13/17 · `docker` 13/16 · `data-eng` 13/14 · `vb` 13/14 · `dart` 12/16 · `distribue` 12/12
+      `c` 11/21 · `clojure` 11/17 · `elixir` 11/17 · `bash` 11/16 · `equipe` 11/14 · `neurones` 11/12
+      `julia` 10/16 · `a11y` 10/15 · `asm` 10/15 · `stats` 10/15 · `dataviz` 10/14 · `objc` 10/14
+      `compilation` 10/13 · `vscode` 10/11 · `ocaml` 9/18 · `pandas` 9/14 · `pascal` 9/14 · `maths` 9/13
+      `archi` 9/12 · `iac` 9/11 · `swift` 8/18 · `ada` 8/14 · `vue` 8/14 · `projets-js` 7/24
+      `api` 7/14 · `fortran` 7/14 · `nosql` 7/14 · `os` 7/14 · `prolog` 7/14 · `kubernetes` 7/12
+      `llm` 7/12 · `ml` 7/12 · `linux` 7/11 · `algo` 6/28 · `scala` 6/17 · `cobol` 6/14
+      `groovy` 6/14 · `formats` 6/12 · `cicd` 6/11 · `markdown` 6/11 · `observabilite` 6/11 · `regex` 6/11
+      `reseaux` 6/11 · `erlang` 5/14 · `http` 5/12 · `doc` 5/6 · `haskell` 4/18 · `securite` 4/15
+      `sass` 4/14 · `tests` 4/14 · `solidity` 3/17 · `offensive` 3/12 · `graphql` 3/11 · `ux` 3/11
+      `lisp` 2/15 · `fsharp` 2/14 · `cloud` 1/12 · `patterns` 1/11 · `wasm` 1/11 · `crypto` 0/11
+
+      **Composition des lots** (dix cours chacun, du plus suspect au moins suspect ; 90 cours = 9 × 10) :
+
+      | case | cours | suspects / « Cas réel » |
+      |---|---|---:|
+      | B4 | `javascript`, `python`, `html`, `css`, `react`, `sql`, `java`, `csharp`, `php`, `ruby` | 272 / 350 |
+      | B5 | `nodejs`, `go`, `git`, `perl`, `powershell`, `typescript`, `zig`, `perf-web`, `bdd`, `mobile` | 165 / 189 |
+      | B6 | `kotlin`, `lua`, `cpp`, `rust`, `r`, `docker`, `data-eng`, `vb`, `dart`, `distribue` | 130 / 175 |
+      | B7 | `c`, `clojure`, `elixir`, `bash`, `equipe`, `neurones`, `julia`, `a11y`, `asm`, `stats` | 106 / 158 |
+      | B8 | `dataviz`, `objc`, `compilation`, `vscode`, `ocaml`, `pandas`, `pascal`, `maths`, `archi`, `iac` | 94 / 134 |
+      | B9 | `swift`, `ada`, `vue`, `projets-js`, `api`, `fortran`, `nosql`, `os`, `prolog`, `kubernetes` | 73 / 152 |
+      | B10 | `llm`, `ml`, `linux`, `algo`, `scala`, `cobol`, `groovy`, `formats`, `cicd`, `markdown` | 63 / 142 |
+      | B11 | `observabilite`, `regex`, `reseaux`, `erlang`, `http`, `doc`, `haskell`, `securite`, `sass`, `tests` | 49 / 126 |
+      | B12 | `solidity`, `offensive`, `graphql`, `ux`, `lisp`, `fsharp`, `cloud`, `patterns`, `wasm`, `crypto` | 19 / 125 |
+
 - [ ] **B2 · L'échantillon, pour connaître le vrai taux.** Tirer **150 encadrés** au hasard,
       stratifiés par cours, avec une graine écrite dans le compte rendu (le tirage doit pouvoir être
       refait). Vérifier chacun à une source primaire. Verdict : **VRAI**, **INEXACT** (fait réel,
@@ -343,21 +416,21 @@ notion de la leçon, ne disant que ce que dit la source.
       réel » nomme son **sujet**, sa **date** et sa **source**. Ajouter à `verif-contenu.js` un
       contrôle qui la vérifie, **non bloquant pour l'instant** (il ferait échouer des centaines de
       leçons avant les lots), et l'éprouver par injection. Il deviendra bloquant en B13.
-- [ ] **B4 · Lot 1** (cours fixés en B1). **Portée de chaque lot** : tous les encadrés **suspects**
+- [ ] **B4 · Lot 1** (`javascript`, `python`, `html`, `css`, `react`, `sql`, `java`, `csharp`, `php`, `ruby` — 272 suspects / 350) (cours fixés en B1). **Portée de chaque lot** : tous les encadrés **suspects**
       de B1. Et **tous les encadrés** du lot si B2 a trouvé au moins un INVENTÉ ou un INVÉRIFIABLE
       **hors des suspects**. Pour chacun : vérifier ; INVENTÉ → un cas réel sourcé sur la même
       notion, ou « Scénario » ; INEXACT → corrigé à la source. Rejouer ensuite `verif-contenu
       --strict` et les **deux cliquets QCM** : un mot ajouté à un corps de leçon peut rouvrir
       l'indice lexical d'un QCM. Remède mesuré au V16 : choisir des mots de moins de 6 lettres, le
       seuil de l'outil. Compte rendu : encadrés lus, verdicts, sources citées.
-- [ ] **B5 · Lot 2.** Même portée et même méthode que B4.
-- [ ] **B6 · Lot 3.** Idem.
-- [ ] **B7 · Lot 4.** Idem.
-- [ ] **B8 · Lot 5.** Idem.
-- [ ] **B9 · Lot 6.** Idem.
-- [ ] **B10 · Lot 7.** Idem.
-- [ ] **B11 · Lot 8.** Idem.
-- [ ] **B12 · Lot 9.** Idem.
+- [ ] **B5 · Lot 2.** (`nodejs`, `go`, `git`, `perl`, `powershell`, `typescript`, `zig`, `perf-web`, `bdd`, `mobile` — 165 suspects / 189) Même portée et même méthode que B4.
+- [ ] **B6 · Lot 3.** (`kotlin`, `lua`, `cpp`, `rust`, `r`, `docker`, `data-eng`, `vb`, `dart`, `distribue` — 130 suspects / 175) Idem.
+- [ ] **B7 · Lot 4.** (`c`, `clojure`, `elixir`, `bash`, `equipe`, `neurones`, `julia`, `a11y`, `asm`, `stats` — 106 suspects / 158) Idem.
+- [ ] **B8 · Lot 5.** (`dataviz`, `objc`, `compilation`, `vscode`, `ocaml`, `pandas`, `pascal`, `maths`, `archi`, `iac` — 94 suspects / 134) Idem.
+- [ ] **B9 · Lot 6.** (`swift`, `ada`, `vue`, `projets-js`, `api`, `fortran`, `nosql`, `os`, `prolog`, `kubernetes` — 73 suspects / 152) Idem.
+- [ ] **B10 · Lot 7.** (`llm`, `ml`, `linux`, `algo`, `scala`, `cobol`, `groovy`, `formats`, `cicd`, `markdown` — 63 suspects / 142) Idem.
+- [ ] **B11 · Lot 8.** (`observabilite`, `regex`, `reseaux`, `erlang`, `http`, `doc`, `haskell`, `securite`, `sass`, `tests` — 49 suspects / 126) Idem.
+- [ ] **B12 · Lot 9.** (`solidity`, `offensive`, `graphql`, `ux`, `lisp`, `fsharp`, `cloud`, `patterns`, `wasm`, `crypto` — 19 suspects / 125) Idem.
 - [ ] **B13 · Le garde-fou devient bloquant.** Le contrôle de B3 passe en mode `--strict` bloquant.
       Le site doit être à **0 encadré** hors de la règle. Rejouer l'échantillon de B2 avec la **même
       graine** : combien d'INVENTÉ, combien d'INEXACT, comparés au départ. Écrire le chiffre, quel
