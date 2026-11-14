@@ -291,8 +291,8 @@ const url = URL.createObjectURL(blob);
 URL.revokeObjectURL(url); // À LIBÉRER : sinon le Blob reste retenu en mémoire</code></pre></figure>
 <p class="code-caption">Boucle classique côté navigateur&nbsp;: <code>File</code> → <code>arrayBuffer()</code> → <code>DataView</code>/<code>TypedArray</code> pour parser.</p>
 
-<h2>Cas réel&nbsp;: lire un en-tête de fichier</h2>
-<p>Mettons tout ensemble. Voici comment vérifier qu'un tampon commence par la signature PNG et lire les dimensions de l'image — stockées dans le chunk <code>IHDR</code> en deux entiers 32&nbsp;bits non signés <strong>big-endian</strong>. L'exemple ci-dessous est de la logique pure (on fabrique un en-tête factice), donc exécutable.</p>
+<h2>Cas réel — l'en-tête d'un fichier PNG (norme W3C, 2025)</h2>
+<p>Mettons tout ensemble sur un format réel, le PNG, dont la norme du W3C (3<sup>e</sup>&nbsp;édition, recommandation du 24 juin 2025) fixe l'en-tête octet par octet. Les <strong>huit premiers octets</strong> d'un PNG valent toujours <code>89 50 4E 47 0D 0A 1A 0A</code>&nbsp;: cette signature distingue un PNG des autres formats et permet de repérer tôt certaines erreurs de transmission. Viennent ensuite des blocs (<em>chunks</em>), chacun commençant par sa longueur sur 4&nbsp;octets puis son type sur 4&nbsp;octets&nbsp;; le premier est obligatoirement <code>IHDR</code>, dont les données commencent par la <strong>largeur</strong> puis la <strong>hauteur</strong>, chacune sur 4&nbsp;octets. La norme impose que tout entier de plus d'un octet soit écrit octet de poids fort en premier, en <strong>big-endian</strong>. D'où les offsets 16 (8&nbsp;+&nbsp;4&nbsp;+&nbsp;4) et 20 du code ci-dessous, qui vérifie la signature puis lit les dimensions. L'exemple est de la logique pure (on fabrique un en-tête factice), donc exécutable.</p>
 <figure class="code-block" data-file="script.js"><pre><code class="language-javascript">// On simule les 24 premiers octets d'un PNG 800x600.
 const buffer = new ArrayBuffer(24);
 const vue = new DataView(buffer);
@@ -314,6 +314,7 @@ function lireEnTetePng(vue) {
 
 console.log(lireEnTetePng(vue)); // affiche: { largeur: 800, hauteur: 600 }</code></pre></figure>
 <p class="code-caption">Parser un format binaire = lire à des offsets connus, avec le bon type et la bonne endianness.</p>
+<p class="cas-reel__source">Source&nbsp;: W3C, <a href="https://www.w3.org/TR/png-3/">«&nbsp;Portable Network Graphics (PNG) Specification (Third Edition)&nbsp;»</a>, recommandation du 24 juin 2025, §&nbsp;5.2, 5.3, 7.1 et 11.2.1.</p>
 
 <h2>Pièges fréquents</h2>
 <div class="callout callout--warn"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg><div class="callout__body"><p class="callout__title">Piège fréquent</p><p><strong>Confondre le buffer et la vue.</strong> L'<code>ArrayBuffer</code> est la mémoire&nbsp;; la vue est l'interface. Tu passes souvent un <code>ArrayBuffer</code> aux API (fetch, fichiers), mais tu lis et écris toujours via une vue. <strong>Partage involontaire</strong>&nbsp;: deux vues sur un même buffer s'écrasent mutuellement — utilise <code>slice()</code> quand tu veux une copie indépendante. <strong>Endianness oubliée</strong> avec <code>DataView</code>&nbsp;: valeurs plausibles mais fausses. <strong>Bornes</strong>&nbsp;: lire hors limites avec <code>DataView</code> lève une <code>RangeError</code>, alors qu'une TypedArray renvoie silencieusement <code>undefined</code> en lecture et ignore l'écriture — bug muet.</p></div></div>
