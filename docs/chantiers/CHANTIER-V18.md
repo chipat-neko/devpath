@@ -636,7 +636,49 @@ notion de la leçon, ne disant que ce que dit la source.
       `Invoke-WebRequest` de `powershell/lecon-14` demande confirmation depuis KB5074596 ;
       `tools/fraicheur/releves/nodejs-lot-2026-11-11.json` garde trois ancres d'anciens encadrés
       (phase E). LinkedIn 2012 reste raconté par `crypto/lecon-07` et `securite/lecon-05`.
-- [ ] **B6 · Lot 3.** (`kotlin`, `lua`, `cpp`, `rust`, `r`, `docker`, `data-eng`, `vb`, `dart`, `distribue` — 130 suspects / 175) Idem.
+- [x] **B6 · Lot 3.** (`kotlin`, `lua`, `cpp`, `rust`, `r`, `docker`, `data-eng`, `vb`, `dart`, `distribue` — 130 suspects / 175) Idem.
+
+      **COCHÉ le 2026-11-14** (décision de Noah : « Lots 3 et 4 d'affilée », vérification entre les
+      deux). Cinq agents partis de `1b45660` (kotlin et data-eng, lua et distribue, cpp et vb, rust et
+      dart, r et docker), réservations communes (175 sujets, aucun pris deux fois), dix
+      contre-relectures. **Lus : les 175.** Outils portables téléchargés dans les scratchpads pour
+      rejouer le code (kotlinc 2.4.21, Rust 1.100, Lua 5.1.5 à 5.5.0 compilés depuis les sources,
+      Compiler Explorer pour le C++), plus .NET 10 (VB), Dart 3.13.5 et webR (R 4.6).
+
+      **Trouvé** : **6 INVENTÉS** (quatre incidents de Vélociti, l'entreprise fictive du fil rouge de
+      `data-eng`, racontés comme réels ; deux « Imagine… ») ; au moins 29 INEXACT (rust 10 : Android
+      « sous les 20 % » pour 35 %, Stylo, ripgrep, Discord… ; kotlin 7 : Google n'a pas cité Uber ni
+      Evernote ; cpp 6 : la panne de 2003, 50 et non 55 millions) ; le reste INVÉRIFIABLE. **Fait** :
+      **153 remplacés, 22 corrigés**, 0 « Scénario ». Sujets déjà gardés par le registre écartés (Tony
+      Hoare ×2, Ariane 5, Heartbleed, SQLite).
+
+      **Contre-relecture** : une faute dans **40 cas sur 175 — 22,9 %** (Wilson [17,3 ; 29,6]) ;
+      cumul des lots 1 à 3 : 163/714, **22,8 %** [19,9 ; 26,0] — le taux ne baisse pas d'un lot à
+      l'autre : l'auteur seul laisse passer environ un cas sur quatre. 51 corrections et 4 titres.
+      Fautes de fond : le choix de la cohérence chez GitHub en 2018 placé PENDANT la partition (sur la
+      leçon qui doit énoncer CAP correctement), les températures de Challenger qui étaient celles des
+      joints, `Encoding.Default` daté de .NET Core 1.0 (il n'existe qu'en 2.0), un accès hors limites
+      Rust « écarté avant l'exécution » (il panique), `strict.lua` qui laisse passer l'affectation dans
+      le morceau principal, l'estimation de Shopify calculée sur le mauvais volume. Cliquet lexical
+      rouge une fois après correction (« fichier »), ramené à 0 ; deux écarts acceptés en
+      `data-eng` (« moindre », « affichées » sortis avec des phrases inexactes, cliquets verts).
+
+      **Hors encadré, corrigé à la fusion** : `distribue/lecon-04` (deux renvois au « cas réel
+      raconté plus bas », disparu) et l'explication d'une question de `distribue/lecon-12` ; les deux
+      CR parasites de `kotlin/lecon-04` et `-08` (commit `5b37b6b`, avant `</code>`) retirés — plus
+      aucun CR dans les pages. `controle-branche.js` et `cr-appliquer.js` ne signalent plus qu'une
+      HAUSSE des CR par rapport à la base ; `foyers-ajouter.js` inscrit les sujets d'un lot au registre.
+
+      **Contrôles sur master** : `--cas-reel` 0 sur les dix cours, `--strict` 0, `verif-html` 0,
+      domaines 0, cliquets 0, `verif-recherche` 77/77, `verif-doc` 41/41, point fixe au tour 4,
+      **`--rapide` 54/54** (305,0 s), `doublons.js` 2 (légitimes), mojibake de `r/lecon-06` intact.
+      **Conformes : 543 → 718** sur 1 551. Quota hebdomadaire : 56 % → 65 %.
+
+      **Ouvert, hors encadré** : `rust/lecon-01` (corps : les accès hors limites « éliminés une fois
+      compilé ») et `rust/lecon-02` (« Piège fréquent » : `255u8 + 1` est refusé à la compilation,
+      pas une panique) ; ancre de fraîcheur de l'ancien encadré `docker/lecon-01`
+      (`tools/fraicheur/releves/infra-lot-2026-09-03.json`, phase E) ; Heartbleed raconté deux fois
+      par `c` (lot 4) ; le salaire médian de l'Insee est pris par `r/lecon-08` (`stats/lecon-02`, lot 4).
 - [ ] **B7 · Lot 4.** (`c`, `clojure`, `elixir`, `bash`, `equipe`, `neurones`, `julia`, `a11y`, `asm`, `stats` — 106 suspects / 158) Idem.
 - [ ] **B8 · Lot 5.** (`dataviz`, `objc`, `compilation`, `vscode`, `ocaml`, `pandas`, `pascal`, `maths`, `archi`, `iac` — 94 suspects / 134) Idem.
 - [ ] **B9 · Lot 6.** (`swift`, `ada`, `vue`, `projets-js`, `api`, `fortran`, `nosql`, `os`, `prolog`, `kubernetes` — 73 suspects / 152) Idem.

@@ -20,13 +20,13 @@ var args = process.argv.slice(2), sec = args.indexOf("--sec") >= 0;
 args = args.filter(function (a) { return a !== "--sec"; });
 var dir = args.shift();
 var L = function (s) { return Buffer.from(s, "utf8").toString("latin1"); };
-var ok = 0, ko = [], aTraiter = [], pages = {};
+var ok = 0, ko = [], aTraiter = [], pages = {}, crAvant = {};
 args.forEach(function (f) {
   JSON.parse(fs.readFileSync(f, "utf8")).forEach(function (v) {
     if (v.verdict === "A_REMPLACER" || v.verdict === "INACCESSIBLE") { aTraiter.push(v.verdict + " " + v.id + " : " + (v.remarque || "")); return; }
     if (v.verdict !== "A_CORRIGER") return;
     var p = v.id.split("#")[0], abs = path.join(dir, p);
-    if (!pages[p]) pages[p] = fs.readFileSync(abs, "latin1");
+    if (!pages[p]) { pages[p] = fs.readFileSync(abs, "latin1"); crAvant[p] = (pages[p].match(/\r/g) || []).length; }
     (v.corrections || []).forEach(function (c, i) {
       var av = L(c.avant), ap = L(c.apres || "");
       var s = pages[p], n = s.split(av).length - 1;
@@ -41,7 +41,8 @@ args.forEach(function (f) {
   });
 });
 Object.keys(pages).forEach(function (p) {
-  if ((pages[p].match(/\r/g) || []).length) ko.push(p + " : CR présents");
+  /* une HAUSSE seulement : deux pages kotlin portaient déjà un CR parasite (commit 5b37b6b) */
+  if ((pages[p].match(/\r/g) || []).length > crAvant[p]) ko.push(p + " : CR ajoutés");
   if (!sec) fs.writeFileSync(path.join(dir, p), pages[p], "latin1");
 });
 console.log((sec ? "[APERÇU] " : "") + ok + " correction(s) appliquée(s) dans " + Object.keys(pages).length + " page(s)");

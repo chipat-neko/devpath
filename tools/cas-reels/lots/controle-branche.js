@@ -68,8 +68,10 @@ var fichiers = git(["diff", "--name-only", base + "..HEAD"]).split("\n").filter(
 fichiers.forEach(function (p) {
   var n = show("HEAD", p), a = show(base, p);
   if (n === null) { pb.push(p + " : SUPPRIMÉ"); return; }
-  var cr = (n.match(/\r/g) || []).length;
-  if (cr) pb.push(p + " : " + cr + " CR");
+  /* une HAUSSE des CR par rapport à la base : deux pages kotlin en portaient déjà un, parasite,
+     avant le lot 3 (commit 5b37b6b) — l'agent n'y était pour rien */
+  var cr = (n.match(/\r/g) || []).length, crA = a === null ? 0 : (a.match(/\r/g) || []).length;
+  if (cr > crA) pb.push(p + " : " + cr + " CR (base : " + crA + ")");
   ["cdnjs.cloudflare.com", "fonts.googleapis.com", "fonts.gstatic.com"].forEach(function (d) {
     var cN = n.split(d).length - 1, cA = a === null ? 0 : a.split(d).length - 1;
     if (cN > cA) pb.push(p + " : domaine interdit " + d + " (" + cA + " -> " + cN + ")");
