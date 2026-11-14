@@ -57,7 +57,13 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 > 153 remplacés, 22 corrigés ; **6 INVENTÉS** trouvés (l'entreprise fictive Vélociti racontée comme
 > réelle en `data-eng`) ; la contre-relecture trouve encore **22,9 %** de fautes (22,8 % sur les
 > lots 1 à 3 : le taux ne baisse pas). Conformes : **718** sur 1 551. `--rapide` 54/54.
-> **Prochaine case : B7**, le lot 4 ; outils, registre des foyers et modèles de consigne dans
+>
+> **✅ B7 DU V18 FAITE (2026-11-14), 13 cases sur 61 — le lot 4, dix cours, 158 « Cas réel ».**
+> 142 remplacés, 16 corrigés ; **6 INVENTÉS** trouvés (Orbit, l'application fictive de `stats`,
+> racontée comme une entreprise réelle ; un « Imagine… » en `elixir`) ; la contre-relecture trouve
+> encore **21,5 %** de fautes (22,6 % sur les lots 1 à 4), dont deux chronologies que seul
+> l'historique des tickets Jira révélait. Conformes : **876** sur 1 551. `--rapide` 54/54.
+> **Prochaine case : B8**, le lot 5 ; outils, registre des foyers et modèles de consigne dans
 > `tools/cas-reels/lots/`.
 
 ---
@@ -90,7 +96,7 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 | CHANTIER-V15 — comprendre ce qu'on ne voit pas | ✅ 32/32 |
 | CHANTIER-V17 — les garde-fous qui mentent | ✅ 80/80 |
 | CHANTIER-V16 — consolider ce que les quatre chantiers ont laissé derrière | ✅ 22/22 (clos le 2026-11-11) |
-| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **12/61 — plan courant** (écrit le 2026-11-11 ; phase A close le même jour ; B1 à B6 le 2026-11-14) |
+| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **13/61 — plan courant** (écrit le 2026-11-11 ; phase A close le même jour ; B1 à B7 le 2026-11-14) |
 
 **Le V18 est le plan courant.** Ses phases, dans l'ordre : **A** les instruments d'abord (6 cases :
 la sonde des QCM et l'épreuve de D2 entrent dans la chaîne, contrôle des domaines interdits, sondes

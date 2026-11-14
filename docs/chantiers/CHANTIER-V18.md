@@ -679,7 +679,61 @@ notion de la leçon, ne disant que ce que dit la source.
       pas une panique) ; ancre de fraîcheur de l'ancien encadré `docker/lecon-01`
       (`tools/fraicheur/releves/infra-lot-2026-09-03.json`, phase E) ; Heartbleed raconté deux fois
       par `c` (lot 4) ; le salaire médian de l'Insee est pris par `r/lecon-08` (`stats/lecon-02`, lot 4).
-- [ ] **B7 · Lot 4.** (`c`, `clojure`, `elixir`, `bash`, `equipe`, `neurones`, `julia`, `a11y`, `asm`, `stats` — 106 suspects / 158) Idem.
+- [x] **B7 · Lot 4.** (`c`, `clojure`, `elixir`, `bash`, `equipe`, `neurones`, `julia`, `a11y`, `asm`, `stats` — 106 suspects / 158) Idem.
+
+      **COCHÉ le 2026-11-14** (décision de Noah : « Lots 3 et 4 d'affilée »). Cinq agents partis de
+      `13eabe3` (c et equipe, clojure et elixir, bash et asm, julia et stats, neurones et a11y),
+      réservations communes (158 sujets, aucun pris deux fois), dix contre-relectures. **Lus : les
+      158.** Code rejoué avec des versions portables officielles vérifiées par somme de contrôle :
+      jars de Clojure 1.3 à 1.12 (Java 27), Erlang/OTP 29.1.2 et Elixir 1.20.5, Julia 1.11.7, Zig
+      0.14.1 complet (glibc et musl) pour le C et l'assembleur, Bash 5.3, Compiler Explorer.
+
+      **Trouvé** : **6 INVENTÉS** (cinq incidents d'Orbit, l'application fictive du cours `stats`,
+      racontés comme une vraie entreprise ; le « Imagine un module bancaire… » d'`elixir/lecon-03`) ;
+      les 14 récits d'`equipe` fictifs ou anonymes (quatre mettaient en scène l'équipe du fil rouge) ;
+      au moins 27 INEXACT (le Patriot « en flottant » alors que 0,1 était en virgule fixe sur 24 bits ;
+      Celeste « mille milliards » d'opérations par seconde pour un million de milliards ; un processus
+      de la BEAM « quelques centaines d'octets » pour 2,6 Ko ; re-frame installe l'état par `reset!`) ;
+      2 VRAIS seulement (Heartbleed, la Fed de New York) ; le reste INVÉRIFIABLE. **Fait** : **142
+      remplacés, 16 corrigés**, 0 « Scénario ». Sujets du registre écartés ou rendus à leur foyer :
+      Tony Hoare (`csharp`), Ariane 5 (`ada`), GitLab 2017 (`iac`), Robles contre Domino's et le
+      WebAIM Million (`html`), le salaire médian de l'Insee (`r`), Discord (`erlang`) ; Heartbleed
+      raconté une seule fois dans `c` (leçon 11), le ver Morris une seule fois sur le site (`c/lecon-09`).
+
+      **Contre-relecture** : une faute dans **34 cas sur 158 — 21,5 %** (Wilson [15,8 ; 28,6]),
+      de 14,8 % (`neurones`, `a11y`) à 32,3 % (`julia`, `stats`) ; cumul des lots 1 à 4 : 197/872,
+      **22,6 %** [19,9 ; 25,5] — le taux ne baisse toujours pas. 47 retouches. Fautes de fond : deux
+      CHRONOLOGIES réécrites après coup, visibles seulement dans l'historique des tickets Jira
+      (CLJ-1959 demandait `map-keys` en 2016, `update-keys` date de 2021 ; CLJ-733 proposait une
+      `DataConveyingException` avant `ex-info`) ; un correctif du noyau placé APRÈS l'exploit qu'il
+      précède (CVE-2009-1897) ; deux exécutions de Celeste fondues en une ; des CITATIONS amputées de
+      leur sens (Gould sans son « probablement », Moore 1965 sans sa concession, Dowd et al. qui
+      jugent « true but irrelevant » l'argument qu'on leur prêtait) ; Moore 1975 raconté d'après un
+      résumé secondaire, rétabli sur son texte ; Mozilla Hubs décrit au présent (fermé en 2024) ; un
+      mot ajouté pour le cliquet lexical qui prêtait à `inert` un effet qu'il n'a pas (`a11y/lecon-08`).
+      Cliquet lexical rouge une fois après correction (« milliers » sorti de `stats/lecon-05`), remis
+      dans une phrase exacte ; 0 écart sur les cinq branches.
+
+      **Hors encadré, corrigé à la fusion** : `a11y/lecon-14` (« un audit automatique ne détecte
+      qu'environ un tiers des critères », sans source -> rattaché à la mesure du GDS de 2017 que
+      raconte le cas de la leçon ; l'exercice 2 aussi) ; `clojure/lecon-09` (« Walmart ou Apple »
+      sans source retirés) ; `elixir/lecon-09` (intertitre « Un cas réel » sur un exemple
+      d'enseignement -> « Cas d'usage »). `foyers-ajouter.js` retire les mentions de travail des
+      agents (« REMPLACE ma ligne … : ») et ignore les lignes « ABANDON » ; dix mentions des lots 2
+      et 3 retirées sur place.
+
+      **Contrôles sur master** : `--cas-reel` 0 sur les dix cours, `--strict` 0, `verif-html` 0,
+      domaines 0, cliquets 0, `verif-recherche` 77/77, `verif-doc` 41/41, point fixe au tour 4,
+      **`--rapide` 54/54** (273,5 s), `doublons.js` 2 (légitimes), les quatre pages au mojibake
+      volontaire intactes. **Conformes : 718 → 876** sur 1 551 (56,5 %). Quota hebdomadaire :
+      65 % → 74 %.
+
+      **Ouvert, hors encadré** : les blocs de code de `clojure/lecon-03`, `-04` et `-05`, que
+      l'encadré n'introduit plus (transition à relire) ; `lisp/lecon-08` (lot B12) cite le bloc `go`
+      de core.async, sujet gardé par `clojure/lecon-11` ; Gangnam Style reste raconté par
+      `haskell/lecon-02` (lot B11) sur une seule source de presse ; le Zig portable commun
+      (`scratchpad/outils-portables/zig-0.14.1`) n'a que la libc mingw — l'archive complète est à
+      reprendre de l'archive de `bash-asm`.
 - [ ] **B8 · Lot 5.** (`dataviz`, `objc`, `compilation`, `vscode`, `ocaml`, `pandas`, `pascal`, `maths`, `archi`, `iac` — 94 suspects / 134) Idem.
 - [ ] **B9 · Lot 6.** (`swift`, `ada`, `vue`, `projets-js`, `api`, `fortran`, `nosql`, `os`, `prolog`, `kubernetes` — 73 suspects / 152) Idem.
 - [ ] **B10 · Lot 7.** (`llm`, `ml`, `linux`, `algo`, `scala`, `cobol`, `groovy`, `formats`, `cicd`, `markdown` — 63 suspects / 142) Idem.
