@@ -45,8 +45,15 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 > 54/54. Les **doublons entre cours** (Azure 29/02/2012 cinq fois, Ariane 5 trois fois, et 13
 > sujets déjà racontés par leur foyer naturel hors du lot) sont remplacés le même jour : 37 cas,
 > registre `tools/cas-reels/lots/foyers.md`, sources partagées 19 → 2. Coût : ~6 points de quota
-> hebdomadaire pour 100 cas. **Prochaine case :
-> B5**, le lot 2 ; outils et modèles de consigne dans `tools/cas-reels/lots/`.
+> hebdomadaire pour 100 cas.
+>
+> **✅ B5 DU V18 FAITE (2026-11-14), 11 cases sur 61 — le lot 2, dix cours, 189 « Cas réel ».**
+> Cinq agents d'écriture avec réservations communes (189 sujets, aucun pris deux fois), dix
+> contre-relectures : 174 remplacés, 13 corrigés, 2 vérifiés ; 2 INVENTÉS trouvés (l'app fictive
+> Carnet du cours mobile, racontée comme réelle). La contre-relecture trouve encore **20,1 %** de
+> fautes (22,8 % sur les lots 1 et 2). Conformes : **354 → 543** sur 1 551. `--rapide` 54/54.
+> **Prochaine case : B6**, le lot 3 ; outils, registre des foyers et modèles de consigne dans
+> `tools/cas-reels/lots/`.
 
 ---
 
@@ -78,7 +85,7 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 | CHANTIER-V15 — comprendre ce qu'on ne voit pas | ✅ 32/32 |
 | CHANTIER-V17 — les garde-fous qui mentent | ✅ 80/80 |
 | CHANTIER-V16 — consolider ce que les quatre chantiers ont laissé derrière | ✅ 22/22 (clos le 2026-11-11) |
-| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **10/61 — plan courant** (écrit le 2026-11-11 ; phase A close le même jour ; B1 à B4 le 2026-11-14) |
+| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **11/61 — plan courant** (écrit le 2026-11-11 ; phase A close le même jour ; B1 à B5 le 2026-11-14) |
 
 **Le V18 est le plan courant.** Ses phases, dans l'ordre : **A** les instruments d'abord (6 cases :
 la sonde des QCM et l'épreuve de D2 entrent dans la chaîne, contrôle des domaines interdits, sondes

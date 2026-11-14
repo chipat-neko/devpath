@@ -590,11 +590,52 @@ notion de la leçon, ne disant que ce que dit la source.
       refuse ce qui n'est pas unique ou hors d'un « Cas réel »), `lexique-diff.js`, `doublons.js`, et
       les deux modèles de consigne (`consigne-ecriture.md`, avec ce que le lot 1 a appris ;
       `consigne-contre-relecture.md`).
-- [ ] **B5 · Lot 2.** (`nodejs`, `go`, `git`, `perl`, `powershell`, `typescript`, `zig`, `perf-web`, `bdd`, `mobile` — 165 suspects / 189) Même portée et même méthode que B4, **contre-relecture
+- [x] **B5 · Lot 2.** (`nodejs`, `go`, `git`, `perl`, `powershell`, `typescript`, `zig`, `perf-web`, `bdd`, `mobile` — 165 suspects / 189) Même portée et même méthode que B4, **contre-relecture
       comprise** (24,3 % de fautes trouvées après l'auteur au lot 1 : elle n'est pas optionnelle),
       consigne tirée de `tools/cas-reels/lots/consigne-ecriture.md` (règles apprises au lot 1 : un
       sujet = un seul cours sur tout le site, l'intertitre collé fait partie du cas, un lien
       seulement dans la ligne de source, `lexique-diff.js` à 0 écart). **Valable pour B6 à B12.**
+
+      **COCHÉ le 2026-11-14** (décision de Noah : « Doublons, puis lot 2 »). Cinq agents d'écriture
+      partis de `1b8d94b` (nodejs et bdd, go et zig, git et mobile, perl et powershell, typescript et
+      perf-web), un fichier de **réservations** commun (`scratchpad/v18-parallele/b5-reservations.txt` :
+      193 lignes, 189 sujets, aucun pris deux fois), puis **dix contre-relectures** en lecture seule.
+      **Lus : les 189 « Cas réel »**. Rapports cas par cas : `en-cours/rapports-v18/b5-*.md`.
+
+      **Trouvé** : une très large majorité d'INVÉRIFIABLE (récits anonymes : tout perl, tout
+      powershell, tout bdd), au moins 15 INEXACT (zig 8 : Bun n'est plus écrit en Zig, `Allocator` a
+      quatre fonctions et non trois ; git 6 ; go 1), **2 INVENTÉS** (`mobile/06` et `15` racontaient
+      comme réels des incidents de Carnet, l'app fictive du cours), et 5 sujets réels déjà gardés par
+      un autre cours (Tony Hoare, Mars Climate Orbiter, left-pad, LinkedIn 2012, GitHub 2012), vus par
+      le registre ou par `doublons.js`. **Fait** : **174 remplacés, 13 corrigés, 2 vérifiés**, 0
+      « Scénario ». Comportements rejoués : Go 1.27.4, Zig 0.14.1 et 0.17.1 portables (dans le
+      scratchpad), `tsc` 3.0 à 5.9, Perl 5.42, Windows PowerShell 5.1, Git 2.54, Node 24, PHP et Ruby
+      en WebAssembly.
+
+      **Contre-relecture** : une faute dans **38 cas sur 189 — 20,1 %** (Wilson [15,0 ; 26,4]) ;
+      cumul des lots 1 et 2 : 123/539, **22,8 %** [19,5 ; 26,5]. 47 corrections et 2 titres
+      retouchés, 0 à remplacer. Fautes de fond : un `bind` présenté comme un appel, `--isolatedModules` présenté comme exhaustif, le correctif Netlify de `colors` qui
+      n'avait pas marché (annulé le jour même : yarn ignore `npm-shrinkwrap.json`), un `local $@`
+      que Perl 5.14 a corrigé, `t.String()` de Go qui affiche bien la lecture monotone, un mot
+      bulgare donné pour du russe, un chercheur de Lugano donné à Microsoft Research, trois dates de
+      Trello décalées d'un jour par l'heure UTC. **Cliquet lexical** rouge deux fois après des
+      corrections justes (« organique » ; « formats », « identique », « reçoit » sortis des pages),
+      ramené à 0 écart.
+
+      **Contrôles sur master** : `--cas-reel` 0 sur les dix cours, `--strict` 0, `verif-html` 0,
+      domaines 0, cliquets 0, `verif-recherche` 77/77, `verif-doc` 41/41, point fixe au tour 3,
+      **`--rapide` 54/54** (256,7 s), `doublons.js` toujours 2 (légitimes), mojibake de
+      `perl/lecon-13` intact (octets identiques hors encadré). **Conformes : 354 → 543** sur 1 551.
+      Registre `foyers.md` : les 189 sujets du lot. Coût : quota hebdomadaire 42 % → 54 %.
+
+      **Ouvert, hors encadré** (signalé par les agents, non traité) : `zig/lecon-02` présente
+      `u8 + i32` comme une erreur (le code compile, rejoué en 0.14.1 et 0.17.1) ; le cours `zig` est
+      écrit pour Zig 0.14 sans le dire (`GeneralPurposeAllocator`, `ArrayList.init`) ; le corps de
+      `zig/lecon-10` et `zig/cours.html` disent Bun écrit en Zig ; `powershell/lecon-12` enseigne
+      `Should -Be` (Pester 5), que refuse le Pester 3.4 livré avec Windows ; l'exemple
+      `Invoke-WebRequest` de `powershell/lecon-14` demande confirmation depuis KB5074596 ;
+      `tools/fraicheur/releves/nodejs-lot-2026-11-11.json` garde trois ancres d'anciens encadrés
+      (phase E). LinkedIn 2012 reste raconté par `crypto/lecon-07` et `securite/lecon-05`.
 - [ ] **B6 · Lot 3.** (`kotlin`, `lua`, `cpp`, `rust`, `r`, `docker`, `data-eng`, `vb`, `dart`, `distribue` — 130 suspects / 175) Idem.
 - [ ] **B7 · Lot 4.** (`c`, `clojure`, `elixir`, `bash`, `equipe`, `neurones`, `julia`, `a11y`, `asm`, `stats` — 106 suspects / 158) Idem.
 - [ ] **B8 · Lot 5.** (`dataviz`, `objc`, `compilation`, `vscode`, `ocaml`, `pandas`, `pascal`, `maths`, `archi`, `iac` — 94 suspects / 134) Idem.
