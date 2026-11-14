@@ -125,7 +125,7 @@ La DERNIÈRE réservation de chaque cas (un agent qui change de sujet ajoute une
 | GitLab, « How we solved GitLab's CHANGELOG conflict crisis » (Robert Speicher, 2018) | `git/lecon-06#1` |
 | Meli, McNiece et Reaves, « How Bad Can It Git? » (NDSS 2019) : secrets retirés par un nouveau commit, historique jamais réécrit | `git/lecon-07#1` |
 | GitHub refuse le mot de passe du compte pour Git à partir du 13 août 2021 (billet du 15 décembre 2020) | `git/lecon-08#1` |
-| REMPLACE ma ligne « GitHub Pages (2008) » (sujet déjà raconté par ruby/lecon-22, libéré) : GitHub rend gratuits les dépôts privés illimités (Nat Friedman, 7 janvier 2019) | `git/lecon-09#1` |
+| GitHub rend gratuits les dépôts privés illimités (Nat Friedman, 7 janvier 2019) | `git/lecon-09#1` |
 | Bacchelli et Bird (Microsoft Research), « Expectations, Outcomes, and Challenges of Modern Code Review » (ICSE 2013) | `git/lecon-10#1` |
 | Hacktoberfest 2020 : PR indésirables, passage à l'opt-in des dépôts (DigitalOcean, DEV) | `git/lecon-11#1` |
 | Documentation du noyau Linux « Rebasing and merging » (Jonathan Corbet, 2019) | `git/lecon-12#1` |
@@ -190,12 +190,12 @@ La DERNIÈRE réservation de chaque cas (un agent qui change de sujet ajoute une
 | Node.js 19 : server.close() ferme les connexions keep-alive inactives (2022) | `nodejs/lecon-14#1` |
 | Heartland Payment Systems : l'injection SQL du 26 décembre 2007, acte d'accusation d'Albert Gonzalez (2009) | `nodejs/lecon-15#1` |
 | Dropbox, « How Dropbox securely stores your passwords » : SHA512, bcrypt coût 10, poivre AES256 (2016) | `nodejs/lecon-16#1` |
-| REMPLACE ma ligne « Slack Real-time Messaging » (sujet libéré) : Figma, « How Figma's multiplayer technology works », WebSocket et un processus par document (Evan Wallace, 2019) | `nodejs/lecon-17#1` |
+| Figma, « How Figma's multiplayer technology works », WebSocket et un processus par document (Evan Wallace, 2019) | `nodejs/lecon-17#1` |
 | Apache Superset, CVE-2023-27524 : la SECRET_KEY par défaut, refus de démarrer en 2.1 (2023) | `nodejs/lecon-18#1` |
 | Netflix, « Node.js in Flames » : routes Express dupliquées, +10 ms par heure, flame graphs (2014) | `nodejs/lecon-19#1` |
 | Kubernetes KEP-3960 : l'action sleep du crochet preStop contre la course des endpoints (2023, alpha 1.29) | `nodejs/lecon-20#1` |
 | Prisma, ticket n° 5184 « Use JOINs in more queries » (2021) puis relationJoins dans Prisma 5.7.0 (2023) | `nodejs/lecon-21#1` |
-| REMPLACE ma ligne « GitHub et l'assignation de masse (2012) » (sujet déjà raconté par ruby/lecon-09, libéré) : AnythingLLM, CVE-2024-0404, rôle admin glissé dans la route d'invitation (correctif du 10 janvier 2024) | `nodejs/lecon-22#1` |
+| AnythingLLM, CVE-2024-0404, rôle admin glissé dans la route d'invitation (correctif du 10 janvier 2024) | `nodejs/lecon-22#1` |
 | Node.js 18.3.0 intègre util.parseArgs (PR #42675 de Benjamin Coe, 2022) | `nodejs/lecon-23#1` |
 | ESLint 9.34.0 : analyse multithread par worker threads, --concurrency (2025) | `nodejs/lecon-24#1` |
 | Le lanceur de tests node:test : expérimental dans Node 18 (2022), stable dans Node 20 (2023) | `nodejs/lecon-25#1` |
@@ -339,7 +339,7 @@ La DERNIÈRE réservation de chaque cas.
 | Wolt, « Scaling our merchant app with Flutter » (Rifat Ordulu, 30 juin 2023) : Picker App, premier essai Flutter, pour préparer les commandes en magasin, étendue en app marchande unique iOS/Android | `dart/lecon-16#1` |
 | Public Health England : 15 841 cas de COVID-19 absents des chiffres quotidiens, fichiers trop gros pour le chargement (25 septembre - 2 octobre 2020) | `data-eng/lecon-01#1` |
 | Jay Kreps (LinkedIn), « Questioning the Lambda Architecture » : batch si la latence n'importe pas, flux sinon, pas les deux ; architecture Kappa (O'Reilly Radar, 2 juillet 2014) | `data-eng/lecon-02#1` |
-| REMPLACE ma ligne « Redshift / Tristan Handy » (sujet libéré) : Uber, « Uber's Big Data Platform: 100+ Petabytes with Minute Latency » : ETL ad hoc vers Vertica, puis brut ingéré une seule fois sans transformation dans Hadoop (Reza Shiftehfar, 17 octobre 2018) | `data-eng/lecon-03#1` |
+| Uber, « Uber's Big Data Platform: 100+ Petabytes with Minute Latency » : ETL ad hoc vers Vertica, puis brut ingéré une seule fois sans transformation dans Hadoop (Reza Shiftehfar, 17 octobre 2018) | `data-eng/lecon-03#1` |
 | AWS, « Analyzing Data in S3 using Amazon Athena » : 1 To de journaux texte devenus 130 Go de Parquet, 99 % de données scannées en moins (30 novembre 2016) | `data-eng/lecon-04#1` |
 | Kafka Connect, connecteur JDBC source : ligne validée après l'avance du curseur jamais lue (forum Confluent, 22 octobre 2021) ; timestamp.delay.interval.ms | `data-eng/lecon-05#1` |
 | Airbnb, Minerva partie I : tables dérivées de core_data qui prolifèrent, chiffres divergents, modèles certifiés reconstruits (Robert Chang, 30 avril 2021) | `data-eng/lecon-06#1` |
@@ -382,7 +382,7 @@ La DERNIÈRE réservation de chaque cas.
 | Google annonce le support officiel de Kotlin sur Android, « 100 % compatible » avec Java, Expedia, Flipboard, Pinterest, Square (Mike Cleron, Google I/O, 17 mai 2017) | `kotlin/lecon-01#1` |
 | Google Home : 33 % de NullPointerException en moins depuis les nouvelles fonctions en Kotlin, type de plantage n° 1 de la Play Console (Android Developers Blog, 16 juillet 2020) | `kotlin/lecon-02#1` |
 | Kotlin 1.6.0 avertit puis Kotlin 1.7.0 refuse les instructions when non exhaustives sur enum, sealed et Boolean (KT-47709 ; 16 novembre 2021, 9 juin 2022) | `kotlin/lecon-03#1` |
-| REMPLACE ma ligne « Compose Material 1.0.0 » : la fonction Text de Compose Material 3, première version stable 1.0.0, seize paramètres dont quinze ont une valeur par défaut (24 octobre 2022) | `kotlin/lecon-04#1` |
+| la fonction Text de Compose Material 3, première version stable 1.0.0, seize paramètres dont quinze ont une valeur par défaut (24 octobre 2022) | `kotlin/lecon-04#1` |
 | Proposition « Immutable Collections » d'Ilya Gorbunov (kotlinx.collections.immutable) : une collection exposée en lecture seule peut être recastée en mutable (12 juillet 2016) | `kotlin/lecon-05#1` |
 | Kotlin 1.4.0 : reduceOrNull, runningFold et scan, références :: vers des fonctions à paramètres par défaut (17 août 2020) | `kotlin/lecon-06#1` |
 | Kotlin 1.2 ajoute chunked, windowed et zipWithNext à Iterable, Sequence et CharSequence (28 novembre 2017) | `kotlin/lecon-07#1` |
@@ -405,13 +405,13 @@ La DERNIÈRE réservation de chaque cas.
 | Lua 5.2 ajoute goto (Roberto Ierusalimschy, « The Novelties of Lua 5.2 », atelier Lua, septembre 2011 ; sortie le 16 décembre 2011) | `lua/lecon-03#1` |
 | Des upvalues figées de Lua 3.1 à la portée lexicale complète de Lua 5.0 : message de John D. Ramsdell (juillet 2001), algorithme d'Edgar Toering (HOPL III, 2007) | `lua/lecon-04#1` |
 | Lua 5.1 remplace table.getn par l'opérateur de longueur #, table.setn obsolète (février 2006) | `lua/lecon-05#1` |
-| GARDE ET CORRIGE : lua-cjson d'OpenResty et la table vide, encode_empty_table_as_object (18 février 2014), cjson.empty_array et empty_array_mt (29 février 2016) | `lua/lecon-06#1` |
+| lua-cjson d'OpenResty et la table vide, encode_empty_table_as_object (18 février 2014), cjson.empty_array et empty_array_mt (29 février 2016) | `lua/lecon-06#1` |
 | etc/strict.lua, livré avec Lua 5.1 (février 2006) : métatable sur _G, __newindex et __index contre les globales non déclarées | `lua/lecon-07#1` |
 | Programming in Lua, 1re édition (2003), chapitre 16 : la classe Account, setmetatable(o, self) et self.__index = self, SpecialAccount | `lua/lecon-08#1` |
-| GARDE ET CORRIGE : Neovim 0.5 (2 juillet 2021), init.lua et package.path ajusté selon 'runtimepath' (lua-package-path) | `lua/lecon-09#1` |
+| Neovim 0.5 (2 juillet 2021), init.lua et package.path ajusté selon 'runtimepath' (lua-package-path) | `lua/lecon-09#1` |
 | Lua 5.2 (16 décembre 2011) : yield possible dans un pcall, « attempt to yield across metamethod/C-call boundary » en Lua 5.1 | `lua/lecon-10#1` |
 | GitHub, « How we scaled the GitHub API with a sharded, replicated rate limiter in Redis » : logique en Lua pour l'atomicité (Robert Mosolgo, 5 avril 2021) | `lua/lecon-11#1` |
-| GARDE ET CORRIGE : Balatro, fait avec LÖVE (site de LÖVE), trois prix aux Game Awards 2024 | `lua/lecon-12#1` |
+| Balatro, fait avec LÖVE (site de LÖVE), trois prix aux Game Awards 2024 | `lua/lecon-12#1` |
 | Programming in Lua, 1re édition (2003), § 20.1 : pas de regex POSIX, plus de 4 000 lignes contre moins de 500 pour les motifs | `lua/lecon-13#1` |
 | Lua 5.4 (29 juin 2020) : io.lines rend 4 valeurs, le fichier est fermé même après un break (valeur de fermeture) | `lua/lecon-14#1` |
 | Lua 5.1 et le ramasse-miettes incrémental demandé par les développeurs de jeux, le robot Crazy Ivan (HOPL III, 2007) | `lua/lecon-15#1` |
@@ -429,7 +429,7 @@ La DERNIÈRE réservation de chaque cas.
 | BBC Visual and Data Journalism : le package bbplot et le cookbook R pour ggplot2 (janvier 2019) | `r/lecon-07#1` |
 | Insee Première n° 2079 : salaires du privé en 2024, moyenne 2 733 euros, médiane 2 190 euros (23 octobre 2025) | `r/lecon-08#1` |
 | Ottoboni et Stark, « Random problems with R » (2018) ; R 3.6.0 change l'algorithme de sample() (26 avril 2019), RNGversion / sample.kind | `r/lecon-09#1` |
-| REMPLACE ma ligne « Galton 1886 » (sujet libéré : l'année 1886 n'est pas reconnue par la règle) : Challenger, les vols sans incident omis de la comparaison température / dégâts des joints, 36 °F au lancement (rapport de la commission Rogers, 6 juin 1986) | `r/lecon-10#1` |
+| Challenger, les vols sans incident omis de la comparaison température / dégâts des joints, 36 °F au lancement (rapport de la commission Rogers, 6 juin 1986) | `r/lecon-10#1` |
 | Les scripts « Willoughby-Hoye » donnaient des résultats différents selon le système (ordre des fichiers) ; Bhandari Neupane et al., Organic Letters, 8 octobre 2019 | `r/lecon-11#1` |
 | Baggerly et Coombes, « Deriving chemosensitivity from cell lines » (Annals of Applied Statistics, 2009) : rapports Sweave et sessionInfo | `r/lecon-12#1` |
 | R 4.0.0 (24 avril 2020) ajoute les chaînes brutes r"(...)" : plus besoin de doubler les antislashs des regex | `r/lecon-13#1` |
@@ -441,7 +441,7 @@ La DERNIÈRE réservation de chaque cas.
 | RFC 560 « Integer overflow » (Niko Matsakis, acceptée le 6 février 2015) : le débordement d'entier devient une erreur, vérifiée au moins quand les debug_assert! sont actifs, WrappingOps pour l'arithmétique modulaire voulue | `rust/lecon-02#1` |
 | Rust 1.19 : loop peut rendre une valeur par break (RFC 1624, 2016) — langage orienté expressions (blog de Rust, 20 juillet 2017) | `rust/lecon-03#1` |
 | Rust 1.65 stabilise let-else : motif réfutable, bloc else divergent (blog de Rust, 3 novembre 2022) | `rust/lecon-04#1` |
-| REMPLACE ma ligne « Avis zlib 2002-03-11 » (sujet libéré, foyer naturel plutôt au cours c) : Rust retire ses pointeurs @ à ramasse-miettes — 0.9 (janvier 2014) les met derrière un drapeau, 0.11 (juillet 2014) remplace ~T par Box<T> et @T par Gc<T>, 0.12 (octobre 2014) supprime Gc<T> (RELEASES.md) | `rust/lecon-05#1` |
+| Rust retire ses pointeurs @ à ramasse-miettes — 0.9 (janvier 2014) les met derrière un drapeau, 0.11 (juillet 2014) remplace ~T par Box<T> et @T par Gc<T>, 0.12 (octobre 2014) supprime Gc<T> (RELEASES.md) | `rust/lecon-05#1` |
 | Rust 1.31 et Rust 2018 : les durées de vie non lexicales (NLL), le borrow checker accepte let y = &x; let z = &mut x; (blog de Rust, 6 décembre 2018) | `rust/lecon-06#1` |
 | RFC 141 d'Aaron Turon, nouvelles règles d'élision des durées de vie : 147 des 169 annotations de libstd évitées, 87 % (2014) | `rust/lecon-07#1` |
 | Rust 1.47 : les traits de la bibliothèque standard implémentés pour les tableaux de toute longueur, plus seulement 0..=32, grâce aux const generics (8 octobre 2020) | `rust/lecon-08#1` |
@@ -473,3 +473,168 @@ La DERNIÈRE réservation de chaque cas.
 | .NET Core (1.0, 27 juin 2016) : Encoding.Default renvoie toujours UTF-8, la page de codes active sous .NET Framework ; File.WriteAllLines écrit en UTF-8 sans BOM | `vb/lecon-12#1` |
 | Framework Design Guidelines (Cwalina et Abrams, 2e éd., 22 octobre 2008) : le motif Try-Parse (DateTime.Parse et TryParse) | `vb/lecon-13#1` |
 | Barclays et la faillite de Lehman : 179 contrats cachés dans des lignes masquées d'un tableur réintégrés lors d'une conversion en PDF (Computerworld, 15 octobre 2008) | `vb/lecon-14#1` |
+
+## Pris par le lot 4 (B7, 2026-11-14)
+
+La DERNIÈRE réservation de chaque cas.
+
+| Sujet | Foyer |
+|---|---|
+| NFB contre Target : ordonnance du 6 septembre 2006 (lien avec les magasins) et accord du 27 août 2008 | `a11y/lecon-01#1` |
+| WebAIM, Screen Reader User Survey #10 : 71,6 % commencent par les titres, repères et niveaux de titres (2024) | `a11y/lecon-02#1` |
+| Nielsen Norman Group, Placeholders in Form Fields Are Harmful (Katie Sherwin, 11 mai 2014) | `a11y/lecon-03#1` |
+| W3C, Using ARIA : les quatre règles d'ARIA, brouillon de 2013 à 2018, « Discontinued Draft » le 24 février 2026 | `a11y/lecon-04#1` |
+| Naughty Dog, The Last of Us Part II : plus de 60 réglages, affichage à fort contraste, modes daltoniens de l'interface (PlayStation Blog, 9 juin 2020) | `a11y/lecon-05#1` |
+| GDS, Accessibility monitoring of public sector websites and mobile apps 2022-2024 : audits, 12 semaines, 29 787 problèmes, 55,3 % corrigés (17 décembre 2024) | `a11y/lecon-06#1` |
+| Chrome DevTools et l'arbre d'accessibilité complet (Johan Bay, developer.chrome.com, 2021) | `a11y/lecon-07#1` |
+| L'attribut inert : Safari 15.5 (16 mai 2022), Firefox 112 (11 avril 2023) ; la page derrière une modale | `a11y/lecon-08#1` |
+| GOV.UK, la recherche à filtres et la région live qui n'annonce que le nombre de résultats (Alice Bartlett, 14 août 2014) | `a11y/lecon-09#1` |
+| YouTube et les sous-titres automatiques, annoncés par Ken Harrenstien (Official Google Blog, 19 novembre 2009) | `a11y/lecon-10#1` |
+| Maguire contre le SOCOG (HREOC, 24 août 2000) : les tableaux de résultats des Jeux de Sydney | `a11y/lecon-11#1` |
+| WCAG 2.0, critère 3.3.1 « Identification des erreurs » et technique ARIA21 (11 décembre 2008) | `a11y/lecon-12#1` |
+| W3C, WAI-ARIA Authoring Practices 1.1, Read Me First : « a role is a promise », div role=button (14 août 2019) | `a11y/lecon-13#1` |
+| GDS, Mehmet Duran : 10 outils automatiques sur la page la moins accessible du monde, 143 défauts, 29 % vus par aucun (24 février 2017) | `a11y/lecon-14#1` |
+| FTC contre accessiBe : 1 million de dollars, accessWidget ne rend pas tout site conforme aux WCAG (ordonnance finale, 22 avril 2025) | `a11y/lecon-15#1` |
+| FFmpeg School of Assembly Language (première leçon, 25 janvier 2025) : pourquoi écrire de l'assembleur, gain ×10, intrinsèques, dav1d ×2 contre ×8 | `asm/lecon-01#1` |
+| Granlund et Montgomery, « Division by Invariant Integers using Multiplication » (PLDI 1994) : division par une constante remplacée par une multiplication | `asm/lecon-02#1` |
+| FreeBSD-SA-02:38.signed-error (19 août 2002) : contrôles de bornes faussés par des entiers signés, accept/getsockname/getpeername (Silvio Cesare) | `asm/lecon-03#1` |
+| Aleph One, « Smashing The Stack For Fun And Profit », Phrack 49 (8 novembre 1996) : cadre de pile, adresse de retour écrasée | `asm/lecon-04#1` |
+| Linux, tools/nolibc : _start i386, push %eax après and $-16 désaligne la pile, SIGSEGV en movaps/movdqa (Ammar Faizi, 30 août 2023) | `asm/lecon-05#1` |
+| Joe Damato (packagecloud), « Two frequently used system calls are ~77% slower on AWS EC2 » : vDSO et horloge Xen (7 mars 2017) | `asm/lecon-06#1` |
+| Danny Cohen, « On Holy Wars and a Plea for Peace », IEN 137 (1er avril 1980) : big-endian et little-endian | `asm/lecon-07#1` |
+| CVE-2009-1897, pilote tun du noyau Linux, test de pointeur nul supprimé par GCC, -fno-delete-null-pointer-checks (2009) | `asm/lecon-08#1` |
+| le Patriot de Dhahran (25 février 1991), horloge en dixièmes de seconde, 1/10 tronqué sur 24 bits, rapport GAO IMTEC-92-26 (foyer du Patriot ; fortran/lecon-02 le remplacera au lot 6) | `asm/lecon-09#1` |
+| Ver SQL Slammer (25 janvier 2003) : débordement de pile dans le service de résolution de SQL Server (MS02-039), Moore et al., « Inside the Slammer Worm » | `asm/lecon-10#1` |
+| Microsoft, Windows Error Reporting : « Debugging in the (Very) Large » (SOSP, octobre 2009), débogage post mortem de minidumps, !analyze | `asm/lecon-11#1` |
+| ticket golang/go n° 60937 (22 juin 2023), binaire Go compilé sur Debian 12 refusé par Debian 11 (GLIBC_2.34 not found), expliqué par la glibc 2.34 | `asm/lecon-12#1` |
+| GCC 12 active la vectorisation à -O2 (modèle de coût very-cheap, 2022) | `asm/lecon-13#1` |
+| Intel, Gabriele Paoloni, « How to Benchmark Code Execution Times on Intel IA-32 and IA-64 Instruction Set Architectures » (2010) : rdtsc, rdtscp, cpuid, asm volatile | `asm/lecon-14#1` |
+| Google, automemcpy (ISMM, 22 juin 2021) : memcpy en C++ réglé par mesures, égale puis dépasse l'assembleur écrit à la main, +1 % sur le parc | `asm/lecon-15#1` |
+| macOS Catalina (2019) : zsh devient le shell par défaut à la place de bash | `bash/lecon-01#1` |
+| Fedora 17, UsrMove : /bin, /sbin, /lib, /lib64 deviennent des liens vers /usr (Harald Hoyer, Kay Sievers ; fiche du 7 février 2012) | `bash/lecon-02#1` |
+| Bumblebee (mai 2011) : une espace de trop, rm -rf /usr /lib/nvidia-current/... efface /usr | `bash/lecon-03#1` |
+| Knuth et McIlroy, « Programming Pearls: A Literate Program » (CACM, juin 1986) : tr | `bash/lecon-04#1` |
+| Codecov, Bash Uploader modifié (avril 2021) : variables d'environnement envoyées par $(env) | `bash/lecon-05#1` |
+| Steam pour Linux (janvier 2015), rm -rf "$STEAMROOT/"* avec STEAMROOT vide, ticket 3671 (foyer du bogue Steam ; bash/lecon-11 remplacé) | `bash/lecon-06#1` |
+| Debian : modèle /etc/init.d/skeleton (case "$1" in start/stop/status/restart/force-reload) puis Debian 8 « Jessie » passe à systemd (25 avril 2015) | `bash/lecon-07#1` |
+| Shellshock, CVE-2014-6271 (24 septembre 2014) : définitions de fonctions dans les variables d'environnement | `bash/lecon-08#1` |
+| Aho, Weinberger, Kernighan, « Awk — A Pattern Scanning and Processing Language », 2e édition (Bell Labs, 1er septembre 1978) : motif { action }, BEGIN et END | `bash/lecon-09#1` |
+| systemd 230 (mai 2016) : KillUserProcesses=yes tue screen, tmux et nohup à la déconnexion | `bash/lecon-10#1` |
+| Ubuntu 6.10 (octobre 2006) : /bin/sh devient dash, les « bashismes » des scripts cassent | `bash/lecon-11#1` |
+| Installateur d'iTunes 2.0 pour Mac OS X (novembre 2001) : rm -rf $2Applications/iTunes.app non quoté, disques effacés (TidBITS, Adam Engst, 12 novembre 2001) | `bash/lecon-12#1` |
+| Bash 5.2 (26 septembre 2022) : option patsub_replacement, le & du remplacement ${var/motif/texte} | `bash/lecon-13#1` |
+| Bash 4.0 (février 2009) : tableaux associatifs (declare -A) et mapfile | `bash/lecon-14#1` |
+| Docker : les heredocs dans les Dockerfile (Justin Chadwell, 2021) | `bash/lecon-15#1` |
+| US-CERT, Ruggiero et Heckathorn, « Data Backup Options » (2012) : la règle 3-2-1 | `bash/lecon-16#1` |
+| GCC 14 (7 mai 2024) change en erreurs des avertissements ignorés : déclaration implicite de fonction, int implicite, conversion pointeur/entier (« Porting to GCC 14 ») | `c/lecon-01#1` |
+| Linux 5.6 (fusion du 29 janvier 2020, Arnd Bergmann) : time_t 64 bits partout, premier noyau pour un système 32 bits qui passe 2038 ; Gangnam Style (haskell/lecon-02) et Ariane 5 (ada/lecon-07) retirés | `c/lecon-02#1` |
+| Le noyau Linux active -Wimplicit-fallthrough partout (Gustavo A. R. Silva, Linux 5.3, 2019) : break oubliés dans des switch, 32 cas sur 2 311 restants | `c/lecon-03#1` |
+| Expat, CVE-2022-25313 : épuisement de pile par récursion dans build_model, fichier de 2 Mo plein d'accolades ouvrantes, rendu itératif (Expat 2.4.5, 18 février 2022) | `c/lecon-04#1` |
+| OpenSSL, CVE-2021-3449 : pointeur remis à NULL mais longueur gardée, déréférencement NULL à la renégociation, signalé par Nokia (25 mars 2021) | `c/lecon-05#1` |
+| Sudo « Baron Samedit », CVE-2021-3156 (Qualys, 26 janvier 2021) : antislash final, la boucle while (*from) saute le zéro terminal et copie hors du tampon | `c/lecon-06#1` |
+| BIND 9, CVE-2022-38177 : fuite de mémoire dans la vérification ECDSA (DNSSEC) quand la longueur de signature ne correspond pas, named finit par tomber (ISC, 21 septembre 2022) | `c/lecon-07#1` |
+| CVE-2016-4482 : struct usbdevfs_connectinfo, 3 octets de bourrage non initialisés copiés vers l'espace utilisateur par copy_to_user (Kangjie Lu, 3 mai 2016) | `c/lecon-08#1` |
+| le ver Morris (novembre 1988), fingerd lu par gets() ; gets retiré par C11 (foyer du ver Morris, aussi raconté par asm/lecon-10 et c/lecon-06) | `c/lecon-09#1` |
+| Peter Miller, « Recursive Make Considered Harmful » (AUUGN, 1997-1998) : .o dépendant des .h, dépendances omises, builds trop lents | `c/lecon-10#1` |
+| Heartbleed dans OpenSSL (avis du 7 avril 2014), AddressSanitizer et fuzzing (foyer de Heartbleed ; c/lecon-16 sera remplacé) | `c/lecon-11#1` |
+| Avis zlib du 11 mars 2002 (double free, zlib 1.1.4) : applications liées en statique à recompiler, bibliothèque partagée à mettre à jour et programmes à relancer | `c/lecon-12#1` |
+| CVE-2009-2692 : sock_sendpage appelait sock->ops->sendpage sans tester NULL, tables proto_ops mal initialisées (Julien Tinnes et Tavis Ormandy, 13 août 2009) | `c/lecon-13#1` |
+| environ 70 % des failles sont des erreurs de sûreté mémoire (MSRC, 16 juillet 2019 ; Chromium, moitié de use-after-free, blog du 21 septembre 2021) | `c/lecon-14#1` |
+| chmod dans la première édition du manuel d'Unix (3 novembre 1971) : mode construit par OU de drapeaux octaux ; valeurs S_IRUSR 0400… de POSIX | `c/lecon-15#1` |
+| Le Zune 30 Go figé le 31 décembre 2008 : pilote d'horloge et dernier jour d'une année bissextile (réponse officielle de Matt Akers, Zune Product Team) | `c/lecon-16#1` |
+| OpenBSD 3.6 (1er novembre 2004) ajoute strtonum(3) contre les défauts d'atoi et de strtol | `c/lecon-17#1` |
+| Qualys, qsort() de la glibc et les comparateurs non transitifs « return a - b » (30 janvier 2024) | `c/lecon-18#1` |
+| Todd C. Miller et Theo de Raadt, « strlcpy and strlcat » (USENIX, juin 1999) ; ajoutées à la glibc 2.38 (31 juillet 2023, ticket 178 ouvert en 2004) | `c/lecon-19#1` |
+| Mozilla, « Eliminating Data Races in Firefox » : ThreadSanitizer, courses « bénignes », champs de bits voisins écrits par deux threads (Holler, Beingessner, Wright, 6 avril 2021) | `c/lecon-20#1` |
+| Jim Meyering, « Goodbye World! The perils of relying on output streams in C » (GNU Hackers Meeting, Paris, 27 août 2011) : hello world > /dev/full renvoie 0, close_stdout | `c/lecon-21#1` |
+| Cognitect rejoint Nubank (23 juillet 2020) : 600 développeurs Clojure, 2,5 millions de lignes, 500 microservices | `clojure/lecon-01#1` |
+| Rich Hickey, Git Deps for Clojure : une dépendance déclarée comme une map dans deps.edn (5 janvier 2018) | `clojure/lecon-02#1` |
+| Clojure 1.6 ajoute some?, if-some et when-some : tester « non nil » au lieu de la vérité logique, ticket CLJ-1343 (2014) | `clojure/lecon-03#1` |
+| Rich Hickey annonce Transit : maps à clés quelconques, sets, listes, keywords transportés en JSON et MessagePack (Cognitect, 22 juillet 2014) | `clojure/lecon-04#1` |
+| Rich Hickey, Reducers - A Library and Model for Collection Processing : map, filter et fold sur reduce (8 mai 2012) | `clojure/lecon-05#1` |
+| David Nolen présente Om : TodoMVC sur données immuables, égalité de références, annulation gratuite (17 décembre 2013) | `clojure/lecon-06#1` |
+| re-frame et son app-db, un seul atom mis à jour par reset! (documentation, depuis 2015) | `clojure/lecon-07#1` |
+| Clojure 1.12 : valeurs de méthodes et méthodes qualifiées String/.toUpperCase (5 septembre 2024) | `clojure/lecon-08#1` |
+| Clojure 1.7 : fichiers .cljc et reader conditionals #? (30 juin 2015) | `clojure/lecon-09#1` |
+| Clojure 1.2 introduit les protocols (19 août 2010), page de référence Protocols | `clojure/lecon-10#1` |
+| Rich Hickey annonce core.async, canaux et blocs go (28 juin 2013) | `clojure/lecon-11#1` |
+| Clojure 1.9 : spec intégré, macros de clojure.core vérifiées par core.specs.alpha (8 décembre 2017) | `clojure/lecon-12#1` |
+| CLJ-1285 : Zach Tellman trouve par test génératif (collection-check, simple-check) un bogue des sets/maps à collision de hachage après transients, corrigé dans Clojure 1.6 (octobre 2013) | `clojure/lecon-13#1` |
+| Rich Hickey, Transducers are Coming (6 août 2014) | `clojure/lecon-14#1` |
+| Clojure 1.11 ajoute update-keys et update-vals, ticket CLJ-1959 ouvert en 2016 (22 mars 2022) | `clojure/lecon-15#1` |
+| Clojure 1.4 ajoute ex-info et ex-data, ticket CLJ-733 « Data Conveying Exception » de Stuart Halloway (2011-2012) | `clojure/lecon-16#1` |
+| L'équipe Clojure présente Morse, navigateur de données au REPL issu de REBL (avril 2023) | `clojure/lecon-17#1` |
+| Change.org remplace un prestataire par trois applications Elixir, plus d'un milliard d'e-mails par mois (étude de cas elixir-lang.org, 27 octobre 2020) | `elixir/lecon-01#1` |
+| Elixir 1.17 : types ensemblistes inférés des motifs, avertissements sur %{adress: ...} = user (12 juin 2024) | `elixir/lecon-02#1` |
+| Elixir 1.5 : Exception.blame et les FunctionClauseError qui montrent les clauses tentées (25 juillet 2017) | `elixir/lecon-03#1` |
+| Elixir 0.13 : les maps (Erlang R17), la mise à jour %{map | `elixir/lecon-04#1` |
+| José Valim, Announcing GenStage : comptage de mots, File.read! contre File.stream! et Stream (14 juillet 2016) | `elixir/lecon-05#1` |
+| Elixir 1.12 ajoute then/2 et tap/2 pour les pipelines (19 mai 2021) | `elixir/lecon-06#1` |
+| Elixir 1.2 introduit with à la place des case imbriqués (3 janvier 2016) | `elixir/lecon-07#1` |
+| X-Plane (Laminar Research) : serveur multijoueur en Elixir, un processus par connexion UDP (étude de cas elixir-lang.org, 29 juillet 2021) | `elixir/lecon-08#1` |
+| Phoenix, The Road to 2 Million Websocket Connections : file du processus :timer, serveur PubSub unique devenu goulot, pool de serveurs (Gary Rennie, 3 novembre 2015) | `elixir/lecon-09#1` |
+| Community : les superviseurs Elixir rétablissent les connexions RabbitMQ et base de données (étude de cas elixir-lang.org, 3 février 2021) | `elixir/lecon-10#1` |
+| Elixir 0.8.2 ajoute les doctests (29 avril 2013) | `elixir/lecon-11#1` |
+| Mozilla Hubs : espaces virtuels sur Phoenix, en ligne depuis janvier 2018 (étude de cas elixir-lang.org, 2 juin 2021) | `elixir/lecon-12#1` |
+| Elixir 1.8 : @derive {Inspect, only: ...} pour masquer :encrypted_password dans les journaux (14 janvier 2019) | `elixir/lecon-13#1` |
+| Elixir 1.4 ajoute Task.async_stream et max_concurrency (5 janvier 2017) | `elixir/lecon-14#1` |
+| Elixir 1.14 ajoute la macro dbg, qui affiche chaque étape d'un pipeline (1er septembre 2022) | `elixir/lecon-15#1` |
+| Phoenix 1.6 et le générateur phx.gen.auth : changeset d'inscription e-mail et mot de passe (26 août 2021) | `elixir/lecon-16#1` |
+| Veeps : chaque panier d'achat est un GenServer (étude de cas elixir-lang.org, 5 mars 2024) | `elixir/lecon-17#1` |
+| Avelino, Passos, Hora, Valente, « A Novel Approach for Estimating Truck Factors » : 65 % de 133 projets GitHub ont un facteur camion de 1 ou 2 (ICPC 2016) | `equipe/lecon-01#1` |
+| Xia et al., « Measuring Program Comprehension » : 78 développeurs, 3 148 heures, environ 58 % du temps à comprendre le code (IEEE TSE, octobre 2018) | `equipe/lecon-02#1` |
+| Rodeghero, Zimmermann, Houck, Ford, « Please Turn Your Cameras On » : 267 nouveaux embauchés de Microsoft intégrés à distance en 2020, binôme et documentation (ICSE SEIP 2021) | `equipe/lecon-03#1` |
+| Google publie ses « Code Review Guidelines » (eng-practices, septembre 2019) : « Nit: », commenter le code et pas la personne ; étiquettes de sévérité ajoutées en août 2022 | `equipe/lecon-04#1` |
+| Egelman et al. (Google), « Predicting Developers' Negative Feelings about Code Review » : 1 317 développeurs, le « pushback » (ICSE 2020) | `equipe/lecon-05#1` |
+| James Long annonce Prettier (10 janvier 2017) ; « Why Prettier? » : arrêter les débats de style, « Option Philosophy » | `equipe/lecon-06#1` |
+| Documentation du noyau Linux « Submitting patches » : un changement logique par correctif ; phrase sur git bisect ajoutée par Jonathan Corbet (23 décembre 2014) | `equipe/lecon-07#1` |
+| Sadowski et al., « Modern Code Review: A Case Study at Google » : 9 millions de changements, médiane 24 lignes, premier retour en moins d'une heure (ICSE SEIP 2018) | `equipe/lecon-08#1` |
+| Software Engineering at Google (2020), chapitre 10 : GooWiki, documents sans propriétaire devenus obsolètes, documentation passée sous gestion de versions puis g3doc | `equipe/lecon-09#1` |
+| Ron Jeffries, « Story Points Revisited » (23 mai 2019) : jours idéaux × facteur de charge, devenus « points » ; « if I did, I'm sorry now » | `equipe/lecon-10#1` |
+| Ward Cunningham, rapport d'expérience OOPSLA '92 sur WyCash : « Shipping first time code is like going into debt » (26 mars 1992) | `equipe/lecon-11#1` |
+| Fastly, panne mondiale du 8 juin 2021 : détectée en une minute, configuration désactivée, 95 % du réseau rétabli en 49 minutes, correctif le soir (Nick Rockwell) | `equipe/lecon-12#1` |
+| Joyent us-east-1, 27 mai 2014 : un opérateur redémarre tout le centre de données par une commande mal tapée ; outil sans validation, opérateur gardé (post-mortem du 28 mai, Bryan Cantrill sur HN) | `equipe/lecon-13#1` |
+| Spotify, « Squad Health Check model » (Henrik Kniberg et Kristian Lindwall, 16 septembre 2014) : auto-évaluation d'équipe, dix indicateurs, outil de soutien et non de jugement | `equipe/lecon-14#1` |
+| la Fed de New York passe son modèle DSGE de MATLAB à Julia, estimation dix fois plus rapide (Liberty Street Economics, 3 décembre 2015) | `julia/lecon-01#1` |
+| Bitcoin, l'incident de débordement du bloc 74638 : deux sorties de 92 233 720 368,54 BTC, somme Int64 qui déborde (bitcointalk, 15 août 2010 ; CVE-2010-5139) | `julia/lecon-02#1` |
+| Julia 1.5 rend la « portée douce » au REPL : la boucle for qui modifie une globale (Bezanson et Karpinski, blog Julia, 3 août 2020) | `julia/lecon-03#1` |
+| Julia 0.5 rend rapides les fonctions anonymes : map(x->2x, v) 22 fois plus lent en 0.4, aussi rapide en 0.5 (Karpinski, blog Julia, 11 octobre 2016) | `julia/lecon-04#1` |
+| Steven G. Johnson, More Dots : la fusion des appels pointés dans Julia 0.6, une seule boucle sans tableau temporaire (blog Julia, 21 janvier 2017) | `julia/lecon-05#1` |
+| Julia 0.6 : immutable devient struct, type devient mutable struct (ticket JuliaLang/julia n° 19157 de Jeff Bezanson, 29 octobre 2016 ; Julia 0.6, 27 juin 2017) | `julia/lecon-06#1` |
+| Mosè Giordano, Measurements.jl, sous-type d'AbstractFloat : complexes, précision arbitraire, algèbre linéaire et unités sans une ligne de code (arXiv 1610.08716, 28 octobre 2016) | `julia/lecon-07#1` |
+| Celeste, catalogue astronomique en Julia, 1,54 PFLOP/s sur Cori (Julia Computing, 12 septembre 2017 ; Regier et al., arXiv 1801.10277, 2018) | `julia/lecon-08#1` |
+| Julia 1.7 change le format du Manifest.toml pour y noter julia_version (Carlsson et Butterworth, Julia 1.7 Highlights, 30 novembre 2021) | `julia/lecon-09#1` |
+| Julia 1.9 met en cache le code natif des paquets : premier appel de CSV 11,66 s -> 0,08 s, DataFrames 17,39 s -> 0,38 s (Julia 1.9 Highlights, 9 mai 2023) | `julia/lecon-10#1` |
+| Oceananigans.jl, le modèle d'océan de la Climate Modeling Alliance, un seul code Julia pour CPU et GPU (JOSS, 22 septembre 2020 ; MIT News, 12 décembre 2018) | `julia/lecon-11#1` |
+| JuMP, premier langage de modélisation d'optimisation bâti sur des macros syntaxiques (Dunning, Huchette, Lubin, SIAM Review 59(2), 2017 ; arXiv 1508.01982) | `julia/lecon-12#1` |
+| Julia 1.3 et Threads.@spawn : parallélisme multithread composable, tri fusion parallèle (Bezanson, Nash, Pamnany, blog Julia, 23 juillet 2019) | `julia/lecon-13#1` |
+| Chen et Revels, Robust benchmarking in noisy environments : BenchmarkTools et Nanosoldier, plus de 1 300 benchmarks dans la CI de Julia (arXiv, 15 août 2016) | `julia/lecon-14#1` |
+| PySR : une interface Python sur SymbolicRegression.jl, moteur écrit en Julia et compilé à la volée (Miles Cranmer, arXiv 2305.01582, 3 mai 2023) | `julia/lecon-15#1` |
+| Le mot-clé init de sum, prod, maximum et minimum : PR JuliaLang/julia n° 35839 (Tim Holy) et n° 36188 (Takafumi Arakaki), fusionnées le 11 juin 2020, livrées dans Julia 1.6 (24 mars 2021) | `julia/lecon-16#1` |
+| Minsky et Papert, Perceptrons (1969), d'après l'avant-propos de Léon Bottou (2017) | `neurones/lecon-01#1` |
+| Leshno, Lin, Pinkus et Schocken : une activation non polynomiale (1992-1993) | `neurones/lecon-02#1` |
+| Le format safetensors de Hugging Face et son audit (2022-2023) | `neurones/lecon-03#1` |
+| Krizhevsky, Sutskever et Hinton (AlexNet, NIPS 2012) : on maximise la log-probabilité, on rapporte les taux d'erreur top-1 et top-5 | `neurones/lecon-04#1` |
+| Goyal et al. (Facebook), Training ImageNet in 1 Hour : règle linéaire du taux d'apprentissage et montée progressive (2017) | `neurones/lecon-05#1` |
+| Rumelhart, Hinton et Williams, la rétropropagation dans Nature (1986) | `neurones/lecon-06#1` |
+| Zhang, Bengio, Hardt, Recht et Vinyals : des réseaux qui apprennent des étiquettes tirées au hasard (ICLR 2017) | `neurones/lecon-07#1` |
+| Krogh et Hertz, A Simple Weight Decay Can Improve Generalization, pénalité L2 et NetTalk (NIPS 1991) | `neurones/lecon-08#1` |
+| Glorot et Bengio, la difficulté d'entraîner les réseaux profonds, saturation des sigmoïdes (AISTATS 2010) | `neurones/lecon-09#1` |
+| Azulay et Weiss : un décalage d'un pixel change la prédiction des réseaux convolutifs (2018-2019) | `neurones/lecon-10#1` |
+| Vaswani et al., Attention Is All You Need : le Transformer et l'encodage de position (2017) | `neurones/lecon-11#1` |
+| NIST et le Census Bureau, First Census OCR Systems Conference : SD3 (agents du recensement) contre TD1 (lycéens), NISTIR 4912 (1992) | `neurones/lecon-12#1` |
+| Stack Overflow Developer Survey 2025 : 49 009 réponses de 177 pays, recrutées surtout par les canaux de Stack Overflow (méthodologie, 2025) | `stats/lecon-01#1` |
+| Stephen Jay Gould, The Median Isn't the Message : médiane de survie de huit mois, distribution asymétrique à droite (Discover, juin 1985) | `stats/lecon-02#1` |
+| Gilbert S. Daniels, The Average Man? : 4 063 aviateurs, aucun dans la moyenne sur 10 mesures (US Air Force, décembre 1952) | `stats/lecon-03#1` |
+| Dean et Barroso, The Tail at Scale : 99e centile, éventail de 100 serveurs (CACM, février 2013) | `stats/lecon-04#1` |
+| Les sondages des législatives britanniques du 7 mai 2015 et l'enquête Sturgis : échantillons non représentatifs (BPC et MRS, mars 2016) | `stats/lecon-05#1` |
+| Goldman Sachs et les « 25 écarts-types » de David Viniar : la loi normale démentie (août 2007 ; Dowd et al., 2008) | `stats/lecon-06#1` |
+| Insee, chômage au sens du BIT au 4e trimestre 2025 : 7,9 % à +/- 0,3 point près, hausse de 0,2 point (Informations Rapides n° 34, 10 février 2026) | `stats/lecon-07#1` |
+| L'ASA publie sa déclaration sur la significativité et les valeurs p : six principes (7 mars 2016) | `stats/lecon-08#1` |
+| Matejka et Fitzmaurice, Same Stats, Different Graphs : la Datasaurus Dozen, r = -0,06 pour treize nuages (Autodesk Research, CHI 2017) | `stats/lecon-09#1` |
+| le traitement hormonal de la ménopause et l'essai randomisé WHI, risque coronarien 1,29 (JAMA, 17 juillet 2002) ; confusion socio-économique (Lawlor et al., AJPH, 2004) | `stats/lecon-10#1` |
+| Gordon Moore, une droite par cinq points en échelle log (1959-1964), 65 000 composants prévus pour 1975, pente révisée à l'IEDM 1975 (Electronics, 19 avril 1965 ; Computer History Museum) | `stats/lecon-11#1` |
+| Google Flu Trends : 50 millions de requêtes pour 1 152 points, le double des consultations du CDC en février 2013 (Lazer et al., Science, 14 mars 2014) | `stats/lecon-12#1` |
+| Open Science Collaboration, 100 réplications en psychologie : 97 % d'originaux significatifs, 36 % des réplications (Science, 28 août 2015) | `stats/lecon-13#1` |
+| Paradoxe de Simpson dans la létalité du Covid-19, Italie (9 mars 2020) contre Chine : plus basse par âge, plus haute au total (von Kügelgen, Gresele, Schölkopf, arXiv, 14 mai 2020) | `stats/lecon-14#1` |
+| Optimizely et le « peeking » : un test A/A surveillé en continu franchit 95 %, erreur de type I multipliée par cinq, valeurs p « toujours valides » depuis janvier 2015 (Johari, Pekelis, Walsh, arXiv 1512.04922) | `stats/lecon-15#1` |

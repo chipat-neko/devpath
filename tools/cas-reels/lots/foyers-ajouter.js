@@ -20,12 +20,19 @@ if (i >= 0) { var j = s.indexOf("\n## ", i + marque.length); s = s.slice(0, i) +
 s = s.replace(/\n+$/, "\n");
 var L = fs.readFileSync(RESA, "utf8").split("\n")
   .filter(function (l) { return /^(pages\/)?[a-z0-9-]+\/lecon-\d+(\.html)?#\d+\s*\|/.test(l); });
-var parId = {};
+/* Mentions de travail des agents, retirées du sujet (lot 4) : « REMPLACE ma ligne « … » (…) : »,
+   « GARDE ET CORRIGE : », « REMPLACE ET RECENTRE : ». Une ligne « ABANDON … » ne réserve rien :
+   elle est ignorée, la réservation précédente ou suivante du même cas fait foi. */
+var MENTION = /^(REMPLACE ma ligne\s*«[^»]*»\s*(\([^)]*\))?|GARDE ET CORRIGE|REMPLACE ET RECENTRE|GARDE|CORRIGE|REMPLACE)\s*:\s*/i;
+var parId = {}, abandons = 0;
 L.forEach(function (l) {
   var p = l.split(" | ");
   var id = p[0].trim().replace(/^pages\//, "").replace(/\.html/, "");
-  parId[id] = (p[1] || "").replace(/^\((correction|remplace)[^)]*\)\s*/i, "").trim();
+  var sujet = (p[1] || "").replace(/^\((correction|remplace)[^)]*\)\s*/i, "").trim();
+  if (/^ABANDON\b/i.test(sujet)) { abandons++; return; }
+  parId[id] = sujet.replace(MENTION, "").trim();
 });
+if (abandons) console.log(abandons + " ligne(s) « ABANDON » ignorée(s)");
 var ids = Object.keys(parId).sort(function (a, b) {
   var x = a.match(/^(.*)\/lecon-(\d+)#(\d+)$/), y = b.match(/^(.*)\/lecon-(\d+)#(\d+)$/);
   return x[1].localeCompare(y[1]) || (+x[2] - +y[2]) || (+x[3] - +y[3]);
