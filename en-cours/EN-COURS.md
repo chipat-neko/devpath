@@ -33,8 +33,18 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 > à la source : **21,3 % INEXACT**, 58,0 % INVÉRIFIABLE, 1,3 % INVENTÉ — et **37,7 % d'INEXACT chez
 > les cas ancrés** : plus un cas affirme, plus il se trompe. La règle (sujet, date, source) est
 > écrite dans `docs/enrichissements/NOUVEAUX-COURS.md` et contrôlée en avertissement par
-> `verif-contenu.js --cas-reel` (4 conformes sur 1 551). **Prochaine case : B4**, le lot 1 ; chaque
-> lot relit **tous** ses « Cas réel » (règle de B4, déclenchée par B2).
+> `verif-contenu.js --cas-reel` (4 conformes sur 1 551). Chaque lot relit **tous** ses « Cas réel »
+> (règle de B4, déclenchée par B2).
+>
+> **✅ B4 DU V18 FAITE (2026-11-14), 10 cases sur 61 — le lot 1, dix cours, 350 « Cas réel ».**
+> Sept agents d'écriture en parallèle (une copie et une branche chacun), puis quinze agents de
+> contre-relecture en lecture seule, puis fusion vérifiée. 303 remplacés par un vrai cas daté et
+> sourcé, 42 corrigés, 5 gardés, 0 « Scénario », 0 INVENTÉ trouvé. **La contre-relecture a encore
+> trouvé une faute dans 24,3 % des cas** (85 sur 350) après la vérification de l'auteur : elle est
+> obligatoire pour les lots suivants. Conformes à la règle : **4 → 354** sur 1 551. `--rapide`
+> 54/54. Ouvert : les **doublons entre cours** (Azure 29/02/2012 cinq fois, Ariane 5 trois fois…),
+> à remplacer avant B13. Coût : ~6 points de quota hebdomadaire pour 100 cas. **Prochaine case :
+> B5**, le lot 2 ; outils et modèles de consigne dans `tools/cas-reels/lots/`.
 
 ---
 
@@ -66,7 +76,7 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 | CHANTIER-V15 — comprendre ce qu'on ne voit pas | ✅ 32/32 |
 | CHANTIER-V17 — les garde-fous qui mentent | ✅ 80/80 |
 | CHANTIER-V16 — consolider ce que les quatre chantiers ont laissé derrière | ✅ 22/22 (clos le 2026-11-11) |
-| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **9/61 — plan courant** (écrit le 2026-11-11 ; phase A close le même jour ; B1 à B3 le 2026-11-14) |
+| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **10/61 — plan courant** (écrit le 2026-11-11 ; phase A close le même jour ; B1 à B4 le 2026-11-14) |
 
 **Le V18 est le plan courant.** Ses phases, dans l'ordre : **A** les instruments d'abord (6 cases :
 la sonde des QCM et l'épreuve de D2 entrent dans la chaîne, contrôle des domaines interdits, sondes

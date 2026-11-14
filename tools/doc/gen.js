@@ -583,6 +583,9 @@ const RECH_NB = (function () {
        échantillonnés à la main — voir l'en-tête de mesures/recours.js. */
     siteLecons: milliers(s.lecons),
     sitePortes: String(s.portes),
+    /* V18 : les leçons qui citent la source d'un « Cas réel ». Leurs liens ne
+       sont PAS des portes (voir mesures/recours.js, motif lienExterne). */
+    siteSourcees: milliers(s.sourcees),
     siteCoursPortes: String(s.coursPorte),
     sitePourMille: String(s.pourMille).replace('.', ','),
     siteSansPorte: milliers(s.sansPorte),

@@ -52,6 +52,19 @@ const MOTIFS = {
        celui-là est du texte enseigné, pas une porte de sortie. */
     re: /<a\b[^>]*href="https?:\/\//i,
     surHtml: true,
+    /* ⚠ V18 (2026-11-14) : la ligne de SOURCE d'un « Cas réel »
+       (<p class="cas-reel__source">) porte souvent un lien vers le document
+       cité. Comptée comme une porte, elle a fait passer ce chiffre de 11 à 312
+       leçons au premier lot du chantier — et la phrase « ce site est une île »
+       serait devenue fausse par un effet de bord. Une source citée n'est pas
+       une porte de sortie : elle dit d'où vient un fait, pas où chercher le
+       suivant. Elle est donc retirée ici et comptée à part (sourceCitee). */
+    horsSources: true,
+  },
+  sourceCitee: {
+    libelle: 'citent la source d’un « Cas réel » (ligne cas-reel__source)',
+    re: /<p class="cas-reel__source"/,
+    surHtml: true,
   },
   nomment: {
     libelle: 'nomment Stack Overflow ou un assistant de code',
@@ -69,6 +82,10 @@ function sansBlocsDeCode(html) {
     .replace(/<code[\s\S]*?<\/code>/gi, ' ');
 }
 
+function sansSources(html) {
+  return html.replace(/<p class="cas-reel__source"[\s\S]*?<\/p>/gi, ' ');
+}
+
 function mesurer() {
   const fichiers = lib.fichiersLecons();
   const cpt = {}, exemples = {};
@@ -84,7 +101,7 @@ function mesurer() {
     const texte = lib.texteDe(brutSansCode);
     for (const k of Object.keys(MOTIFS)) {
       const m = MOTIFS[k];
-      const cible = m.surHtml ? brutSansCode : texte;
+      const cible = m.surHtml ? (m.horsSources ? sansSources(brutSansCode) : brutSansCode) : texte;
       if (!m.re.test(cible)) continue;
       if (m.exclut && !m.re.test(cible.replace(new RegExp(m.exclut.source, 'g'), ' '))) continue;
       cpt[k]++;
@@ -96,6 +113,7 @@ function mesurer() {
     lecons: fichiers.length,
     cpt, exemples, motifs: MOTIFS,
     portes: avecPorte,
+    sourcees: cpt.sourceCitee,
     coursPorte: coursPorte.size,
     sansPorte: fichiers.length - avecPorte,
     /* En pour mille, parce qu'en pourcentage le chiffre s'arrondirait à 1 %

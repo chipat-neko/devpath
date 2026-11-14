@@ -106,6 +106,9 @@ const ATTENDUS = [
   [REQ.v1.pctStable + ' % de stable', 'la part du moteur'],
   [REQ.v2.nbCauses + ' causes, ' + REQ.v2.messagesDistincts + ' message', 'la mesure centrale du deuxième volet'],
   [RECOURS.portes + ' portent un lien vers l’extérieur', 'les portes de sortie du site'],
+  /* V18 : les sources citées, comptées À PART des portes (voir recours.js). */
+  /* milliers() de gen.js sépare par une espace insécable RÉELLE (U+00A0), que TEXTE garde. */
+  [String(RECOURS.sourcees).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' citent la source', 'les leçons qui citent la source de leur « Cas réel »'],
   [RECOURS.cpt.nomment + ' leçons', 'les mentions de Stack Overflow et des assistants'],
 ];
 for (const [brut, quoi] of ATTENDUS) {

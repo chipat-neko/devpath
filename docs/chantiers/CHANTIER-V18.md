@@ -489,14 +489,104 @@ notion de la leçon, ne disant que ce que dit la source.
       **4/9** (code 1), sans celle de la date **8/9** (code 1), tout jugé hors règle → code 2.
       Cliquets QCM (lexique, biais) verts après les quatre sources ; point fixe des pages dérivées au
       tour 3 (`search-index.js`, `etude-recherche.html`) ; `verif.js --rapide` 54/54, 103,7 s.
-- [ ] **B4 · Lot 1** (`javascript`, `python`, `html`, `css`, `react`, `sql`, `java`, `csharp`, `php`, `ruby` — 272 suspects / 350) (cours fixés en B1). **Portée de chaque lot** : tous les encadrés **suspects**
+- [x] **B4 · Lot 1** (`javascript`, `python`, `html`, `css`, `react`, `sql`, `java`, `csharp`, `php`, `ruby` — 272 suspects / 350) (cours fixés en B1). **Portée de chaque lot** : tous les encadrés **suspects**
       de B1. Et **tous les encadrés** du lot si B2 a trouvé au moins un INVENTÉ ou un INVÉRIFIABLE
       **hors des suspects**. Pour chacun : vérifier ; INVENTÉ → un cas réel sourcé sur la même
       notion, ou « Scénario » ; INEXACT → corrigé à la source. Rejouer ensuite `verif-contenu
       --strict` et les **deux cliquets QCM** : un mot ajouté à un corps de leçon peut rouvrir
       l'indice lexical d'un QCM. Remède mesuré au V16 : choisir des mots de moins de 6 lettres, le
       seuil de l'outil. Compte rendu : encadrés lus, verdicts, sources citées.
-- [ ] **B5 · Lot 2.** (`nodejs`, `go`, `git`, `perl`, `powershell`, `typescript`, `zig`, `perf-web`, `bdd`, `mobile` — 165 suspects / 189) Même portée et même méthode que B4.
+
+      **COCHÉ le 2026-11-14.** **Méthode** (décision de Noah : « Lot 1 en parallèle ») : sept agents
+      d'écriture, un par copie de travail `D:\test-claude-b4-<nom>` et branche `v18/b4-<nom>`, partis
+      de `a244d0f` ; puis **quinze agents de contre-relecture** en lecture seule, 22 à 25 cas chacun,
+      qui confrontent chaque affirmation à la source qu'ils ouvrent eux-mêmes (exécutant le code
+      quand il y en a : node, Python, .NET 10, Java 27, pandas, SQLite, Chrome) ; l'orchestrateur
+      applique les corrections, contrôle chaque branche (`tools/cas-reels/lots/controle-branche.js` :
+      0 CR, octets identiques hors des « Cas réel » — mojibake de `html/lecon-15` intact —, types
+      d'encadrés gardés, signatures) et fusionne. **Lus : les 350 « Cas réel » des dix cours**
+      (portée « tous » par la règle de B4). Rapports cas par cas, avec les URL ouvertes, dans
+      `en-cours/rapports-v18/b4-*.md` ; verdicts de contre-relecture et sources dans les messages
+      de commit des branches.
+
+      **Ce que les agents ont trouvé** : 35 INEXACT (10,0 %, Wilson [7,3 ; 13,6]), **0 INVENTÉ**,
+      une large majorité d'INVÉRIFIABLE (récits anonymes, usages généraux, affirmations sur le
+      fonctionnement interne de produits nommés que rien ne documente). **Ce qu'ils ont fait** :
+      **303 remplacés** par un vrai cas daté et sourcé sur la même notion, **42 corrigés** à leur
+      source, **5 gardés** tels quels, **0 renommé « Scénario »**. Exemples d'INEXACT : Ariane 5
+      (30 s et non 37 s ; l'erreur a bien été levée, la conversion n'était pas protégée ; les deux
+      centrales inertielles, pas « le calculateur de bord ») ; Domino's « perd en justice » (la cour
+      a renvoyé l'affaire) ; Kubernetes et son « SIGKILL immédiat » ; mypy « né chez Dropbox » ;
+      British Airways attaqué par « un script tiers » (un fichier de son propre site, 429 612
+      personnes selon l'ICO) ; le « Saint Graal » du CSS pris pour le centrage.
+
+      **La contre-relecture** a trouvé une faute dans **85 cas sur 350 — 24,3 %** (Wilson
+      [20,1 ; 29,0]) **après** la vérification de l'auteur : html 16,7 %, python 18,0 %, javascript
+      19,7 %, css 23,4 %, java et csharp 28,3 %, react et sql 30,0 %, php et ruby 37,2 %. 0 cas à
+      remplacer, 0 source inaccessible. 102 corrections appliquées. Les fautes sont surtout des
+      raccourcis (« deux raisons » quand la source en liste quatre ; 232/30 « sept fois moins »),
+      des généralisations (« chaque », « toujours », « tous les utilisateurs » pour « la plupart »),
+      des dates posées sur le mauvais événement, des rôles confondus ; mais aussi des fautes de fond :
+      `DeclarativeBase` de SQLAlchemy 2.0 « sans métaclasse » (l'auteur avait « corrigé » le cas à
+      tort), `ANY_VALUE()` proposé là où MySQL dit de retirer le mode, une ligne Ruby `lazy` qui
+      n'affiche rien, un `"0"` PHP dont l'encadré inversait le mécanisme. **Une source primaire
+      peut se tromper** : web.dev décrit mal `auto-fill`, démenti par la mesure dans Chrome. Et
+      **une vingtaine d'intertitres** « Un cas réel : … », collés au-dessus des encadrés, annonçaient
+      encore l'ANCIEN récit (« la List partagée qui plantait au hasard » au-dessus de Nasdaq) : la
+      contre-relecture ne les a vus que parce qu'ils étaient dans sa part.
+
+      **Cliquet lexical** : trois corrections justes l'ont fait rougir (« réservées » entré dans
+      `css/lecon-19` ; « moitié », « pendant », « fausse » sortis de `php` — INVERSE 0 % → 100 %),
+      ramenés à **0 écart** par `tools/cas-reels/lots/lexique-diff.js` (écrit par l'agent php-ruby).
+      Deux blocs de la référence refigés par les agents, lus avant fusion (`csharp`, `react` : gain
+      de rendement STRICTE, le nombre de questions résolues ne monte pas). **En nombre absolu**, sur
+      les 1 206 questions des dix cours, le lot ne déplace presque rien : STRICTE 197 → 200,
+      PROPORTION 609 → 605, INVERSE 31 → 31.
+
+      **Effet de bord corrigé** : les lignes de source ajoutent des liens vers l'extérieur, et
+      `pages/doc/lecon-04` (« 11 leçons portent un lien vers l'extérieur… Ce site est une île »)
+      serait devenue fausse (312 au lot 1). `tools/doc/mesures/recours.js` compte désormais les
+      liens **hors des lignes de source** (11 portes, inchangé) et, à part, les leçons qui **citent
+      la source** de leur cas (352) ; la phrase dit : citer une source n'est pas apprendre à la
+      trouver. L'exemple « l'affichage d'une réponse au fil des mots » (ancien `js/57`, retiré) est
+      remplacé par l'avocat piégé par des décisions inventées (`llm`). **Hors encadré**, corrigés :
+      `sql/lecon-08` (« les anciens MySQL » : MySQL 8.4 n'a pas `FULL OUTER JOIN`, grammaire du
+      manuel ouverte), `sql/lecon-13` (un exemple travaillé titré « Cas réel » → « Cas d'usage »).
+
+      **Contrôles sur master après fusion** : `--cas-reel` 0 sur les dix cours, `verif-contenu
+      --strict` 0, `verif-html` 0, `verif-domaines-interdits` 0, cliquets lexique et biais 0, point
+      fixe des pages dérivées au tour 3, `verif-doc` 41/41, `verif-recherche` 77/77, **`verif.js
+      --rapide` 54/54** (178,3 s). Conformes à la règle sur le site : **4 → 354** sur 1 551.
+
+      **Ouvert, à reprendre** :
+      - **Doublons entre cours** : agents indépendants, mêmes histoires célèbres — Azure
+        29/02/2012 **cinq fois**, Ariane 5 trois fois, les gènes renommés par Excel trois fois, et
+        une quinzaine de paires (goto fail, GTA Online, Cloudflare 2019, TalkTalk, CRMEB,
+        Reinhart-Rogoff, PEP 343, la doc React…). `tools/cas-reels/lots/doublons.js` en voit
+        **19 sources partagées** (dont une seule légitime : les notes de Safari 15.4, deux sujets).
+        Règle ajoutée pour B5 à B12 (« un sujet = un seul cours »), et les doublons du lot 1 sont à
+        remplacer — au plus tard avant B13.
+      - Hors encadré, signalés mais non traités : `html/lecon-12` balise un prix barré en
+        `<del>`/`<ins>` alors que la norme HTML prend `<s>` pour un ancien prix (touche le corps et
+        peut-être le QCM) ; `react/lecon-25`, le corps dit « on coupe les mouvements superflus » là
+        où WebKit dit « ceux qui déclenchent les troubles » ; `js/lecon-42` prend pour « Cas réel »
+        le thème du site lui-même, source = son propre code (exact, mais auto-référent : à trancher
+        en B13).
+      - Coût : le quota hebdomadaire est passé de 14 % à **35 %** pour l'ensemble (sept
+        écritures, quinze contre-relectures, l'orchestration), soit **~6 points pour 100 cas**. Au
+        même rythme, les huit lots restants (1 201 cas) en demanderaient de l'ordre de 70 : à
+        répartir sur plusieurs semaines de quota.
+
+      **Outils pour les lots suivants**, dans `tools/cas-reels/lots/` : `controle-branche.js`,
+      `cr-extraire.js` (parts de contre-relecture, intertitres compris), `cr-appliquer.js` (à l'octet,
+      refuse ce qui n'est pas unique ou hors d'un « Cas réel »), `lexique-diff.js`, `doublons.js`, et
+      les deux modèles de consigne (`consigne-ecriture.md`, avec ce que le lot 1 a appris ;
+      `consigne-contre-relecture.md`).
+- [ ] **B5 · Lot 2.** (`nodejs`, `go`, `git`, `perl`, `powershell`, `typescript`, `zig`, `perf-web`, `bdd`, `mobile` — 165 suspects / 189) Même portée et même méthode que B4, **contre-relecture
+      comprise** (24,3 % de fautes trouvées après l'auteur au lot 1 : elle n'est pas optionnelle),
+      consigne tirée de `tools/cas-reels/lots/consigne-ecriture.md` (règles apprises au lot 1 : un
+      sujet = un seul cours sur tout le site, l'intertitre collé fait partie du cas, un lien
+      seulement dans la ligne de source, `lexique-diff.js` à 0 écart). **Valable pour B6 à B12.**
 - [ ] **B6 · Lot 3.** (`kotlin`, `lua`, `cpp`, `rust`, `r`, `docker`, `data-eng`, `vb`, `dart`, `distribue` — 130 suspects / 175) Idem.
 - [ ] **B7 · Lot 4.** (`c`, `clojure`, `elixir`, `bash`, `equipe`, `neurones`, `julia`, `a11y`, `asm`, `stats` — 106 suspects / 158) Idem.
 - [ ] **B8 · Lot 5.** (`dataviz`, `objc`, `compilation`, `vscode`, `ocaml`, `pandas`, `pascal`, `maths`, `archi`, `iac` — 94 suspects / 134) Idem.
@@ -507,7 +597,10 @@ notion de la leçon, ne disant que ce que dit la source.
 - [ ] **B13 · Le garde-fou devient bloquant.** Le contrôle de B3 passe en mode `--strict` bloquant.
       Le site doit être à **0 encadré** hors de la règle. Rejouer l'échantillon de B2 avec la **même
       graine** : combien d'INVENTÉ, combien d'INEXACT, comparés au départ. Écrire le chiffre, quel
-      qu'il soit.
+      qu'il soit. **Ajouté au B4** : aucun sujet raconté dans deux cours — `node
+      tools/cas-reels/lots/doublons.js` ne liste plus que des sources partagées LÉGITIMES (même
+      document, sujets différents, comme les notes de Safari 15.4), chacune écrite ici ; les
+      doublons du lot 1 (Azure ×5, Ariane 5 ×3, Excel ×3, une quinzaine de paires) remplacés.
 
 ---
 
