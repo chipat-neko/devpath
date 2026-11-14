@@ -199,9 +199,14 @@ Outils à lancer : `node tools/verif.js --rapide` (≈ 3 min, 54 étapes), `node
   cette machine (prouvé sur une page vide hors du site). La sonde réseau range ce nom exact dans son
   bruit, avec la preuve écrite à côté. Depuis A3 du V18, elle compte aussi les connexions **au
   chargement** de la page, et les trois domaines interdits ne sont **jamais** du bruit.
-- **Fins de ligne** : 77 fichiers suivis sont en CRLF et 2 à fins mêlées sur le disque de ce dépôt
-  (index en LF). Les épreuves et les outils y tiennent désormais (A6 du V18) ; renormaliser le
-  disque ou poser un `.gitattributes eol=lf` reste une décision de Noah.
+- **Fins de ligne : le disque est en LF depuis le 2026-11-14** (décision de Noah). 78 fichiers
+  suivis portaient 30 939 CR sur le disque alors que l'index était en LF ; chacun a été réécrit
+  seulement après avoir vérifié que, sans ses CR, il était **octet pour octet** le blob de l'index
+  (0 refus, aucun contenu changé). Seul `en-cours/ETAT-AUTONOMIE.md`, réécrit chaque heure par
+  `Syntaxe-Sante`, est resté tel quel. Et `core.autocrlf=false` est réglé **pour ce dépôt**
+  (`.git/config`) : un `git checkout` ou un `git merge` n'y réécrit plus en CRLF (le réglage système
+  vaut toujours `true`). Pas de `.gitattributes` : un clone frais reste en CRLF, ce qui garde le
+  banc d'essai de A6. `--rapide` après : 54/54, 101,2 s.
 - `.autonomie/epreuve-reset.ps1` : **82 cas conformes, 0 en échec** depuis le 2026-09-29 (les tests
   de dates ont une référence fixe au lieu de dépendre du jour où on les lance).
 - Pendant qu'une passe réécrit un cours, `verif-donnees` peut signaler des index périmés

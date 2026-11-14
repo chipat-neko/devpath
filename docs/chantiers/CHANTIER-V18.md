@@ -73,7 +73,8 @@ prouve**.
 - **Git : toujours `-c core.autocrlf=false`** pour une commande qui écrit des fichiers (checkout,
   worktree, merge). Le réglage système vaut `true`, et `git status` reste propre sur un fichier
   réécrit en CRLF : le défaut est invisible. Compter les CR avec node, jamais avec `cat -A` (Git Bash
-  les cache).
+  les cache). Depuis le 2026-11-14, `core.autocrlf=false` est réglé dans `.git/config` de ce dépôt ;
+  l'option reste obligatoire dans toute autre copie (worktree d'agent, clone).
 - **Ne modifier aucun fichier du dépôt pendant `verif.js --mutations`** : le mode restaure tout
   fichier changé pendant une épreuve. Préparer ses écrits hors du dépôt.
 - **`verif.js --seules=`** compare des **noms de fichiers** (`sonde-clic-reseau`), pas les noms
@@ -295,9 +296,10 @@ dépôt** sont exactement ceux dont les phases B et C auront besoin.
 
       **Reste** : `verif-chaine` n'a pas de témoin intégré (fait une fois à la main) ; `--strict` et
       `--complet` jamais joués sur un clone **entièrement** en CRLF ; `vexec` injecte encore en CRLF
-      dans un fichier LF (sans effet sur JS) ; 77 fichiers en CRLF et 2 à fins mêlées sur le disque
-      du dépôt principal — les renormaliser, ou poser un `.gitattributes eol=lf`, est une décision
-      de Noah.
+      dans un fichier LF (sans effet sur JS). **Fait le 2026-11-14 sur décision de Noah** : les 78
+      fichiers en CRLF ou à fins mêlées du disque remis en LF (chacun vérifié octet pour octet égal
+      au blob de l'index, 0 refus), et `core.autocrlf=false` réglé pour ce seul dépôt ; pas de
+      `.gitattributes`, pour garder le banc d'essai d'un clone frais en CRLF.
 
 **PHASE A CLOSE le 2026-11-11 — six agents en parallèle, une branche `v18/a<N>` chacun, puis fusion et
 passe de vérification par l'orchestrateur.** Cinq des six agents ont trouvé, chacun de son côté, le
