@@ -31,7 +31,7 @@ CE QUE LE LOT 1 A APPRIS (B4, 350 cas, sept agents) — règles obligatoires :
 - **Après chaque retouche d'un encadré** : `node tools/cas-reels/lots/lexique-diff.js __DOSSIER__ __BASE__` doit donner 0 écart (mots d'options de QCM entrés dans la page OU sortis d'elle), en plus des deux cliquets.
 
 INTERDITS ET PIÈGES :
-- **Mojibake volontaire** : ne JAMAIS toucher aux caractères mal encodés exprès de `pages/html/lecon-15.html` (et de `pages/formats/lecon-06.html`, `pages/r/lecon-06.html`, `pages/perl/lecon-13.html`). Si tu modifies un « Cas réel » de `html/lecon-15`, fais un remplacement exact de l'encadré seul, puis prouve avec node que tous les octets hors de l'encadré sont identiques à avant.
+- **Mojibake volontaire** : ne JAMAIS toucher aux caractères mal encodés exprès de `pages/html/lecon-15.html` (et de `pages/formats/lecon-06.html`, `pages/r/lecon-06.html`, `pages/perl/lecon-13.html`). Si tu modifies un « Cas réel » d'une de ces pages, fais un remplacement exact de l'encadré seul, puis prouve avec node que tous les octets hors de l'encadré sont identiques à avant.
 - Ne touche ni aux QCM, ni à `js/data.js`, ni aux index dérivés (`js/search-index.js`, `js/quiz-index.js`, `pages/etude-recherche.html`…) : l'orchestrateur les régénère après la fusion.
 - Git : toujours `git -c core.autocrlf=false` ; commits par `git commit -F <fichier>`, message terminé par la ligne `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` ; ne pousse jamais ; ne touche à aucune autre branche.
 - L'outil Bash mange les backslashs (même dans un heredoc entre apostrophes) : écris tes scripts avec l'outil Write, dans `__DOSSIER__\scratchpad\__CASEMIN__-__NOM__\` (ignoré par git).
@@ -46,7 +46,7 @@ CONTRÔLES AVANT TON DERNIER COMMIT (cite chaque code de sortie dans le rapport)
 - `node tools/verif-html.js` → 0 ;
 - `node tools/verif-domaines-interdits.js` → 0 ;
 - les deux cliquets QCM → 0 ;
-- `node tools/verif.js --rapide` : le SEUL rouge toléré est l'étape `donnees` pour l'invariant I18 (index de recherche périmé, régénéré par l'orchestrateur) ; tout autre rouge doit être expliqué.
+- `node tools/verif.js --rapide` : les SEULS rouges tolérés sont l'étape `donnees` pour l'invariant I18 (index de recherche périmé) et les étapes `doc-ref` et `doc-rec` (chiffres du cours `doc` mesurés sur tout le site, que tes lignes de source font bouger) : l'orchestrateur les régénère après la fusion — ne déforme JAMAIS une ligne de source pour les garder verts ; tout autre rouge doit être expliqué.
 
 RAPPORT : `en-cours/rapports-v18/__CASEMIN__-__NOM__.md`, commité. Pour CHAQUE « Cas réel » : identifiant (`pages/…/lecon-NN.html#rang`), état trouvé (VRAI / INEXACT : quoi / INVÉRIFIABLE / INVENTÉ, et nature : événement, produit nommé, anonyme, général), action (vérifié tel quel / corrigé : quoi / remplacé par : sujet / renommé Scénario), nouveau titre, sources ouvertes (URL). Puis les décomptes, les codes des contrôles, et ce qui reste ouvert. Au moins un commit par cours, avec les chiffres dans le message.
 

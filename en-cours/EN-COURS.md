@@ -42,8 +42,10 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 > sourcé, 42 corrigés, 5 gardés, 0 « Scénario », 0 INVENTÉ trouvé. **La contre-relecture a encore
 > trouvé une faute dans 24,3 % des cas** (85 sur 350) après la vérification de l'auteur : elle est
 > obligatoire pour les lots suivants. Conformes à la règle : **4 → 354** sur 1 551. `--rapide`
-> 54/54. Ouvert : les **doublons entre cours** (Azure 29/02/2012 cinq fois, Ariane 5 trois fois…),
-> à remplacer avant B13. Coût : ~6 points de quota hebdomadaire pour 100 cas. **Prochaine case :
+> 54/54. Les **doublons entre cours** (Azure 29/02/2012 cinq fois, Ariane 5 trois fois, et 13
+> sujets déjà racontés par leur foyer naturel hors du lot) sont remplacés le même jour : 37 cas,
+> registre `tools/cas-reels/lots/foyers.md`, sources partagées 19 → 2. Coût : ~6 points de quota
+> hebdomadaire pour 100 cas. **Prochaine case :
 > B5**, le lot 2 ; outils et modèles de consigne dans `tools/cas-reels/lots/`.
 
 ---

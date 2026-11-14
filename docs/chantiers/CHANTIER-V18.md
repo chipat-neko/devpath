@@ -558,20 +558,28 @@ notion de la leçon, ne disant que ce que dit la source.
       fixe des pages dérivées au tour 3, `verif-doc` 41/41, `verif-recherche` 77/77, **`verif.js
       --rapide` 54/54** (178,3 s). Conformes à la règle sur le site : **4 → 354** sur 1 551.
 
-      **Ouvert, à reprendre** :
-      - **Doublons entre cours** : agents indépendants, mêmes histoires célèbres — Azure
-        29/02/2012 **cinq fois**, Ariane 5 trois fois, les gènes renommés par Excel trois fois, et
-        une quinzaine de paires (goto fail, GTA Online, Cloudflare 2019, TalkTalk, CRMEB,
-        Reinhart-Rogoff, PEP 343, la doc React…). `tools/cas-reels/lots/doublons.js` en voit
-        **19 sources partagées** (dont une seule légitime : les notes de Safari 15.4, deux sujets).
-        Règle ajoutée pour B5 à B12 (« un sujet = un seul cours »), et les doublons du lot 1 sont à
-        remplacer — au plus tard avant B13.
-      - Hors encadré, signalés mais non traités : `html/lecon-12` balise un prix barré en
-        `<del>`/`<ins>` alors que la norme HTML prend `<s>` pour un ancien prix (touche le corps et
-        peut-être le QCM) ; `react/lecon-25`, le corps dit « on coupe les mouvements superflus » là
-        où WebKit dit « ceux qui déclenchent les troubles » ; `js/lecon-42` prend pour « Cas réel »
-        le thème du site lui-même, source = son propre code (exact, mais auto-référent : à trancher
-        en B13).
+      **Doublons entre cours — TRAITÉS le même jour** (décision de Noah : « Doublons, puis lot 2 ») :
+      agents indépendants, mêmes histoires célèbres — Azure 29/02/2012 **cinq fois**, Ariane 5 trois
+      fois, les gènes renommés par Excel trois fois, une quinzaine de paires ; et un balayage par
+      noms propres sur les 1 551 cas a montré que **13 sujets du lot 1 étaient déjà racontés par
+      leur foyer naturel hors du lot** (TalkTalk et Samy en `securite`, Parity en `solidity`,
+      Ariane 5 en `ada`, Cloudflare 2019 et Stack Overflow 2016 en `regex`, GTA Online en `algo`,
+      Therac-25 en `os`, Figma en `wasm`…). Registre créé : `tools/cas-reels/lots/foyers.md` (le
+      cours qui garde chaque sujet). **37 cas remplacés** par quatre agents en parallèle, sujets
+      réservés dans un fichier commun (37 sujets nouveaux, aucun pris deux fois), puis contre-relus
+      : **7 corrigés sur 38** (dont `html/lecon-12#1`, que la contre-relecture du lot 1 avait
+      laissé passer : la directive fixe une échéance, elle ne constate pas une application).
+      `doublons.js` : **19 → 2** sources partagées, toutes deux légitimes (même document, sujets
+      différents). Hors encadré, aussi traités : le corps de `html/lecon-12` suit la norme (`<s>`
+      pour un ancien prix, `<del>`/`<ins>` pour une modification du document ; la légende « sept
+      balises » de la fiche en comptait neuf) ; `js/lecon-42` ne prend plus le site lui-même pour
+      « Cas réel ». Contrôles : `--cas-reel` 0 sur les dix cours, cliquets 0, `verif-recherche`
+      77/77, `verif-doc` 41/41, `--rapide` 54/54.
+
+      **Ouvert, à reprendre en B13** : `js/lecon-04` et `react/lecon-05` racontent le même piège (le
+      « 0 » affiché par React) par deux sources différentes ; le corps de `react/lecon-25` dit « on
+      coupe les mouvements superflus » là où les sources parlent des mouvements qui déclenchent
+      les troubles.
       - Coût : le quota hebdomadaire est passé de 14 % à **35 %** pour l'ensemble (sept
         écritures, quinze contre-relectures, l'orchestration), soit **~6 points pour 100 cas**. Au
         même rythme, les huit lots restants (1 201 cas) en demanderaient de l'ordre de 70 : à
