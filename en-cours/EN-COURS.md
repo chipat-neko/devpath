@@ -26,7 +26,15 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 > `v18/a<N>` chacun, puis fusion et passe de vérification. Après la fusion : `--rapide` 54/54,
 > `--complet` **83/83 vert d'un seul passage** (4 347,6 s), `--mutations` 19/19 (18 dans le passage
 > complet, `chaine` rejouée après une correction trouvée par ce passage). Un rapport par agent dans
-> [`rapports-v18/`](rapports-v18/). **Prochaine case : B1** (inventaire des « Cas réel »).
+> [`rapports-v18/`](rapports-v18/).
+>
+> **✅ B1 À B3 DU V18 FAITES (2026-11-14), 9 cases sur 61.** Inventaire : **1 551 « Cas réel »**
+> (et non 1 500), dont 971 suspects (`tools/cas-reels/inventaire.js`). Échantillon de 150 vérifiés
+> à la source : **21,3 % INEXACT**, 58,0 % INVÉRIFIABLE, 1,3 % INVENTÉ — et **37,7 % d'INEXACT chez
+> les cas ancrés** : plus un cas affirme, plus il se trompe. La règle (sujet, date, source) est
+> écrite dans `docs/enrichissements/NOUVEAUX-COURS.md` et contrôlée en avertissement par
+> `verif-contenu.js --cas-reel` (4 conformes sur 1 551). **Prochaine case : B4**, le lot 1 ; chaque
+> lot relit **tous** ses « Cas réel » (règle de B4, déclenchée par B2).
 
 ---
 
@@ -58,7 +66,7 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 | CHANTIER-V15 — comprendre ce qu'on ne voit pas | ✅ 32/32 |
 | CHANTIER-V17 — les garde-fous qui mentent | ✅ 80/80 |
 | CHANTIER-V16 — consolider ce que les quatre chantiers ont laissé derrière | ✅ 22/22 (clos le 2026-11-11) |
-| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **6/61 — plan courant** (écrit le 2026-11-11 ; phase A close le même jour) |
+| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **9/61 — plan courant** (écrit le 2026-11-11 ; phase A close le même jour ; B1 à B3 le 2026-11-14) |
 
 **Le V18 est le plan courant.** Ses phases, dans l'ordre : **A** les instruments d'abord (6 cases :
 la sonde des QCM et l'épreuve de D2 entrent dans la chaîne, contrôle des domaines interdits, sondes

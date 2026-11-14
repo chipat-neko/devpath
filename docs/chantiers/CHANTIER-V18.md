@@ -406,12 +406,52 @@ notion de la leçon, ne disant que ce que dit la source.
       | B11 | `observabilite`, `regex`, `reseaux`, `erlang`, `http`, `doc`, `haskell`, `securite`, `sass`, `tests` | 49 / 126 |
       | B12 | `solidity`, `offensive`, `graphql`, `ux`, `lisp`, `fsharp`, `cloud`, `patterns`, `wasm`, `crypto` | 19 / 125 |
 
-- [ ] **B2 · L'échantillon, pour connaître le vrai taux.** Tirer **150 encadrés** au hasard,
+- [x] **B2 · L'échantillon, pour connaître le vrai taux.** Tirer **150 encadrés** au hasard,
       stratifiés par cours, avec une graine écrite dans le compte rendu (le tirage doit pouvoir être
       refait). Vérifier chacun à une source primaire. Verdict : **VRAI**, **INEXACT** (fait réel,
       détail faux — préciser lequel), **INVÉRIFIABLE**, **INVENTÉ**. Donner le taux de chaque
       verdict, **chez les suspects et chez les autres**, avec l'intervalle à 95 %. Ne rien corriger
       ici : c'est une mesure.
+
+      **COCHÉ le 2026-11-14.** Tirage : `node tools/cas-reels/inventaire.js --echantillon=150 --graine=20261114`
+      (stratifié par cours, répartition proportionnelle aux plus forts restes, Fisher-Yates et
+      mulberry32 ; rejoué deux fois, identique ; 97 suspects et 53 autres, les 90 cours couverts).
+      Vérification par cinq agents en lecture seule, 30 cas chacun, **sans connaître le classement
+      de B1**, avec la même consigne (verdicts stricts ; seule une URL réellement ouverte se cite ;
+      un PDF illisible en ligne se lit avec `pypdf`). Verdicts et sources, cas par cas :
+      `tools/cas-reels/b2-verdicts.json` (B13 le rejouera).
+
+      | population | VRAI | INEXACT | INVÉRIFIABLE | INVENTÉ |
+      |---|---|---|---|---|
+      | **tous** (150) | 29 — 19,3 % [13,8 ; 26,4] | 32 — 21,3 % [15,5 ; 28,6] | 87 — 58,0 % [50,0 ; 65,6] | 2 — 1,3 % [0,4 ; 4,7] |
+      | suspects (97) | 9 — 9,3 % [5,0 ; 16,7] | 12 — 12,4 % [7,2 ; 20,4] | 75 — 77,3 % [68,0 ; 84,5] | 1 — 1,0 % [0,2 ; 5,6] |
+      | autres (53) | 20 — 37,7 % [25,9 ; 51,2] | 20 — 37,7 % [25,9 ; 51,2] | 12 — 22,6 % [13,5 ; 35,5] | 1 — 1,9 % [0,3 ; 9,9] |
+
+      (effectif — taux [intervalle de Wilson à 95 %]). Par nature : événement daté 25 (VRAI 15, INEXACT 9) ; produit nommé 33 (VRAI 14, INEXACT 14) ; récit anonyme 47 (INVÉRIFIABLE 44) ; usage général 45 (INVÉRIFIABLE 38).
+
+      **Ce que dit la mesure.** Le défaut n'est pas surtout l'invention (2 sur 150) mais **l'inexactitude** :
+      plus d'un cas « ancré » sur trois porte un détail faux — **plus un cas affirme, plus il se
+      trompe**. Exemples : la réinitialisation de Mars Pathfinder attribuée au rover Sojourner
+      (`os/lecon-11`) ; Kubernetes qui « tue d'un SIGKILL immédiat » (`python/lecon-45`, il envoie
+      SIGTERM puis attend 30 s) ; un `match` OCaml incomplet qui « ne compile pas » (`ocaml/lecon-04`,
+      c'est un avertissement) ; le compteur de YouTube « débordé » par Gangnam Style (`haskell/lecon-02`,
+      un clin d'œil de YouTube) ; un `sealed interface` Kotlin dont le code ne compile pas
+      (`kotlin/lecon-09`, vérifié au compilateur) ; un chiffre du site lui-même faux (`css/lecon-14` :
+      six feuilles de style, pas cinq). Les deux INVENTÉ se déclarent eux-mêmes : « Imagine un module
+      bancaire… » (`elixir/lecon-03`) et l'entreprise fictive Orbit (`stats/lecon-05`). La liste
+      complète des 32 INEXACT, avec la bonne valeur et sa source, est dans le fichier de verdicts.
+
+      **Conséquence pour les lots, par la règle de B4** : B2 a trouvé **12 INVÉRIFIABLE et 1 INVENTÉ
+      hors des suspects** — la portée de chaque lot est donc **tous** ses « Cas réel », pas seulement
+      les suspects (1 551 au total). Et puisque l'INEXACT pèse le plus chez les cas ancrés, un lot
+      vérifie **chaque affirmation** d'un cas ancré à sa source, pas seulement son existence.
+
+      **Réserve** : un seul vérificateur par cas, sans contre-relecture. Les INEXACT et INVENTÉ que
+      l'orchestrateur connaissait ont été relus et tiennent (Pathfinder, SIGTERM, OCaml, `strings.Split`,
+      README de Linux, `BigFloat`, `@Dao`), mais les taux sont ceux d'une passe : les lots, qui
+      revérifient chaque cas, les corrigeront s'il le faut. Coût mesuré : environ 2 points du quota
+      hebdomadaire pour les 150 (12 % → 14 %).
+
 - [x] **B3 · La règle d'écriture, et son garde-fou (en avertissement).** Écrire la règle : un « Cas
       réel » nomme son **sujet**, sa **date** et sa **source**. Ajouter à `verif-contenu.js` un
       contrôle qui la vérifie, **non bloquant pour l'instant** (il ferait échouer des centaines de
