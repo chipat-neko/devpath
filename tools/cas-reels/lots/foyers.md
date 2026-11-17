@@ -938,3 +938,152 @@ La DERNIÈRE réservation de chaque cas.
 | Paul Lewis, « FLIP Your Animations » (11 février 2015), technique utilisée par transition-group de Vue | `vue/lecon-12#1` |
 | Vue 3 : un composant qui ré-émet click sans emits déclenche deux fois l'écouteur (guide de migration, « emits Option ») | `vue/lecon-13#1` |
 | Pinia, né en novembre 2019 (Eduardo San Martin Morote), devenu la recommandation officielle à la place de Vuex 5 | `vue/lecon-14#1` |
+
+## Pris par le lot 7 (B10, 2026-11-17)
+
+La DERNIÈRE réservation de chaque cas.
+
+| Sujet | Foyer |
+|---|---|
+| GTA Online, chargement : JSON de 10 Mo, sscanf/strlen et dédoublonnage quadratique (t0st, 28 février 2021 ; correctif de Rockstar, 16 mars 2021) | `algo/lecon-01#1` |
+| Jackson (jackson-databind), ticket n° 2816 : JSON très imbriqué, récursion et StackOverflowError ; CVE-2020-36518 ; limite de 1 000 niveaux dans 2.13.2.1 (13 août 2020 - 24 mars 2022) | `algo/lecon-02#1` |
+| Joshua Bloch, recherche binaire de java.util.Arrays et de Programming Pearls : (low + high) / 2 déborde (Google Research, 2 juin 2006) — FOYER tranché au lot 7 : `java/lecon-04` (lot 1, même billet) et `tests/lecon-10` (lot 8) prennent un autre sujet | `algo/lecon-03#1` |
+| Rust 1.20 ajoute sort_unstable : stabilité (rust, crate, package, cargo) et tri en place (31 août 2017) | `algo/lecon-04#1` |
+| PostgreSQL 15 : tri externe, fusion polyphasée remplacée par une fusion équilibrée à k voies (commit 65014000b, 18 octobre 2021 ; sortie le 13 octobre 2022) | `algo/lecon-05#1` |
+| M. D. McIlroy, « A Killer Adversary for Quicksort » : qsort du C rendu quadratique par une comparaison adverse (Software—Practice and Experience, avril 1999) | `algo/lecon-06#1` |
+| LinkedHashMap de Java 1.4 : table de hachage traversée par une liste doublement chaînée, liens before/after, ordre d'accès pour un cache LRU (Sun, 6 février 2002) | `algo/lecon-07#1` |
+| Amazon SQS lance les files FIFO : ordre garanti, contre l'ordre « au mieux » des files standard (Jeff Barr, AWS News Blog, 17 novembre 2016) | `algo/lecon-08#1` |
+| Node.js, graine de table de hachage constante par version (instantanés V8), hash flooding ; CVE-2017-11499, correctifs du 11 juillet 2017 | `algo/lecon-09#1` |
+| Bayer et McCreight, « Organization and maintenance of large ordered indexes » : l'arbre B, temps en log_k I (Acta Informatica, septembre 1972) ; CREATE INDEX = B-tree dans PostgreSQL | `algo/lecon-10#1` |
+| Node.js : les listes de minuteurs ordonnées par une PriorityQueue (tas binaire), PR n° 20555 d'Anatoli Papirovski (mai 2018), sortie dans Node.js 11.0.0 (23 octobre 2018) | `algo/lecon-11#1` |
+| The Oracle of Bacon (Patrick Reynolds) : BFS sur la base TMDB, nombres de Bacon au 30 août 2026 (moyenne 3,142 ; Samuel L. Jackson 2,968) | `algo/lecon-12#1` |
+| David A. Huffman, « A Method for the Construction of Minimum-Redundancy Codes » (Proceedings of the I.R.E., septembre 1952) : le glouton des deux messages les moins probables ; repris par DEFLATE (RFC 1951, mai 1996) | `algo/lecon-13#1` |
+| Richard Bellman nomme la « programmation dynamique » (RAND, années 1950) et le principe d'optimalité, d'après Eye of the Hurricane (S. Dreyfus, Operations Research, 2002) | `algo/lecon-14#1` |
+| Viola et Jones, « Rapid Object Detection using a Boosted Cascade of Simple Features » : l'image intégrale, somme préfixée 2D, tout rectangle en quatre accès (CVPR 2001) | `algo/lecon-15#1` |
+| Edsger W. Dijkstra conçoit le plus court chemin en vingt minutes à une terrasse d'Amsterdam pour la démonstration de l'ARMAC (1956), publié en 1959 ; entretien de 2001 (CACM, août 2010) | `algo/lecon-16#1` |
+| R. C. Prim, « Shortest Connection Networks and Some Generalizations » : principes P1 et P2, Washington et les 48 capitales, lignes louées du Bell System (Bell System Technical Journal, novembre 1957) | `algo/lecon-17#1` |
+| Peter Norvig, « Solving Every Sudoku Puzzle » : propagation de contraintes et recherche en profondeur, heuristique minimum remaining values (2006) | `algo/lecon-18#1` |
+| Cloudflare, « How we built rate limiting capable of scaling to millions of domains » : fenêtre glissante approchée à deux compteurs, 42 × 0,75 + 18 = 49,5 (Julien Desgats, 7 juin 2017) | `algo/lecon-19#1` |
+| Linux retire fib_hash : la table de routage IPv4 passe au trie compressé fib_trie (LC-trie), commit de David S. Miller du 1er février 2011, Linux 2.6.39 (18 mai 2011) | `algo/lecon-20#1` |
+| Mike Haertel, « why GNU grep is fast » : Boyer-Moore, boucle déroulée, moins de 3 instructions x86 par octet examiné (liste freebsd-current, 21 août 2010) | `algo/lecon-21#1` |
+| Voyageur de commerce pla85900 (puce LaserLogic des Bell Labs) résolu à l'optimum par Concorde, branch-and-cut de décembre 2004 à avril 2006 (Applegate, Bixby, Chvátal, Cook et al.) | `algo/lecon-22#1` |
+| Facebook, « Three and a half degrees of separation » : 3,57 degrés estimés par l'algorithme de Flajolet-Martin (hachage, zéros finaux, OU bit à bit) sur Apache Giraph (4 février 2016) | `algo/lecon-23#1` |
+| Peter M. Fenwick, « A new data structure for cumulative frequency tables » : le binary indexed tree pour la compression arithmétique dynamique (Software: Practice and Experience, mars 1994) | `algo/lecon-24#1` |
+| Arbres rouge-noir de la bibliothèque standard : bits/stl_tree.h de libstdc++ (code Hewlett-Packard 1994, SGI 1996-1997, d'après Cormen, Leiserson et Rivest), std::map (cppreference) et TreeMap de Java 1.2 | `algo/lecon-25#1` |
+| Harris et Ross, rapport RAND du 24 octobre 1955 sur le rail soviétique : flot de 163 000 tonnes = coupe « the bottleneck » (Schrijver, Math. Programming, 2002) | `algo/lecon-26#1` |
+| Redis : LRU approché par échantillonnage (maxmemory-samples, 5 par défaut), réservoir de candidates et « Much improved LRU approximation » de Redis 3.0.0 (1er avril 2015) | `algo/lecon-27#1` |
+| Elasticsearch 0.90.3 : le completion suggester, FST en mémoire par segment et poids des suggestions (Alexander Reelsen, « You Complete Me », 22 août 2013) | `algo/lecon-28#1` |
+| Facebook passe facebook.com à une livraison quasi continue depuis master, avril 2016-avril 2017 (Chuck Rossi, « Rapid release at massive scale », 31 août 2017) | `cicd/lecon-01#1` |
+| GitHub passe son monorepo à la file de fusion (merge queue) : trains de 15 PR, 2 500 PR par mois, -33 % d'attente (blog de GitHub, 6 mars 2024) | `cicd/lecon-02#1` |
+| tj-actions/changed-files compromise les 14-15 mars 2025, étiquettes déplacées, secrets dans les journaux (GHSA-mrrh-fwg8-r2c3, CVE-2025-30066) — FOYER du sujet ; cicd/lecon-07 prend un autre sujet | `cicd/lecon-03#1` |
+| Node.js 17 et OpenSSL 3 cassent webpack (ticket n° 14532, 19 octobre 2021) ; webpack 5.61.0 et la matrice de CI élargie à Node 17 (29 octobre 2021) | `cicd/lecon-04#1` |
+| Slack, « Deploys at Slack » (29 mars 2020) : staging, dogfood, canary 2 %, paliers 10-25-50-75-100 %, retour au build précédent (remplace Knight Capital, gardé par tests/lecon-14) | `cicd/lecon-05#1` |
+| SolarWinds Orion : système de build compromis, mises à jour de mars à juin 2020, moins de 18 000 clients (8-K du 14 décembre 2020, FireEye SUNBURST, CISA ED 21-01) | `cicd/lecon-06#1` |
+| CircleCI, incident du 4 janvier 2023 : session SSO volée, variables d'environnement, jetons et clés des clients exfiltrés ; recommandation OIDC (rapport de Rob Zuber, 12 janvier 2023) — remplace tj-actions, gardé par cicd/lecon-03 | `cicd/lecon-07#1` |
+| GitHub Actions Artifacts v4 : 4 millions d'artefacts par jour, archive unique, plus de 10x, artefacts immuables et noms suffixés en matrice (Pabjan et Herley, 12 février 2024) | `cicd/lecon-08#1` |
+| ubuntu-latest passe à Ubuntu 24.04 : annonce du 17 septembre 2024, pipelines cassés, retour à 22.04 le 16 octobre, nouvelle bascule du 5 décembre 2024 au 17 janvier 2025 (ticket actions/runner-images n° 10636) | `cicd/lecon-09#1` |
+| Flickr, feature flags et flippers : code livré éteint sur head, activé en changeant false en true (Ross Harmes, « Flipping Out », 2 décembre 2009) | `cicd/lecon-10#1` |
+| Netflix, « How We Build Code at Netflix » (9 mars 2016) : Nebula, Jenkins, AMI cuite une fois, Spinnaker, 16 minutes du commit au déploiement multirégion | `cicd/lecon-11#1` |
+| New Jersey, point presse du 4 avril 2020 : allocations chômage, mainframes de 40 ans, appel à des compétences COBOL (gouverneur Murphy, transcription officielle) | `cobol/lecon-01#1` |
+| Rapport COBOL 60 (CODASYL, avril 1960) : format de référence, numéro de séquence à 6 chiffres, zones A et B, trois divisions | `cobol/lecon-02#1` |
+| Bogue de l'an 2000 (GAO/AIMD-10.1.14, septembre 1997) et le fenêtrage qui ressort en 2020 (New Scientist, 7 janvier 2020) — cas gardé, corrigé | `cobol/lecon-03#1` |
+| Passage à l'euro : règlement (CE) 1103/97 du 17 juin 1997, six chiffres significatifs, arrondi au cent le plus proche, la moitié vers le haut ; taux du 31 décembre 1998 (règlement 2866/98) | `cobol/lecon-04#1` |
+| Norme COBOL 85 (ANSI X3.23-1985, FIPS PUB 21-2) : EVALUATE, PERFORM en ligne, END-PERFORM, TEST AFTER, terminateurs de portée | `cobol/lecon-05#1` |
+| Norme COBOL 85 (ANSI X3.23-1985, FIPS PUB 21-2), changements des tables : sept dimensions au lieu de trois, VALUE permis sous OCCURS | `cobol/lecon-06#1` |
+| GnuCOBOL 3.2 (28 juillet 2023) : fichiers LINE SEQUENTIAL selon COBOL 2023, ligne trop longue rendue en plusieurs enregistrements avec le statut 06 au lieu d'être coupée (NEWS) | `cobol/lecon-07#1` |
+| RBS, NatWest et Ulster Bank, juin 2012 : l'ordonnanceur de batchs revenu en arrière, les traitements de nuit en retard d'un jour (FCA, avis final du 19 novembre 2014) | `cobol/lecon-08#1` |
+| GAO-16-468 (mai 2016) : systèmes hérités fédéraux, Title II de la SSA (162 sous-systèmes, COBOL, retraités réembauchés) | `cobol/lecon-09#1` |
+| Mike Cowlishaw (IBM), « Decimal Floating-Point: Algorism for Computers » (ARITH 16, 2003) : taxe de 5 % sur un appel à 0,70 $, 0,73 en binaire au lieu de 0,74 | `cobol/lecon-10#1` |
+| Rapport COBOL 60 (avril 1960), chapitre IX « Libraries » : COPY dans les divisions ENVIRONMENT et DATA, INCLUDE pour les procédures | `cobol/lecon-11#1` |
+| IBM, OS/VS VSAM Planning Guide GC26-3799-0 (juillet 1972) : fichiers à clé (key-sequenced), index et espace libre, COBOL via l'interface ISAM | `cobol/lecon-12#1` |
+| ANSI X3.23a-1989 (FIPS PUB 21-3), module des fonctions intrinsèques de COBOL : UPPER-CASE, LOWER-CASE, NUMVAL, REVERSE (approuvé le 13 septembre 1989) | `cobol/lecon-13#1` |
+| GAO, manuel d'audit FISCAM (révision de septembre 2024, GAO-24-107026) : totaux de contrôle comparés entre l'entrée et la sortie d'un traitement | `cobol/lecon-14#1` |
+| Facebook ouvre Thrift (avril 2007) : types et interfaces dans un fichier neutre, code généré pour C++, Java, Python, Ruby, PHP (Slee, Agarwal, Kwiatkowski) | `formats/lecon-01#1` |
+| package.json « must be actual JSON » (doc. npm 11) et l'erreur EJSONPARSE rejouée avec npm 11.20.0 le 17 novembre 2026 (sujet gardé, B2 VRAI) | `formats/lecon-02#1` |
+| PEP 305 « CSV File API » (26 janvier 2003, Python 2.3) : line.split(",") finit par échouer, le V de « Vague » — remplace les gènes renommés (foyer python/lecon-02) | `formats/lecon-03#1` |
+| YAML lit 3.10 comme 3.1 dans une matrice GitHub Actions : tickets actions/setup-python n° 198 (2 avril 2021), 334, 482, 695 ; PyYAML 6.0.3 rejoué | `formats/lecon-04#1` |
+| ECMA-376 Office Open XML, 1re édition (décembre 2006) : XML et ZIP, 400 millions d'utilisateurs, 40 milliards de documents (aperçu TC45) ; docx dézippé | `formats/lecon-05#1` |
+| VS Code valide package.json avec le schéma https://www.schemastore.org/package (manifeste de l'extension npm, jsonValidation ; doc. « Editing JSON with Visual Studio Code ») | `formats/lecon-06#1` |
+| Excel annonce un format CSV en UTF-8 (blog Excel, Olaf Hubel, 6 décembre 2016) ; aide « Opening CSV UTF-8 files correctly in Excel » (BOM) ; « CafÃ© » rejoué | `formats/lecon-06#2` |
+| Kubernetes : schémas structurels des CRD et élagage des champs inconnus (Stefan Schimanski, 20 juin 2019 ; CRD stables dans Kubernetes 1.16, 18 septembre 2019) | `formats/lecon-07#1` |
+| Google ouvre Protocol Buffers (Kenton Varda, Google Open Source Blog, 7 juillet 2008) : XML trop cher, compatibilité entre versions, classes générées, « un ordre de grandeur plus rapide que XML » | `formats/lecon-08#1` |
+| Mathias Bynens, « JavaScript has a Unicode problem » (20 octobre 2013) : length et paires de substitution, Array.from / [...s] ; rejoué dans Node | `formats/lecon-09#1` |
+| Twitter ajoute id_str (Matt Harris, « Snowflake: An update and some very important information », twitter-api-announce, octobre 2010) ; doc. X IDs — FOYER du sujet id/id_str | `formats/lecon-10#1` |
+| Stripe date les versions de son API, compte épinglé, en-tête Stripe-Version, modules de transformation (Brandur Leach, « APIs as infrastructure », 5 août 2017) | `formats/lecon-11#1` |
+| JSR 241, « The Groovy Programming Language » (JCP, vote de revue 16-29 mars 2004 ; James Strachan et Richard Monson-Haefel ; dormante en avril 2012) | `groovy/lecon-01#1` |
+| Les décimaux littéraux de Groovy sont des BigDecimal : 0.1 + 0.2 == 0.3, division exacte ou MathContext (documentation de la syntaxe, Groovy 6.0.0, 22 septembre 2026) | `groovy/lecon-02#1` |
+| Groovy 3.0 (parseur Parrot, 7 février 2020) : affectation Elvis ?=, indexation sûre ?[ ], ===, !in, !instanceof | `groovy/lecon-03#1` |
+| Groovy 2.2 (18 novembre 2013) : coercition implicite d'une closure vers un type SAM, sans as | `groovy/lecon-04#1` |
+| JENKINS-26481 : [1, 2, 3].each { println it } n'affichait que 1 dans un pipeline scripté (Daniel Tschan, 18 janvier 2015 ; corrigé dans Pipeline: Groovy 2.33, mai 2017) | `groovy/lecon-05#1` |
+| Groovy 2.0 (28 juin 2012) : vérification statique @TypeChecked et compilation statique @CompileStatic | `groovy/lecon-06#1` |
+| Gradle 8.12 (20 décembre 2024) déprécie la « space assignment » : méthodes propertyName(value) générées à l'exécution, retrait prévu dans Gradle 10 | `groovy/lecon-07#1` |
+| Jenkins 2.0 : le pipeline en DSL Groovy, versionné avec le code (Kohsuke Kawaguchi, 26 avril 2016) | `groovy/lecon-08#1` |
+| Android passe les nouveaux scripts de build au Kotlin DSL (James Ward et Boris Farber, Android Developers Blog, 13 avril 2023) | `groovy/lecon-09#1` |
+| Groovy 2.3 (5 mai 2014) introduit les traits | `groovy/lecon-10#1` |
+| Groovy 1.8 (27 avril 2011) : JSON natif, JsonSlurper et JsonBuilder | `groovy/lecon-11#1` |
+| Spock 2.0 (17 mai 2021) : tests pilotés par les données déroulés par défaut, @Unroll sans argument inutile | `groovy/lecon-12#1` |
+| Gradle, « A Groovy Build Script Primer » (manuel de Gradle 9.9.1, 10 novembre 2026) : un bloc est une méthode dont le dernier argument est une Closure ou une Action, et qui change le délégué | `groovy/lecon-13#1` |
+| GROOVY-6975 : sortie JSON plus de 4,8 fois plus grosse à cause de l'échappement \uXXXX (Mathieu Carbou, 25 juillet 2014) ; JsonGenerator et disableUnicodeEscaping (Groovy 2.5) | `groovy/lecon-14#1` |
+| Linus Torvalds annonce son noyau sur comp.os.minix (août 1991) ; W3Techs et TOP500 relevés le 17/11/2026 | `linux/lecon-01#1` |
+| La FHS 3.0 (Linux Foundation, 19 mars 2015) : FSSTND du 14 février 1994, /etc et /var/log | `linux/lecon-02#1` |
+| Ubuntu 21.04 rend les dossiers personnels privés, 750 au lieu de 755 (Alex Murray, blog d'Ubuntu, 1er février 2021) | `linux/lecon-03#1` |
+| Debian 12 « bookworm » n'installe plus rsyslog, journalctl et /var/log/journal (notes de publication, § 5.1.7, 10 juin 2023) | `linux/lecon-04#1` |
+| FritzFrog, botnet pair à pair qui force les serveurs SSH depuis janvier 2020, clé ajoutée à authorized_keys (Guardicore Labs, août 2020) | `linux/lecon-05#1` |
+| Docker contourne ufw : ticket moby/moby n° 4737 « docker and ufw serious problems » (18 mars 2014) et doc. « Packet filtering and firewalls » | `linux/lecon-06#1` |
+| Let's Encrypt passe de 90 à 45 jours (2 décembre 2025), fin des courriels d'expiration (4 juin 2025), certbot.timer de Debian 13 | `linux/lecon-07#1` |
+| EPFL SCITAS, /scratch du cluster Jed : 77 % d'espace mais 98 % d'inodes, « No space left on device » (post-mortem du 13 décembre 2023) | `linux/lecon-08#1` |
+| Facebook publie oomd, OOM killer en espace utilisateur, PSI et cgroups v2 (Daniel Xu, 19 juillet 2018) | `linux/lecon-09#1` |
+| KDE, « Too Perfect a Mirror » (Jeff Mitchell, 24 mars 2013) : corruption de git.kde.org recopiée par les miroirs anongit, une seule copie intacte vérifiée par git fsck | `linux/lecon-10#1` |
+| customers.gitlab.com, disque plein le 25 mai 2021 (logrotate, vieux journaux), même cause qu'au 29 juin 2020 : revue d'incident publique sans reproche | `linux/lecon-11#1` |
+| Mata v. Avianca, ordonnance de sanctions (S.D.N.Y., 22 juin 2023) : fausses décisions produites par ChatGPT | `llm/lecon-01#1` |
+| GPT-3, « Language Models are Few-Shot Learners » (OpenAI, arXiv, 28 mai 2020) : zero-shot, one-shot, few-shot sur WebQuestions | `llm/lecon-02#1` |
+| Lasso Security : 1 681 jetons d'API Hugging Face valides trouvés sur GitHub et Hugging Face (novembre 2023, publié le 4 décembre 2023) | `llm/lecon-03#1` |
+| Toolformer (Meta AI Research, arXiv 2302.04761, 9 février 2023) : le modèle apprend à appeler une calculatrice et d'autres API | `llm/lecon-04#1` |
+| Google AI Overviews, « AI Overviews: About last week » (Elizabeth Reid, 30 mai 2024) : cailloux et colle sur la pizza, réponses liées à des sources satiriques | `llm/lecon-05#1` |
+| ReAct (Yao et al., Princeton et Google Research, arXiv 2210.03629, 6 octobre 2022) : boucle pensée-action-observation | `llm/lecon-06#1` |
+| Truffle Security, « Google API Keys Weren't Secrets. But then Gemini Changed the Rules » (Joe Leon, 25 février 2026) : 2 863 clés Google du JavaScript public valides pour Gemini | `llm/lecon-07#1` |
+| OpenAI, « Expanding on what we missed with sycophancy » (2 mai 2025) : la mise à jour complaisante de GPT-4o (25 avril 2025) et les évals qui ne la mesuraient pas | `llm/lecon-08#1` |
+| Greshake et al., « Not what you've signed up for » (arXiv 2302.12173, v1 23 février 2023, v2 5 mai 2023) : injection de prompt indirecte sur Bing Chat et ver par e-mail | `llm/lecon-09#1` |
+| RouteLLM (LMSYS, billet du 1er juillet 2024) : routeur GPT-4 Turbo / Mixtral 8x7B, 85 % d'économie sur MT Bench pour 95 % de la performance | `llm/lecon-10#1` |
+| Ovadia et al. (Microsoft), « Fine-Tuning or Retrieval? Comparing Knowledge Injection in LLMs » (arXiv 2312.05934, 10 décembre 2023) | `llm/lecon-11#1` |
+| Lewis et al. (Facebook AI Research, UCL, NYU), « Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks » (arXiv 2005.11401, 22 mai 2020) : index Wikipédia 2016/2018 échangé | `llm/lecon-12#1` |
+| John Gruber présente Markdown (Daring Fireball, 15 mars 2004 ; Markdown 1.0.1, 17 décembre 2004) : lisible tel quel en texte brut | `markdown/lecon-01#1` |
+| CommonMark 0.26 (15 juillet 2016) : le numéro de départ d'une liste ordonnée, et seule une liste qui commence à 1 peut couper un paragraphe | `markdown/lecon-02#1` |
+| GitHub publie accessibility-alt-text-bot (Kate Higa et Kendall Gassner, 12 juin 2023) : rappel quand une image partagée n'a pas de texte alternatif | `markdown/lecon-03#1` |
+| Stack Exchange accepte les blocs de code délimités (réponse de balpha, 8 janvier 2019, à la demande de Mathias Bynens du 9 mars 2012) | `markdown/lecon-04#1` |
+| GitHub ajoute les listes de tâches au GFM (Matt Todd, 9 janvier 2013 ; tous les documents Markdown, Reg Braithwaite, 28 avril 2014) | `markdown/lecon-05#1` |
+| Prana, Treude et al., « Categorizing the Content of GitHub README Files » (arXiv 1802.06997, 2018) : 393 dépôts, 4 226 sections, What 97 %, How 88,5 % | `markdown/lecon-06#1` |
+| GitHub accepte les notes de bas de page dans tout champ Markdown (changelog du 30 septembre 2021 ; non prises en charge dans les wikis) — cas gardé, corrigé | `markdown/lecon-07#1` |
+| GitHub rend les maths en Markdown avec MathJax (Martin Woodward et Tali Herzka, 19 mai 2022) — cas gardé, corrigé | `markdown/lecon-08#1` |
+| Facebook présente Docusaurus (Joel Marcey, 14 décembre 2017) : docs en Markdown, métadonnées en tête de fichier, fin du gabarit Jekyll recopié | `markdown/lecon-09#1` |
+| Journal of Open Source Software : articles en Markdown (paper.md, métadonnées YAML) compilés par Pandoc en PDF et JATS (lancé en mai 2016) | `markdown/lecon-10#1` |
+| GitHub relie le fichier CONTRIBUTING aux issues et pull requests (Kevin R. Barnes, 17 septembre 2012) ; dossier .github/ et modèles (17 février 2016) | `markdown/lecon-11#1` |
+| Filtre anti-spam de Gmail : boutons « Report spam »/« Not spam » (blog Gmail, 9 juillet 2015) et 99,9 % bloqués, TensorFlow (Google, 7 février 2019) | `ml/lecon-01#1` |
+| Zech et al., PLOS Medicine (6 novembre 2018) : CNN de dépistage de pneumonie, généralisation entre NIH, Mount Sinai et Indiana, jeton métallique | `ml/lecon-02#1` |
+| Kapoor et Narayanan, « Leakage and the Reproducibility Crisis in ML-based Science » (arXiv 2207.07048, 14 juillet 2022) : imputation sur entraînement et test, guerre civile | `ml/lecon-03#1` |
+| Zillow arrête Zillow Offers (communiqué du 2 novembre 2021, pièce 99.1 du 8-K à la SEC) : dépréciation de 304 M$, prix des logements imprévisibles | `ml/lecon-04#1` |
+| Jeu « Credit Card Fraud Detection » de l'ULB et Worldline : 492 fraudes sur 284 807 transactions (septembre 2013), AUPRC recommandée | `ml/lecon-05#1` |
+| Roelofs et al. (UC Berkeley), « A Meta-Analysis of Overfitting in Machine Learning » (NeurIPS 2019) : classements public et privé de 120 compétitions Kaggle | `ml/lecon-06#1` |
+| scikit-learn 0.20 (25 septembre 2018) ajoute ColumnTransformer ; exemple officiel « Column Transformer with Mixed Types » sur le Titanic | `ml/lecon-07#1` |
+| Chen, Sain et Guo, segmentation RFM par k-means d'un cybermarchand britannique (Journal of Database Marketing & Customer Strategy Management, 27 août 2012) | `ml/lecon-08#1` |
+| Gulshan et al. (Google), rétinopathie diabétique, deux seuils de fonctionnement (JAMA, 13 décembre 2016) | `ml/lecon-09#1` |
+| Leo Breiman, « Random Forests » (université de Californie à Berkeley, janvier 2001) : bagging, variables tirées au hasard, vote, importance par permutation (diabète) | `ml/lecon-10#1` |
+| Uber, « Meet Michelangelo: Uber's Machine Learning Platform » (Mike Del Balso et Jeremy Hermann, 5 septembre 2017) : mêmes expressions de préparation à l'entraînement et à la prédiction | `ml/lecon-11#1` |
+| Jeu Breast Cancer Wisconsin (Diagnostic) : Wolberg, Street, Mangasarian, novembre 1995 ; noyaux cellulaires d'une ponction à l'aiguille fine, 569 cas (UCI, scikit-learn) | `ml/lecon-12#1` |
+| Scala 3.0.0 sort après huit ans de travail (blog scala-lang.org, Anatolii Kmetiuk, 14 mai 2021) | `scala/lecon-01#1` |
+| Scala 2.10 apporte l'interpolation de chaînes s et f vérifiée à la compilation (annonce Typesafe, Adriaan Moors, 8 janvier 2013) | `scala/lecon-02#1` |
+| Twitter, « Your Server as a Function » : filtres Finagle composés par andThen (Marius Eriksen, PLOS 2013) | `scala/lecon-03#1` |
+| Les collections de Scala 2.13 : groupBy suivi de mapValues paresseux, groupMap, LazyList remplace Stream (Julien Richard-Foy, 13 juin 2018) | `scala/lecon-04#1` |
+| SI-7296 : Scala 2.11 lève la limite de 22 paramètres des case classes (Jason Zaugg, PR #2305, mars 2013 ; Scala 2.11.0, 17 avril 2014) | `scala/lecon-05#1` |
+| Scala 2.12 compile un trait en une seule interface Java 8 à méthodes par défaut (notes de version, 3 novembre 2016) | `scala/lecon-06#1` |
+| Spark SQL, l'optimiseur Catalyst : règles par filtrage de motifs sur des arbres d'expressions (Armbrust et al., blog Databricks, 13 avril 2015) | `scala/lecon-07#1` |
+| « Scala with Explicit Nulls » (Nieto, Zhao, Lhoták, Chang, Pu, ECOOP 2020) : String | `scala/lecon-08#1` |
+| Ordering[Double] et NaN : scala/bug#10511 (NthPortal, 2017), TotalOrdering/IeeeOrdering et avertissement en 2.13.0 (2019), retiré en 2.13.2 après scala/bug#11844 (2020) | `scala/lecon-09#1` |
+| SIP-14, Futures and Promises : scala.concurrent.Future dans Scala 2.10 (2013) | `scala/lecon-10#1` |
+| SIP-46 (Krzysztof Romanowski et l'équipe Scala CLI, 2022) : Scala CLI devient la commande scala dans Scala 3.5.0 (Paweł Marks, 22 août 2024) | `scala/lecon-11#1` |
+| Akka passe sous Business Source License (Jonas Bonér, 7 septembre 2022) ; Apache Pekko, fork d'Akka 2.6.x, devient projet de premier niveau (ASF, 16 mai 2024) | `scala/lecon-12#1` |
+| Either biaisé à droite : PR « Right-bias Either » de Simon Ochsenreither (2016), Scala 2.12.0 (3 novembre 2016) ; for-comprehension sans projection, filterOrElse | `scala/lecon-13#1` |
+| Spark, article RDD (Zaharia et al., NSDI 2012) : fouille de journaux, transformations paresseuses jusqu'à l'action | `scala/lecon-14#1` |
+| Dotty 0.13.0-RC1 (5 mars 2019) introduit la clause derives : instance générée = TC.derived, à fournir par le compagnon de la type class (Pickling, Ordering…) | `scala/lecon-15#1` |
+| Documentation de Cats, page Validated : formulaire d'inscription, for sur Either qui s'arrête à la première erreur, mapN sur ValidatedNec qui les accumule | `scala/lecon-16#1` |
+| Effective Scala, guide de Twitter (Marius Eriksen, 2012) : collections immuables, mise à jour par une référence (var volatile ou AtomicReference), atomiques à réessayer | `scala/lecon-17#1` |
