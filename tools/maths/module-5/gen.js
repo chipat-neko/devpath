@@ -236,6 +236,17 @@ META.forEach(function (m) {
   const corps = remplirMarqueurs(fs.readFileSync(src, 'utf8'));
   const html = page(m, corps.replace(/\n+$/, ''));
   const cible = path.join(sortie, 'lecon-' + m.num + '.html');
+  /* GARDE-FOU (V18, lot 5, 2026-11-17). Les pages publiées ne sont PLUS la sortie
+     de ce générateur : leurs QCM ont été retouchés à la main au chantier B4, et leurs
+     « Cas réel » réécrits et contre-relus au V18. Écrire par-dessus effacerait ce
+     travail sans bruit. Le générateur refuse donc d'écraser une page qui diffère de
+     sa sortie, sauf avec --ecraser (après avoir reporté ces retouches dans corps/). */
+  if (fs.existsSync(cible) && fs.readFileSync(cible, 'utf8') !== html && process.argv.indexOf('--ecraser') < 0) {
+    console.log('REFUS : ' + cible + ' diffère de la sortie du générateur (retouches à la main : QCM de B4, Cas réel du V18).' +
+      ' Rien n\'est écrit ; --ecraser pour passer outre, après avoir reporté ces retouches dans corps/.');
+    process.exitCode = 1;
+    return;
+  }
   fs.writeFileSync(cible, html, 'utf8');
   const visible = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ')
     .replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;|&#\d+;/gi, ' ').replace(/\s+/g, ' ').trim();
