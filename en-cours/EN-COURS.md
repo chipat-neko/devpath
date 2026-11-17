@@ -71,8 +71,15 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 > d'outillage réparés en route (étape de `verif.js` sans plafond, noms temporaires fixes, générateurs
 > de `maths` qui auraient écrasé les pages, `verif-recherche` aveugle au-delà de 1 000). Conformes :
 > **1 010** sur 1 551. `--rapide` 54/54.
-> **Case en cours : B9**, le lot 6 (cinq agents partis de `c5b3e9d`) ; outils, registre des foyers
-> et modèles de consigne dans `tools/cas-reels/lots/`.
+>
+> **✅ B9 DU V18 FAITE (2026-11-17), 15 cases sur 61 — le lot 6, dix cours, 152 « Cas réel ».**
+> Lancé pendant la clôture du lot 5. 124 remplacés, 28 corrigés ; 2 INVENTÉS seulement ; la
+> contre-relecture trouve encore **23,0 %** de fautes (22,4 % sur les lots 1 à 6), toutes
+> corrigeables sur place — dont une version « annoncée » par un billet écrit avant sa sortie (Swift
+> 4.1 et Hashable) et une durée de cycle prise pour un écart (Ariane 5). Conformes : **1 162** sur
+> 1 551 (74,9 %). `--rapide` 54/54.
+> **Prochaine case : B10**, le lot 7 (llm, ml, linux, algo, scala, cobol, groovy, formats, cicd,
+> markdown) ; outils, registre des foyers et modèles de consigne dans `tools/cas-reels/lots/`.
 
 ---
 
@@ -104,7 +111,7 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 | CHANTIER-V15 — comprendre ce qu'on ne voit pas | ✅ 32/32 |
 | CHANTIER-V17 — les garde-fous qui mentent | ✅ 80/80 |
 | CHANTIER-V16 — consolider ce que les quatre chantiers ont laissé derrière | ✅ 22/22 (clos le 2026-11-11) |
-| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **14/61 — plan courant** (écrit le 2026-11-11 ; phase A close le même jour ; B1 à B7 le 2026-11-14 ; B8 le 2026-11-17) |
+| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **15/61 — plan courant** (écrit le 2026-11-11 ; phase A close le même jour ; B1 à B7 le 2026-11-14 ; B8 et B9 le 2026-11-17) |
 
 **Le V18 est le plan courant.** Ses phases, dans l'ordre : **A** les instruments d'abord (6 cases :
 la sonde des QCM et l'épreuve de D2 entrent dans la chaîne, contrôle des domaines interdits, sondes

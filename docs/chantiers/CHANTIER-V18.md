@@ -809,7 +809,71 @@ notion de la leçon, ne disant que ce que dit la source.
       imprécisions ; les relevés `infra-2026-09-03.json` et `infra-lot-2026-09-03.json` gardent l'ancre
       de l'ancienne phrase d'`iac/lecon-04` ; `ocaml/lecon-14` relu sur la copie de l'auteur, la copie de
       l'Internet Archive est restée inaccessible (429).
-- [ ] **B9 · Lot 6.** (`swift`, `ada`, `vue`, `projets-js`, `api`, `fortran`, `nosql`, `os`, `prolog`, `kubernetes` — 73 suspects / 152) Idem.
+- [x] **B9 · Lot 6.** (`swift`, `ada`, `vue`, `projets-js`, `api`, `fortran`, `nosql`, `os`, `prolog`, `kubernetes` — 73 suspects / 152) Idem.
+
+      **COCHÉ le 2026-11-17** (décision de Noah : « Enchaîne sur le lot 5 et 6 »). Cinq agents partis
+      de `c5b3e9d` (swift et prolog, ada et fortran, vue et api, nosql et os, projets-js et
+      kubernetes) **pendant la clôture du lot 5**, une fois le registre des foyers à jour —
+      les cours des deux lots ne se recoupent pas ; réservations communes (152 sujets, aucun pris deux
+      fois), dix contre-relectures. **Lus : les 152.** Code rejoué : Swift sur Compiler Explorer
+      (swiftc 4.0.3 à 5.9), Prolog sur SWISH (SWI-Prolog 10.1.21), GNAT et gfortran 16.2 sur
+      Compiler Explorer, Vue 3.3.13, 3.4.0 et 3.5 avec Vue Test Utils 2.6, Node.
+
+      **Trouvé** : 2 INVENTÉS seulement (deux « Imagine… », `swift/lecon-03` et `vue/lecon-09`) ; au
+      moins 24 INEXACTS (le générateur de mots de passe de Chrome prêté à `crypto.getRandomValues` ;
+      Audacity prêté à l'API Web Audio ; Mars Pathfinder pris pour Sojourner ; une route de Stripe qui
+      n'existe pas ; `useDebouncedRef` pour `refDebounced` ; « de gfortran 12 à 13, il faut tout
+      recompiler », alors que GCC 8 à 14 partagent un format ; iFACTS présenté « tout en SPARK ») ;
+      deux paires de doublons internes en `api` ; 1 VRAI gardé (Amazon 2011, `kubernetes/03`) ; le
+      reste INVÉRIFIABLE. **Fait** : **124 remplacés, 28 corrigés**, 0 « Scénario ». Gardés à leur
+      foyer et vérifiés : Ariane 5 (`ada/07`, sur le rapport de la commission Lions), Therac-25
+      (`os/07`, sur Leveson et Turner) ; rendus à leur foyer : Tony Hoare (`csharp`), le Patriot de
+      Dhahran (`asm`), Mars Climate Orbiter, GitHub GraphQL 2016 (`graphql`), le ReDoS (`regex`).
+      **Foyer tranché** : Amazon et ses 11,6 s entre deux déploiements reste à `kubernetes/lecon-03`,
+      où il est sourcé ; `cicd/lecon-01` (lot B10) devra prendre un autre sujet — noté au registre.
+
+      **Contre-relecture** : une faute dans **35 cas sur 152 — 23,0 %** (Wilson [17,0 ; 30,3]), de
+      14,3 % (`nosql-os`) à 32,1 % (`ada-fortran`) ; cumul des lots 1 à 6 : 259/1 158, **22,4 %**
+      [20,1 ; 24,9] — stable. Deuxième lot de suite **sans aucun cas À REMPLACER**. Fautes de fond :
+      une DURÉE prise pour un écart (Ariane 5 : 72 ms est la période d'un cycle, l'écart entre les deux
+      pannes est d'environ 0,05 s) ; une version annoncée par un billet ÉCRIT AVANT sa sortie (Swift 4.1
+      « Equatable et Hashable » : Hashable n'arrive qu'en 4.2, swiftc 4.1 refuse `Set<[Int]>`) ; un
+      libellé d'erreur cité au présent alors qu'il a changé (SE-0269) ; le code ACTUEL décrit sous la
+      date d'une ancienne version (Firefox 70 avait trois jeux de caractères, pas quatre) ; la date d'un
+      billet prise pour celle d'une version (Kubernetes 1.28, Vue 3.5) ; des conditionnels rendus
+      indicatifs (RBAC « aurait limité » chez JW Player ; GKE « would allow » un millier de nœuds) ; une
+      convention de compilateur présentée comme une règle du langage (KIND = nombre d'octets) ; un
+      témoignage (« never blamed ») rendu en fait (« jamais causé ») ; un double compte prêté à Vue
+      alors qu'il vient de Vue Test Utils ; la leçon `vue/lecon-11` présentée comme conforme à Baymard
+      alors qu'elle fait la validation prématurée qu'il déconseille. Un titre repris à la main
+      (`kubernetes/03`, « en semaine »). 45 retouches automatiques, 5 à la main ;
+      `lexique-diff` 0 écart sauf ceux connus et acceptés (« source » par la ligne de source sur
+      `os/01`, `06`, `10`, `14`, `fortran/12`, `swift/12`, et les mots de rééquilibrage pris dans des
+      phrases exactes).
+
+      **Hors encadré, corrigé à la fusion** : `os/lecon-11` (intertitre « un robot sur Mars » ->
+      « réinitialisait Mars Pathfinder ») ; `nosql/lecon-14` (« MongoDB apocalypse », surnom sans
+      source, retiré de l'explication) ; `fortran/lecon-01` (la règle de typage vient du manuel
+      d'octobre 1956) ; `fortran/lecon-09` (ce sont les implémentations de RÉFÉRENCE de BLAS et LAPACK
+      qui sont en Fortran) ; `ada/lecon-03` (la légende disait que `when others` empêche d'oublier un
+      cas en silence — c'est l'inverse sur un type énuméré, comme le dit le cas réel de la page) ;
+      `prolog/lecon-09` (Watson exprimait en Prolog ses règles d'analyse, pas l'analyseur) ;
+      `api/lecon-02` (PATCH n'est pas « (souvent) idempotent » : RFC 5789).
+
+      **Contrôles sur master** : `--cas-reel` 0 sur les dix cours, `--strict` 0, `verif-html` 0,
+      domaines 0, cliquets 0, `verif-recherche` 77/77, `verif-doc` 41/41, point fixe au tour 3,
+      **`--rapide` 54/54** (385,0 s), `doublons.js` 2 (légitimes), les quatre pages au mojibake volontaire
+      intactes. **Conformes : 1 010 → 1 162** sur 1 551 (74,9 %). Quota hebdomadaire : 21 % → 32 % (le lot 5 tournait en même temps jusqu'à sa clôture).
+      Le plafond par étape de `verif.js` (né au lot 5) a servi : chez un agent, l'étape `caract`,
+      bloquée sous charge, a été arrêtée à 10 min et comptée NON MESURÉE au lieu de figer la chaîne.
+
+      **Ouvert, hors encadré** : `kubernetes/lecon-09` cite encore ingress-nginx comme exemple de
+      contrôleur (relevé de fraîcheur daté, code, glossaire, exercice), retiré en mars 2026 — phase E ;
+      `vue/lecon-11` valide dès la première frappe (le cas réel le dit ; valider au `blur` serait la
+      retouche) ; trois ancres de fraîcheur des anciens encadrés de `vue` (`vue-lot-2026-11-11.json`)
+      et une de `kubernetes/lecon-02` (`infra-*-2026-09-03.json`) — phase E. Le shell d'un agent
+      démarre dans le dépôt principal : la copie locale du modèle de consigne de contre-relecture doit
+      être recopiée du dépôt à chaque changement (elle ne l'était pas au premier lancement de ce lot).
 - [ ] **B10 · Lot 7.** (`llm`, `ml`, `linux`, `algo`, `scala`, `cobol`, `groovy`, `formats`, `cicd`, `markdown` — 63 suspects / 142) Idem.
 - [ ] **B11 · Lot 8.** (`observabilite`, `regex`, `reseaux`, `erlang`, `http`, `doc`, `haskell`, `securite`, `sass`, `tests` — 49 suspects / 126) Idem.
 - [ ] **B12 · Lot 9.** (`solidity`, `offensive`, `graphql`, `ux`, `lisp`, `fsharp`, `cloud`, `patterns`, `wasm`, `crypto` — 19 suspects / 125) Idem.
