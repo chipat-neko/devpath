@@ -212,13 +212,16 @@ watch(recherche, (nouvelle, ancienne) =&gt; {
   <figcaption>Besoin d'<em>une valeur</em> à afficher → <code>computed</code>. Besoin de <em>faire quelque chose</em> quand ça change → <code>watch</code>.</figcaption>
 </figure>
 
-<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — la sauvegarde automatique d'un brouillon</p><p>Les éditeurs en ligne (Google Docs, Notion, un formulaire long) sauvegardent le brouillon <em>tout seuls</em>, quelques instants après qu'on arrête de taper. Le mécanisme&nbsp;: un <code>watch</code> observe le contenu&nbsp;; à chaque changement, il relance une sauvegarde différée. C'est le cas d'école de <code>watch</code> — un <strong>effet de bord</strong> (écrire sur le serveur) déclenché par un changement de donnée, ce que <code>computed</code> ne sait pas faire.</p><figure class="code-block" data-file="script setup"><pre><code class="language-javascript">import { ref, watch } from 'vue'
-const brouillon = ref('')
-let minuteur
-watch(brouillon, (texte) =&gt; {
-  clearTimeout(minuteur)                                // annule la sauvegarde précédente
-  minuteur = setTimeout(() =&gt; sauvegarder(texte), 800) // 0,8 s après la dernière frappe
-})</code></pre></figure></div></div>
+<div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">Cas réel — Vue 3.5 et le nettoyage des watchers (2024)</p><p>Le 3&nbsp;septembre 2024, Evan You annonce Vue&nbsp;3.5 sur le blog officiel de Vue. Parmi les nouveautés, <code>onWatcherCleanup()</code>, une fonction qui enregistre un nettoyage dans un <code>watch</code>. L'exemple du billet est le cas d'école de cette leçon&nbsp;: un <code>watch</code> observe un identifiant et, à chaque changement, lance une requête vers le serveur avec <code>fetch</code> — un <strong>effet de bord</strong>, ce que <code>computed</code> ne sait pas faire. La documentation pose le problème&nbsp;: si l'identifiant change avant la fin de la requête, l'ancienne réponse déclenchera quand même son traitement, avec un identifiant déjà périmé. Le nettoyage est appelé quand le watcher va être relancé&nbsp;: il annule alors la requête périmée, grâce à un <code>AbortController</code>.</p><figure class="code-block" data-file="script setup"><pre><code class="language-javascript">import { watch, onWatcherCleanup } from 'vue'
+watch(id, (newId) =&gt; {
+  const controller = new AbortController()
+  fetch(`/api/${newId}`, { signal: controller.signal }).then(() =&gt; {
+    // traitement de la réponse
+  })
+  onWatcherCleanup(() =&gt; {
+    controller.abort() // annule la requête périmée
+  })
+})</code></pre></figure><p class="cas-reel__source">Source&nbsp;: Evan You, «&nbsp;Announcing Vue 3.5&nbsp;», The Vue Point (blog officiel de Vue), billet daté du 1<sup>er</sup>&nbsp;septembre 2024, mis en ligne le 3&nbsp;septembre 2024 avec la version 3.5.0 (<a href="https://blog.vuejs.org/posts/vue-3-5">blog.vuejs.org</a>)&nbsp;; page de la version v3.5.0 sur GitHub, publiée le 3&nbsp;septembre 2024 (<a href="https://github.com/vuejs/core/releases/tag/v3.5.0">github.com</a>)&nbsp;; guide de Vue, «&nbsp;Side Effect Cleanup&nbsp;» (<a href="https://vuejs.org/guide/essentials/watchers.html#side-effect-cleanup">vuejs.org</a>).</p></div></div>
 
 <div class="callout callout--note"><svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg><div class="callout__body"><p class="callout__title">computed ou watch&nbsp;?</p><p>Confusion fréquente. <strong>computed</strong>&nbsp;: «&nbsp;quelle est la valeur de X en fonction de l'état&nbsp;?&nbsp;» (un total, un filtre). <strong>watch</strong>&nbsp;: «&nbsp;que faire <em>quand</em> Y change&nbsp;?&nbsp;» (lancer une requête, sauvegarder). Règle&nbsp;: si tu veux <em>afficher</em> une valeur dérivée, computed&nbsp;; si tu veux un <em>effet de bord</em> en réaction à un changement, watch. Beaucoup de débutants utilisent watch là où computed serait plus simple&nbsp;: pense d'abord computed.</p></div></div>
 
