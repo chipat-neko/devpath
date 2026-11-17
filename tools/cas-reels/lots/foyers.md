@@ -779,3 +779,162 @@ La DERNIÈRE réservation de chaque cas.
 | VS Code 1.36 : dependsOrder "sequence" pour enchaîner les tâches (juin 2019) | `vscode/lecon-09#1` |
 | Remote Development de VS Code : extensions SSH, WSL, conteneurs en préversion (2 mai 2019) | `vscode/lecon-10#1` |
 | VS Code 1.57 : Workspace Trust et mode restreint (mai 2021) | `vscode/lecon-11#1` |
+
+## Pris par le lot 6 (B9, 2026-11-17)
+
+La DERNIÈRE réservation de chaque cas.
+
+| Sujet | Foyer |
+|---|---|
+| Naissance d'Ada : le programme HOLWG du DoD (1975), « Green » de Cii-Honeywell Bull choisi le 2 mai 1979, MIL-STD-1815 (récit de William Whitaker, 1993) | `ada/lecon-01#1` |
+| GNAT et la vérification des dimensions physiques (Dimension_System, System.Dim.Mks ; AdaCore Gem 136, 12 novembre 2012) | `ada/lecon-02#1` |
+| Ada 95 Quality and Style Guide (SPC, octobre 1995), guideline 5.6.3 : limiter when others dans un case | `ada/lecon-03#1` |
+| AI05-0143-1 : paramètres in out pour les fonctions (Ada 2012, approuvé par le WG 9 en juin 2010) | `ada/lecon-04#1` |
+| Ada 2012 et les conteneurs bornés (Bounded_Vectors, Capacity, Capacity_Error ; Rationale for Ada 2012 de John Barnes, 2013) | `ada/lecon-05#1` |
+| David Parnas, « On the Criteria To Be Used in Decomposing Systems into Modules » (CACM, décembre 1972), masquage d'information, index KWIC | `ada/lecon-06#1` |
+| Ariane 5, vol 501 (1996) : conversion 64 bits vers 16 bits non protégée, Operand Error, arrêt des deux SRI (rapport Lions, foyer gardé) | `ada/lecon-07#1` |
+| Le profil Ravenscar, défini au 8e IRTAW (Ravenscar, avril 1997) ; guide de Burns, Dobbing et Vardanega (York, YCS-2003-348, janvier 2003) | `ada/lecon-08#1` |
+| GNAT entre dans GCC 3.1 (15 mai 2002) ; front end Ada écrit en Ada (notes de version de GCC 3.1, prérequis d'installation de GCC) | `ada/lecon-09#1` |
+| Musser et Stepanov, « A Library of Generic Algorithms in Ada » (SIGAda, décembre 1987), Ada Generic Library | `ada/lecon-10#1` |
+| Ada 95 Rationale (Ada 9X Design Team, janvier 1995), chapitre 4 : types étiquetés, types de classe, dispatching | `ada/lecon-11#1` |
+| AI95-00301 (WG 9, juin 2004) : fonction Get_Line ajoutée à Ada.Text_IO et paquet Text_IO.Unbounded_IO (Ada 2005) | `ada/lecon-12#1` |
+| iFACTS (NATS, Swanwick), SPARK 2005, 152 927 conditions de vérification (Roderick Chapman, Altran UK, HCSS 2014) | `ada/lecon-13#1` |
+| Vermont Lunar CubeSat, logiciel de vol en SPARK 2005, lancé le 19 novembre 2013 (Brandon et Chapin, HILT 2016) | `ada/lecon-14#1` |
+| L'API web du National Weather Service américain, api.weather.gov (documentation, 2026) | `api/lecon-01#1` |
+| RFC 5789 : la méthode PATCH (Dusseault et Snell, mars 2010) | `api/lecon-02#1` |
+| RFC 7725 : le code 451 Unavailable For Legal Reasons (Tim Bray, février 2016) | `api/lecon-03#1` |
+| Heroku publie son HTTP API Design Guide (Mark McGranaghan, 20 mai 2014) : pluriels, imbrication minimale | `api/lecon-04#1` |
+| GitHub date les versions de son API REST, X-GitHub-Api-Version: 2022-11-28 (Tim Rogers, 28 novembre 2022) | `api/lecon-05#1` |
+| Peloton : points d'entrée de l'API sans authentification (Jan Masters, Pen Test Partners, 5 mai 2021) | `api/lecon-06#1` |
+| RFC 6749 : OAuth 2.0 (Dick Hardt, octobre 2012), le client tiers sans le mot de passe | `api/lecon-07#1` |
+| Stripe et l'en-tête Idempotency-Key (Brandur Leach, 22 février 2017) | `api/lecon-08#1` |
+| PayPal Checkout passe de REST à GraphQL (PayPal Tech Blog, 16 octobre 2018) | `api/lecon-09#1` |
+| GitHub publie la description OpenAPI de son API REST (Marc-Andre Giroux, 27 juillet 2020) | `api/lecon-10#1` |
+| Microsoft REST API Guidelines : un seul format d'erreur pour tous les services (publiées le 19 juillet 2016) | `api/lecon-11#1` |
+| Standard Webhooks : spécification commune (webhook-id, signature, réessais), importée sur GitHub le 27 août 2023 | `api/lecon-12#1` |
+| Pact, test de contrat né chez realestate.com.au (2013) | `api/lecon-13#1` |
+| OpenAPI 3.1.0 (15 février 2021) ajoute le champ webhooks | `api/lecon-14#1` |
+| MIL-STD-1753 (DoD, 9 novembre 1978) : IMPLICIT NONE, DO WHILE, END DO, INCLUDE ajoutés à FORTRAN 77 | `fortran/lecon-01#1` |
+| Rationale de C99 (WG14, révision 5.10, avril 2003), §6.5.5 : la division entière tronque vers zéro comme en Fortran | `fortran/lecon-02#1` |
+| Le DO à point au lieu de virgule dans un programme d'orbite de la NASA (été 1963), témoignage de Fred Webb (RISKS 9.54, 12 décembre 1989) | `fortran/lecon-03#1` |
+| Manuel de référence FORTRAN de l'IBM 704 (15 octobre 1956) : tableaux rangés « columnwise » | `fortran/lecon-04#1` |
+| Norme FORTRAN 77 (ANSI X3.9-1978), 15.9.3.2 : un argument effectif constant ne doit pas être redéfini (FIPS PUB 69-1) | `fortran/lecon-05#1` |
+| GCC 4.9 (22 avril 2014) : version des .mod incrémentée et fichiers compressés ; GCC 15 : nouveau format | `fortran/lecon-06#1` |
+| GCC 4.2 (13 mai 2007) : marqueurs d'enregistrement de 4 octets pour les fichiers non formatés, -frecord-marker=8 ; accès stream | `fortran/lecon-07#1` |
+| CEPMMT (ECMWF) : IFS en simple précision (Newsletter 157, 2018 ; cycle 47r2 opérationnel le 11 mai 2021, Newsletter 168) | `fortran/lecon-08#1` |
+| LAPACK 1.0 (29 février 1992) et numpy.linalg qui s'appuie sur BLAS/LAPACK (solve via _gesv) | `fortran/lecon-09#1` |
+| Fortran 2003 : extension de type, CLASS et SELECT TYPE (John Reid, WG5 N1648) | `fortran/lecon-10#1` |
+| GCC 4.6 (25 mars 2011) : (ré)allocation automatique à l'affectation des tableaux allocatables, -fno-realloc-lhs | `fortran/lecon-11#1` |
+| Coarrays dans Fortran 2008 : Co-Array Fortran de Numrich et Reid, F-- du Cray T3D (John Reid, WG5 N1824, 21 avril 2010) | `fortran/lecon-12#1` |
+| LAPACKE, interface C de LAPACK 3.3 (14 novembre 2010) : LAPACK_ROW_MAJOR / LAPACK_COL_MAJOR | `fortran/lecon-13#1` |
+| Fortran-lang (décembre 2019), stdlib et fpm (Kedward et al., The State of Fortran, CiSE 2022) | `fortran/lecon-14#1` |
+| Pokémon GO sur Google Container Engine : trafic 50 fois l'objectif, mise à niveau du cluster avant le Japon (Luke Stone, Google Cloud, 29 septembre 2016) | `kubernetes/lecon-01#1` |
+| Conteneurs side-car natifs : alpha en Kubernetes 1.28 (25 août 2023), stables en 1.33 (23 avril 2025), KEP-753 | `kubernetes/lecon-02#1` |
+| Amazon, statistiques de déploiement continu de mai 2011 : 11,6 s entre deux déploiements (diapositives de Jinesh Varia, QCon SF 2011, crédits Jon Jenkins) — sujet gardé ; FOYER tranché au lot 6 : `cicd/lecon-01` (lot B10), qui raconte le même chiffre sans source, prend un autre sujet | `kubernetes/lecon-03#1` |
+| CoreDNS atteint la disponibilité générale en Kubernetes 1.11, remplace kube-dns (John Belamaric, 10 juillet 2018) | `kubernetes/lecon-04#1` |
+| Kubernetes 1.29 : chiffrement au repos KMS v2 stable (13 décembre 2023) ; Secrets non chiffrés dans etcd par défaut | `kubernetes/lecon-05#1` |
+| Kubernetes 1.6 : provisionnement dynamique et StorageClass stables, politique de récupération « delete » (29 mars 2017) | `kubernetes/lecon-06#1` |
+| Buffer retire les limites de CPU de ses services critiques : bridage CFS, page d'accueil 22 fois plus rapide (Eric Khun, 31 août 2020) | `kubernetes/lecon-07#1` |
+| Skyscanner, panne mondiale du 25 août 2021 : un gabarit sans {{ }}, tous les namespaces corrompus, 478 services supprimés par ArgoCD (11 novembre 2021) | `kubernetes/lecon-08#1` |
+| Retraite d'Ingress NGINX annoncée le 11 novembre 2025, maintenance arrêtée en mars 2026 ; Ingress v1 stable depuis 1.19 | `kubernetes/lecon-09#1` |
+| Kubernetes 1.21 : CronJob GA et nouveau contrôleur (9 avril 2021), 5 120 CronJobs, 8 planifications manquées par l'ancien | `kubernetes/lecon-10#1` |
+| Helm 3.0.0 (13 novembre 2019) : fin de Tiller, fusion à trois voies et retour arrière | `kubernetes/lecon-11#1` |
+| JW Player, un mineur de cryptomonnaie via le tableau de bord Weave Scope exposé ; RBAC limité au namespace weave (Brian Choy, 19 mars 2019) | `kubernetes/lecon-12#1` |
+| Amazon Dynamo (2004-2007) | `nosql/lecon-01#1` |
+| Eric Brewer, CAP Twelve Years Later : les distributeurs de billets (2012) | `nosql/lecon-02#1` |
+| The Guardian quitte MongoDB pour PostgreSQL JSONB (Composer, 30 novembre 2018) | `nosql/lecon-03#1` |
+| Discord, stockage des messages Cassandra puis ScyllaDB (2017-2023) | `nosql/lecon-04#1` |
+| Panama Papers, ICIJ et Neo4j (2016) | `nosql/lecon-05#1` |
+| Netflix, persistance polyglotte | `nosql/lecon-06#1` |
+| Harness, panne après la suppression d'un index MongoDB (8 avril 2021) | `nosql/lecon-07#1` |
+| MongoDB 5.0 déprécie map-reduce au profit du pipeline d'agrégation (2021) | `nosql/lecon-08#1` |
+| Jepsen : MongoDB 2.4, basculement et écritures perdues (Kyle Kingsbury, 18 mai 2013) | `nosql/lecon-09#1` |
+| Rançons des bases MongoDB ouvertes (janvier 2017) | `nosql/lecon-10#1` |
+| Prometheus 2.0 et sa nouvelle couche de stockage (8 novembre 2017) | `nosql/lecon-11#1` |
+| GitHub, nouvelle recherche de code Blackbird, index de trigrammes (Timothy Clem, 6 février 2023) | `nosql/lecon-12#1` |
+| Facebook publie Faiss, recherche de similarité (29 mars 2017) | `nosql/lecon-13#1` |
+| OpenSky : catalogue dans MongoDB, commandes en relationnel (blog Doctrine, 22 juillet 2010) | `nosql/lecon-14#1` |
+| Meltdown, KPTI et le coût des appels système (Brendan Gregg, 9 février 2018) | `os/lecon-01#1` |
+| Chrome, Site Isolation activée par défaut (2018) | `os/lecon-02#1` |
+| Ingo Molnar annonce l'ordonnanceur CFS (13 avril 2007), Linux 2.6.23 | `os/lecon-03#1` |
+| Peter Denning, « Thrashing: Its causes and prevention » (AFIPS FJCC 1968) | `os/lecon-04#1` |
+| Windows 10 version 1809 : « Quick removal » par défaut, sans cache d'écriture (2018) | `os/lecon-05#1` |
+| Netflix, « Linux Performance Analysis in 60,000 Milliseconds » (30 novembre 2015) | `os/lecon-06#1` |
+| Therac-25 (1985-1987), Leveson et Turner | `os/lecon-07#1` |
+| Dennis Ritchie : l'arrivée des tubes dans Unix (1972), à la demande de McIlroy | `os/lecon-08#1` |
+| Multitâche coopératif du Mac (Inside Macintosh: Processes) puis Mac OS X préemptif (24 mars 2001) | `os/lecon-09#1` |
+| AWS Firecracker, microVM entre VM et conteneur (Jeff Barr, 26 novembre 2018) | `os/lecon-10#1` |
+| Mars Pathfinder, inversion de priorité et réinitialisations (1997) | `os/lecon-11#1` |
+| Dirty COW, CVE-2016-5195 (2016) | `os/lecon-12#1` |
+| Stephen Tweedie, « Journaling the Linux ext2fs Filesystem » (LinuxExpo 1998) | `os/lecon-13#1` |
+| Brendan Gregg, « Linux Load Averages: Solving the Mystery » : le correctif de Matthias Urlichs (1993) | `os/lecon-14#1` |
+| Calculatrice de Windows publiée en code source (6 mars 2019) : MVVM, CalcEngine, RatPack en précision infinie | `projets-js/lecon-01#1` |
+| John Resig présente les attributs data- de HTML 5 et dataset (13 juillet 2008) ; dataset dans Firefox 6 (16 août 2011) | `projets-js/lecon-02#1` |
+| Spotify, le mode aléatoire et Fisher-Yates (Lukáš Poláček, 28 février 2014) | `projets-js/lecon-03#1` |
+| Guillermo Rauch, « Pure UI » : l'interface comme fonction pure de l'état, refonte de VideoPress (13 juillet 2015) | `projets-js/lecon-04#1` |
+| API de YNAB : montants entiers en « milliunits » (v1.0.0 du 19 juin 2018), champs _formatted ajoutés en v1.82.0 (2 avril 2026) | `projets-js/lecon-05#1` |
+| crypto.randomUUID() : proposition du WICG (uuid sur npm, 235 millions de téléchargements par mois, avril 2021), Chrome 92 (20 juillet 2021) | `projets-js/lecon-06#1` |
+| Le générateur de mots de passe de Firefox 70 (22 octobre 2019), PasswordGenerator.sys.mjs | `projets-js/lecon-07#1` |
+| API Clipboard asynchrone (navigator.clipboard.writeText) livrée dans Chrome 66 : HTTPS, onglet actif (Jason Miller, « Unblocking Clipboard Access », mars 2018) | `projets-js/lecon-08#1` |
+| Le tutoriel officiel de React : un morpion à « voyage dans le temps » grâce aux plateaux immuables (reactjs.org 2017, react.dev) | `projets-js/lecon-09#1` |
+| Svelte 5 délègue click et d'autres événements à un seul écouteur à la racine (22 octobre 2024) | `projets-js/lecon-10#1` |
+| David Harel, « Statecharts » et la montre Citizen Quartz Multi-Alarm III (Science of Computer Programming, 1987) | `projets-js/lecon-11#1` |
+| Chrome 88 bride les minuteurs JS enchaînés des pages cachées, une vérification par minute (Jake Archibald, janvier 2021) | `projets-js/lecon-12#1` |
+| Dark Sky rejoint Apple : plus d'inscriptions à son API (31 mars 2020), API arrêtée le 31 mars 2023 | `projets-js/lecon-13#1` |
+| Luke Wroblewski, « Avoid The Spinner » : l'appli Polar remplace ses indicateurs de chargement par des écrans squelettes (17 septembre 2013) | `projets-js/lecon-14#1` |
+| Elm Reactor, « Time Travel made Easy » (Michael James, 24 septembre 2014) : entrées enregistrées, fonctions pures rejouées, instantané tous les 100 événements | `projets-js/lecon-15#1` |
+| Glenn Fiedler, « Fix Your Timestep! » : pas fixe et accumulateur (Gaffer On Games, 10 juin 2004) | `projets-js/lecon-16#1` |
+| Pointer Events devient Recommandation du W3C (24 février 2015) : souris, stylet et doigt sous un seul modèle | `projets-js/lecon-17#1` |
+| Chrome 71 étend sa politique d'autoplay à Web Audio : AudioContext « suspended », resume() après un geste (4 décembre 2018) | `projets-js/lecon-18#1` |
+| Atlassian, Pragmatic drag and drop : glisser-déposer natif du navigateur (Trello, Jira, Confluence) et menus « déplacer » pour les technologies d'assistance (2024) | `projets-js/lecon-19#1` |
+| Wordle (Josh Wardle) rejoint New York Times Games : six essais, un mot de cinq lettres (communiqué du 31 janvier 2022) | `projets-js/lecon-20#1` |
+| Code source de DOOM publié par id Software (README de John Carmack, 23 décembre 1997) : fichiers i_ (X11, clavier) séparés du moteur | `projets-js/lecon-21#1` |
+| Écran de choix des navigateurs de Microsoft (browserchoice.eu), mélange par sort aléatoire biaisé (Rob Weir, 27 février 2010) | `projets-js/lecon-22#1` |
+| TodoMVC (Addy Osmani, 2011) : app-spec (filtres #/active, #/completed, localStorage) et Speedometer 3.0 (11 mars 2024) | `projets-js/lecon-23#1` |
+| Duolingo sépare la série (streak) de l'objectif quotidien : une leçon suffit, +40 % d'apprenants sur une série de 7 jours (Anton Yu, 19 novembre 2020) | `projets-js/lecon-24#1` |
+| IBM Watson et Prolog (gardé, corrigé ; Lally et Fodor, ALP, 31 mars 2011) | `prolog/lecon-01#1` |
+| Yarn 2 écrit ses contraintes de workspaces en Prolog (2020), dépréciées dans Yarn 4 (2023) | `prolog/lecon-02#1` |
+| Robin Milner, algorithme W et unification de Robinson (1978) | `prolog/lecon-03#1` |
+| Lawrence Byrd, le modèle des boîtes à quatre ports (1980) | `prolog/lecon-04#1` |
+| Colmerauer et Roussel, The birth of Prolog : les listes du Prolog de 1972-1973 | `prolog/lecon-05#1` |
+| David H. D. Warren, optimisation de la récursion terminale dans DEC-10 Prolog (1980) | `prolog/lecon-06#1` |
+| Keith Clark, Negation as Failure (1978) | `prolog/lecon-07#1` |
+| Niklaus Wirth, les huit reines et le générer-et-tester (CACM, avril 1971) | `prolog/lecon-08#1` |
+| Histoire de SWI-Prolog (Wielemaker et al., TPLP) | `prolog/lecon-09#1` |
+| SETOF.PL de Richard O'Keefe pour DEC-10 Prolog (1983), bagof/setof de David Warren | `prolog/lecon-10#1` |
+| La vue logique des mises à jour (assert/retract) : BSI 1986, Quintus 2.0, ISO 1991 | `prolog/lecon-11#1` |
+| SWI-Prolog and the Web : DCG pour analyser et produire les en-têtes HTTP (Wielemaker et al., 2007) | `prolog/lecon-12#1` |
+| Markus Triska, le solveur CLP(FD) de SWI-Prolog (FLOPS 2012) | `prolog/lecon-13#1` |
+| The British Nationality Act as a Logic Program (Sergot, Kowalski et al., CACM, mai 1986) | `prolog/lecon-14#1` |
+| Lyft réécrit son app iOS en Swift (gardé, corrigé ; Fast Company, 10 septembre 2015) | `swift/lecon-01#1` |
+| SE-0054 : Swift 4.2 abolit le type ImplicitlyUnwrappedOptional | `swift/lecon-02#1` |
+| SE-0192 : @unknown default, les cas futurs d'un enum (Swift 5.0) | `swift/lecon-03#1` |
+| SE-0279 : les trailing closures multiples (Swift 5.3) | `swift/lecon-04#1` |
+| SE-0165 : Dictionary & Set Enhancements, subscript default et grouping (Swift 4.0) | `swift/lecon-05#1` |
+| SE-0069 : Foundation importée en types valeur (Date, URL, Data…), Swift 3 | `swift/lecon-06#1` |
+| SE-0194 : CaseIterable et allCases générés (Swift 4.2) | `swift/lecon-07#1` |
+| SE-0261 : le protocole Identifiable entre dans la bibliothèque standard (Swift 5.1) | `swift/lecon-08#1` |
+| SE-0143 : conformances conditionnelles (Swift 4.1/4.2) et billet swift.org de Ben Cohen | `swift/lecon-09#1` |
+| SE-0269 : self explicite dans les closures @escaping et cycles de références (Swift 5.3) | `swift/lecon-10#1` |
+| SE-0296 : async/await et la « pyramide » des completion handlers (Swift 5.5) | `swift/lecon-11#1` |
+| Swift Testing présenté à la WWDC24 (@Test, #expect) | `swift/lecon-12#1` |
+| Apple présente SwiftUI, framework déclaratif (WWDC, 3 juin 2019) | `swift/lecon-13#1` |
+| SE-0395 Observation (Swift 5.9) et la session WWDC23 « Discover Observation in SwiftUI » | `swift/lecon-14#1` |
+| SE-0166 et SE-0167 : Codable, JSONEncoder et JSONDecoder (Swift 4.0) | `swift/lecon-15#1` |
+| SE-0235 : Result entre dans la bibliothèque standard (Swift 5.0) | `swift/lecon-16#1` |
+| SE-0258 : les property wrappers (Swift 5.1) | `swift/lecon-17#1` |
+| SwiftData présenté à la WWDC23 (« Meet SwiftData ») | `swift/lecon-18#1` |
+| GitLab choisit Vue.js : l'état d'une issue, une trentaine de lignes jQuery contre une ligne (Jacob Schatz, 20 octobre 2016) | `vue/lecon-01#1` |
+| Vue 2.2.0 « Initial D » exige une key avec v-for sur un composant (26 février 2017) ; mise à jour « sur place » du guide | `vue/lecon-02#1` |
+| Vue 3.4 « Slam Dunk » : un computed ne relance ses effets que si sa valeur change (Evan You, 28 décembre 2023) | `vue/lecon-03#1` |
+| Vuetify 3.0 « Titan » (31 octobre 2022) : props de taille fondues en size, outlined/text de v-alert fondues en variant | `vue/lecon-04#1` |
+| Vue 3.5 : onWatcherCleanup() pour annuler la requête périmée d'un watch (Evan You, 1er septembre 2024) | `vue/lecon-05#1` |
+| Vue 3 devient la version par défaut (annonce du 20 janvier 2022, bascule le 7 février 2022) : Vite, Pinia, Volar | `vue/lecon-06#1` |
+| VueUse, collection de composables d'Anthony Fu (premier commit 14 décembre 2019), recommandée par la doc de Vue | `vue/lecon-07#1` |
+| RFC n° 112 de Vue : <Teleport> (Thorsten Lünborg, 20 janvier 2020, fusionnée le 9 avril 2020), renommé pour éviter <portal> | `vue/lecon-08#1` |
+| GitLab, « Our big Frontend plan revealed » : webpack, code chargé à la demande (Jacob Schatz, 6 février 2017) | `vue/lecon-09#1` |
+| RFC n° 187 de Vue Router : les gardes renvoient une valeur au lieu d'appeler next (Eduardo San Martin Morote, fusionnée le 5 août 2020) | `vue/lecon-10#1` |
+| Baymard Institute : la validation en ligne prématurée frustre (Edward Scott, 9 janvier 2024) | `vue/lecon-11#1` |
+| Paul Lewis, « FLIP Your Animations » (11 février 2015), technique utilisée par transition-group de Vue | `vue/lecon-12#1` |
+| Vue 3 : un composant qui ré-émet click sans emits déclenche deux fois l'écouteur (guide de migration, « emits Option ») | `vue/lecon-13#1` |
+| Pinia, né en novembre 2019 (Eduardo San Martin Morote), devenu la recommandation officielle à la place de Vuex 5 | `vue/lecon-14#1` |
