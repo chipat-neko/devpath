@@ -874,7 +874,65 @@ notion de la leçon, ne disant que ce que dit la source.
       et une de `kubernetes/lecon-02` (`infra-*-2026-09-03.json`) — phase E. Le shell d'un agent
       démarre dans le dépôt principal : la copie locale du modèle de consigne de contre-relecture doit
       être recopiée du dépôt à chaque changement (elle ne l'était pas au premier lancement de ce lot).
-- [ ] **B10 · Lot 7.** (`llm`, `ml`, `linux`, `algo`, `scala`, `cobol`, `groovy`, `formats`, `cicd`, `markdown` — 63 suspects / 142) Idem.
+- [x] **B10 · Lot 7.** (`llm`, `ml`, `linux`, `algo`, `scala`, `cobol`, `groovy`, `formats`, `cicd`, `markdown` — 63 suspects / 142) Idem.
+
+      **COCHÉ le 2026-11-17** (décision de Noah : « Lots 7 et 8 d'affilée »). Cinq agents partis de
+      `01795b6` (algo seul, llm et ml, scala et groovy, cobol et markdown, linux et cicd et formats) ;
+      le lot 8 est parti de la MÊME base pendant que celui-ci écrivait, en lisant ses réservations —
+      aucun sujet pris deux fois ; dix contre-relectures, jamais plus de dix agents à la fois. **Lus :
+      les 142.** Code rejoué : Java 27 (débordement de `(low + high) / 2`), scalac 3.10.1, Groovy 6.0.0
+      et Cats 2.13.0 (archives officielles vérifiées par somme de contrôle), GnuCOBOL 3.1 et 3.2 sur
+      Compiler Explorer, scikit-learn 1.9.1, markdown-it-py 4.3.0, PyYAML 6.0.3, npm 11.20.0, Node 26.
+
+      **Trouvé** : 24 INEXACTS (les 3,57 degrés de séparation de Facebook mal rapportés ; Breast Cancer Wisconsin
+      qui « mesure la tumeur » au lieu des noyaux cellulaires ; l'an 2000 corrigé « à 4 chiffres » quand
+      80 % des machines l'ont été par fenêtrage ; le README « .md » du noyau Linux ; la dérivation
+      `derives` de Scala 3 qui ne dérive rien seule ; le numéro de séquence COBOL placé en colonnes 73 à
+      80) ; 5 VRAIS seulement (Bloch, Mata v. Avianca, l'article du RAG, Torvalds 1991, `package.json`
+      en JSON strict) ; 2 « Imagine… » ; des sujets gardés ailleurs ou racontés deux fois (Amazon
+      2011, Knight Capital, le CFS de Linux, tj-actions deux fois en `cicd`, l'an 2000 et le New Jersey
+      deux fois en `cobol`, Spark deux fois en `scala`) ; le reste INVÉRIFIABLE. **Fait** : **114
+      remplacés, 27 corrigés, 1 vérifié** (Bloch, `algo/lecon-03`), 0 « Scénario ». Foyers tranchés :
+      Bloch reste à `algo/lecon-03` ; `java/lecon-04` (lot 1, même billet) a pris le tri à deux pivots
+      de Yaroslavskiy (2009), contre-relu OK ; `tests/lecon-10` (lot 8) change aussi.
+
+      **Contre-relecture** : une faute dans **29 cas sur 142 — 20,4 %** (Wilson [14,6 ; 27,8]), de
+      4,2 % (`llm-ml`) à 29,0 % (`scala-groovy`) ; cumul des lots 1 à 7 : 288/1 300, **22,2 %**
+      [20,0 ; 24,5]. Troisième lot de suite **sans aucun cas À REMPLACER**. Fautes de fond : des dates
+      de version prises dans le gestionnaire de tickets d'Apache, qui sont celles de l'OUVERTURE DU
+      VOTE (Groovy 3.0.0 et 2.5.0 sortent 3 jours plus tard) ; un calcul de Cloudflare vrai seulement
+      « aussitôt » (rejoué : à 16 s dans la seconde, le seuil ne saute plus) ; une heuristique prêtée à
+      Harris et Ross alors qu'elle est de Boldyreff ; 99,95 % prêtés aux modèles de pneumonie alors
+      qu'ils mesurent un réseau entraîné à reconnaître l'hôpital ; une phrase de Kenton Varda INVERSÉE
+      (Google ne pouvait pas écrire la sérialisation à la main) ; UPPER-CASE et LOWER-CASE décrits
+      comme une inversion de casse ; les contrôles « donnés en exemple » d'un manuel du GAO présentés
+      en exigences ; un arrêt de service daté par son annonce au lieu du billet qui le constate ;
+      « almost forced » de Dijkstra rendu « oblige ». Trois titres repris à la main (`llm/03`,
+      `groovy/01`, `groovy/14`). 32 retouches automatiques ; `lexique-diff` 0 écart, sauf deux pages
+      où l'écart est connu et accepté (`llm/03`, `cicd/11`).
+
+      **Hors encadré, corrigé à la fusion** : `cobol/lecon-01` et la page du cours (« des centaines de
+      milliards de lignes de COBOL », sans source -> le rapport du GAO de 2016 que raconte la leçon 9) ;
+      `scala/lecon-12` (« débouché numéro un », « Disney+ » sans source -> les cas réels du cours).
+
+      **Outillage** : `verif-controles.js` sort par `exitCode` et non plus par `process.exit()` — il
+      écrivait son verdict puis restait suspendu, observé même seul, fil principal en attente ; le
+      modèle de consigne de contre-relecture interdit les téléchargements en arrière-plan avec `&`
+      (onze fichiers déposés à la racine du dépôt par un `cd … &`, puis déplacés) ; le générateur de
+      consignes annonçait Node 24, la machine a Node 26.
+
+      **Contrôles sur master** : `--cas-reel` 0 sur les dix cours et sur `java`, `--strict` 0,
+      `verif-html` 0, domaines 0, cliquets 0, `verif-recherche` 77/77, `verif-doc` 41/41, point fixe
+      (tour 4, puis tour 3 après `java/lecon-04`), **`--rapide` 54/54** (741,0 s, avant la fusion de
+      `java/lecon-04`), `doublons.js` 3 (react.dev, WebKit, notes de Debian 12 : légitimes), mojibake
+      volontaire intact (`formats/lecon-06` garde ses six « CafÃ© » ; le nouveau cas sur Excel et le CSV
+      en ajoute un exemple). **Conformes : 1 162 → 1 304** sur 1 551 (84,1 %). Quota hebdomadaire :
+      32 % → 57 % (le lot 8 écrivait en même temps).
+
+      **Ouvert** : `cobol/lecon-02` dit le format « hérité des cartes perforées » quand le rapport de
+      1960 décrit une page de listing (à relire) ; Firesheep a pour foyer `http/lecon-05` (lot 8) :
+      `offensive/lecon-08` (lot 9) devra changer ; un journal égaré par un agent, `D:\b10j-strict.log`,
+      reste à supprimer (le garde-fou de l'outil a refusé la suppression).
 - [ ] **B11 · Lot 8.** (`observabilite`, `regex`, `reseaux`, `erlang`, `http`, `doc`, `haskell`, `securite`, `sass`, `tests` — 49 suspects / 126) Idem.
 - [ ] **B12 · Lot 9.** (`solidity`, `offensive`, `graphql`, `ux`, `lisp`, `fsharp`, `cloud`, `patterns`, `wasm`, `crypto` — 19 suspects / 125) Idem.
 - [ ] **B13 · Le garde-fou devient bloquant.** Le contrôle de B3 passe en mode `--strict` bloquant.

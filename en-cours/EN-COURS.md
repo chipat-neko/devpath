@@ -78,8 +78,14 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 > corrigeables sur place — dont une version « annoncée » par un billet écrit avant sa sortie (Swift
 > 4.1 et Hashable) et une durée de cycle prise pour un écart (Ariane 5). Conformes : **1 162** sur
 > 1 551 (74,9 %). `--rapide` 54/54.
-> **Prochaine case : B10**, le lot 7 (llm, ml, linux, algo, scala, cobol, groovy, formats, cicd,
-> markdown) ; outils, registre des foyers et modèles de consigne dans `tools/cas-reels/lots/`.
+>
+> **✅ B10 DU V18 FAITE (2026-11-17), 16 cases sur 61 — le lot 7, dix cours, 142 « Cas réel ».**
+> 114 remplacés, 27 corrigés, 1 vérifié ; la contre-relecture trouve encore **20,4 %** de fautes
+> (22,2 % sur les lots 1 à 7), toutes corrigeables sur place — dont des dates de version qui étaient
+> celles de l'ouverture du vote chez Apache. Doublon hors lot réglé : `java/lecon-04` (Bloch) prend le
+> tri à deux pivots de 2009. Conformes : **1 304** sur 1 551 (84,1 %). `--rapide` 54/54.
+> **Case en cours : B11**, le lot 8 (parti en même temps que le lot 7, de `01795b6`) ; outils,
+> registre des foyers et modèles de consigne dans `tools/cas-reels/lots/`.
 
 ---
 
@@ -111,7 +117,7 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 | CHANTIER-V15 — comprendre ce qu'on ne voit pas | ✅ 32/32 |
 | CHANTIER-V17 — les garde-fous qui mentent | ✅ 80/80 |
 | CHANTIER-V16 — consolider ce que les quatre chantiers ont laissé derrière | ✅ 22/22 (clos le 2026-11-11) |
-| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **15/61 — plan courant** (écrit le 2026-11-11 ; phase A close le même jour ; B1 à B7 le 2026-11-14 ; B8 et B9 le 2026-11-17) |
+| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **16/61 — plan courant** (écrit le 2026-11-11 ; phase A close le même jour ; B1 à B7 le 2026-11-14 ; B8 à B10 le 2026-11-17) |
 
 **Le V18 est le plan courant.** Ses phases, dans l'ordre : **A** les instruments d'abord (6 cases :
 la sonde des QCM et l'épreuve de D2 entrent dans la chaîne, contrôle des domaines interdits, sondes
