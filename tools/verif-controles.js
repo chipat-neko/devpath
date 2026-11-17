@@ -64,4 +64,10 @@ for (const t of trouves) {
 }
 if (!trouves.length) console.log('  aucun caractère de contrôle.');
 console.log('\n' + accidents.length + ' accident(s), ' + (trouves.length - accidents.length) + ' emploi(s) voulu(s).');
-process.exit(accidents.length ? 1 : 0);
+/* exitCode plutôt que process.exit() (V18, lot 7) : lancé par verif.js sous charge, cet outil
+   restait parfois suspendu APRÈS avoir écrit son verdict (vu 20 à 36 min, sur une dizaine de
+   copies ; une fois même lancé seul sous timeout, fil principal en attente, 0,28 s de processeur).
+   Sous Windows, l'écriture vers un tube est asynchrone et process.exit() peut attendre une
+   écriture en suspens. Hypothèse non démontrée ; laisser Node sortir seul est sans risque, et
+   le plafond par étape de verif.js reste le filet. */
+process.exitCode = accidents.length ? 1 : 0;
