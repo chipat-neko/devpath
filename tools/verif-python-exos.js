@@ -95,7 +95,8 @@ if (!PY) {
 
 var fautes = [];
 var nExos = 0, nFichiers = 0;
-var tmp = path.join(os.tmpdir(), 'verif-python-exo.py');
+// Nom propre au processus : deux copies du dépôt contrôlées en même temps écrasaient le fichier l'une de l'autre.
+var tmp = path.join(os.tmpdir(), 'verif-python-exo-' + process.pid + '.py');
 
 lecons().forEach(function (f) {
   var src = fs.readFileSync(f, 'utf8');

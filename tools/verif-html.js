@@ -481,7 +481,8 @@ function passeDom(fichiers, max) {
     console.log('\nPasse DOM ignorée : ni Chrome ni Edge trouvé (elle est optionnelle).');
     return [];
   }
-  const udd = path.join(os.tmpdir(), 'verif-html-udd');
+  // Un profil par lancement : deux copies du dépôt contrôlées en même temps ne se partagent pas le même profil Chrome.
+  const udd = fs.mkdtempSync(path.join(os.tmpdir(), 'verif-html-udd-'));
   const liste = fichiers.slice(0, max);
   const ecarts = [];
   console.log('\n--- Passe 2 (optionnelle) : Chrome headless --dump-dom sur ' + liste.length + ' fichier(s) ---');
@@ -519,6 +520,7 @@ function passeDom(fichiers, max) {
         ', exercice ' + src.exercise + '/' + rendu.exercise + ', moteurs ' + mot.declare + '/' + mot.monte + ')');
     }
   }
+  try { fs.rmSync(udd, { recursive: true, force: true }); } catch (e) { /* Chrome peut tenir un verrou un instant */ }
   return ecarts;
 }
 

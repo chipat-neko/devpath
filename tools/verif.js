@@ -1160,6 +1160,7 @@ function classer(r) {
    sinon la derniere ligne non vide, sinon le signal ou l'erreur de lancement. */
 function causeDe(r, sortie) {
   if (r.status !== 2) {
+    if (r.plafondMin) return "plafond de " + r.plafondMin + " min depasse : processus arrete, aucune mesure rendue (relancer l etape seule)";
     if (r.error) return "l'etape n'a pas pu etre lancee : " + (r.error.code || r.error.message);
     if (r.signal) return "processus tue par " + r.signal + " : aucune mesure rendue";
     if (r.status === null || r.status === undefined) return "processus interrompu sans code de sortie";
@@ -1210,11 +1211,21 @@ ETAPES.forEach(function (e) {
      sans ouvrir un seul navigateur. Une etape peut donc dire POURQUOI elle est lente. */
   process.stdout.write("  " + e.nom + "  " + e.quoi +
     (e.lent ? "  (patience, " + (e.pourquoiLent || "il pilote Chrome") + ")" : "") + "\n");
+  /* PLAFOND PAR ETAPE (V18, lot 5, 2026-11-17). Cette boucle attendait un enfant
+     SANS LIMITE : quatre copies du depot verifiees en meme temps ont vu une etape
+     ne jamais rendre la main (23 et 25 min avant arret a la main), et toute la
+     chaine restait figee. Une etape ordinaire coute 10 s ou moins seule ; 10 min,
+     c est 60 fois sa duree, et une etape `lent` a 90 min. Au-dela, l enfant est
+     tue et l etape compte NON MESUREE, avec la cause : on la relance seule. */
+  var plafondMin = e.lent ? 90 : 10;
   var r = cp.spawnSync(process.execPath, [path.join(TOOLS, e.fichier)].concat(e.args), {
     encoding: "utf8",
     cwd: RACINE,
     maxBuffer: 32 * 1024 * 1024,
+    timeout: plafondMin * 60 * 1000,
+    killSignal: "SIGKILL",
   });
+  if (r.error && r.error.code === "ETIMEDOUT") r.plafondMin = plafondMin;
   var duree = ((Date.now() - t0) / 1000).toFixed(1);
   var sortie = (r.stdout || "") + (r.stderr || "");
   var etat = classer(r);
