@@ -1087,3 +1087,11 @@ La DERNIÈRE réservation de chaque cas.
 | Dotty 0.13.0-RC1 (5 mars 2019) introduit la clause derives : instance générée = TC.derived, à fournir par le compagnon de la type class (Pickling, Ordering…) | `scala/lecon-15#1` |
 | Documentation de Cats, page Validated : formulaire d'inscription, for sur Either qui s'arrête à la première erreur, mapN sur ValidatedNec qui les accumule | `scala/lecon-16#1` |
 | Effective Scala, guide de Twitter (Marius Eriksen, 2012) : collections immuables, mise à jour par une référence (var volatile ou AtomicReference), atomiques à réessayer | `scala/lecon-17#1` |
+
+## Pris au lot 7 pour dédoublonner java/lecon-04 (B10, 2026-11-17)
+
+La DERNIÈRE réservation de chaque cas.
+
+| Sujet | Foyer |
+|---|---|
+| Vladimir Yaroslavskiy propose le tri rapide à deux pivots (Dual-Pivot Quicksort) pour java.util.Arrays (core-libs-dev, 11 septembre 2009), intégré au JDK 7 le 29 octobre 2009 (JDK-6880672) — remplace Arrays.binarySearch de Bloch (foyer algo/lecon-03) | `java/lecon-04#1` |
