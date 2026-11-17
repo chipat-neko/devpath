@@ -638,3 +638,144 @@ La DERNIÈRE réservation de chaque cas.
 | Open Science Collaboration, 100 réplications en psychologie : 97 % d'originaux significatifs, 36 % des réplications (Science, 28 août 2015) | `stats/lecon-13#1` |
 | Paradoxe de Simpson dans la létalité du Covid-19, Italie (9 mars 2020) contre Chine : plus basse par âge, plus haute au total (von Kügelgen, Gresele, Schölkopf, arXiv, 14 mai 2020) | `stats/lecon-14#1` |
 | Optimizely et le « peeking » : un test A/A surveillé en continu franchit 95 %, erreur de type I multipliée par cinq, valeurs p « toujours valides » depuis janvier 2015 (Johari, Pekelis, Walsh, arXiv 1512.04922) | `stats/lecon-15#1` |
+
+## Pris par le lot 5 (B8, 2026-11-17)
+
+La DERNIÈRE réservation de chaque cas.
+
+| Sujet | Foyer |
+|---|---|
+| Segment, « Goodbye Microservices » : retour de plus de 140 services à un monolithe (A. Noonan, 10 juillet 2018) | `archi/lecon-01#1` |
+| Dijkstra, le système THE bâti en niveaux, testé niveau par niveau (Communications of the ACM, 1968) | `archi/lecon-02#1` |
+| Martin Fowler, « Inversion of Control Containers and the Dependency Injection pattern » (janvier 2004) | `archi/lecon-03#1` |
+| Prime Video, outil de surveillance audio/vidéo passé des microservices serverless à un monolithe, coûts -90 % (M. Kolny, 22 mars 2023) | `archi/lecon-04#1` |
+| Netflix Studio Workflows, architecture hexagonale : bascule d'une API JSON vers GraphQL en deux heures (10 mars 2020) | `archi/lecon-05#1` |
+| Uber, Domain-Oriented Microservice Architecture : 2 200 microservices classés en 70 domaines (A. Gluck, 23 juillet 2020) | `archi/lecon-06#1` |
+| Michael Nygard, « Documenting Architecture Decisions », la proposition des ADR (15 novembre 2011) | `archi/lecon-07#1` |
+| GitHub, « Introducing Resque » : tâches d'arrière-plan en files, « 50 % de travail en arrière-plan » (C. Wanstrath, 3 novembre 2009) | `archi/lecon-08#1` |
+| LMAX, processeur métier en mémoire et event sourcing, instantanés et rejeu (M. Fowler, 12 juillet 2011) | `archi/lecon-09#1` |
+| Netflix, disjoncteurs de l'API (2011) puis Hystrix (2012, en maintenance depuis 2018) | `archi/lecon-10#1` |
+| Spotify, les ADR de l'équipe Creator (J. Blake, 14 avril 2020) | `archi/lecon-11#1` |
+| Shopify, ventes flash de Kylie Cosmetics, limiteur et page d'attente du checkout (E. Stolarsky, 3 février 2017) | `archi/lecon-12#1` |
+| Stripe et Sorbet (2017-2022) : les NameError de production remplacés par des erreurs de type statiques | `compilation/lecon-01#1` |
+| GCC 10 (7 mai 2020) passe à -fno-common : une globale définie dans un en-tête devient une erreur d'édition de liens | `compilation/lecon-02#1` |
+| json2.js de Douglas Crockford (version du 17 novembre 2010) : quatre regex filtrent les caractères, eval juge l'imbrication | `compilation/lecon-03#1` |
+| WG21 N1757 « Right Angle Brackets » (D. Vandevoorde, 14 janvier 2005) : >> et la plus longue correspondance dans les templates C++ | `compilation/lecon-04#1` |
+| Russ Cox, « Regular Expression Matching Can Be Simple And Fast » : automate de Thompson contre retour arrière (janvier 2007) | `compilation/lecon-05#1` |
+| Trojan Source (Boucher et Anderson, 2021), CVE-2021-42574 : caractères bidirectionnels dans commentaires et chaînes | `compilation/lecon-06#1` |
+| PEP 617 (2020) : CPython quitte son analyseur LL(1) pour un analyseur PEG | `compilation/lecon-07#1` |
+| GARDÉ et sourcé : Clang, analyseur par descente récursive écrit à la main, -fbracket-depth | `compilation/lecon-08#1` |
+| Python : ** groupe de droite à gauche, référence du langage (3.14) | `compilation/lecon-09#1` |
+| Python : ast.NodeVisitor appelle visit_<classe> (3.14) | `compilation/lecon-10#1` |
+| CPython 3.14 désassemblé par dis : LOAD_SMALL_INT, STORE_NAME, LOAD_NAME | `compilation/lecon-11#1` |
+| PEP 3147 : les .pyc rangés dans __pycache__ avec une étiquette de version (Python 3.2, 2010) | `compilation/lecon-12#1` |
+| Python 3.12 : python -m unittest sort avec le code 5 quand aucun test n'a tourné (gh-62432) | `compilation/lecon-13#1` |
+| Gelman, Pasarica et Dodhia, « Let's Practice What We Preach: Turning Tables into Graphs » : les tableaux d'un numéro du JASA redessinés en graphiques (The American Statistician, mai 2002) | `dataviz/lecon-01#1` |
+| Hadley Wickham, « A Layered Grammar of Graphics » : la grammaire de ggplot2, le camembert = barre empilée en coordonnées polaires (JCGS, 2010) | `dataviz/lecon-02#1` |
+| Le « Visual Vocabulary » du Financial Times : choisir le graphique selon la relation à montrer (affiche versée au dépôt chart-doctor le 15 août 2016) | `dataviz/lecon-03#1` |
+| Correll, Bertini et Franconeri, « Truncating the Y-Axis: Threat or Menace? » : l'axe tronqué grossit l'effet perçu, même avec axe cassé (CHI 2020) | `dataviz/lecon-04#1` |
+| Heer et Agrawala, « Multi-Scale Banking to 45° » : le CO2 de Mauna Loa selon le ratio d'aspect (IEEE TVCG, 2006) | `dataviz/lecon-05#1` |
+| Weissgerber et al., « Beyond Bar and Line Graphs » : 703 articles de physiologie, des barres pour des données continues (PLOS Biology, 22 avril 2015) | `dataviz/lecon-06#1` |
+| Hans Rosling, « The best stats you've ever seen » : bulles pays, taille = population, au TED de février 2006 | `dataviz/lecon-07#1` |
+| Ben Shneiderman invente le treemap pour un disque de 80 Mo plein (HCIL, 1990 ; ACM TOG, janvier 1992) | `dataviz/lecon-08#1` |
+| UK Statistics Authority contre le tweet du DfE sur le financement des écoles : axe tronqué, euros courants, pas par élève (lettres du 8 octobre 2018) | `dataviz/lecon-09#1` |
+| Crameri, Shephard et Heron, « The misuse of colour in science communication » : jet contre batlow, daltonisme (Nature Communications, 28 octobre 2020) | `dataviz/lecon-10#1` |
+| Gaia DR2, diagrammes de Hertzsprung-Russell en densité (racine carrée), 65 921 112 étoiles (Gaia Collaboration, Babusiaux et al., A&A 616, 2018) | `dataviz/lecon-11#1` |
+| ONS, décès liés au Covid-19 par collectivité : carte en taux standardisés sur l'âge, Newham 144,3 pour 100 000 (bulletin du 1er mai 2020) | `dataviz/lecon-12#1` |
+| Columbia : la diapositive « Review of Test Data Indicates Conservatism for Tile Penetration » analysée par Tufte (rapport du CAIB, vol. I, août 2003) | `dataviz/lecon-13#1` |
+| Le graphique à deux axes non gradués de Planned Parenthood montré par Jason Chaffetz (audition du 29 septembre 2015 ; PolitiFact, 1er octobre 2015) | `dataviz/lecon-14#1` |
+| Reddit, panne du jour de pi : réglage Calico fait à la main, enregistré nulle part (14 mars 2023, post-mortem du 21 mars) | `iac/lecon-01#1` |
+| HashiCorp annonce Terraform : dépendances déduites, création en parallèle, plans d'exécution (M. Hashimoto, 28 juillet 2014) | `iac/lecon-02#1` |
+| Terraform 0.9 : remote backends et verrouillage automatique du state (note de version, 15 mars 2017) | `iac/lecon-03#1` |
+| HashiCorp lance le Terraform Module Registry (M. Hashimoto, 19 septembre 2017) | `iac/lecon-04#1` |
+| GitLab.com, base de production effacée par erreur (31 janvier 2017), post-mortem | `iac/lecon-05#1` |
+| Charity Majors, un state partagé par tous les environnements, « a tfstate file per env » (30 mars 2016) | `iac/lecon-06#1` |
+| Terraform 1.10, valeurs éphémères : les secrets hors du plan et du state (G. Rai, 27 novembre 2024) | `iac/lecon-07#1` |
+| Ticket Terraform n° 17179 (24 janvier 2018), for_each pour les ressources dans Terraform 0.12.6 (31 juillet 2019) | `iac/lecon-08#1` |
+| Ticket Terraform n° 2437 (23 juin 2015) et drapeau lifecycle ignore_changes (Terraform 0.6.4, 15 octobre 2015) | `iac/lecon-09#1` |
+| Uber, clé d'accès AWS en clair dans un dépôt GitHub privé, fuite de 2016 (plainte révisée de la FTC, 2018) | `iac/lecon-10#1` |
+| Ministère de la Justice britannique, Cloud Platform : composants du cluster de production supprimés par erreur, restaurés par apply (21 septembre 2020) | `iac/lecon-11#1` |
+| OpenSMTPD, CVE-2020-7247 : partie locale invalide et domaine vide acceptés par smtp_mailaddr() (Qualys, 28 janvier 2020) | `maths/lecon-01#1` |
+| UglifyJS, ticket n° 751 : De Morgan appliqué à une chaîne de && qui perd la valeur de the_stuff() ; 2.4.24 (21-22 juillet 2015) | `maths/lecon-02#1` |
+| MySQL et MariaDB, CVE-2012-2122 : résultat de memcmp() mal converti, un mot de passe faux accepté environ une fois sur 256 (S. Golubchik, 9 juin 2012) | `maths/lecon-03#1` |
+| Mercurial, « changegroup: store old heads as a set » : 46 492 têtes chez Mozilla, unbundle 18,5 s -> 1,3 s (G. Szorc, 23 mars 2017 ; 4.1.2) | `maths/lecon-04#1` |
+| Go 1.24 et les Swiss Tables : collisions, sondage, groupes de 8 cases, croissance par doublement (M. Pratt, 26 février 2025) | `maths/lecon-05#1` |
+| Stefan Axelsson, « The Base-Rate Fallacy and the Difficulty of Intrusion Detection » (ACM CCS 1999 ; TISSEC, août 2000) | `maths/lecon-06#1` |
+| Le numéro de semaine GPS sur 10 bits repasse à zéro tous les 1 024 semaines : 21 août 1999, 6 avril 2019 (mémorandum DHS/NCCIC, 2018) | `maths/lecon-07#1` |
+| GARDÉ et corrigé : Heninger, Durumeric, Wustrow, Halderman, « Mining Your Ps and Qs » (USENIX Security 2012) ; Lenstra et al., « Ron was wrong, Whit is right » (2012) | `maths/lecon-08#1` |
+| Mastodon 2.0.0 (18 octobre 2017) : identifiants Snowflake en bigint, renvoyés en chaînes dans l'API REST | `maths/lecon-09#1` |
+| Ubuntu, bogue Launchpad n° 1956629 : firewalld crée un cycle d'ordre, systemd supprime cloud-init.service pour le casser (6 janvier 2022) | `maths/lecon-10#1` |
+| Google, Jouppi et al., « In-Datacenter Performance Analysis of a Tensor Processing Unit » : 65 536 multiplieurs, inférence, 2013 voix (ISCA 2017) | `maths/lecon-11#1` |
+| MySQL 8.0.18 exécute les jointures par hachage, jusque-là seulement des boucles imbriquées (E. Frøseth, « Hash join in MySQL 8 », 13 novembre 2019) | `maths/lecon-12#1` |
+| William Pugh, « Skip Lists: A Probabilistic Alternative to Balanced Trees » : l'insertion dans l'ordre dégénère un arbre (CACM, juin 1990) | `maths/lecon-13#1` |
+| L'API OpenStep (septembre 1994), première à employer le préfixe NS, devenue Cocoa après le rachat de NeXT (Apple, Cocoa Fundamentals Guide, « A Bit of History ») | `objc/lecon-01#1` |
+| Clang 3.2 (20 décembre 2012) avertit « direct comparison of a string literal has undefined behavior » (-Wobjc-string-compare) | `objc/lecon-02#1` |
+| Apple, The Objective-C Programming Language, « Sending Messages to nil » : ce que renvoie un message à nil (2013) | `objc/lecon-03#1` |
+| Apple, Programming with Objective-C : %@ appelle description (adresse par défaut) ; debugDescription et la commande po | `objc/lecon-04#1` |
+| Apple, « Adopting Modern Objective-C » : instancetype pour init et les fabriques de classe (2014) | `objc/lecon-05#1` |
+| Une catégorie sortDescriptorWithKey:ascending: en collision avec la méthode ajoutée à NSSortDescriptor dans Mac OS X 10.6 et iOS 4.0 (Apple, Programming with Objective-C) | `objc/lecon-06#1` |
+| ARC (Xcode 4.2, 2011) ne protège pas des cycles de références fortes ; block, __weak (Apple, Transitioning to ARC Release Notes) ; -Warc-retain-cycles | `objc/lecon-07#1` |
+| GARDÉ (B2) : NSURLSession (iOS 7, 2013), dataTaskWithURL:completionHandler: exécuté sur la file du délégué | `objc/lecon-08#1` |
+| Swift annoncé le 2 juin 2014, « coexists with Objective-C » ; migrer vers Swift une classe à la fois (Apple) | `objc/lecon-09#1` |
+| Apple, Error Handling Programming Guide : le succès se lit dans le retour (nil ou NO), pas dans l'NSError (2011) | `objc/lecon-10#1` |
+| Apple, File System Programming Guide : Documents sauvegardé par iTunes et iCloud, Library/Caches et tmp non sauvegardés | `objc/lecon-11#1` |
+| Clang 3.0 (1er décembre 2011), ARC : « performSelector may cause a leak because its selector is unknown » | `objc/lecon-12#1` |
+| Main Thread Checker d'Xcode 9 (2017) : appels UIKit/AppKit hors du thread principal | `objc/lecon-13#1` |
+| NSFetchedResultsController (iPhone OS 3.0, 2009) prévient son délégué des changements de ses résultats | `objc/lecon-14#1` |
+| VPNKit de Docker for Mac et Windows, bibliothèque réseau écrite en OCaml (A. Madhavapeddy, blog Docker, 18 mai 2016) | `ocaml/lecon-01#1` |
+| OCaml 4.01 ajoute les opérateurs /> et @@ à Pervasives (12 septembre 2013) | `ocaml/lecon-02#1` |
+| Chris Okasaki, Purely Functional Data Structures, thèse CMU (septembre 1996) : structures fonctionnelles automatiquement persistantes | `ocaml/lecon-03#1` |
+| Luc Maranget, « Warnings for pattern matching » : l'algorithme d'exhaustivité du compilateur OCaml, repris par rustc (JFP, 2007) | `ocaml/lecon-04#1` |
+| Jane Street et l'état de connexion réécrit en variants (Y. Minsky, « OCaml for the Masses », ACM Queue, 2011) | `ocaml/lecon-05#1` |
+| OCaml 4.05 : variantes _opt des fonctions de la bibliothèque standard qui levaient Not_found (A. Frisch, PR n° 885, 2016-2017) | `ocaml/lecon-06#1` |
+| OCaml 5.1 : List.map, List.filter… deviennent récursives terminales grâce à la transformation TMC (2023) | `ocaml/lecon-07#1` |
+| OCamlgraph, bibliothèque de graphes générique par foncteurs (Conchon, Filliâtre, Signoles, TFP 2007) | `ocaml/lecon-08#1` |
+| OCaml 4.02 sépare string immuable et bytes mutable ; -safe-string par défaut en 4.06 (2014-2017) | `ocaml/lecon-09#1` |
+| Le compilateur de Rust se compile lui-même ; l'amorçage était écrit en OCaml (P. Walton, 29 avril 2011) | `ocaml/lecon-10#1` |
+| Jane Street, « Why GADTs matter for performance » (Y. Minsky, 30 mars 2015) | `ocaml/lecon-11#1` |
+| OCaml 5.0 : nouveau runtime, parallélisme à mémoire partagée (domaines) et gestionnaires d'effets (décembre 2022) | `ocaml/lecon-12#1` |
+| L'interpréteur de référence de WebAssembly écrit en OCaml (Haas et al., PLDI 2017) | `ocaml/lecon-13#1` |
+| js_of_ocaml : les objets JavaScript typés par des types objets OCaml (Vouillon et Balat, 2014) | `ocaml/lecon-14#1` |
+| Module Seq : PR n° 1002 de Simon Cruanes, OCaml 4.07 (2018), plus de 40 fonctions en 4.14 (2022) | `ocaml/lecon-15#1` |
+| Jane Street, « The perils of polymorphic compare » : deux ensembles égaux mais structurellement différents (Y. Minsky, 18 août 2008) | `ocaml/lecon-16#1` |
+| OCaml 4.08 : opérateurs de liaison let*, let+ et modules Result et Option (13 juin 2019) | `ocaml/lecon-17#1` |
+| Multicoretests (Tarides) : Lin et STM sur QCheck trouvent des bogues d'OCaml 5 (OCaml Workshop 2022) | `ocaml/lecon-18#1` |
+| Wes McKinney présente pandas à SciPy 2010 : Series, DataFrame, Index et alignement automatique (« Data Structures for Statistical Computing in Python », 2010 ; projet commencé chez AQR en 2008) | `pandas/lecon-01#1` |
+| L'étude Surgisphere du Lancet (22 mai 2020) contestée par la lettre ouverte de 201 signataires (28 mai) : données australiennes incompatibles, puis retrait (5 juin 2020) | `pandas/lecon-02#1` |
+| pandas 3.0 (21 janvier 2026) : type str dédié par défaut au lieu d'object pour le texte (PDEP-14) | `pandas/lecon-03#1` |
+| pandas 1.0 (29 janvier 2020) introduit pd.NA, marque unique du manquant, qui se propage dans les comparaisons | `pandas/lecon-04#1` |
+| pandas 3.0 rend le Copy-on-Write obligatoire : l'affectation enchaînée ne marche plus jamais, SettingWithCopyWarning supprimé (PDEP-7, guide de migration) | `pandas/lecon-05#1` |
+| PEP 335 (Gregory Ewing, 2004) rejetée par Guido van Rossum le 13 mars 2012 : pourquoi NumPy et pandas combinent les masques avec &, | `pandas/lecon-06#1` |
+| Rio 2016, 100 m nage libre : Oleksiak et Manuel ex aequo en or (52,70), bronze à Sjöström, classement « 1, 1, 3 » | `pandas/lecon-07#1` |
+| Élection du Schleswig-Holstein du 5 avril 1992 : 4,97 % arrondis à 5 %, une majorité changée (RISKS Digest 13.37, D. Weber-Wulff, 7 avril 1992) | `pandas/lecon-08#1` |
+| Hadley Wickham, « The Split-Apply-Combine Strategy for Data Analysis » : plyr, l'année de carrière des joueurs de baseball (JSS, 7 avril 2011) | `pandas/lecon-09#1` |
+| Les séries temporelles Covid-19 du CSSE de Johns Hopkins en format large : une colonne par jour, 1 147 colonnes (dépôt archivé le 10 mars 2023) | `pandas/lecon-10#1` |
+| L'argument validate de pd.merge : ticket n° 16270 de Nick Eubank (6 mai 2017), livré dans pandas 0.21.0 (27 octobre 2017) | `pandas/lecon-11#1` |
+| pandas 2.0 (3 avril 2023) : to_datetime applique à toute la colonne le format de la première valeur non manquante | `pandas/lecon-12#1` |
+| pandas 1.2.0 (26 décembre 2020) : xlwt n'est plus maintenu, xlrd ne lit plus que les .xls, écrire les .xlsx avec openpyxl | `pandas/lecon-13#1` |
+| BuzzFeed News et la BBC, « The Tennis Racket » (17 janvier 2016) : analyse de 25 993 matchs publiée avec son carnet pandas | `pandas/lecon-14#1` |
+| Niklaus Wirth, « Summary of projects » (ETH) : Pascal 1968-1972, premier compilateur sur CDC 6000 en 1970, cours d'introduction en 1972 | `pascal/lecon-01#1` |
+| Niklaus Wirth, « Good Ideas, through the Looking Glass » : le signe = de l'affectation, l'erreur de Fortran que := corrige (IEEE Computer, janvier 2006) | `pascal/lecon-02#1` |
+| Dijkstra, « A Case against the GO TO Statement » (EWD215), publié en mars 1968 sous le titre « Go To Statement Considered Harmful » : clauses while et repeat | `pascal/lecon-03#1` |
+| Niklaus Wirth, « 50 Years of Pascal » (CACM, mars 2021) : paramètres valeur et variable, paramètre par nom et own d'Algol retirés | `pascal/lecon-04#1` |
+| C. A. R. Hoare, « The Emperor's Old Clothes » (conférence Turing 1980, CACM 1981) : chaque indice vérifié contre les bornes, les clients refusent de couper ce contrôle | `pascal/lecon-05#1` |
+| Apple, Inside Macintosh, documentation préliminaire (1983-1984) : EventRecord, Point et Rect décrits en records Pascal | `pascal/lecon-06#1` |
+| Vim 7.0 (7 mai 2006) : branches d'annulation ; l'historique est une liste chaînée de u_header (uh_next, uh_prev) | `pascal/lecon-07#1` |
+| Turbo Pascal 4.0 (1987) : unités et compilation séparée ; UPGRADE /U découpe un programme 3.0 en unités | `pascal/lecon-08#1` |
+| GARDÉ et corrigé : Total Commander, 32 bits en Delphi, 64 bits compilé avec Lazarus/Free Pascal (history.txt, SDK) | `pascal/lecon-09#1` |
+| /var/log/wtmp, fichier de structures utmp à champ de temps 32 bits : Y2038, format sur disque à changer, wtmpdb (T. Kukuk, 30 mars 2023) | `pascal/lecon-10#1` |
+| Delphi 2009 : set of Char réduit à AnsiChar, avertissement W1050 et CharInSet (M. Cantù, « Delphi and Unicode », décembre 2008) | `pascal/lecon-11#1` |
+| Niklaus Wirth, Algorithms and Data Structures, § « When Not To Use Recursion » : Fibonacci, 15 activations de Fib(5) (1985, version Oberon 2004) | `pascal/lecon-12#1` |
+| Turbo Pascal 6.0 Programmer's Guide (1990) : la portée de private s'arrête au module qui déclare le type objet | `pascal/lecon-13#1` |
+| Turbo Pascal 5.5 (1989), Object-Oriented Programming Guide : des records qui héritent, encapsulation laissée au programmeur | `pascal/lecon-14#1` |
+| Visual Studio Code 1.0 (14 avril 2016) | `vscode/lecon-01#1` |
+| Language Server Protocol annoncé par l'équipe VS Code (27 juin 2016) | `vscode/lecon-02#1` |
+| VS Code 1.37-1.38 : option Preserve Case dans Rechercher/Remplacer, puis dans la recherche globale (2019) | `vscode/lecon-03#1` |
+| VS Code : éditeur de fusion à trois volets, expérimental en 1.68, activé par défaut en 1.70 (2022) | `vscode/lecon-04#1` |
+| VS Code 1.6 : extensions recommandées de l'espace de travail, .vscode/extensions.json (septembre 2016) | `vscode/lecon-05#1` |
+| VS Code 1.22 : les Logpoints du débogueur (mars 2018) | `vscode/lecon-06#1` |
+| VS Code 1.43 : mode de sélection en colonne (février 2020) | `vscode/lecon-07#1` |
+| VS Code 1.28 : snippets de projet *.code-snippets dans .vscode et préfixes multiples (septembre 2018) | `vscode/lecon-08#1` |
+| VS Code 1.36 : dependsOrder "sequence" pour enchaîner les tâches (juin 2019) | `vscode/lecon-09#1` |
+| Remote Development de VS Code : extensions SSH, WSL, conteneurs en préversion (2 mai 2019) | `vscode/lecon-10#1` |
+| VS Code 1.57 : Workspace Trust et mode restreint (mai 2021) | `vscode/lecon-11#1` |
