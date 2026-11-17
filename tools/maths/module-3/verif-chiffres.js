@@ -53,6 +53,26 @@ const DECLARES = {
   '50,3': 'le chiffre ERRONÉ de la première version, cité comme repoussoir',
   '2008': 'année de révision de la norme IEEE 754',
   '7291736452811264009': 'identifiant fictif donné en exemple dans une question',
+  /* Ajouts du V18, lot 5 (B8, 2026-11-17) : les « Cas réel » réécrits et contre-relus
+     citent des nombres de leur SOURCE (dates, numéros, chiffres d un article), vérifiés
+     par la contre-relecture et non par une exécution. Chacun nomme d où il vient. */
+  '1980': 'Cas réel GPS (lecon-07) : origine du compteur de semaines, 6 janvier 1980, mémorandum du DHS',
+  '1999': 'Cas réel GPS (lecon-07) : premier retour à zéro, 21 août 1999, mémorandum du DHS',
+  '2019': 'Cas réel GPS (lecon-07) : second retour à zéro, 6 avril 2019, mémorandum du DHS',
+  '2018': 'Cas réel GPS (lecon-07) : date de création du PDF du mémorandum, non daté',
+  '1023': 'Cas réel GPS (lecon-07) : plus grande valeur d un champ de 10 bits (0 à 1 023)',
+  '7168': 'Cas réel GPS (lecon-07) : 1 024 semaines x 7 jours, calcul montré dans la phrase',
+  '11170883': 'Cas réel Mining Your Ps and Qs (lecon-08) : modules distincts, § 3.3 de l article',
+  '16717': 'Cas réel Mining Your Ps and Qs (lecon-08) : clés publiques factorisées, § 3.3',
+  '64081': 'Cas réel Mining Your Ps and Qs (lecon-08) : serveurs TLS de leur relevé, § 4.2',
+  '0,50': 'Cas réel Mining Your Ps and Qs (lecon-08) : part de ces serveurs TLS, § 4.2',
+  '2459': 'Cas réel Mining Your Ps and Qs (lecon-08) : serveurs SSH de leur relevé, § 4.2',
+  '064': 'Cas réel (lecon-08) : numéro du rapport ePrint 2012/064 cité en source',
+  '2.0': 'Cas réel Mastodon (lecon-09) : numéro de version, notes de version 2.0.0',
+  '2017': 'Cas réel Mastodon (lecon-09) : date des notes de version, 18 octobre 2017',
+  '4801': 'Cas réel Mastodon (lecon-09) : numéro de PR cité dans les notes de version',
+  '5260': 'idem, numéro de PR cité dans les notes de version',
+  '5019': 'idem, numéro de PR cité dans les notes de version',
 };
 
 const pages = process.argv.slice(2);
@@ -72,6 +92,7 @@ for (const page of pages) {
 
   /* 3. la PROSE : tout sauf les blocs de code, les scripts et les attributs */
   let prose = html
+    .replace(/<span class="duration">[\s\S]*?<\/span>/g, ' ')  /* durée d en-tête : métadonnée recalculée, pas un chiffre de la prose (comme au module 5) */
     .replace(/<figure class="code-block"[\s\S]*?<\/figure>/g, ' ')
     .replace(/<script[\s\S]*?<\/script>/g, ' ')
     .replace(/<svg[\s\S]*?<\/svg>/g, ' ')

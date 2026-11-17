@@ -66,6 +66,13 @@ const DECLARES = {
      navigateur. La leçon 13 les cite en nommant leur source. */
   '2,00000000000000044': 'valeur Node de log(9)/log(3), relevée par verif-clic.js',
   '2,00000000000000000': 'valeur Chrome de la même expression, idem',
+  /* Ajouts du V18, lot 5 (B8, 2026-11-17) : nombres cités de la SOURCE des « Cas réel »
+     réécrits et contre-relus, non mesurés par une exécution. */
+  '8.0': 'Cas réel MySQL (lecon-12) : version 8.0.18, notes de version',
+  '2019': 'Cas réel MySQL (lecon-12) : année de la version 8.0.18 et du billet',
+  '1990': 'Cas réel Pugh (lecon-13) : Communications of the ACM, juin 1990',
+  '668': 'Cas réel Pugh (lecon-13) : première page de l article cité',
+  '676': 'Cas réel Pugh (lecon-13) : dernière page de l article cité',
 };
 
 const pages = process.argv.slice(2);

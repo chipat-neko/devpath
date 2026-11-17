@@ -60,6 +60,14 @@ const DECLARES = {
   '1998': 'date : modèle petit monde de Watts et Strogatz',
   '50000': 'taille de graphe posée dans une question d auto-évaluation',
   '300000': 'nombre d arêtes posé dans la même question',
+  /* Ajouts du V18, lot 5 (B8, 2026-11-17) : nombres cités de la SOURCE des « Cas réel »
+     réécrits et contre-relus, non mesurés par une exécution. */
+  '2022': 'Cas réel systemd (lecon-10) : bogue Launchpad ouvert le 6 janvier 2022',
+  '1956629': 'Cas réel systemd (lecon-10) : numéro du bogue Launchpad cité en source',
+  '2013': 'Cas réel TPU (lecon-11) : année de la projection racontée par Jouppi et al., ISCA 2017',
+  '2015': 'Cas réel TPU (lecon-11) : mise en service dans les centres de données, même article',
+  '2017': 'Cas réel TPU (lecon-11) : année de l article (ISCA, juin 2017)',
+  '65536': 'Cas réel TPU (lecon-11) : 256 x 256 multiplieurs-accumulateurs, calcul montré dans la phrase',
 };
 
 const pages = process.argv.slice(2);
@@ -79,6 +87,7 @@ for (const page of pages) {
 
   /* 3. la PROSE : tout sauf les blocs de code, les scripts et les attributs */
   let prose = html
+    .replace(/<span class="duration">[\s\S]*?<\/span>/g, ' ')  /* durée d en-tête : métadonnée recalculée, pas un chiffre de la prose (comme au module 5) */
     .replace(/<figure class="code-block"[\s\S]*?<\/figure>/g, ' ')
     .replace(/<script[\s\S]*?<\/script>/g, ' ')
     .replace(/<svg[\s\S]*?<\/svg>/g, ' ')
