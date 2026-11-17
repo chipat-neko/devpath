@@ -734,7 +734,81 @@ notion de la leçon, ne disant que ce que dit la source.
       `haskell/lecon-02` (lot B11) sur une seule source de presse ; le Zig portable commun
       (`scratchpad/outils-portables/zig-0.14.1`) n'a que la libc mingw — l'archive complète est à
       reprendre de l'archive de `bash-asm`.
-- [ ] **B8 · Lot 5.** (`dataviz`, `objc`, `compilation`, `vscode`, `ocaml`, `pandas`, `pascal`, `maths`, `archi`, `iac` — 94 suspects / 134) Idem.
+- [x] **B8 · Lot 5.** (`dataviz`, `objc`, `compilation`, `vscode`, `ocaml`, `pandas`, `pascal`, `maths`, `archi`, `iac` — 94 suspects / 134) Idem.
+
+      **COCHÉ le 2026-11-17** (décision de Noah : « Enchaîne sur le lot 5 et 6 »). Cinq agents partis
+      de `d86be7b` (dataviz et pandas, objc et compilation, ocaml et vscode, pascal et maths, archi et
+      iac), consigne du modèle qui apprend des lots 2 à 4, réservations communes (134 sujets, aucun pris
+      deux fois), dix contre-relectures. **Lus : les 134.** Code rejoué : pandas 1.2, 2.3 et 3.0 à 3.1
+      (roues officielles dans le scratchpad), OCaml 5.0.0, 5.1.0 et 5.5.2 et Free Pascal 3.2.2 sur
+      Compiler Explorer, `zig cc` (Clang 19.1.7) pour l'Objective-C et le C, Terraform 1.9.8 officiel,
+      Python 3.14 et 3.11, Node.
+
+      **Trouvé** : **22 INVENTÉS** (les exemples fictifs des cours racontés
+      comme réels : la ville de Belleville en `dataviz`, la librairie en `pandas`, quatre scénarios
+      en `maths`, des « Imagine… » en `ocaml` et `pascal`) ; 17 INEXACTS (un match OCaml non
+      exhaustif qui « refuse de compiler » alors que c'est l'avertissement 8 ; Flow « écrit en OCaml »,
+      il est en Rust ; Prime Video « jusqu'à » 90 % pour « plus de » ; GitLab 2017 avec cinq procédures
+      de sauvegarde pour quatre ; Uber 2016 à 57 millions pour les 25,6 millions de la FTC) ; 2 sujets
+      déjà racontés ailleurs (MapReduce par `data-eng`, la panne S3 de 2017 par `cloud`) ; 2 VRAIS
+      seulement ; 91 INVÉRIFIABLES. **Fait** : **117 remplacés, 16 corrigés, 1 gardé et précisé**
+      (`objc/lecon-08`), 0 « Scénario ». Gardés à leur foyer et vérifiés : GitLab 2017 (`iac/05`), la
+      clé d'Uber (`iac/10`), Netflix et Hystrix (`archi/10`) ; Tony Hoare rendu à `csharp`.
+
+      **Contre-relecture** : une faute dans **27 cas sur 134 — 20,1 %** (Wilson [14,2 ; 27,7]), de
+      14,8 % (`pascal-maths`) à 26,1 % (`archi-iac`) ; cumul des lots 1 à 5 : 224/1 006, **22,3 %**
+      [19,8 ; 24,9] — toujours stable. **Premier lot sans aucun cas À REMPLACER** : les 27 fautes se
+      corrigent sur place. Fautes de fond : une fonction datée de la version qui l'ACTIVE par défaut au
+      lieu de celle qui l'introduit (Workspace Trust, VS Code 1.56 puis 1.57) ; la syntaxe `merge 1:1`
+      de Stata datée de la 12 sur la foi d'un « around Stata 12 » (c'est la 11) ; un ordre de sortie
+      prêté à `ddply` que son code source contredit ; un témoignage du forum RISKS raconté comme un fait,
+      avec un siège de liste que le résultat officiel dément ; la confusion clés / serveurs de « Mining
+      Your Ps and Qs » déjà relevée au B2, revenue sous une autre forme ; les dates de PLDI 2017 recopiées
+      du pied de page d'un PDF ; une justification de la PR 1002 d'OCaml rattachée au mauvais choix ; la
+      famille `init` oubliée parmi celles qu'ARC retient ; un « seules » ajouté à Russ Cox ; une mise en
+      garde d'Uber sur les microservices prêtée à DOMA ; une signature et des phrases du « Visual
+      Vocabulary » du FT qui n'apparaissent que dans des versions postérieures à la date citée. Trois
+      titres repris à la main (l'outil ne corrige que le corps) : `archi/04` (seul l'outil de surveillance
+      de Prime Video revient au monolithe), `pascal/09` (« trente ans de Delphi et de Lazarus » : Lazarus
+      date de 2010), `maths/01` (« la quatrième ligne » ne désignait aucune ligne). 32 retouches
+      automatiques, 6 à la main ; `lexique-diff` 0 écart sauf les deux connus et acceptés (« source »
+      sur `vscode/10` et `maths/12`, par la ligne de source).
+
+      **Hors encadré, corrigé à la fusion** : `ocaml/lecon-10` (Flow -> Infer, écrit en OCaml d'après
+      le dépôt `meta/infer` ; Coq -> « Rocq, anciennement Coq », corps et explication du QCM) ;
+      `archi/lecon-10` (Hystrix n'est plus proposé comme bibliothèque : en maintenance depuis 2018,
+      Netflix prend Resilience4j, README de Netflix/Hystrix).
+
+      **Outillage, né du lot** : `verif.js` attendait chaque étape sans limite — une étape bloquée sous
+      charge (23 à 36 min, sur quatre copies) figeait la chaîne : plafond de 10 min par étape (90 pour
+      une étape lente), au-delà NON MESURÉE avec sa cause ; `verif-python-exos.js` et `verif-html.js
+      --dom` avaient un fichier et un profil Chrome temporaires au nom FIXE, partagés entre copies ;
+      `tools/maths/module-3` à `5/gen.js` ne sont plus la source des pages (QCM retouchés au B4, Cas réel
+      du V18 : les sept pages diffèrent déjà de leur sortie) — ils refusent maintenant d'écraser une page
+      retouchée ; `verif-chiffres.js` (modules 3 à 5) déclare les 28 nombres que les nouveaux cas citent
+      de leur source, et exclut la durée d'en-tête aux modules 3 et 4 comme au 5 — sans quoi le témoin de
+      `mth-chif` serait resté rouge ; `verif-recherche.js` cherchait « 1 003 » avec une insécable que
+      son texte normalisé n'a plus (`\s` couvre U+00A0 en JavaScript) — défaut invisible tant que le
+      compte tenait sous 1 000 ; le modèle de consigne de contre-relecture prévient que le shell d'un
+      agent démarre dans le dépôt principal (trois PDF y ont été téléchargés, puis déplacés) ; le
+      commit-graph de git pointait vers un fichier disparu (réécrit).
+
+      **Contrôles sur master** : `--cas-reel` 0 sur les dix cours, `--strict` 0, `verif-html` 0,
+      domaines 0, cliquets 0, `verif-recherche` 77/77, `verif-doc` 41/41, vérificateurs du cours `maths`
+      0 (chiffres, vérité, accept, renvois, expect ; mutations 5/5 avec témoin vert), point fixe au
+      tour 4, **`--rapide` 54/54** (236,0 s), `doublons.js` 2 (légitimes), les quatre pages au mojibake
+      volontaire intactes. **Conformes : 876 → 1 010** sur 1 551 (65,1 %). Quota hebdomadaire :
+      21 % à la clôture (remis à zéro le 17/11 ; le lot 6 tourne en parallèle). Le lot 6 (B9) est parti de `c5b3e9d` avant la clôture de ce lot, une fois le registre
+      des foyers à jour.
+
+      **Ouvert, hors encadré** : `iac/lecon-07` présente encore DynamoDB comme le verrou courant du
+      backend S3 (code, légende, tableau, indice ; deux relevés de fraîcheur datés) — phase E ; les
+      corps du cours `pandas` sont écrits pour pandas 2 sans le dire (`dtype: object` pour le texte,
+      `SettingWithCopyWarning` enseigné) — phase E ; `objc/lecon-01` (« NS pour NeXTSTEP », Apple
+      date le préfixe de l'API OpenStep de 1994) et `objc/lecon-11` (chemins en texte plutôt qu'en URL),
+      imprécisions ; les relevés `infra-2026-09-03.json` et `infra-lot-2026-09-03.json` gardent l'ancre
+      de l'ancienne phrase d'`iac/lecon-04` ; `ocaml/lecon-14` relu sur la copie de l'auteur, la copie de
+      l'Internet Archive est restée inaccessible (429).
 - [ ] **B9 · Lot 6.** (`swift`, `ada`, `vue`, `projets-js`, `api`, `fortran`, `nosql`, `os`, `prolog`, `kubernetes` — 73 suspects / 152) Idem.
 - [ ] **B10 · Lot 7.** (`llm`, `ml`, `linux`, `algo`, `scala`, `cobol`, `groovy`, `formats`, `cicd`, `markdown` — 63 suspects / 142) Idem.
 - [ ] **B11 · Lot 8.** (`observabilite`, `regex`, `reseaux`, `erlang`, `http`, `doc`, `haskell`, `securite`, `sass`, `tests` — 49 suspects / 126) Idem.
