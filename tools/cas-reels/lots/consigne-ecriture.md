@@ -1,7 +1,7 @@
 <!-- Modèle de consigne d'ÉCRITURE des lots B5 à B12 (CHANTIER-V18), issu du lot 1 (B4). Champs : __COURS__, __NB__, __DOSSIER__, __BRANCHE__, __BASE__, __CASE__ (ex. « B5 (lot 2) »), __CASEMIN__ (ex. « b5 »), __NOM__. -->
 Tu rends VRAIS et SOURCÉS les encadrés « Cas réel » d'une partie d'un site éducatif francophone (« Syntaxe », site statique 100 % `file://`). C'est la case __CASE__ du chantier `docs/chantiers/CHANTIER-V18.md` ; lis d'abord, dans ce plan, les comptes rendus de B1, B2 et B3 (phase B), et la règle dans `docs/enrichissements/NOUVEAUX-COURS.md` (§ « La règle des « Cas réel » »).
 
-TA PART : __COURS__ (__NB__ « Cas réel » au total). Tu travailles UNIQUEMENT dans la copie `__DOSSIER__` (branche `__BRANCHE__`, déjà créée, partie de `__BASE__`). Ne touche jamais `D:\test-claude` ni une autre copie `D:\test-claude-__CASEMIN__-*` : six autres agents y travaillent sur d'autres cours.
+TA PART : __COURS__ (__NB__ « Cas réel » au total). Tu travailles UNIQUEMENT dans la copie `__DOSSIER__` (branche `__BRANCHE__`, déjà créée, partie de `__BASE__`). Ne touche jamais `D:\test-claude` ni une autre copie `D:\test-claude-__CASEMIN__-*` : d'autres agents y travaillent sur d'autres cours.
 
 POURQUOI. Un apprenant qui lit « Cas réel » croit lire un fait. B2 a vérifié 150 cas tirés au hasard : 21 % INEXACTS (37,7 % chez les cas qui nomment une organisation ou une date : plus un cas affirme, plus il se trompe), 58 % INVÉRIFIABLES (récits anonymes : « une équipe », « un service », « sur un site marchand »…), 1,3 % INVENTÉS. Exemples d'erreurs réelles trouvées : la panne de Mars Pathfinder attribuée au rover Sojourner ; Kubernetes qui « tue d'un SIGKILL immédiat » ; un code Kotlin présenté qui ne compile pas.
 
@@ -29,6 +29,17 @@ CE QUE LE LOT 1 A APPRIS (B4, 350 cas, sept agents) — règles obligatoires :
 - **Les fautes que la contre-relecture a trouvées** dans 24,3 % des cas du lot 1, APRÈS vérification par l'auteur : un nombre arrondi ou forcé (« deux raisons » quand la source en liste quatre, « sept fois moins » pour 7,7, « plus de trois ans » pour trois ans et demi) ; une généralisation (« chaque », « toujours », « la plus répandue », « tous les utilisateurs » pour « la plupart ») ; une date déplacée sur le mauvais événement ; une citation qui n'est dans aucune source ; un rôle confondu (auteur et porteur d'une proposition) ; un comportement technique faux (un `take(100)` Ruby paresseux qui n'affiche rien). Relis chaque phrase contre la source avant de commiter.
 - **Une source primaire peut se tromper** (web.dev décrivait mal `auto-fill`, la mesure dans Chrome l'a démenti) : un comportement technique se TESTE (node, python, le SDK installé).
 - **Après chaque retouche d'un encadré** : `node tools/cas-reels/lots/lexique-diff.js __DOSSIER__ __BASE__` doit donner 0 écart (mots d'options de QCM entrés dans la page OU sortis d'elle), en plus des deux cliquets.
+
+CE QUE LES LOTS 2 À 4 ONT APPRIS (B5 à B7, 522 cas) — la contre-relecture trouve ENCORE une faute dans 20 à 23 % des cas, lot après lot ; ce sont ces fautes-là :
+- **L'exemple fictif du cours raconté comme réel est INVENTÉ** : Vélociti (`data-eng`), Orbit (`stats`), Carnet (`mobile`), une équipe du fil rouge (Sam, Léa…). Un « Imagine… » aussi.
+- **Une citation amputée change le sens** : Gould sans son « probablement », une phrase coupée avant sa concession, un argument que les auteurs RÉFUTENT présenté comme le leur. Cite ce qui porte le sens, ou ne cite pas.
+- **L'histoire d'un ticket se lit dans son HISTORIQUE**, pas dans sa description du jour, souvent réécrite des années plus tard (Jira : `/rest/api/2/issue/<CLÉ>?expand=changelog` ; GitHub : la chronologie des commentaires).
+- **Deux événements fondus en un** (deux exécutions, deux mesures, deux versions) ; **une date qui est celle d'un autre événement** (la sortie d'un système au lieu de la publication de la note citée) ; **un correctif placé après l'exploit qu'il précède**.
+- **Le présent devenu faux** : vérifie que le produit, le service ou le projet existe encore AUJOURD'HUI (Mozilla Hubs a fermé en 2024) ; sinon, raconte au passé.
+- **Les rôles et les natures** : contributeur ≠ mainteneur, organisation à but non lucratif ≠ société, stagiaire ≠ auteur.
+- **Un mot ajouté pour garder un cliquet vert doit être dans une phrase EXACTE** : au lot 4, un mot ajouté pour le lexique prêtait à `inert` un effet qu'il n'a pas. Le mot « source » entre dans chaque page par « Source : » (visible) : si un distracteur le porte, égalise les quatre options avec d'autres mots tirés de TA source, jamais en touchant au QCM.
+- **L'année du titre doit être entre 1950 et 2039** (l'outil ne lit pas les autres) : un sujet plus ancien (Hubble 1929, Legendre 1805) se remplace.
+- **Une copie hébergée par un tiers** (PDF d'un cours, miroir) : vérifie titre, auteurs, date et chiffre ; préfère la copie de l'Internet Archive de l'original quand elle existe.
 
 INTERDITS ET PIÈGES :
 - **Mojibake volontaire** : ne JAMAIS toucher aux caractères mal encodés exprès de `pages/html/lecon-15.html` (et de `pages/formats/lecon-06.html`, `pages/r/lecon-06.html`, `pages/perl/lecon-13.html`). Si tu modifies un « Cas réel » d'une de ces pages, fais un remplacement exact de l'encadré seul, puis prouve avec node que tous les octets hors de l'encadré sont identiques à avant.
