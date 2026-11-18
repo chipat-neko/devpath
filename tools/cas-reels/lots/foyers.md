@@ -1095,3 +1095,138 @@ La DERNIÈRE réservation de chaque cas.
 | Sujet | Foyer |
 |---|---|
 | Vladimir Yaroslavskiy propose le tri rapide à deux pivots (Dual-Pivot Quicksort) pour java.util.Arrays (core-libs-dev, 11 septembre 2009), intégré au JDK 7 le 29 octobre 2009 (JDK-6880672) — remplace Arrays.binarySearch de Bloch (foyer algo/lecon-03) | `java/lecon-04#1` |
+
+## Pris par le lot 8 (B11, 2026-11-18)
+
+La DERNIÈRE réservation de chaque cas.
+
+| Sujet | Foyer |
+|---|---|
+| Syntaxe : les titres du site confrontés aux limites documentées de slugify() (relevé de tools/doc/mesures/corpus-slugify.js, 2026) — sujet propre au cours doc, gardé | `doc/lecon-01#1` |
+| Syntaxe : la rubrique Exceptions de slugify() promettait « Thrown if s is not a string » (commit 785940f, 3 septembre 2026) — sujet propre au cours doc, gardé et corrigé | `doc/lecon-02#1` |
+| Syntaxe : la clause M6 de la spécification data-quiz, trois rédactions (commit 7051fe9, 3 septembre 2026) — sujet propre au cours doc, gardé | `doc/lecon-03#1` |
+| Syntaxe : le bouton « Tester » perdu par normatif-mots.js, 96 blocs mesurés (commit 7051fe9, 3 septembre 2026) — sujet propre au cours doc, gardé | `doc/lecon-03#2` |
+| Syntaxe : la sonde arguments-slice refusée par le garde-fou de conseils.js (commit 2d121fa, 3 septembre 2026) — sujet propre au cours doc, gardé | `doc/lecon-04#1` |
+| Syntaxe : le biais de longueur du corpus d'affirmations de la leçon 04 (commit 2d121fa, 3 septembre 2026) — sujet propre au cours doc, gardé | `doc/lecon-04#2` |
+| De la JAM à la BEAM : Turbo Erlang de Bogumil Hausman rebaptisé BEAM en 1993 (Joe Armstrong, « A History of Erlang », HOPL III, juin 2007) | `erlang/lecon-01#1` |
+| EEP 49, maybe et ?= (Fred Hébert, 31 août 2018) ; feature dans OTP 25 (2022), active par défaut dans OTP 27 (2024) | `erlang/lecon-02#1` |
+| Fred Hébert, « Erlang's Tail Recursion is Not a Silver Bullet » (12 juillet 2011) et guide d'efficacité d'OTP (List Handling) | `erlang/lecon-03#1` |
+| RabbitMQ : chaque file est un processus Erlang (documentation) ; plus d'un million de messages par seconde sur Google Compute Engine (Google et Pivotal, 23 juin 2014) | `erlang/lecon-04#1` |
+| Discord, « How Discord Scaled Elixir to 5,000,000 Concurrent Users » : processus de session et de guilde (GenServer), Manifold (Stanislav Vishnevskiy, 6 juillet 2017) | `erlang/lecon-05#1` |
+| Thèse de Joe Armstrong (KTH, décembre 2003) : let it crash, arbres de supervision de l'AXD301, « Cascading restarts do not work » | `erlang/lecon-06#1` |
+| gen_statem dans Erlang/OTP 19.0 (21 juin 2016), gen_fsm déprécié dans OTP 20.0 (21 juin 2017) | `erlang/lecon-07#1` |
+| Riak 2.0 (étiquette du 2 septembre 2014) : cohérence forte optionnelle par type de bucket, échec si quorum injoignable | `erlang/lecon-08#1` |
+| BeamAsm, le JIT d'Erlang/OTP 24 (Lukas Larsson, 12 mai 2021 ; John Högberg, 3 novembre 2020) | `erlang/lecon-09#1` |
+| ETS ordered_set avec write_concurrency : arbre CA dans OTP 22 (Kjell Winblad, 19 août 2020) | `erlang/lecon-10#1` |
+| Dialyzer incrémental dans Erlang/OTP 26 (Björn Gustavsson, 16 mai 2023 ; Tom Davies) | `erlang/lecon-11#1` |
+| La bit syntax publiée dans Erlang 5.0 (R7A), d'après le prototype de Wikström et Rogvall (Patrik Nyblom, EUC, 3 octobre 2000) | `erlang/lecon-12#1` |
+| Quviq QuickCheck teste l'implémentation Megaco d'Ericsson (Arts, Hughes, Johansson, Wiger, atelier Erlang de l'ACM SIGPLAN 2006) | `erlang/lecon-13#1` |
+| WhatsApp, Rick Reed, « That's Billion with a B » (Erlang Factory SF, 7 mars 2014) : start with gen_server — cas gardé, corrigé | `erlang/lecon-14#1` |
+| Facebook réécrit Sigma (anti-spam) en Haskell à la place du langage maison FXL, plus d'un million de requêtes par seconde (Simon Marlow, « Fighting spam with Haskell », 26 juin 2015) | `haskell/lecon-01#1` |
+| Basecamp 3 en lecture seule près de cinq heures : la table des événements atteint 2 147 483 647, colonne integer au lieu de big integer (DHH, Signal v. Noise, 8 et 12 novembre 2018) | `haskell/lecon-02#1` |
+| GHC 9.8.1 (9 octobre 2023) : avertissement x-partial sur Data.List.head et tail, proposition n° 87 du Core Libraries Committee (2022) | `haskell/lecon-03#1` |
+| John Hughes, « Why Functional Programming Matters » (mémo Chalmers 1984, The Computer Journal 1989) : reduce, sum, product, map, summatrix | `haskell/lecon-04#1` |
+| Alexis King, « Parse, don't validate » (5 novembre 2019) : head partielle, Maybe, NonEmpty | `haskell/lecon-05#1` |
+| Wadler et Blott, « How to make ad-hoc polymorphism less ad hoc » (POPL, Austin, janvier 1989) : les type classes, Eq et member | `haskell/lecon-06#1` |
+| McBride et Paterson, « Applicative programming with effects » (Journal of Functional Programming 18(1), 2008) : la classe Applicative, Except qui accumule les erreurs | `haskell/lecon-07#1` |
+| Philip Wadler, « Monads for functional programming » (Marktoberdorf 1992, LNCS 925 1995) : l'évaluateur, Raise/Return, unit et ⋆ | `haskell/lecon-08#1` |
+| Haskell 1.3 adopte l'I/O monadique (mai 1996), après les flots de Haskell 1.0, d'après « A History of Haskell » (HOPL III, 2007) | `haskell/lecon-09#1` |
+| nothunks, la bibliothèque de Well-Typed contre les fuites de thunks (travail sur Cardano pour IOHK) : Map stricte de paires, 15,7 s contre 2,3 s (Edsko de Vries, « Being lazy without getting bloated », 28 septembre 2020) | `haskell/lecon-10#1` |
+| QuickCheck, l'article fondateur (Koen Claessen et John Hughes, ICFP 2000, Montréal) : un module Haskell 98 d'environ 300 lignes, reverse, 100 tests | `haskell/lecon-11#1` |
+| xmonad : cœur pur StackSet (focusUp), X = ReaderT XConf (StateT XState IO), QuickCheck (Wouter Swierstra, « xmonad in Coq », Haskell Symposium, 13 septembre 2012) | `haskell/lecon-12#1` |
+| Standard Chartered : bibliothèque Cortex, dialecte strict Mu, DSL de contrats, la grille ne fait pas d'IO (Lennart Augustsson, « A Report from the Real World », Chalmers, 7 mai 2012) | `haskell/lecon-13#1` |
+| Brent Yorgey, « Monoids: Theme and Variations », la bibliothèque diagrams bâtie sur les monoïdes (Haskell Symposium, Copenhague, 13 septembre 2012) | `haskell/lecon-14#1` |
+| Michael Snoyman, « The ReaderT Design Pattern » (FP Complete, 12 juin 2017) : ReaderT Env IO, IORef/TVar, StateT perd l'état sur exception et en concurrence — cas gardé, corrigé | `haskell/lecon-15#1` |
+| Parsec (Daan Leijen et Erik Meijer, rapport UU-CS-2001-27, université d'Utrecht, 2001) : LL(1) et try, étiquettes <?>, messages d'erreur | `haskell/lecon-16#1` |
+| « Composable Memory Transactions » (Harris, Marlow, Peyton Jones, Herlihy, PPoPP 2005, Chicago) : STM dans GHC, retry, orElse | `haskell/lecon-17#1` |
+| Pandoc 2.0 (2017) : lecteurs et rédacteurs dans PandocMonad, instance pure et instance IO ; Builder monoïde (John MacFarlane, « Twenty Years of Pandoc », 2 août 2026 ; « Using the pandoc API ») | `haskell/lecon-18#1` |
+| CERN, le premier serveur web sur un NeXT (fin 1990), annonce sur les groupes Internet (août 1991), le web à 1 % du trafic d'Internet fin 1993 (« A short history of the Web ») | `http/lecon-01#1` |
+| Dyn, attaque DDoS contre son DNS géré (Mirai, 21 octobre 2016) — cas gardé | `http/lecon-02#1` |
+| GitHub, « Heads up: nosniff header support coming to Chrome and Firefox » (Ben Toews, 24 avril 2013) : raw en text/plain, X-Content-Type-Options depuis 2011 | `http/lecon-03#1` |
+| RFC 7538, code 308 Permanent Redirect (Julian Reschke, avril 2015) ; RFC 7231 § 6.4 : 301 et 302 réécrits en GET | `http/lecon-04#1` |
+| Firesheep, Eric Butler (ToorCon, 24 octobre 2010) : cookies de session en clair sur Wi-Fi ouvert — cas gardé ; FOYER tranché au lot 8 : `securite/lecon-07` a pris sslstrip et HSTS, `offensive/lecon-08` (lot 9) devra changer | `http/lecon-05#1` |
+| Let's Encrypt en bêta publique (3 décembre 2015) et Chrome 68 marque « Not secure » toute page HTTP (juillet 2018) ; part du trafic chiffré (Transparency Report) — cas gardé | `http/lecon-06#1` |
+| James Kettle (PortSwigger), « Exploiting CORS misconfigurations for Bitcoins and bounties » (14 octobre 2016) : origine reflétée avec credentials | `http/lecon-07#1` |
+| Rails 3.1 (31 août 2011) : le pipeline d'assets met une empreinte du contenu dans le nom au lieu d'une chaîne de requête (guide Asset Pipeline v3.1) | `http/lecon-08#1` |
+| Google publie Brotli (22 septembre 2015) ; RFC 7932 (juillet 2016) — cas gardé | `http/lecon-09#1` |
+| Detectify, « Slack bot token leakage exposing business critical information » (28 avril 2016) : plus de 1 500 jetons Slack sur GitHub | `http/lecon-10#1` |
+| Okta, incident d'octobre 2023 : fichiers HAR du support avec jetons de session, 134 clients, 5 sessions détournées (David Bradbury, 20 octobre et 3 novembre 2023) | `http/lecon-11#1` |
+| Chrome 80 et SameSite=Lax par défaut, SameSite=None exige Secure (blog Chromium, 23 octobre 2019) ; déploiement suspendu le 3 avril 2020, repris le 14 juillet 2020 | `http/lecon-12#1` |
+| Charity Majors, Parse et Scuba : « Parse is down! » alors que le monitoring est vert, débogage d'un jour ou plus à quelques minutes (« Observability — A 3-Year Retrospective », The New Stack, 6 août 2019) | `observabilite/lecon-01#1` |
+| Stripe, « Fast and flexible observability with canonical log lines » (Brandur Leach, 30 juillet 2019) : une ligne de log canonique par requête | `observabilite/lecon-02#1` |
+| LinkedIn, « Who moved my 99th percentile latency? » (Richard Hsu et Cuong Tran, 8 avril 2015) : latences de longue traîne, microrafales invisibles à la seconde | `observabilite/lecon-03#1` |
+| Google Dapper (rapport technique dapper-2010-1, Sigelman et al., avril 2010) : Ads Review, requêtes en série inutiles, latences améliorées de deux ordres de grandeur | `observabilite/lecon-04#1` |
+| Evernote adopte les SLO avec Google CRE : 99,95 % sur le mois, fenêtres de livraison de cinq à deux (Ben McCormack, The Site Reliability Workbook, chap. 3, 2018) | `observabilite/lecon-05#1` |
+| Facebook disparaît d'Internet le 4 octobre 2021 (BGP, DNS, outils internes perdus) — FOYER du registre, cas gardé | `observabilite/lecon-06#1` |
+| Uplight et OpenTelemetry : dépendance au fournisseur APM, auto-instrumentation et instrumentation manuelle (End-User Q&A, Adriana Villela, 20 mars 2023) | `observabilite/lecon-07#1` |
+| Thumbtack, « A tale of misinterpreted percentiles » (Dhananjay Sathe, 9 novembre 2021) : max des P95 ≠ P95 du max, des centiles qui ne se combinent pas | `observabilite/lecon-08#1` |
+| Uber, « Reducing Logging Cost by Two Orders of Magnitude using CLP » (Devesh Agrawal et Jack Luo, 29 septembre 2022) : 200 To de logs Spark par jour, rétention de 3 jours, compression 169x | `observabilite/lecon-09#1` |
+| Etsy, John Allspaw, « Blameless PostMortems and a Just Culture » (Code as Craft, 22 mai 2012) | `observabilite/lecon-10#1` |
+| Cloudflare, panne du 21 juin 2022 (19 centres de données, ordre des termes BGP) : chronologie détecter / localiser / réparer (Tom Strickx et Jeremy Hartman) | `observabilite/lecon-11#1` |
+| Litestar, AllowedHosts : le point non échappé de example.com accepte exampleXcom (GHSA-93ph-p7v4-hwh4, CVE-2026-25479, février 2026 ; re.escape en 2.20.0) | `regex/lecon-01#1` |
+| shell-quote : l'intervalle [A-z] laisse passer l'accent grave, injection de commande (CVE-2021-42740, GHSA-g4rg-993r-mgx7, version 1.7.3, octobre 2021) | `regex/lecon-02#1` |
+| ntfy : liste d'autorisation web push, * changé en .+ qui déborde sur le chemin, SSRF (CVE-2026-39087 ; version 2.22.0, 21 avril 2026) | `regex/lecon-03#1` |
+| Manuel de GNU grep 3.12 : références arrière (§ 3.5) et « Known Bugs » (§ 6.1 : cinq bugs de la glibc en 2021) | `regex/lecon-04#1` |
+| V8 annonce le lookbehind en JavaScript (Yang Guo, 26 février 2016) ; proposition TC39 de Yakin, Katō, Ehrenberg ; ECMA-262 9e édition (juin 2018) | `regex/lecon-05#1` |
+| Cloudflare, panne mondiale du 2 juillet 2019 par une regex du WAF (John Graham-Cumming, 12 juillet 2019) — cas gardé | `regex/lecon-06#1` |
+| Proposition TC39 « Unicode property escapes » (\p{…}, drapeau u ; XRegExp et Regenerate) ; ECMA-262 9e édition (juin 2018) | `regex/lecon-07#1` |
+| Django, groupes nommés des URLconf (doc. 1.11, avril 2017 : moins d'erreurs d'ordre des arguments) et groupes non nommés déconseillés (doc. 5.2) | `regex/lecon-08#1` |
+| Stack Overflow, panne de 34 minutes du 20 juillet 2016 par une regex de nettoyage d'espaces (post-mortem stackstatus) — cas gardé | `regex/lecon-09#1` |
+| W3C, recommandation HTML5 (28 octobre 2014) : « valid e-mail address », violation délibérée de la RFC 5322 et regex d'une ligne | `regex/lecon-10#1` |
+| Davis, Coghlan, Servant, Lee (Virginia Tech), ReDoS dans npm et pypi : 448 402 modules, 1 % de regex super-linéaires, plus de 10 000 modules (ESEC/FSE 2018) | `regex/lecon-11#1` |
+| RFC 1149, IP par pigeons voyageurs (David Waitzman, 1er avril 1990) et sa mise en œuvre par le Bergen Linux User Group (28 avril 2001) | `reseaux/lecon-01#1` |
+| Pakistan Telecom détourne YouTube par une annonce BGP du /24 (24 février 2008), étude de cas RIS du RIPE NCC (17 mars 2008) | `reseaux/lecon-02#1` |
+| Mosh, terminal sur UDP contre SSH sur TCP (Winstein et Balakrishnan, MIT, USENIX ATC 2012) : 5 ms contre 503 ms en 3G | `reseaux/lecon-03#1` |
+| Slack active DNSSEC sur slack.com (30 septembre 2021) : DS gardé 24 h en cache par la zone .com, SERVFAIL, réponses NSEC de Route 53 (Rafael Elvira et Laura Nolan, 29 novembre 2021) | `reseaux/lecon-04#1` |
+| Google et QUIC, HTTPS sur UDP (Langley et al., SIGCOMM 2017) ; RFC 9000 (mai 2021) et RFC 9114 (juin 2022) | `reseaux/lecon-05#1` |
+| Cloudflare, « A Question of Timing » (Piers Cornwell, 17 octobre 2018) : curl -w décompose 3 s (DNS 1,5 s, TCP, TLS, TTFB) | `reseaux/lecon-06#1` |
+| RFC 6598 (avril 2012) : la plage 100.64.0.0/10 pour les NAT d'opérateur (CGN), car la RFC 1918 chevauche les réseaux des abonnés | `reseaux/lecon-07#1` |
+| RFC 5227, IPv4 Address Conflict Detection (Stuart Cheshire, juillet 2008) : sondes ARP, DHCPDECLINE, 169.254 de Mac OS 9 (1998) | `reseaux/lecon-08#1` |
+| La FCC ouvre 1 200 MHz de la bande des 6 GHz au Wi-Fi (communiqué du 23 avril 2020, FCC 20-51) | `reseaux/lecon-09#1` |
+| Redis exposé sur Internet : antirez, « A few things about Redis security » (novembre 2015), puis le protected mode de Redis 3.2 (6 mai 2016) | `reseaux/lecon-10#1` |
+| Microsoft, « Running on VPN: How Microsoft is keeping its remote workforce connected » (Lukas Velush, 23 mars 2020) : tunnel partagé, Chine en tunnel complet à 85-95 % | `reseaux/lecon-11#1` |
+| Bootstrap 4 alpha quitte Less pour Sass et passe ses options en variables Sass (blog de Bootstrap, 19 août 2015) ; LibSass dépréciée (26 octobre 2020) | `sass/lecon-01#1` |
+| Sass 3.3 (7 mars 2014) déprécie l'écriture d'une globale depuis un bloc et ajoute !global ; Sass 3.4 (18 août 2014) rend locales ces affectations | `sass/lecon-02#1` |
+| Airbnb CSS / Sass Styleguide (29 juin 2015) : pas plus de trois niveaux d'imbrication, jamais un ID imbriqué ; dépôt mis en archive en 2024 | `sass/lecon-03#1` |
+| Sass lance son système de modules : @use, @forward, with, Dart Sass 1.23.0 (Natalie Weizenbaum, 2 octobre 2019) | `sass/lecon-04#1` |
+| The Guardian crée le mixin Sass mq() pour son site responsive et IE8 (Kaelig Deloumeau-Prigent, 14 octobre 2013), devenu Sass MQ | `sass/lecon-05#1` |
+| Dart Sass 1.79 (septembre 2024) : espaces de couleur, lighten() et darken() dépréciés au profit de color.adjust() et color.scale() (Miriam Suzanne, 11 septembre 2024) | `sass/lecon-06#1` |
+| Font Awesome Free 7.3.1 (15 juillet 2026) : 2 001 classes d'icônes générées par @each sur la map $icons, tailles .fa-1x à .fa-10x par @for | `sass/lecon-07#1` |
+| Sass 3.3.0 (7 mars 2014) accepte un suffixe après le sélecteur parent (&-suffix, &_suffix) : l'écriture &__element de BEM | `sass/lecon-08#1` |
+| Mode sombre de GitHub (8 décembre 2020), thème dimmed (16 mars et 14 avril 2021) ; Primer Primitives 4.0.0 et Primer CSS 16.0.0 : mixins Sass qui déclarent les variables CSS par thème | `sass/lecon-09#1` |
+| Bootstrap 5.0.2 (22 juin 2021) contourne la dépréciation de / (Dart Sass 1.33.0, mai 2021) par sa fonction divide() pour garder LibSass | `sass/lecon-10#1` |
+| Bootstrap 5.3.9 (11 novembre 2026) : map $grid-breakpoints et mixins media-breakpoint-up/down/between/only à @content — cas gardé, corrigé | `sass/lecon-11#1` |
+| Bulma 1.0.4 (19 avril 2025) : $colors construite par mergeColorMaps() et map.merge à partir de $custom-colors, entrées invalides écartées sans @error — cas gardé, corrigé | `sass/lecon-12#1` |
+| @import déprécié dans Dart Sass 1.80.0 (Jennifer Thakar, 17 octobre 2024) et sass-migrator module --migrate-deps | `sass/lecon-13#1` |
+| Bootstrap 6 alpha (8 octobre 2026) : @use/@forward et « token maps », des maps Sass de variables CSS, @each, $radius | `sass/lecon-14#1` |
+| Equifax 2017 : faille Apache Struts non corrigée, données d'environ 147 millions de personnes (GAO-18-559, août 2018) — cas gardé | `securite/lecon-01#1` |
+| OpenMage LTS : la liste noire « php,exe » du téléversement des options de produit contournée par .phtml, .phar, .php5 (GHSA-3j5q-7q7h-2hhv, CVE-2026-40488, 21 avril 2026 ; corrigé en 20.17.0) | `securite/lecon-02#1` |
+| TalkTalk, injection SQL d'octobre 2015 sur des pages héritées de Tiscali, amende record de 400 000 £ (ICO, 5 octobre 2016) — cas gardé | `securite/lecon-03#1` |
+| Ver Samy sur MySpace (Samy Kamkar, 4 octobre 2005) — cas gardé | `securite/lecon-04#1` |
+| Fuite LinkedIn de 2012 (6,5 millions de mots de passe hachés, passage au sel ; plus de 100 millions en 2016), sources de LinkedIn — cas gardé, corrigé | `securite/lecon-05#1` |
+| First American, IDOR par ImageDocumentID séquentiel, plus de 850 millions de documents (NYDFS, Second Amended Statement of Charges, 17 juin 2021) — cas gardé, corrigé | `securite/lecon-06#1` |
+| Log4Shell, CVE-2021-44228 (Apache Log4j, décembre 2021 ; rapport du CSRB, juillet 2022) — cas gardé si vérifié | `securite/lecon-06#2` |
+| sslstrip (Moxie Marlinspike, Black Hat DC, février 2009) et HSTS (RFC 6797, novembre 2012) — Firesheep laissé à http/lecon-05 | `securite/lecon-07#1` |
+| Fuite Adobe 2013 : mots de passe chiffrés (3DES en mode ECB) au lieu d'être hachés, indices en clair — cas gardé si vérifié | `securite/lecon-08#1` |
+| event-stream et flatmap-stream, vol ciblé sur Copay (npm, novembre 2018) — cas gardé si vérifié | `securite/lecon-09#1` |
+| Failles alg: none et HS256/RS256 des bibliothèques JWT (Tim McLean, blog d'Auth0, 31 mars 2015) — cas gardé | `securite/lecon-10#1` |
+| Capital One 2019 : pare-feu applicatif mal configuré, identifiants du rôle *-WAF-Role (plainte du DOJ, 29 juillet 2019) ; SSRF selon Wyden et Warren — cas gardé, corrigé | `securite/lecon-11#1` |
+| Marriott et Starwood : alerte du 8 septembre 2018, accès non autorisé depuis 2014 (Marriott, 30 novembre 2018 ; ICO, 30 octobre 2020) | `securite/lecon-12#1` |
+| STRIDE : Kohnfelder et Garg, « The threats to our products » (Interface, Microsoft, 1er avril 1999) ; SDL obligatoire en 2004 — cas gardé, corrigé | `securite/lecon-13#1` |
+| CISA, directive contraignante BOD 20-01 « Develop and Publish a Vulnerability Disclosure Policy » (2 septembre 2020) : périmètre, tests permis, engagement de ne pas poursuivre la recherche de bonne foi — remplace « Hack the Pentagon » | `securite/lecon-14#1` |
+| Boeing Starliner, vol d'essai orbital OFT (décembre 2019) : horloge de mission synchronisée trop tôt sur l'Atlas V, enquête NASA-Boeing, 61 actions dont des tests de bout en bout plus fidèles (remplace Ariane 5, gardé par ada/lecon-07) | `tests/lecon-01#1` |
+| John Micco, « Flaky Tests at Google and How We Mitigate Them » (Google Testing Blog, 27 mai 2016) : 1,5 % des exécutions, 16 % des tests, 84 % des passages au rouge | `tests/lecon-02#1` |
+| Mike Cohn, « The Forgotten Layer of the Test Automation Pyramid » (17 décembre 2009) et Martin Fowler, « Test Pyramid » (2012) : la pyramide d'automatisation des tests | `tests/lecon-03#1` |
+| Django 1.8 (1er avril 2015), guide des contributeurs : un test de régression qui doit échouer avant le correctif (liste de contrôle « Bugs ») | `tests/lecon-04#1` |
+| Andrew Trenk et Dillon Bly, « Test Doubles », chapitre 13 de Software Engineering at Google (mars 2020) : réel d'abord, puis fakes, tests « détecteurs de changement » — sujet gardé, corrigé | `tests/lecon-05#1` |
+| Carlos Arguelles, Marko Ivanković et Adam Bender, « Code Coverage Best Practices » (Google Testing Blog, 7 août 2020) : 60/75/90 %, pas de cible à cocher | `tests/lecon-06#1` |
+| Comair, Noël 2004 : le système d'équipages TRACK s'arrête à la limite fixe de 32 000 transactions par mois, 1 100 vols annulés le 25 décembre (rapport SC-2005-051 de l'OIG du DOT, 28 février 2005) | `tests/lecon-07#1` |
+| Jest 26 « Tick Tock » (5 mai 2020) : nouveaux faux minuteurs fondés sur @sinonjs/fake-timers, qui simulent aussi Date ; par défaut dans Jest 27 | `tests/lecon-08#1` |
+| Mike Wacker, « Just Say No to More End-to-End Tests » (Google Testing Blog, 22 avril 2015) : portrait composite d'une stratégie tout-E2E, répartition 70/20/10, cornet de glace | `tests/lecon-09#1` |
+| Facebook, Mutation Monkey (Beller et al., « What It Would Take to Use Mutation Testing in Industry—A Study at Facebook », arXiv 2010.13464, v3 du 27 janvier 2021) : 15 000 mutants, plus de la moitié survivent | `tests/lecon-10#1` |
+| Ticketmaster, prévente de la tournée Eras de Taylor Swift (15 novembre 2022), explication du 19 novembre 2022 — cas gardé si vérifié | `tests/lecon-11#1` |
+| Mars Climate Orbiter (23 septembre 1999), rapport de phase I du Mishap Investigation Board (10 novembre 1999) : SM_FORCES en livres-force-secondes — foyer, cas gardé | `tests/lecon-12#1` |
+| npm@6 et npm audit (npm, « Announcing npm@6 », 24 avril 2018 ; « npm audit: identify and fix insecure dependencies », 8 mai 2018) : analyse récursive de l'arbre des dépendances | `tests/lecon-13#1` |
+| Knight Capital (1er août 2012), ordonnance de la SEC n° 34-70694 (16 octobre 2013) : Power Peg — foyer, cas gardé | `tests/lecon-14#1` |
+
+**Note du lot 8 (B11, 2026-11-18) — sujet retiré, sans foyer.** Le compteur de vues de Gangnam Style « qui déborde » (YouTube, 2014) était FAUX : l'annonce était un clin d'œil, le compteur était passé en 64 bits des mois plus tôt (B2). `haskell/lecon-02` l'a remplacé par la panne de Basecamp 3 (2018) ; aucun cours ne doit le reprendre.
