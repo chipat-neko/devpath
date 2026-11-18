@@ -18,13 +18,16 @@ célèbres que le lot a pris (ceux qu'un autre cours pourrait vouloir).
 | GitLab, suppression de la base (2017) | `iac/lecon-05` | `bash/lecon-03`, `bash/lecon-12` (B7) |
 | Cloudflare, ReDoS (2019) | `regex/lecon-06` | mention dans `algo/lecon-18` à relire (B10) |
 | Stack Overflow, regex (2016) | `regex/lecon-09` | — |
-| TalkTalk, injection SQL (2015) | `securite/lecon-03` | `offensive/lecon-04` si c'est le même récit (B12) |
-| Ver Samy sur MySpace (2005) | `securite/lecon-04` | `offensive/lecon-05` si c'est le même récit (B12) |
-| Portefeuille Parity (2017) | `solidity/lecon-16` | `solidity/lecon-03`, `solidity/lecon-11` (B12) |
-| Clé d'accès d'Uber (2016) | `iac/lecon-10` | mentions dans `offensive/lecon-09`, `crypto/lecon-09` à relire |
+| TalkTalk, injection SQL (2015) | `securite/lecon-03` | `offensive/lecon-04` (B12, remplacé) |
+| Ver Samy sur MySpace (2005) | `securite/lecon-04` | `offensive/lecon-05` (B12, remplacé) |
+| Portefeuille Parity (2017) | `solidity/lecon-16` | `solidity/lecon-03`, `solidity/lecon-11` (B12, remplacés) |
+| The DAO, réentrance (2016) | `solidity/lecon-06` | `solidity/lecon-01` (B12, remplacé) |
+| CryptoKitties engorge Ethereum (décembre 2017) | `solidity/lecon-15` | — |
+| Panne d'Amazon S3 en us-east-1 (28 février 2017) | `cloud/lecon-12` | `python/lecon-28` (B12, nettoyage) |
+| Clé d'accès d'Uber (2016) | `iac/lecon-10` | `offensive/lecon-09` (B12, remplacé, nettoyage des exercices) ; mention d'une ligne dans une explication de QCM de `crypto/lecon-09` (dépôt privé, 57 millions), gardée |
 | Netflix et Hystrix | `archi/lecon-10` | — |
 | GTA Online, chargement (2021) | `algo/lecon-01` | — |
-| Figma et WebAssembly (2017) | `wasm/lecon-01` | `wasm/lecon-05`, `wasm/lecon-09` (B12) |
+| Figma et WebAssembly (2017) | `wasm/lecon-05` (foyer déplacé au B12 : le cas de 05 a été jugé VRAI en B2) | `wasm/lecon-01`, `wasm/lecon-09`, `wasm/lecon-11` (B12, remplacés) |
 | Tony Hoare et la référence nulle (2009) | `csharp/lecon-08` | `typescript/lecon-02` (B5), `c/lecon-05` (B7), `rust/lecon-04`, `dart/lecon-02` (B6), `swift/lecon-02` (B9), `scala/lecon-08` (B10), `ocaml/lecon-06` (B8), `fsharp/lecon-06` (B12) |
 | Knight Capital (2012) | `tests/lecon-14` | — |
 | Facebook disparaît d'Internet (4 octobre 2021) | `observabilite/lecon-06` | `reseaux/lecon-04` (B11) |
