@@ -933,7 +933,64 @@ notion de la leçon, ne disant que ce que dit la source.
       1960 décrit une page de listing (à relire) ; Firesheep a pour foyer `http/lecon-05` (lot 8) :
       `offensive/lecon-08` (lot 9) devra changer ; un journal égaré par un agent, `D:\b10j-strict.log`,
       reste à supprimer (le garde-fou de l'outil a refusé la suppression).
-- [ ] **B11 · Lot 8.** (`observabilite`, `regex`, `reseaux`, `erlang`, `http`, `doc`, `haskell`, `securite`, `sass`, `tests` — 49 suspects / 126) Idem.
+- [x] **B11 · Lot 8.** (`observabilite`, `regex`, `reseaux`, `erlang`, `http`, `doc`, `haskell`, `securite`, `sass`, `tests` — 49 suspects / 126) Idem.
+
+      **COCHÉ le 2026-11-18** (décision de Noah : « Lots 7 et 8 d'affilée »). Cinq agents partis de
+      `01795b6` EN MÊME TEMPS que le lot 7, en lisant ses réservations (haskell et erlang ;
+      observabilite, reseaux et http ; securite et regex ; tests et doc ; sass) ; dix contre-relectures.
+      **Lus : les 126** (dont 4 déjà conformes, revérifiés). Code rejoué : GHC 9.8.4 sur Compiler
+      Explorer, Erlang/OTP 29.1.2 officiel, Dart Sass 1.108.2 avec Bootstrap 5.3.9, Bulma 1.0.4 et Font
+      Awesome 7.3.1, motifs de regex sous Node 26 (V8 14.6), Python 3.14 et GNU grep, faux minuteurs de
+      Jest (`@sinonjs/fake-timers` 6.0.1).
+
+      **Trouvé** : des récits célèbres FAUX ou déformés — le compteur de Gangnam Style n'a jamais
+      débordé (sujet retiré, plus aucun foyer) ; la panne de Stack Overflow (2016) venait d'une
+      croissance QUADRATIQUE, pas d'une explosion du retour arrière ; la regex de Cloudflare (2019) était
+      `.*(?:.*=.*)`, pas des quantificateurs imbriqués ; `/#\w+/` ne « tronque » pas `#écologie` ;
+      Facebook n'est pas passé au HTTPS intégral « en quelques mois » après Firesheep (option en 2011,
+      défaut en juillet 2013) ; des chiffres de presse remplacés par ceux des autorités (Equifax : au
+      moins 145,5 millions selon le GAO ; First American, Adobe, LinkedIn). La panne de Facebook du
+      4 octobre 2021 était racontée TROIS fois (foyer gardé : `observabilite/lecon-06`). **Fait** : **79
+      remplacés, 44 corrigés, 3 vérifiés**, 0 « Scénario ». Foyers gardés et vérifiés : Cloudflare et
+      Stack Overflow (`regex`), TalkTalk et Samy (`securite`), Mars Climate Orbiter et Knight Capital
+      (`tests`), WhatsApp de Rick Reed (`erlang`) ; rendus à leur foyer : Ariane 5 (`ada`), Bloch
+      (`algo`), MapReduce (`data-eng`), BEM (`css`). Firesheep : foyer `http/lecon-05`.
+
+      **Le cours `doc`** raconte sa propre fabrication : ses six cas ne sont sourcés qu'à des commits de
+      ce dépôt (privé). **Décision de Noah (2026-11-18) : les garder, retirer l'invérifiable.** Ils sont
+      corrigés dans leurs SOURCES `tools/doc/corps/l1` à `l4` puis régénérés par `gen.js` ; les chiffres
+      des premiers jets de `doc/lecon-04` n° 2 (48 et 72 caractères, 7,2 mots, « 50 % », « trois
+      passes »), sans aucune trace hors de la page, sont retirés du cas ET de l'explication du QCM qui
+      les reprenait — la page dit que ce premier jet n'a pas été conservé.
+
+      **Contre-relecture** : une faute dans **36 cas sur 126 — 28,6 %** (Wilson [21,4 ; 37,0]), de
+      21,4 % (`sass`) à 35,0 % (`tests-doc`) — plus haut que les lots 5 à 7, sans en être distinct ;
+      cumul des lots 1 à 8 : 324/1 426, **22,7 %** [20,6 ; 25,0]. Un seul cas À REMPLACER
+      (`doc/04` n° 2, réduit à ce qui se vérifie). Fautes de fond : un motif présenté comme « le motif
+      simplifié » de Cloudflare alors que c'était une variante IMAGINÉE par le post-mortem ; la RFC 7538
+      prise pour la naissance du code 308 (il existe depuis la RFC 7238 de 2014) ; un rapport
+      d'Utrecht cité sous le numéro d'un AUTRE rapport (Parsec : UU-CS-2001-35, pas -27) ; un
+      avertissement de documentation antidaté de deux ans (Riak) ; un nom de la map `$icons` pris pour
+      un nombre d'icônes (2 001 noms, 1 422 icônes) ; une liste blanche décrite en liste noire (Samy) ;
+      un rachat des activités BRITANNIQUES de Tiscali donné pour le rachat de Tiscali ; « environ 200 ms »
+      qui ne tombait pas juste (le calcul de Cloudflare retranche 247 ms) ; une directive de la CISA
+      qui INCITE présentée comme une règle. Titres repris à la main : `sass/07`, `sass/12`.
+      `lexique-diff` 0 écart, sauf `erlang/08` (le mot « source », connu et accepté).
+
+      **Outillage** : `cr-appliquer.js` croit parfois hors de l'encadré une phrase qui y est (sections
+      et dernier paragraphe) — posées à la main puis vérifiées par `controle-branche.js` ; une branche
+      qui touche `tools/doc/corps/` entre en conflit avec le compteur que le point fixe régénère : on
+      prend la page de la branche et on relance `gen.js`.
+
+      **Contrôles sur master** : `--cas-reel` 0 sur les dix cours, `--strict` 0, `verif-html` 0,
+      domaines 0, cliquets 0, `verif-recherche` 77/77, `verif-doc` 41/41, `verif-normatif` 75/75,
+      point fixe au tour 3, **`--rapide` 54/54** (1 271,3 s, machine chargée), `doublons.js` 3 (légitimes), mojibake volontaire
+      intact. **Conformes : 1 304 → 1 426** sur 1 551 (91,9 %). Quota hebdomadaire : 57 % → 65 %.
+
+      **Ouvert** : `sass/lecon-01` montre encore `darken()`, déprécié depuis Dart Sass 1.79.0, dans son
+      premier exemple ; le lot 9 (B12) devra remplacer LinkedIn 2012 (`crypto/lecon-07`), Adobe 2013
+      (`crypto/lecon-08`), First American (`offensive/lecon-06`), Capital One (`cloud/lecon-06`) et
+      Firesheep (`offensive/lecon-08`), dont les foyers sont désormais en `securite` et `http`.
 - [ ] **B12 · Lot 9.** (`solidity`, `offensive`, `graphql`, `ux`, `lisp`, `fsharp`, `cloud`, `patterns`, `wasm`, `crypto` — 19 suspects / 125) Idem.
 - [ ] **B13 · Le garde-fou devient bloquant.** Le contrôle de B3 passe en mode `--strict` bloquant.
       Le site doit être à **0 encadré** hors de la règle. Rejouer l'échantillon de B2 avec la **même

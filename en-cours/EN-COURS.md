@@ -84,8 +84,16 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 > (22,2 % sur les lots 1 à 7), toutes corrigeables sur place — dont des dates de version qui étaient
 > celles de l'ouverture du vote chez Apache. Doublon hors lot réglé : `java/lecon-04` (Bloch) prend le
 > tri à deux pivots de 2009. Conformes : **1 304** sur 1 551 (84,1 %). `--rapide` 54/54.
-> **Case en cours : B11**, le lot 8 (parti en même temps que le lot 7, de `01795b6`) ; outils,
-> registre des foyers et modèles de consigne dans `tools/cas-reels/lots/`.
+>
+> **✅ B11 DU V18 FAITE (2026-11-18), 17 cases sur 61 — le lot 8, dix cours, 126 « Cas réel ».**
+> Parti en même temps que le lot 7. 79 remplacés, 44 corrigés, 3 vérifiés ; des récits célèbres
+> faux ou déformés (le compteur de Gangnam Style n'a jamais débordé ; la panne de Stack Overflow de
+> 2016 était quadratique). Les six cas du cours `doc` racontent la fabrication du site : **gardés**
+> (décision de Noah), l'invérifiable retiré. La contre-relecture trouve encore **28,6 %** de fautes
+> (22,7 % sur les lots 1 à 8). Conformes : **1 426** sur 1 551 (91,9 %). `--rapide` 54/54.
+> **Prochaine case : B12**, le lot 9 et dernier de la phase B (solidity, offensive, graphql, ux,
+> lisp, fsharp, cloud, patterns, wasm, crypto — 125 cas) ; outils, registre des foyers et modèles de
+> consigne dans `tools/cas-reels/lots/`.
 
 ---
 
@@ -117,7 +125,7 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 | CHANTIER-V15 — comprendre ce qu'on ne voit pas | ✅ 32/32 |
 | CHANTIER-V17 — les garde-fous qui mentent | ✅ 80/80 |
 | CHANTIER-V16 — consolider ce que les quatre chantiers ont laissé derrière | ✅ 22/22 (clos le 2026-11-11) |
-| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **16/61 — plan courant** (écrit le 2026-11-11 ; phase A close le même jour ; B1 à B7 le 2026-11-14 ; B8 à B10 le 2026-11-17) |
+| **CHANTIER-V18 — les « Cas réel » qu'on ne sait pas vrais, et ce que le V16 a laissé** | 🟠 **17/61 — plan courant** (écrit le 2026-11-11 ; phase A close le même jour ; B1 à B7 le 2026-11-14 ; B8 à B10 le 2026-11-17 ; B11 le 2026-11-18) |
 
 **Le V18 est le plan courant.** Ses phases, dans l'ordre : **A** les instruments d'abord (6 cases :
 la sonde des QCM et l'épreuve de D2 entrent dans la chaîne, contrôle des domaines interdits, sondes
