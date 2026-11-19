@@ -114,7 +114,16 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 > la liste des 44 est complète. Consigne commune : `tools/qcm-lots/consigne-ecriture.md` (un agent par
 > cours) et `consigne-contre-relecture.md` (relecteur indépendant). Les 22 cours, remesurés, ont les
 > chiffres du plan ; ordre confirmé, sauf `compilation` (44,2), à traiter au 10ᵉ rang.
-> **Prochaine case : C2 (`cloud`)**, puis C3 à C10, C21, C11… — ne pas la lancer sans l'accord de Noah.
+>
+> **✅ C2 À C10 DU V18 FAITES (2026-11-19), 29 cases sur 61 — le premier lot de la phase C, neuf
+> cours en parallèle** (cloud, reseaux, wasm, ml, erlang, ada, llm, fortran, groovy ; 466 questions).
+> « La plus longue » 87-98 % → 23,6-26,0 % ; pire des 44 stratégies ≤ 27,4 % ; lexique 0 / 0 / 0.
+> Contre-relecture indépendante : 150 corrections sur 2 409 points relus, dont 21 distracteurs vrais
+> par accident et des bonnes réponses prouvées fausses. Leçon : chaque contre-relecture rouvrait le
+> lexique — la pré-mesure est désormais obligatoire (`tools/qcm-lots/`). Site : « la plus longue »
+> 33,5 % → 28,4 %. `--rapide` 54/54.
+> **ARRÊT demandé par Noah après ce lot.** Prochaine case : **C21 (`compilation`)**, puis C11 à C20,
+> C22, C23 — ne rien lancer sans sa demande. Outils : `scratchpad/qcm-lots-outils/LISEZ-MOI.md`.
 > Outils, registre des foyers et modèles de consigne dans `tools/cas-reels/lots/`.
 
 ---

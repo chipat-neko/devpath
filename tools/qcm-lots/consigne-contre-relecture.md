@@ -62,6 +62,19 @@ Un tableau JSON, **une entrée par option relue** (y compris celles qui sont jus
 Contrôle ton fichier avec node avant de finir : JSON valide, et chaque `avant` non vide présent UNE
 seule fois dans sa page.
 
+**PRÉ-MESURE tes propositions** (leçon du premier lot de la phase C : six contre-relectures sur sept
+ont rouvert l'indice lexical — 3 à 10 questions par cours —, la seule qui avait pré-mesuré n'a rien
+rouvert). Fais une copie RÉDUITE dans `__TELECH__\copie\` : les dossiers `tools\`, `js\` et
+`pages\__COURS__\` de `__DOSSIER__` (rien d'autre). Applique-y tes corrections avec
+`node D:\test-claude\scratchpad\qcm-lots-outils\qcm-appliquer.js <ta copie réduite> __COURS__ __SORTIE__`
+(il refuse un `avant` ambigu, vérifie le JSON et remesure le cours), puis, dans la copie réduite :
+`node tools/mesure-lexique-qcm.js --liste=__COURS__` (règles du k et du w en tête de sa sortie) et
+`node tools/mesure-biais-qcm.js --json`. Si une proposition rouvre une question du lexique ou fait
+passer une stratégie du cours au-dessus de 27,5 %, **reformule-la** (mots tirés de la page, longueur et
+nombre de mots longs égaux) jusqu'à ce que la mesure reste à 0 / 0 / 0. Dis dans ta réponse finale
+ce que donne la pré-mesure. La copie réduite reste dans ton dossier de téléchargements : jamais dans
+un dépôt.
+
 ## Ta réponse finale (en français)
 
 Le nombre d'options relues, OK et À CORRIGER ; pour chaque À CORRIGER, une ligne (page, question,

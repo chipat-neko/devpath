@@ -1218,15 +1218,86 @@ stratégie nettement au-dessus.
       `compilation` et `offensive`, où c'est « la plus détaillée »). **Ordre confirmé, avec une
       exception** : `compilation` (44,2) se classe 10ᵉ, juste après `groovy` — à traiter à ce rang ;
       les numéros de case ne changent pas.
-- [ ] **C2 · `cloud`** — 53 questions, la plus longue 92,5 %.
-- [ ] **C3 · `reseaux`** — 52 questions, 92,9 %.
-- [ ] **C4 · `wasm`** — 50 questions, 96,0 %.
-- [ ] **C5 · `ml`** — 52 questions, 92,3 %.
-- [ ] **C6 · `erlang`** — 54 questions, 88,9 %.
-- [ ] **C7 · `ada`** — 49 questions, 96,6 %.
-- [ ] **C8 · `llm`** — 48 questions, 97,9 %.
-- [ ] **C9 · `fortran`** — 54 questions, 87,0 %.
-- [ ] **C10 · `groovy`** — 54 questions, 87,0 %.
+- [x] **C2 · `cloud`** — 53 questions, la plus longue 92,5 %. → **25,5 %**, pire des 44 : 27,0 %.
+- [x] **C3 · `reseaux`** — 52 questions, 92,9 %. → **23,6 %**, pire : 27,4 %.
+- [x] **C4 · `wasm`** — 50 questions, 96,0 %. → **26,0 %**, pire : 26,0 %.
+- [x] **C5 · `ml`** — 52 questions, 92,3 %. → **25,0 %**, pire : 26,9 %.
+- [x] **C6 · `erlang`** — 54 questions, 88,9 %. → **24,1 %**, pire : 25,9 %.
+- [x] **C7 · `ada`** — 49 questions, 96,6 %. → **25,2 %**, pire : 26,5 %.
+- [x] **C8 · `llm`** — 48 questions, 97,9 %. → **25,0 %**, pire : 27,1 %.
+- [x] **C9 · `fortran`** — 54 questions, 87,0 %. → **24,1 %**, pire : 26,5 %.
+- [x] **C10 · `groovy`** — 54 questions, 87,0 %. → **25,0 %**, pire : 25,9 %.
+
+      **C2 À C10 COCHÉS LE 2026-11-19, EN UN LOT DE NEUF** (décision de Noah : « Lot de 9 cours »).
+      Neuf agents d'écriture partis de `8d163bf`, un par cours, chacun dans sa copie
+      `D:\test-claude-c<N>-<cours>` (consigne `tools/qcm-lots/consigne-ecriture.md`, écrite en C1) ;
+      puis, cours par cours dès qu'un agent rendait la main, une **contre-relecture indépendante** en
+      deux parts (`consigne-contre-relecture.md`) ; puis, quand ses corrections justes rouvraient un
+      indice, une **reprise du dosage** ; jamais plus de dix agents à la fois. Contrôle de chaque
+      branche avant fusion (fichiers du seul cours, 0 CR, blocs JSON valides, commits signés), neuf
+      fusions `--no-ff` sans conflit. Rapports : `en-cours/rapports-v18/c<N>-<cours>.md`.
+
+      | case | cours | questions | la plus longue | pire des 44 | atteintes prouvées | contre-relecture |
+      |---|---|---:|---:|---|---:|---:|
+      | C2 | `cloud` | 53 | 92,5 → 25,5 % | 27,0 % (la QUATRIÈME plus longue) | 2 | 12 / 268 |
+      | C3 | `reseaux` | 52 | 92,9 → 23,6 % | 27,4 % (la moins bavarde) | 1 | 6 / 263 |
+      | C4 | `wasm` | 50 | 96,0 → 26,0 % | 26,0 % (la plus longue) | 3 | 14 / 257 |
+      | C5 | `ml` | 52 | 92,3 → 25,0 % | 26,9 % (la plus dense) | 2 | 23 / 276 |
+      | C6 | `erlang` | 54 | 88,9 → 24,1 % | 25,9 % (la DEUXIÈME plus longue) | 2 | 13 / 280 |
+      | C7 | `ada` | 49 | 96,6 → 25,2 % | 26,5 % (le mot technique exclusif) | 1 | 23 / 257 |
+      | C8 | `llm` | 48 | 97,9 → 25,0 % | 27,1 % (la plus dense) | 3 | 28 / 258 |
+      | C9 | `fortran` | 54 | 87,0 → 24,1 % | 26,5 % (ÉCARTER la moins bavarde) | 2 | 15 / 274 |
+      | C10 | `groovy` | 54 | 87,0 → 25,0 % | 25,9 % (la plus dense) | 1 | 16 / 276 |
+
+      (mesuré sur `master` après la dernière fusion ; « atteintes prouvées » : bonnes réponses,
+      explications ou énoncés touchés, chacun prouvé — `mesure-qcm-intouchable <cours> 8d163bf` ;
+      « contre-relecture » : corrections retenues sur points relus — options, explications et corps).
+      Rangs de la bonne réponse équilibrés partout (au plus un d'écart), lexique **0 / 0 / 0** sur les
+      neuf, mot fétiche, tics de lot, biais inverse et `--lots` muets, 0 explication orpheline.
+      **Site : « la plus longue » 33,5 % → 28,4 %** sur les 6 167 questions.
+
+      **Exécuté** : Erlang/OTP 29.1.2 et PropEr, GNAT 16.2 et gfortran 16.2 (Compiler Explorer),
+      Groovy 4.0.33 et 5.1.3 (Java 27) et Spock 2.4, scikit-learn 1.9.1, rustc 1.99.1, wabt, Chrome 157,
+      Node 26 et Python 3.14 ; outils dans `D:\outils-c\<cours>\`. **Fautes de fond trouvées** (le
+      détail est dans chaque rapport) : des bonnes réponses FAUSSES — le rappel défini « parmi les
+      vrais positifs » (`ml/05`, VP / VP vaut toujours 1 ; `recall_score` rend 0,5), la cible
+      `wasm32-wasi` retirée de rustc (`wasm/11`), « basse = déterministe » (`llm`, à T = 0,2 un autre
+      jeton sort encore 15,6 % du temps), « l'égalité exacte échoue presque toujours » (`fortran/03`,
+      `0.1 + 0.2 == 0.3` vaut vrai en simple précision) ; des explications fausses — conversion et copie
+      confondues en Ada (norme 3.9(25) : la conversion garde l'étiquette), le compilateur au lieu du
+      système pour `newunit`, HTTP/1.1 qui « répète la connexion » ; des **distracteurs vrais par
+      accident** : 21 vus par la seule contre-relecture, et quelques autres par les auteurs (sur 150
+      corrections : 60 imprécisions, 37 fautes de français, 18 doublons, 8 implausibles ; Hex partagé par
+      Erlang et Elixir, `externref` qui fait passer un objet JS tel quel, `var` valide en Groovy 3,
+      `forall` qui aide bien à paralléliser, un trait Groovy à propriété `static`…) ; et des dizaines
+      de phrases de corps fausses (exemples qui ne compilaient pas, sorties recopiées de mémoire,
+      schémas faux, une fuite de données enseignée dans un script de `ml`).
+
+      **La leçon du lot : chaque contre-relecture rouvre le lexique.** Six sur sept ont rouvert
+      l'indice lexical (3 à 10 questions par cours) en corrigeant JUSTE — un mot de six lettres qui
+      entre dans une option ou en sort. La seule qui avait pré-mesuré ses propositions sur une copie
+      réduite n'a rien rouvert. D'où deux changements, versés au dépôt : la **pré-mesure obligatoire**
+      dans `consigne-contre-relecture.md` (les six dernières contre-relectures, celles de `reseaux`,
+      `wasm` et `ml`, pré-mesurées, n'ont rien rouvert) ; et une **reprise du dosage** par un agent
+      dédié quand il le faut (six cours).
+      Les outils d'orchestration (application des verdicts, contrôle, fusion, reprise, figer les
+      cliquets) sont dans `scratchpad/qcm-lots-outils/` (`LISEZ-MOI.md`).
+
+      **Cliquets** : `verif-qcm-biais --ecrire` et `verif-qcm-lexique --ecrire` relus avant d'être
+      gardés — seules les entrées des neuf cours sont figées (et marquées `traite`) ; 14 cours HORS du
+      lot dérivaient de quelques dixièmes dans la tolérance (pages réécrites en phase B : `css` +1,6
+      point de proportion lexicale, `offensive` +0,3 point de pire indice) : leur ancienne référence
+      est gardée, la dérive ne devient pas la norme sans décision.
+
+      **Contrôles sur master** : point fixe au tour 3, `verif-recherche`, `verif-doc`, `verif-normatif`, `--cas-reel`,
+      explications orphelines, `verif-html`, domaines : 0 ; cliquets verts ; **`--rapide` 54/54** (520,7 s).
+
+      **Ouvert** : relevés par les agents sans preuve suffisante pour toucher l'intouchable —
+      `cloud/01` q1 (« SaaS : tu ne gères rien »), `reseaux/09` q2 (« les seuls » canaux 1, 6 et 11,
+      faux en Europe), `llm/03` q0 (la prémisse « sans mémoire »), `wasm` : la règle « seuls les nombres
+      passent » datée depuis `externref` (bilan q5 et q9), `fortran/09` (frise « 2018 : interopérabilité
+      avec le C », `lecon-13` dit 2003), `ada/09` (Ada dans les commandes de vol d'Airbus, non vérifié).
+      `D:\test-claude\erl_crash.dump` (851 Ko), laissé par l'agent `erlang`, à supprimer.
 - [ ] **C11 · `patterns`** — 45 questions, 97,8 %.
 - [ ] **C12 · `http`** — 48 questions, 89,6 %.
 - [ ] **C13 · `graphql`** — 45 questions, 93,3 %.
