@@ -28,14 +28,18 @@
      node tools/verif-contenu.js --json          # sortie machine, pour un plan de travail
      node tools/verif-contenu.js --strict        # sort en code 1 des la premiere lecon sous le standard
      node tools/verif-contenu.js --cas-reel      # seulement les « Cas réel » hors de LA REGLE ;
-                                                 #   code 1 s'il y en a un (B3, puis B13, du V18)
+                                                 #   code 1 s'il y en a un (B3 du V18) — et depuis
+                                                 #   B13, code 1 dans TOUS les modes
 
    LA REGLE DES « CAS REEL » (B3 du CHANTIER-V18, 2026-11-14) : un « Cas reel » nomme son
    SUJET et sa DATE dans son titre (« Cas reel — Knight Capital (2012) ») et se termine par
    un <p class="cas-reel__source">Source : … (document date, ou lien)</p>. Le jugement est
-   celui de tools/cas-reels/extraction.js, partage avec l'inventaire. AVERTISSEMENT pour
-   l'instant : il ferait echouer des centaines de lecons avant les lots B4 a B12 ; il devient
-   bloquant en B13. Le critere « au moins un cas reel » du standard reste, lui, le mot.
+   celui de tools/cas-reels/extraction.js, partage avec l'inventaire. Avertissement de B3 a
+   B12 (il aurait fait echouer des centaines de lecons avant les lots) ; BLOQUANT DEPUIS B13
+   (2026-11-19), quand les 1 551 cas l'ont tenue : un seul « Cas reel » hors de la regle fait
+   sortir l'outil en code 1 dans TOUS les modes — avec ou sans --strict, --cours, --json —,
+   parce que la chaine (tools/verif.js) le lance sans --strict en --rapide et en --complet.
+   Le critere « au moins un cas reel » du standard reste, lui, le mot (--strict seulement).
    ============================================================================= */
 "use strict";
 
@@ -346,7 +350,7 @@ if (JSON_OUT) {
     rythme: { median: Math.round(RYTHME.med), cours: RYTHME.parCours.map(function (r) { return { id: r.id, mpm: Math.round(r.mpm) }; }) },
     casReel: { total: CASREGLE.total, conformes: CASREGLE.conformes, hors: CASREGLE.hors.length, parRaison: CASREGLE.parRaison },
   }, null, 1));
-  process.exit(incompletes.length && STRICT ? 1 : 0);
+  process.exit(CASREGLE.hors.length || (incompletes.length && STRICT) ? 1 : 0);
 }
 
 console.log("verif-contenu.js — " + lecons.length + " lecons" + (COURS_FILTRE ? " (cours " + COURS_FILTRE + ")" : "") + "\n");
@@ -416,14 +420,18 @@ if (!flag("maigres") && !flag("redondance") && RYTHME.parCours.length) {
   if (hors.length) console.log("  -> calibrage editorial (ni erreur ni urgence) : rapprocher ces durees de ~" + Math.round(med) + " mots/min.");
 }
 
-if (!flag("maigres") && !flag("redondance") && CASREGLE.total) {
-  console.log("\n=== « CAS REEL » ET LEUR REGLE (avertissement, non bloquant — B3 du V18) ===");
+/* Affichée dans tous les modes dès qu'un cas sort de la règle : le code 1 doit s'expliquer
+   lui-même, même lancé avec --maigres ou --redondance. */
+if ((!flag("maigres") && !flag("redondance") && CASREGLE.total) || CASREGLE.hors.length) {
+  console.log("\n=== « CAS REEL » ET LEUR REGLE (BLOQUANT depuis B13 du V18) ===");
   console.log("  regle : titre « Cas reel — sujet (annee) » + <p class=\"cas-reel__source\">Source : … (date ou lien)</p>");
   console.log("  " + CASREGLE.total + " « Cas reel » · conformes : " + CASREGLE.conformes + " · hors de la regle : " + CASREGLE.hors.length);
   Object.keys(CASREGLE.parRaison).sort().forEach(function (r) { console.log("    " + r + " : " + CASREGLE.parRaison[r]); });
-  console.log("  -> detail : node tools/verif-contenu.js --cas-reel ; bloquant a partir de B13.");
+  CASREGLE.hors.forEach(function (h) { console.log("  HORS REGLE  " + h.id + " — " + h.titre.slice(0, 70) + " — " + h.raisons.join(", ")); });
+  if (CASREGLE.hors.length) console.log("  -> BLOQUANT : " + CASREGLE.hors.length + " « Cas reel » hors de la regle (code 1). Detail : node tools/verif-contenu.js --cas-reel");
 }
 
 console.log("\n" + (incompletes.length ? incompletes.length + " lecon(s) sous le standard" : "Toutes les lecons tiennent le standard") +
-  " · " + maigres.length + " maigre(s) · " + redondances.length + " redondance(s)");
-process.exit(STRICT && (incompletes.length || redondances.length) ? 1 : 0);
+  " · " + maigres.length + " maigre(s) · " + redondances.length + " redondance(s)" +
+  " · " + CASREGLE.hors.length + " « Cas reel » hors de la regle");
+process.exit(CASREGLE.hors.length || (STRICT && (incompletes.length || redondances.length)) ? 1 : 0);

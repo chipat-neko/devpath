@@ -15,6 +15,11 @@
    le cas conforme. Témoin d'abord : sans faute, le cas doit être conforme, sinon
    rien n'a de sens (code 2).
 
+   DEPUIS B13 (2026-11-19), LA RÈGLE EST BLOQUANTE : une dixième faute (M10) rejoue la
+   source retirée sur TOUT le site, avec verif-contenu.js lancé SANS option, comme la
+   chaîne le lance ; elle doit sortir en code 1 en nommant ce cas. Son témoin exige le
+   code 0 sans faute : un autre cas hors de la règle ailleurs rend l'épreuve muette (2).
+
      node tools/verif-cas-reel-mutations.js        # 0 : tout vu ; 1 : une faute passée ; 2 : rien de mesuré
    ============================================================================= */
 "use strict";
@@ -35,8 +40,8 @@ process.on("exit", restaurer);
 ["SIGINT", "SIGTERM"].forEach(function (s) { process.on(s, function () { restaurer(); process.exit(130); }); });
 process.on("uncaughtException", function (e) { restaurer(); console.error(e); process.exit(2); });
 
-function mesurer() {
-  var r = cp.spawnSync(process.execPath, [path.join(RACINE, "tools", "verif-contenu.js"), "--cas-reel", "--cours=tests"],
+function mesurer(args) {
+  var r = cp.spawnSync(process.execPath, [path.join(RACINE, "tools", "verif-contenu.js")].concat(args || ["--cas-reel", "--cours=tests"]),
                        { cwd: RACINE, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
   var sortie = r.stdout || "";
   var m = /(\d+) conformes a la regle, (\d+) hors de la regle/.exec(sortie);
@@ -130,8 +135,33 @@ CAS.forEach(function (c, k) {
     " — " + (cible || "(aucun cas de la page signalé)") + " : " + (raisons || "conforme"));
 });
 
-var nFautes = CAS.filter(function (c) { return !c.negatif; }).length;
-var nNeg = CAS.length - nFautes;
+/* M10 (B13 du V18, 2026-11-19) : LA RÈGLE EST BLOQUANTE DANS LA CHAÎNE. tools/verif.js lance
+   verif-contenu.js SANS option en --rapide et en --complet : avant B13, ce mode sortait en 0
+   quoi qu'il arrive aux « Cas réel » (la règle n'était qu'un avertissement). Témoin : sans
+   faute, sur tout le site, code 0 — sinon un autre cas est hors de la règle et rien n'a de
+   sens (code 2). Faute : la source du cas Knight Capital retirée → code 1 ET ce cas nommé
+   avec sa raison. Un code 1 venu d'ailleurs ne compte pas. */
+var tc = mesurer([]);
+if (tc.code !== 0) {
+  console.log("[témoin chaîne] verif-contenu.js sans option sort en " + tc.code + " SANS faute : un « Cas réel » est déjà hors de la règle quelque part, la mesure n'a pas de sens.");
+  Object.keys(tc.hors).forEach(function (h) { console.log("  hors règle : " + h + " — " + tc.hors[h]); });
+  process.exit(2);
+}
+var muteChaine = remplacerUneFois(TXT, SOURCE, "");
+if (!muteChaine) { nonApplicables.push("M10"); console.log("[M10] la chaîne : NON APPLICABLE (source introuvable)"); }
+else {
+  fs.writeFileSync(ABS, muteChaine);
+  var rc = mesurer([]);
+  restaurer();
+  if (Buffer.compare(fs.readFileSync(ABS), ORIGINAL) !== 0) { console.log("RESTAURATION RATÉE : " + PAGE); process.exit(2); }
+  var vuChaine = rc.code === 1 && rc.hors[ID] !== undefined && rc.hors[ID].indexOf("pas de source") !== -1;
+  if (vuChaine) vues++; else passees.push("M10 la chaîne (verif-contenu.js sans option) laisse passer la source retirée");
+  console.log("[M10] la chaîne (verif-contenu.js sans option, comme en --rapide) : témoin code 0, source retirée code " + rc.code +
+    " : " + (vuChaine ? "VUE — " + ID + " : " + rc.hors[ID] : "PASSÉE INAPERÇUE"));
+}
+
+var nFautes = CAS.filter(function (c) { return !c.negatif; }).length + 1;
+var nNeg = CAS.filter(function (c) { return c.negatif; }).length;
 console.log("\n  fautes vues ................ " + vues + " / " + nFautes);
 console.log("  témoins négatifs conformes . " + negatifsOk + " / " + nNeg);
 console.log("  non applicables ............ " + nonApplicables.length + (nonApplicables.length ? " (" + nonApplicables.join(", ") + ")" : ""));

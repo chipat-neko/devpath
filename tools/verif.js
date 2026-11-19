@@ -9,7 +9,7 @@
      source   node tools/verif-html.js       balise creee par erreur dans du code
      donnees  node tools/verif-donnees.js    27 invariants (data.js, index, liens, annonces)
      etudes   node tools/verif-etudes.js     la page d'etude publiee == ce que son assembleur produit
-     contenu  node tools/verif-contenu.js    standard editorial, maigreur, redondance
+     contenu  node tools/verif-contenu.js    standard editorial, maigreur, redondance, regle des « Cas reel » (bloquante)
      exemples node tools/verif-exemples.js   sortie annoncee confrontee au reel (execution)
      rendu    node tools/verif-rendu.js      ce que le navigateur affiche
      stockage node tools/verif-stockage.js  l'echec d'ecriture previent l'apprenant
@@ -97,7 +97,7 @@ var ETAPES = [
      4293/302. Chaque assembleur est rejoue en mode COMPARAISON (il n'ecrit rien) et la
      page publiee doit lui etre identique. 12 s pour les sept (point V17-C6). */
   { nom: "etudes ", fichier: "verif-etudes.js", args: [], quoi: "chaque page d'etude est-elle celle que son assembleur produit aujourd'hui" },
-  { nom: "contenu", fichier: "verif-contenu.js", args: STRICT ? ["--strict"] : [], quoi: "standard editorial, maigreur, redondance" },
+  { nom: "contenu", fichier: "verif-contenu.js", args: STRICT ? ["--strict"] : [], quoi: "standard editorial, maigreur, redondance, regle des « Cas reel » (bloquante depuis B13)" },
   {
     nom: "exemple",
     fichier: "verif-exemples.js",
@@ -919,8 +919,13 @@ if (flag("mutations")) {
        section sans source ; page en CRLF) doivent chacune le faire signaler AVEC LA RAISON
        attendue ; quatre temoins negatifs (lien, tiret court, deux-points, section conforme)
        doivent le laisser conforme. Regle sabotee : 4/9 sans la source, 8/9 sans la date,
-       code 2 quand tout est juge hors regle. 2,0 s. */
-    { nom: "casreel ", fichier: "verif-cas-reel-mutations.js", vues: "9 / 9" },
+       code 2 quand tout est juge hors regle. 2,0 s.
+       Dixieme faute ajoutee le 2026-11-19 (point B13 du V18, la regle devient BLOQUANTE) : la
+       chaine lance verif-contenu.js SANS option ; la source du cas retiree doit l'y faire
+       sortir en code 1 en nommant le cas (temoin : code 0 sur tout le site). Sur l'ancienne
+       sortie (regle non bloquante), l'epreuve rend 9/10 et echoue. 39,8 s (deux passages
+       complets de verif-contenu.js). */
+    { nom: "casreel ", fichier: "verif-cas-reel-mutations.js", vues: "10 / 10" },
     { nom: "git-mod ", fichier: "verif-git-modele-mutations.js", vues: "29 / 29" },
     { nom: "git-graf", fichier: "verif-git-graphe-mutations.js", vues: "29 / 29" },
     { nom: "git-scen", fichier: "verif-git-scenarios-mutations.js", vues: "30 / 30" },

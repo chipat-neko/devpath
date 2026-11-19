@@ -103,9 +103,12 @@ réel » nomme son sujet, sa date et sa source**, et ne dit **rien** que la sour
   « Scénario — … ». Mais le standard exige au moins un cas réel par leçon : remplacer un récit
   inventé par un **vrai cas sourcé sur la même notion** vaut mieux que le renommer.
 - Contrôle : `node tools/verif-contenu.js --cas-reel` (liste les cas hors de la règle ; code 1 s'il
-  y en a). Avertissement dans le rapport ordinaire jusqu'à la fin des lots du V18, **bloquant**
-  ensuite (B13). Épreuve : `tools/verif-cas-reel-mutations.js`. Inventaire et classement :
-  `node tools/cas-reels/inventaire.js`.
+  y en a). **Bloquant depuis le 2026-11-19 (B13 du V18)**, quand les 1 551 cas l'ont tenue : un
+  seul « Cas réel » hors de la règle fait sortir `verif-contenu.js` en code 1 dans tous les modes,
+  donc rougir l'étape `contenu` de `verif.js --rapide`. Épreuve : `tools/verif-cas-reel-mutations.js`
+  (10 fautes). Inventaire et classement : `node tools/cas-reels/inventaire.js`. Avant d'écrire un
+  cas : le registre `tools/cas-reels/lots/foyers.md` (un sujet = un seul cours) et
+  `node tools/cas-reels/lots/doublons.js`.
 - ⚠️ Un mot ajouté au corps d'une leçon peut rouvrir l'indice lexical d'un QCM : relancer
   `verif-qcm-lexique.js` et `verif-qcm-biais.js` après une source ajoutée.
 
