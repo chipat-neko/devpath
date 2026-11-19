@@ -156,14 +156,16 @@ etiquette(rectangle) -&gt; "rectangle".</code></pre></figure>
 
 <h2>Dialyzer : l'analyse statique optionnelle</h2>
 <p><strong>Dialyzer</strong> (<em>DIscrepancy AnaLYZer for ERlang</em>) lit ton code compilé et signale les <strong>incohérences</strong>&nbsp;: appeler une fonction avec un mauvais type, du code inatteignable, un motif qui ne peut jamais réussir. Sa philosophie est le <strong>success typing</strong>&nbsp;: il ne râle que sur ce qui est <em>certainement</em> faux, jamais sur un doute. Zéro faux positif — donc quand Dialyzer parle, il a raison.</p>
-<figure class="code-block" data-file="shell"><pre><code class="language-erlang">$ rebar3 dialyzer
+<figure class="code-block" data-file="shell"><pre><code class="language-erlang">$ dialyzer --plt base.plt geo.beam
 
-%% Exemple d'avertissement :
-%% geo.erl:8: Function surface/2 will never return since it
-%% differs in argument position 1 from the success typing:
-%% (number(), number()) -&gt; number()
+%% (geo.erl porte la spec ci-dessus, et appel() -&gt; surface("x", 3).)
+%% Avertissements rendus par Dialyzer (Erlang/OTP 29) :
+%% geo.erl:7:1: Function appel/0 has no local return
+%% geo.erl:8:13: The call geo:surface("x", 3) will never return
+%%   since the success typing is (number(), number()) -&gt; number()
+%%   and the contract is (number(), number()) -&gt; number()
 %%
-%% (ici : on a appelé surface("x", 3) — une chaîne au lieu d'un nombre)</code></pre></figure>
+%% (dans un projet, rebar3 dialyzer lance la même analyse)</code></pre></figure>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 172" role="img" aria-label="Trois niveaux de sécurité croissants pour structurer des données en Erlang, présentés comme un escalier montant de gauche à droite. Marche basse : le tuple nu, dont les positions sont anonymes ; les erreurs se découvrent à l'exécution. Marche du milieu : le record, dont les positions sont nommées ; une faute de nom de champ est détectée dès la compilation. Marche haute : record plus spec plus Dialyzer ; les incohérences de types sont repérées avant même de lancer le programme. Une flèche indique que la sécurité augmente à mesure qu'on monte les marches.">
@@ -249,7 +251,7 @@ L#livre.annee.   %% =&gt; 2000</code></pre></figure><p>Les champs non précisés
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris la spec de la fonction <code>renommer/2</code> qui prend un <code>#livre{}</code> et une chaîne (le nouveau titre) et renvoie un <code>#livre{}</code>. Puis écris la fonction.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="biblio.erl"><pre><code class="language-erlang">-spec renommer(#livre{}, string()) -&gt; #livre{}.
 renommer(Livre, NouveauTitre) -&gt;
     Livre#livre{titre = NouveauTitre}.</code></pre></figure><p>On peut typer par le record lui-même (<code>#livre{}</code>). La fonction renvoie une copie modifiée&nbsp;; l'original n'est pas touché.</p></details></div>
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Le code appelle <code>surface("10", 3)</code> alors que <code>-spec surface(number(), number()) -&gt; number()</code>. Dialyzer va-t-il se plaindre&nbsp;? À quel moment (compilation, analyse, exécution) l'erreur est-elle détectée, et pourquoi&nbsp;?</p><details><summary>Voir une solution</summary><p>Oui&nbsp;: <code>"10"</code> est une chaîne (une liste), pas un <code>number()</code>. Le compilateur, lui, <strong>accepte</strong> le code (Erlang est dynamiquement typé). C'est <strong>Dialyzer</strong>, à l'étape d'<em>analyse statique</em>, qui signale que <code>surface/2</code> «&nbsp;ne peut jamais réussir&nbsp;» avec ce type d'argument. Sans Dialyzer, l'erreur ne surgirait qu'à l'<strong>exécution</strong> (un <code>badarith</code> lors de la multiplication). L'intérêt des specs + Dialyzer&nbsp;: déplacer la détection le plus tôt possible.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Le code appelle <code>surface("10", 3)</code> alors que <code>-spec surface(number(), number()) -&gt; number()</code>. Dialyzer va-t-il se plaindre&nbsp;? À quel moment (compilation, analyse, exécution) l'erreur est-elle détectée, et pourquoi&nbsp;?</p><details><summary>Voir une solution</summary><p>Oui&nbsp;: <code>"10"</code> est une chaîne (une liste), pas un <code>number()</code>. Le compilateur, lui, <strong>accepte</strong> le code (Erlang est dynamiquement typé). C'est <strong>Dialyzer</strong>, à l'étape d'<em>analyse statique</em>, qui signale que l'appel <code>surface("10", 3)</code> «&nbsp;will never return&nbsp;» (ne reviendra jamais) avec ce type d'argument. Sans Dialyzer, l'erreur ne surgirait qu'à l'<strong>exécution</strong> (un <code>badarith</code> lors de la multiplication). L'intérêt des specs + Dialyzer&nbsp;: déplacer la détection le plus tôt possible.</p></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>
