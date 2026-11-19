@@ -190,3 +190,129 @@ profil Ravenscar (cité dans un « Cas réel », non touché) — vérifiés par
   l'orchestrateur), `normatf` (8 chiffres du site cités par `doc/lecon-0*` : taux et nombre de questions
   conformes à S3 — 805 manquements, 86,8 %… —, S4 69 / 89 cours, corpus de l'ancienne clause ; ils bougent
   parce que les QCM d'`ada` ont changé). Aucune autre étape en échec. `--mutations` non lancé.
+
+## Reprise (après la contre-relecture `e138d31`)
+
+La contre-relecture indépendante (23 corrections justes, commit `e138d31`) avait rouvert le lexique sur
+10 questions, monté « la plus dense » à 31,1 % et « la moins bavarde » à 29,1 %, et laissé au bilan q0
+(`lecon-14` q4, « Pour quel type de systèmes Ada est-il privilégié ? ») trois distracteurs du même champ
+(inventaire, vente, stock). La mesure de départ de la reprise a trouvé en plus **deux alertes du biais
+inverse** et **deux fenêtres de `--lots`** au-dessus du seuil, rouvertes elles aussi. Mission bornée :
+remettre ces indices au hasard sans défaire le sens d'une seule correction.
+
+Commit : `ef4c1cb` (les retouches), puis celui de cette section. ⚠ Le message de `ef4c1cb` dit « 22 options
+sur 11 questions » : le compte juste est **17 options sur 11 questions** (détail ci-dessous).
+
+### Avant / après
+
+| indice | avant (`e138d31`) | après (`ef4c1cb`) | commande |
+|---|---:|---:|---|
+| lexique : exploitables / retournées / à mettre en forme | **10 / 6 / 10** | **0 / 0 / 0** | `node tools/mesure-lexique-qcm.js --liste=ada` |
+| la plus dense (mots longs) | **31,1 %** | **25,0 %** | `node tools/mesure-biais-qcm.js --seul=ada` |
+| la moins bavarde (peu de mots) | **29,1 %** | **26,0 %** | idem |
+| la plus longue | 26,5 % | 25,2 % | idem |
+| pire des 44 stratégies | la plus dense 31,1 % | le mot technique exclusif **26,5 %** | idem |
+| stratégie la plus basse | ECARTER le mot technique exclusif 19,4 % | la même, 20,1 % | idem |
+| ECARTER la plus dense / ECARTER la moins bavarde | 23,0 % / 20,6 % | 25,0 % / 22,3 % | idem |
+| ECARTER la plus courte | 26,5 % (une question à 100 % : bilan q1) | 25,2 % | idem |
+| questions trahies par 5 indices ou plus | 0 | 0 | idem |
+| rangs de la bonne réponse | 13 / 12 / 12 / 12 | 13 / 12 / 12 / 12 | `node tools/plan-rangs-qcm.js ada` |
+| biais inverse | **2 alertes** : le mot technique exclusif (17 tranchées, inverse 29,4 %), son ECARTER (9 tranchées, 33,3 %) | **0 alerte** (pire : le mot technique exclusif, inverse 27,1 %) | `node tools/mesure-biais-inverse.js --toutes ada` |
+| `--lots` (fenêtres de 4 leçons) | **2** : la plus dense en 11-14 (19 q, 43,4 % / 42,1 % seule bonne) et en 5-8 (12 q, 41,7 %) | **0** | `node tools/mesure-biais-qcm.js --lots --cours=ada` |
+| mot fétiche | 0 alerte | 0 alerte | `node tools/mesure-mot-fetiche.js ada` |
+| tics de lot | 0 | 0 | `node tools/mesure-tics-lot.js ada --exemples` |
+| intrus lexical DÉFAUT / EXCÈS | 25,0 % / 24,1 %, 0 sûre | 25,0 % / 24,1 %, 0 sûre | `node tools/mesure-mot-question.js ada --liste` |
+| explications orphelines | 0 | 0 | `node tools/mesure-explain-orpheline.js --depuis=8d163bf --seul=ada` |
+| intouchable | 1 atteinte (`lecon-11` q2, explain, déclarée en tête) | la même, aucune nouvelle | `node tools/mesure-qcm-intouchable.js ada 8d163bf` |
+| `verif-html` / `verif-contenu --cas-reel --cours=ada` | — | 0 / 0 (14 « Cas réel » conformes) | `node tools/verif-html.js`, `node tools/verif-contenu.js --cas-reel --cours=ada` |
+| blocs JSON, CR, BOM | — | tous valides, 0 CR, 0 BOM | contrôle node sur les 15 fichiers |
+
+`verif-qcm-biais` et `verif-qcm-lexique` sortent en code 1 pour la seule raison attendue (« ada a
+PROGRESSÉ […] sans que le gain soit figé »). Sorties brutes : `scratchpad/c7-ada/reprise/avant/` et
+`scratchpad/c7-ada/reprise/apres1/` (hors git).
+
+### Le dosage, calculé avant d'écrire
+
+- **La plus dense** : 15,25 questions sur 49 (31,1 %) ; cible 12,25 → **trois bascules**, choisies pour
+  vider aussi les deux fenêtres de `--lots` : une dans 5-8 (`lecon-08` q2), une dans 11-14 (`lecon-14`
+  q5), une ailleurs (`lecon-03` q1). Fenêtre 5-8 : 5 → 4 bonnes désignées seules sur 12 ; 11-14 : 8 → 7
+  sur 19 (36,8 %, sous 40 %). Résultat 12,25 / 49 = 25,0 %, et « ECARTER la plus dense » remonte de
+  23,0 à 25,0 %.
+- **La moins bavarde** : 14,25 (29,1 %) ; il fallait retirer au moins 0,78 → `lecon-14` q4 et q5 (un
+  distracteur seul au minimum de mots : −0,5 chacune), `lecon-03` q1 (ex æquo avec la bonne : −0,5) :
+  12,75 / 49 = 26,0 %.
+- **Le mot technique exclusif, sens inverse** : inverse = (T − B) / 3T, avec T les questions où un seul
+  mot exclusif tranche et B celles où c'est la bonne. Avant : T = 17, B = 2 → 29,4 %. Visé : B = 3 avec
+  T ≤ 17 (bilan q1 devient B, `lecon-08` q2 et `lecon-14` q1 sortent de T) → T = 16, B = 3 → 27,1 %.
+  Le sens direct est monté de 24,5 à 26,5 % : la variante qui donnait aussi B = 4 au bilan q0 le
+  portait à 27,6 %, au-dessus de la cible — écartée, le bilan q0 garde un ex æquo à 1/2 comme avant.
+- **ECARTER le mot technique exclusif** : 9 questions au motif « trois options en tête, la quatrième
+  seule en dessous », toujours un distracteur → 6 (`lecon-01` q3, `lecon-12` q2 et le bilan q1 sortis
+  du motif) : sous les 8 questions qu'il faut pour mesurer, plus d'alerte.
+
+### Les retouches (17 options, 11 questions, aucune bonne réponse ni explication touchée)
+
+| question | option | avant → après | pourquoi |
+|---|---|---|---|
+| `lecon-01` q1 | opt3 | « reprendre **ses logiciels** » → « reprendre **sa bibliothèque** » | k 3 → 2 (« logiciels » absent de la page, « bibliothèque » présent) |
+| `lecon-01` q3 | opt1 | « (… les blogs, la radio et la photo en ligne) » → « (… la musique en studio, ou la commande sur catalogue) » | w 0 → 4, k 0 → 1 ; sort du motif ECARTER |
+| `lecon-01` q3 | opt3 | « Le tableur et le web (… toute application du navigateur) » → « Le tableur et le navigateur (… tout logiciel installé) » | w 3 → 4, reste plus courte que la bonne |
+| `lecon-03` q1 | opt1 | « ce qui **évite** les contrôles » → « ce qui **supprime** les contrôles » | w 10 → 11 (mot de la page) |
+| `lecon-03` q1 | opt2 | « **est le fait du** type énuméré […] sauf sur **un entier** » → « **tient au** type énuméré […] sauf sur **les entiers** » | 33 → 31 mots, plus dense que la bonne (5,10 contre 5,06), reste plus longue qu'elle (194 contre 193) |
+| `lecon-05` q1 | opt3 | « de la borne inférieure **à** la supérieure » → « **jusqu'à** la supérieure » | w 5 → 6 |
+| `lecon-07` q1 | opt2 | « À relancer le bloc entier […] le même traitement **tour après tour** jusqu'au succès » → « À relancer **automatiquement** le bloc entier […] le même traitement jusqu'au succès » | w 9 → 10, pas de « seconde fois » (sens de la contre-relecture gardé) |
+| `lecon-08` q2 | opt2 | « partagée entre tâches […] après **sa déclaration** » → « partagée entre **plusieurs** tâches […] après **son initialisation** » | k 3 → 4, w 9 → 10, plus dense que la bonne (bascule) ; ex æquo du mot exclusif avec opt3 |
+| `lecon-12` q2 | opt3 | « Wide_String, dont la longueur est **extensible** et la mémoire **doublée en Unicode** » → « … est **variable** et la mémoire **adaptée à l'Unicode** » | k 2 → 0 (« doublée », « unicode » absents de la page ; « l'Unicode » y est) ; sort du motif ECARTER |
+| `lecon-12` q3 | opt3 | « Fermer (Close) **d'abord** » → « Fermer (Close) **au début** » | k 1 → 0 |
+| `lecon-14` q1 | opt1 | « lors de chaque lancement du **programme** » → « … du **logiciel** » | un mot exclusif de moins (ex æquo avec opt2, T − 1) ; l'écho de la question ne désigne plus ce distracteur |
+| bilan q0 (`lecon-14` q4) | opt1 | « Les systèmes utilitaires d'inventaire (comptabilité) » → « Les systèmes de données numériques (statistiques) » | domaine : données et statistiques |
+| bilan q0 | opt2 | « Les systèmes de vente des produits (performance) » → « Les systèmes web et l'interface des utilisateurs (réactivité) » | domaine : web et interfaces ; ex æquo du mot exclusif avec la bonne |
+| bilan q0 | opt3 | « Les systèmes de saisie de stock (simplicité) » → « Les systèmes ludiques numériques (affichage) » | domaine : jeux ; seul au minimum de mots (−0,5 « moins bavarde ») |
+| bilan q1 (`lecon-14` q5) | opt1 | « Faiblement et librement typé » → « Faiblement typé et laxiste » | typage faible ; k et w = 2 |
+| bilan q1 | opt2 | « Typé à l'exécution seulement » → « Typé dynamiquement uniquement » | typage dynamique ; plus dense que la bonne, seule à 3 mots |
+| bilan q1 | opt3 | « Sans type, tout est du texte » → « Sans type, uniquement textuel » | sans type ; la bonne devient seule porteuse d'un mot exclusif (B + 1) |
+
+**Le bilan q0** a maintenant trois domaines distincts — données et statistiques, web et interfaces
+utilisateur, jeux — tous faux pour Ada (privilégié pour les systèmes critiques et embarqués) et tous
+plausibles pour un apprenant ; aucun ne contient « commande », que la contre-relecture avait trouvé
+lisible vrai (« systèmes de commande »). Chaque distracteur porte, comme la bonne réponse, 4 mots longs
+dont 1 absent de la page.
+
+**Le sens des corrections de la contre-relecture est gardé** : bilan q1, trois thèses distinctes (faible,
+dynamique, sans type) et non trois synonymes ; `lecon-12` q2, Wide_String reste faux par sa longueur, et
+la partie vraie porte toujours sur l'Unicode (« adaptée à l'Unicode » au lieu de « doublée en Unicode »,
+même idée, mots de la page) ; `lecon-12` q3, Close sans Reset ; `lecon-07` q1, pas de « seconde fois » ;
+`lecon-14` q1, l'exécution accélérée à chaque lancement ; `lecon-01` q3, aucun doublon avec opt2 (calcul
+scientifique, gestion).
+
+### Exécuté pour la relecture des options retouchées
+
+GNAT 16.2 par Compiler Explorer, `-gnat2022`, fichiers dans `scratchpad/c7-ada/reprise/preuves/` :
+- `r1-wide.adb` : `W : Wide_String := "abc"; W := "abcd";` → avertissement « wrong length for array » puis
+  **Constraint_Error** à l'exécution ; `Wide_Character'Size = 16` ; un `Unbounded_Wide_String` passe de 3
+  à 6 caractères. Donc `lecon-12` q2 opt3 est bien fausse (longueur fixe) et sa partie Unicode est vraie.
+- `r2-case-int.adb` : un `case` sur `Integer` sans `when others` → « error: missing case values:
+  -16#8000_0000# .. 0 » et « 3 .. 16#7FFF_FFFF# ». Donc `lecon-03` q1 opt2 (« sauf sur les entiers »)
+  est bien fausse.
+- `r3-handler.adb` : une division par zéro dans un bloc, gestionnaire `when Constraint_Error` → « le bloc
+  a tourné 1 fois » : le gestionnaire ne relance rien (`lecon-07` q1 opt2 fausse).
+- Bilan q1 (typage dynamique faux) : déjà prouvé par l'auteur, `preuves/e03-melange` (Integer + Float
+  refusé à la compilation).
+
+Non exécutable : les thèses de domaine (bilan q0, `lecon-01` q3) ; relues contre l'encadré « Cas réel » de
+`lecon-01`, qu'elles ne contredisent pas.
+
+### Ce qui reste, sans arrondir
+
+- Pire stratégie à **26,5 %** (le mot technique exclusif, sens direct ; il était à 24,5 %) ; dans le sens
+  inverse, **27,1 %**, sous le seuil de 28 % mais sans grande marge. « La moins bavarde » à 26,0 %.
+- Sous le hasard : ECARTER le mot technique exclusif **20,1 %** (couverture 12,2 %), ECARTER la moins
+  bavarde 22,3 % — hors d'alerte (fenêtres trop courtes pour `mesure-biais-inverse`).
+- Le tic « verbe conjugué » a changé de question : il désignait un distracteur du bilan q1 (seul à porter
+  « est »), il désigne maintenant un distracteur de `lecon-03` q1 (seul sans « est ») ; toujours une seule
+  question, sous le seuil de `mesure-tics-lot`.
+- Bilan q1 : trois options de 29 caractères (la bonne et deux distracteurs) — « la plus longue » y vaut
+  1/3 ; la bonne ne peut pas être raccourcie.
+- Choix de mots discutables, signalés : « la commande sur catalogue » (`lecon-01` q3, la vente par
+  correspondance ; « commande » seul aurait pu se lire « systèmes de commande ») ; « longueur variable »
+  pour Wide_String (`lecon-12` q2) à la place d'« extensible », pour sortir du motif ECARTER.
