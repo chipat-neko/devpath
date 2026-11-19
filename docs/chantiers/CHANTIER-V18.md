@@ -1041,13 +1041,87 @@ notion de la leçon, ne disant que ce que dit la source.
       encadrés (`graphql/10` a changé de texte), à reprendre en phase E ; la question du QCM 2
       d'`offensive/11` suppose que la revue du dépôt xz « disait propre », cadre du programme de la
       leçon que rien ne source. Phase B : il reste **B13** (le garde-fou devient bloquant).
-- [ ] **B13 · Le garde-fou devient bloquant.** Le contrôle de B3 passe en mode `--strict` bloquant.
+- [x] **B13 · Le garde-fou devient bloquant.** Le contrôle de B3 passe en mode `--strict` bloquant.
       Le site doit être à **0 encadré** hors de la règle. Rejouer l'échantillon de B2 avec la **même
       graine** : combien d'INVENTÉ, combien d'INEXACT, comparés au départ. Écrire le chiffre, quel
       qu'il soit. **Ajouté au B4** : aucun sujet raconté dans deux cours — `node
       tools/cas-reels/lots/doublons.js` ne liste plus que des sources partagées LÉGITIMES (même
       document, sujets différents, comme les notes de Safari 15.4), chacune écrite ici ; les
       doublons du lot 1 (Azure ×5, Ariane 5 ×3, Excel ×3, une quinzaine de paires) remplacés.
+
+      **COCHÉ le 2026-11-19** (décision de Noah : « B13, garde-fou »).
+
+      **Le garde-fou** (commit `9862c2d`) : `verif-contenu.js` sort en **code 1 dès qu'un « Cas réel »
+      est hors de la règle, dans TOUS les modes**. Plus fort que « `--strict` bloquant » : la chaîne
+      (`verif.js --rapide` et `--complet`) lance l'outil SANS `--strict`, et ce mode sortait en 0 quoi
+      qu'il arrive aux cas — un `--strict` seul n'aurait rien gardé. Le rapport dit « BLOQUANT » et
+      nomme les cas fautifs. Épreuve `verif-cas-reel-mutations.js` : dixième faute (la source du cas
+      Knight Capital retirée, outil lancé sans option sur tout le site, témoin à 0) — **10/10 vues**,
+      4 témoins verts ; sabotée (ancienne sortie), elle rend 9/10 et échoue. Site : **0 encadré hors
+      de la règle, 1 551 conformes sur 1 551.**
+
+      **La mesure.** Tirage rejoué : `node tools/cas-reels/inventaire.js --echantillon=150
+      --graine=20261114` redonne les **150 mêmes encadrés, dans le même ordre** qu'en B2. Six agents
+      en lecture seule, 25 cas chacun, **sans accès aux verdicts de B2, aux rapports des lots ni aux
+      contre-relectures** ; mêmes verdicts qu'en B2, appliqués strictement (VRAI = toutes les
+      affirmations confirmées à une source ouverte ; une seule affirmation contredite = INEXACT ; une
+      seule introuvable = INVÉRIFIABLE) ; comportements rejoués quand c'était possible (Node 26,
+      Python 3.11 et 3.14, .NET 10, Perl, PowerShell 5.1, Lua 5.1 à 5.4, Dart Sass, pandas 3, GHC,
+      Julia, Kotlin, OCaml, GNAT et gfortran sur Compiler Explorer, Zig et readelf). Verdicts et
+      preuves, cas par cas : `tools/cas-reels/b13-verdicts.json` (avec le verdict de B2 en regard).
+
+      | population | VRAI | INEXACT | INVÉRIFIABLE | INVENTÉ |
+      |---|---|---|---|---|
+      | B2, départ (150) | 29 — 19,3 % [13,8 ; 26,4] | 32 — 21,3 % [15,5 ; 28,6] | 87 — 58,0 % [50,0 ; 65,6] | 2 — 1,3 % [0,4 ; 4,7] |
+      | **B13 (150)** | **148 — 98,7 % [95,3 ; 99,6]** | **2 — 1,3 % [0,4 ; 4,7]** | **0 — 0,0 % [0,0 ; 2,5]** | **0 — 0,0 % [0,0 ; 2,5]** |
+      | B13, suspects de B1 (97) | 95 — 97,9 % [92,8 ; 99,4] | 2 — 2,1 % [0,6 ; 7,2] | 0 — 0,0 % [0,0 ; 3,8] | 0 — 0,0 % [0,0 ; 3,8] |
+      | B13, autres (53) | 53 — 100,0 % [93,2 ; 100,0] | 0 — 0,0 % [0,0 ; 6,8] | 0 — 0,0 % [0,0 ; 6,8] | 0 — 0,0 % [0,0 ; 6,8] |
+
+      (effectif — taux [Wilson à 95 %]). Passage B2 → B13 : 31 des 32 INEXACT, 86 des 87 INVÉRIFIABLE
+      et les 2 INVENTÉ sont devenus VRAI ; les 29 VRAI le sont restés. Par nature, aujourd'hui :
+      événement daté 64 (1 INEXACT), produit nommé 86 (1 INEXACT) ; plus aucun récit anonyme ni
+      général.
+
+      **Les deux INEXACT sont deux DATES D'UN AUTRE ÉVÉNEMENT**, la faute que les lots 2 à 4 avaient
+      déjà nommée : `distribue/lecon-10` datait de 2020 l'article de Malcolm Featonby (Amazon
+      Builders' Library), publié le **15 janvier 2021** (annonce « What's New » d'AWS du même jour) ;
+      `go/lecon-17` datait le correctif de logrus du 22 juin 2023, jour où un mainteneur a RECRÉÉ
+      après coup les pages « Release » de GitHub — les versions 1.8.3, 1.9.1 et 1.9.3 sont
+      étiquetées en **mai 2023**. Corrigés, titre et ligne de source compris. Deux nuances aussi :
+      en Lua 5.1, c'est l'APPEL à `yield` dans un `pcall` qui échoue, pas la coroutine (`lua/10`) ;
+      hors encadré, `scala/15` disait que deux `given` du même type en portée sont toujours ambigus
+      — en Scala 3, l'instance la plus intérieure l'emporte.
+
+      **Ce que dit la mesure.** De 21,3 % d'INEXACT et 58,0 % d'INVÉRIFIABLE au départ, à **1,3 %
+      et 0 %**. Les lots avaient trouvé, à la contre-relecture, une faute dans 22,6 % des cas APRÈS
+      la vérification de l'auteur (350/1 551) ; un troisième lecteur indépendant en trouve 1,3 %
+      après elle : la contre-relecture a fait l'essentiel du travail, et il reste un résidu, pas
+      zéro. **Réserve** : un seul vérificateur par cas ; quelques paraphrases un peu plus fortes que
+      leur source ont été acceptées (« suit en continu » pour « over the last few months ») ; la
+      consigne de B2 n'avait pas été versée au dépôt, celle de B13 en reprend les définitions
+      (`scratchpad/v18-parallele/b13/`).
+
+      **Sources partagées entre cours** (`doublons.js` : 3, toutes légitimes — même document,
+      sujets distincts) :
+      - notes de version de **Debian 12** (bookworm) : `python/lecon-18` (pip refusé hors d'un
+        environnement virtuel, PEP 668) et `linux/lecon-04` (rsyslog n'est plus installé par
+        défaut) ;
+      - billet « **Introducing react.dev** » (16 mars 2023), qui DATE la nouvelle documentation de
+        React : `js/lecon-04` (le `0` qu'affiche `&&`), `js/lecon-29` (les tableaux d'état en
+        lecture seule), `react/lecon-10` (la course des requêtes dans un effet) — trois pages
+        distinctes de cette documentation, chacune citée en plus du billet ;
+      - notes de **Safari 15.4** (WebKit) : `js/lecon-64` (BroadcastChannel) et `html/lecon-27`
+        (`<dialog>`).
+      Les doublons du lot 1 sont remplacés depuis le commit `1b8d94b` ; le registre
+      `tools/cas-reels/lots/foyers.md` garde le foyer de chaque sujet pris par les neuf lots.
+
+      **Contrôles** : `--cas-reel` 0 hors règle, `--strict` 0, cliquets QCM 0, lexique-diff 0,
+      `verif-recherche` 77/77, `verif-doc` 41/41, `verif-normatif` 75/75, point fixe au tour 3,
+      **`--rapide` 54/54** (686,8 s), épreuve `casreel` 10/10.
+
+      **Ouvert** (phase E) : `perf-web/lecon-03` raconte la mise en maintenance de Moment.js
+      (14 septembre 2020) ; la page des annonces du projet porte depuis le 17 août 2026 une mise à
+      jour qui n'exclut plus une version 3 — le récit reste exact, mais sa source vit.
 
 ---
 

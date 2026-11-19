@@ -99,8 +99,16 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 > remplacements laissent faux hors des encadrés (QCM, exercices, antisèches qui racontaient encore
 > l'ancien récit), contre-relu à son tour. **Conformes : 1 551 sur 1 551 — tous les « Cas réel »
 > du site tiennent la règle.** `--rapide` 54/54.
-> **Prochaine case : B13** (le garde-fou des « Cas réel » devient bloquant ; rejouer l'échantillon
-> de B2 avec la même graine) — ne pas la lancer sans l'accord de Noah.
+>
+> **✅ B13 DU V18 FAITE (2026-11-19), 19 cases sur 61 — PHASE B CLOSE.** La règle des « Cas réel »
+> est **bloquante** : `verif-contenu.js` sort en code 1 dès qu'un cas est hors de la règle, dans
+> tous les modes, donc l'étape `contenu` de `--rapide` rougit (épreuve 10/10). L'échantillon de B2
+> rejoué avec la même graine (les 150 mêmes encadrés), par six vérificateurs indépendants :
+> **98,7 % VRAI, 1,3 % INEXACT (2 dates), 0 INVÉRIFIABLE, 0 INVENTÉ** — contre 19,3 % VRAI,
+> 21,3 % INEXACT, 58,0 % INVÉRIFIABLE et 1,3 % INVENTÉ au départ. Les deux dates sont corrigées.
+> Verdicts : `tools/cas-reels/b13-verdicts.json`. `--rapide` 54/54.
+> **Prochaine case : C1** (préparer la phase C, les QCM des 22 cours restants) — ne pas la lancer
+> sans l'accord de Noah.
 > Outils, registre des foyers et modèles de consigne dans `tools/cas-reels/lots/`.
 
 ---

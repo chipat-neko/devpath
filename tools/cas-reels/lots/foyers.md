@@ -363,7 +363,7 @@ La DERNIÈRE réservation de chaque cas.
 | Amazon Aurora, six copies sur trois zones, quorum 4/6 et « AZ+1 » contre les pannes corrélées (Anurag Gupta, AWS Database Blog, 14 août 2017) | `distribue/lecon-07#1` |
 | Notion, « Herding elephants » : partition par identifiant d'espace de travail, 480 partitions logiques sur 32 bases (Garrett Fidalgo, 6 octobre 2021) | `distribue/lecon-08#1` |
 | Cloudflare, « A Byzantine failure in the real world » : élections Raft d'etcd sans fin derrière un commutateur à moitié en panne, incident du 2 novembre 2020 (27 novembre 2020) | `distribue/lecon-09#1` |
-| AWS Builders' Library, Malcolm Featonby, « Making retries safe with idempotent APIs » : ClientToken de RunInstances (2020) | `distribue/lecon-10#1` |
+| AWS Builders' Library, Malcolm Featonby, « Making retries safe with idempotent APIs » : ClientToken de RunInstances (15 janvier 2021) | `distribue/lecon-10#1` |
 | Uber, « Building Reliable Reprocessing and Dead Letter Queues with Apache Kafka » : files de réessai et file des lettres mortes (Ning Xia, 16 février 2018) | `distribue/lecon-11#1` |
 | Elastic, « A new era for cluster coordination in Elasticsearch » : Elasticsearch 7.0 retire minimum_master_nodes (David Turner et Yannick Welsch, 13 mars 2019) | `distribue/lecon-12#1` |
 | Docker 0.1.0 (23 mars 2013) : le README définit le « Standard Container », analogie du conteneur maritime, répétabilité | `docker/lecon-01#1` |
