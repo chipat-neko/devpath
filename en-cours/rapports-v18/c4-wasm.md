@@ -3,6 +3,9 @@
 Case C4 du chantier V18 (phase C), un seul agent, copie `D:\test-claude-c4-wasm`, branche `v18/c4-wasm`,
 partie de `8d163bf`. Aucun fichier du dépôt principal `D:\test-claude\` n'a été modifié.
 
+**Depuis la reprise (section « Reprise » en fin de rapport) : une atteinte déclarée et prouvée, la
+bonne réponse de lecon-11 q4 (`wasm32-wasi` → `wasm32-wasip1`).** Avant la reprise :
+
 **Atteintes à l'intouchable : aucune** (`node tools/mesure-qcm-intouchable.js wasm 8d163bf8` :
 « 50 questions, 150 distracteurs, 149 réécrits. Aucune atteinte : q / correct / explain / bonne réponse
 intacts »). Aucune bonne réponse ni explication n'a été prouvée fausse ; quatre sont **signalées** plus bas
@@ -174,3 +177,115 @@ OffscreenCanvas.
   « une écriture simple, puis un retour de valeur unique » ; lecon-10 q1 « du navigateur client ou
   d'un système serveur » ; lecon-11 q10 « via le canvas partagé du studio client ») : à revoir en
   contre-relecture indépendante.
+
+## Reprise — la plus dense 32,0 → 24,0 %, la moins bavarde 31,7 → 24,7 %
+
+Reprise bornée demandée par l'orchestrateur : corriger lecon-11 q4, puis ramener « la plus dense » et
+« la moins bavarde » sous 27,5 %, fenêtres comprises, sans rien rouvrir. Même copie, même branche ;
+aucun fichier du dépôt principal touché. Deux commits : `a6b5423b` (lecon-11 q4) et `ccaa055a` (dosage).
+
+**Atteinte à l'intouchable, déclarée : lecon-11 q4, bonne réponse.** « En le recompilant pour
+`wasm32-wasi` … » devient « En le recompilant pour `wasm32-wasip1` … » (+2 caractères, rang 2 gardé,
+lexique inchangé : `wasip1` n'est pas un mot de 6 lettres pour l'outil). Preuve rejouée par
+exécution (`scratchpad/c4-wasm/preuves/p6-cible.out`, rustc 1.99.1 du 2026-10-13) :
+`rustc --print cfg --target wasm32-wasi` → `error: error loading target specification: could not
+find specification for target "wasm32-wasi"` et `help: did you mean wasm32-wasip1?` (code 1) ;
+`rustc --print target-list` ne connaît que `wasm32-wasip1`, `wasm32-wasip1-threads`, `wasm32-wasip2`,
+`wasm32-wasip3` ; `rustc --print cfg --target wasm32-wasip1` répond (`target_os="wasi"`,
+`target_env="p1"`). Le corps de la leçon disait déjà `wasm32-wasip1` aux cinq endroits. L'`explain`
+(« Recompilée pour WASI … `wasmtime --dir=.` lui accorde le dossier ») reste juste : non touché.
+`node tools/mesure-qcm-intouchable.js wasm 8d163bf` : 1 atteinte, celle-ci, et aucune autre.
+
+### Avant / après
+
+« Avant » = `6989a747` (fin de la première passe), « après » = `ccaa055a`.
+
+| indice | avant | après | commande |
+|---|---:|---:|---|
+| la plus longue | 26,0 % | 26,0 % | `node tools/mesure-biais-qcm.js --seul=wasm` |
+| pire des 44 stratégies | 32,0 % (la plus dense) | **26,0 %** (la plus longue, la DEUXIÈME, ECARTER la plus courte, COMBINÉ) | idem |
+| la plus dense | 32,0 % | **24,0 %** | idem |
+| la moins bavarde | 31,7 % | **24,7 %** | idem |
+| ECARTER la plus dense / la moins bavarde | 22,7 / 22,7 % | 25,3 / 25,7 % | idem |
+| ECARTER la plus courte | 25,7 % | 26,0 % | idem |
+| `--lots` (seuils 60 % / 40 % seule) | 5 alertes, toutes « la plus dense » (40,0 à 42,9 % seule) | **aucune** | `node tools/mesure-biais-qcm.js --lots --cours=wasm` |
+| la plus dense, par fenêtre de 4 leçons | 28,6 à 42,9 % | **15,4 à 25,0 %** | `scratchpad/c4-wasm/sonde/fenetres.js` (copie de la boucle `--lots`) |
+| la moins bavarde, par fenêtre | 29,2 à 41,1 % | **16,7 à 27,2 %** | idem |
+| rangs de la bonne réponse | 13 / 13 / 12 / 12 | 13 / 13 / 12 / 12 | `node tools/plan-rangs-qcm.js wasm` |
+| lexique (exploitables / retournées / à mettre en forme) | 0 / 0 / 0 | 0 / 0 / 0 | `node tools/mesure-lexique-qcm.js --liste=wasm` |
+| intrus lexical DÉFAUT / EXCÈS | 25,0 / 25,0 % | 25,0 / 25,0 % | `node tools/mesure-mot-question.js wasm` |
+| mot fétiche | 0 alerte | 0 alerte (`chaque` 0 bonne / 13 distracteurs, ÉCARTER 27,3 %, au lieu de 0 / 14 et 27,5 %) | `node tools/mesure-mot-fetiche.js wasm` |
+| tics de lot | 0 | 0 | `node tools/mesure-tics-lot.js wasm` |
+| biais inverse | 0 alerte (pire 25,2 %) | 0 alerte (pire : la plus dense, 25,3 %) | `node tools/mesure-biais-inverse.js --toutes wasm` |
+| explications orphelines | 0 | 0 | `node tools/mesure-explain-orpheline.js --depuis=8d163bf --seul=wasm` |
+| `verif-html` / `verif-contenu --cas-reel --cours=wasm` | 0 / 0 | 0 / 0 | |
+| blocs JSON / CR / BOM | valides / 0 / 0 | valides / 0 / 0 | contrôle node sur `pages/wasm/*.html` |
+| `node tools/verif.js --rapide` | 4 étapes signalées, attendues | les 4 mêmes, attendues (`donnees` I18, `qcmbiai` et `qcmlexi` « progressé sans que le gain soit figé », `normatf`) ; 50 autres vertes, 829 s | sortie : `scratchpad/c4-wasm/reprise/verif-rapide.out` |
+
+### Le calcul
+
+- Au départ, la bonne réponse était la plus dense dans 16 questions sur 50 (32,0 %) ; il en fallait
+  13 au plus pour passer sous 27,5 %. La moins bavarde : crédit 15,85 (12 désignations seules, six
+  égalités à deux, deux à quatre, une à trois) ; il fallait descendre sous 13,75.
+- **Les fenêtres imposent la répartition, pas seulement le total.** Avec des leçons de 3, 3, 3, 3, 3,
+  3, 4, 4, 4, 4 et 16 questions, une fenêtre de 12 questions tolère au plus 3 questions denses, une de
+  14 aussi, une de 15 ou 16 en tolère 4, celle de 28 en tolère 7. Or la leçon 08 portait 3 questions
+  denses sur 4 et la leçon 03, 2 sur 3. Un premier lot de six retouches (non commité) atteignait la
+  cible sur le cours entier (26,0 % / 25,7 %) mais laissait « la plus dense » à 35,7 % sur 05-08 et
+  « la moins bavarde » à 40,6 % sur 06-09 ; deux de ses retouches (lecon-01 q1, lecon-11 q12) ont été
+  rendues à leur texte d'origine, et la répartition a été refaite leçon par leçon.
+- Pour ne pas fermer à fond (11 questions denses, 22 %, aurait mis ÉCARTER à 26,0 %), deux bascules
+  **inverses** ramènent vers 25 % : lecon-10 q3 rend la bonne réponse de nouveau la plus dense, et
+  lecon-11 q15 la rend de nouveau la moins bavarde — dans les deux seules fenêtres qui avaient de la
+  marge (07-10 et 08-11).
+
+### Les dix distracteurs retouchés (le sens de chacun est gardé)
+
+| question | avant | après | effet |
+|---|---|---|---|
+| lecon-02 q1 opt1 | … télécharger le module .wasm depuis la page web (fetch, charger, appeler) | … depuis un registre (fetch, charger, appeler) | plus dense que la bonne réponse ; même nombre de mots (égalité) |
+| lecon-04 q2 opt3 | Une copie des variables JavaScript, faite à chaque appel, que Rust peut lire | Une copie des objets JavaScript, encodée pendant l'instanciation, que Rust peut décoder | plus dense ; un `chaque` de moins (mot fétiche) |
+| lecon-04 q3 opt3 | … sans JSON : il faut la mettre en objet, la copier … | … sans JSON : il faut la traduire, la copier … | moins bavarde (21 mots contre 22) |
+| lecon-05 q3 opt2 | Passer d'abord à Wasm par principe, porter le traitement d'un coup, puis ne mesurer que si l'interface paraît lente | Passer d'abord à Wasm, porter tout le traitement, puis ne mesurer que si l'interface bloque | moins bavarde (17 contre 19) |
+| lecon-06 q2 opt1 | Mesurer chaque côté une seule fois, … le seul appel à instance.exports, oublier le chargement du navigateur | Mesurer chaque fonction à froid, … le premier appel à instance.exports, oublier le chargement côté navigateur | plus dense (6,00 contre 5,95) |
+| lecon-08 q2 opt3 | En renommant main() chaque méthode publique | En renommant chaque méthode publique | plus dense et moins bavarde (égalité rompue) |
+| lecon-08 q3 opt3 | Une chaîne, avec la structure en texte | Une chaîne, structure encodée | plus dense et moins bavarde (égalité rompue) ; 29 caractères, au plancher de la bande (70 % de 41) |
+| lecon-09 q2 opt1 | Par les variables : un côté écrit, l'autre lit directement | Par variables : même document, accès simultané | moins bavarde (6 mots contre 8) ; un worker n'a pas de `document` (exécuté à la première passe, `p2-api.js`) |
+| lecon-10 q3 opt3 | Un mini navigateur dédié aux modules Wasm | Un mini navigateur dédié à tous les modules Wasm | bascule inverse : la bonne réponse redevient la plus dense |
+| lecon-11 q15 opt3 | … le calcul tient en mémoire du thread | … le calcul tient tout entier en mémoire du thread | bascule inverse : la bonne réponse redevient la moins bavarde |
+
+Chaque retouche a été essayée en mémoire contre les 44 stratégies chargées depuis l'outil, le rang,
+la bande 70-130 %, le `k` / `w` du lexique, l'intrus lexical, les motifs de `mesure-tics-lot`, les
+mots de 9 lettres exclusifs et le mot fétiche (`sonde/atelier.js`, `sonde/essai.js`, et la nouvelle
+`sonde/fiche.js` qui donne, pour une question, ce qu'il faut pour basculer chaque indice), puis posée
+par `sonde/pose.js` (refus si la bonne réponse est visée ou si un bloc JSON casse). Aucune de ces
+options n'était une correction de contre-relecture.
+
+**Relecture par contradiction des dix options** : toutes fausses, précises, en français correct ;
+l'`explain` de chaque question les réfute toujours (lecon-06 q2 : « on ignore la chauffe du moteur »
+contre « à froid … le premier appel » ; lecon-09 q2 : « Chaque fil a sa mémoire » contre « même
+document » ; lecon-04 q2 : « un tableau d'octets partagé » contre « une copie des objets
+JavaScript »). Deux restent moins bonnes qu'avant, à revoir en contre-relecture indépendante :
+lecon-08 q2 opt3 a perdu « main() » (la thèse « renommer suffit à exposer » est fausse, mais moins
+précise : renommer en quoi ?) ; lecon-08 q3 opt3 est télégraphique. Les variantes plus précises
+cassaient toutes la densité, la longueur ou l'égalité des mots de 9 lettres.
+
+### Ce qui reste, sans arrondir
+
+- **ECARTER la plus dense sur la fenêtre 04-07 : 28,2 %** (13 questions, la bonne réponse n'y est la
+  plus dense que deux fois). Une troisième désignation dans les leçons 04 à 06 repousse 01-04, 02-05
+  ou 03-06 au-dessus de 27,5 % ; une désignation seule dans la leçon 07 repousse 05-08 ; il faudrait
+  une **égalité** de densité dans la leçon 07, et aucune n'a été trouvée sous les contraintes (q2 :
+  l'égalité impose 63 lettres en 12 mots, soit pile la longueur de la bonne réponse, ou 42 lettres en
+  8 mots, sous la bande des 70 % ; q3 : il faudrait
+  toucher deux options ; q4 : l'égalité impose 51 lettres en 14 mots à l'option qui doit rester plus
+  longue que la bonne réponse, ce qui la rend plus courte). Sur le cours entier, ECARTER la plus dense
+  vaut 25,3 %.
+- Par fenêtre, les stratégies de **rang** dépassent 27,5 % là où elles dépassaient déjà avant la
+  reprise, à l'identique (les rangs n'ont pas bougé) : la DEUXIÈME plus longue 30,8 % sur 04-07, la
+  plus longue, la DEUXIÈME et COMBINÉ 28,6 % sur 05-08. Une question y vaut 7 à 8 points ; `--lots`
+  reste muet.
+- Les signalements de la première passe sont inchangés (lecon-10 q4 « Compute@Edge », `explain` de
+  lecon-04 q1 et de lecon-07 q3, lecon-06 et l'instanciation sans colle) ; lecon-11 q4 n'en fait plus
+  partie.
+- La contre-relecture indépendante reste à faire par l'orchestrateur.
