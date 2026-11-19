@@ -265,3 +265,119 @@ lancé). **48 OK, 6 signalés, aucun inattendu** — sortie brute :
 
 `doc-ref`, `doc-rec`, `contenu`, `exemple`, `python`, `caract`, les études 1 à 5 et toutes les
 étapes de rejeu (`rj-*`) sont vertes.
+
+## 9. Reprise après la contre-relecture (le dosage qui restait)
+
+La contre-relecture indépendante (commit `075ddbdb`, 28 corrections) a rendu faux six distracteurs
+vrais par accident, corrigé la bonne réponse du bilan q1 (« basse ≈ déterministe »), précisé deux
+énoncés du bilan (q3, q5) et la solution de l'exercice 2 de `lecon-06`. Ses retouches des leçons
+07 à 12 avaient rouvert le lexique et la densité ; la reprise les referme **sans défaire leur sens**
+(chaque distracteur qu'elle a rendu faux le reste, avec sa thèse ; les énoncés précisés et la bonne
+réponse corrigée restent tels quels). Seuls des distracteurs ont été touchés.
+
+### Avant / après
+
+Avant = `075ddbdb` (après la contre-relecture) ; après = `dac5d6ed`. Mesures brutes :
+`scratchpad/c8-llm/reprise/avant/`, `r1/`, `r2/`. Numérotation : « `lecon-NN` qK » est celle de
+`mesure-lexique-qcm` (1 à 3 par leçon) ; « bilan qK » est celle de la contre-relecture (0 à 11).
+
+| indice | avant | après | commande |
+|---|---:|---:|---|
+| la plus longue | 25,0 % | 25,0 % | `node tools/mesure-biais-qcm.js --seul=llm` |
+| pire des 44 stratégies | **29,2 %** (la plus dense, 14 questions) | **27,1 %** (la plus dense, 13 questions) | id. |
+| ECARTER la plus dense | 23,6 % | 24,3 % | id. |
+| le mot technique exclusif / ECARTER | 26,9 % / 20,3 % (tranche 27 questions) | 25,7 % / 21,5 % (tranche 24) | id. |
+| l'attaque unique | 26,6 % (1 question, rendement 100 % : bilan q1, « L'aléatoire » seule sans « La ») | 25,0 % (ne tranche plus) | id. |
+| l'écho de la question / ECARTER | 24,7 % / 24,7 % (bilan q5 : « exécute » dans l'option 1 seule ; bilan q11 : « faits » absent de l'option 2) | **25,0 % / 25,0 %** (ne tranche plus) | id. |
+| la moins bavarde / ECARTER | 25,3 % / 24,3 % | 24,3 % / 24,3 % | id. |
+| la plus détaillée, la seule qui nie, la barre oblique | 25,2 %, 25,2 %, 24,5 % (une question chacune) | 25,0 % (ne tranchent plus) | id. |
+| lexique : exploitables / retournées / à mettre en forme | **9 / 7 / 9** | **0 / 0 / 0** | `node tools/mesure-lexique-qcm.js --liste=llm` |
+| intrus lexical DÉFAUT direct / INVERSE | 23,4 % / 25,5 % (3 questions) | 25,0 % / 25,0 % | `node tools/mesure-mot-question.js llm` |
+| tics de forme à un seul porteur (atelier) | 3 questions (`lecon-03` q1, `lecon-06` q1, bilan q11) | 0 | `scratchpad/c8-llm/sonde/atelier.js` |
+| biais inverse (`--toutes`) | 0 alerte (pire 26,7 %) | 0 alerte (pire : mot technique exclusif 27,1 %, voir « ce qui reste ») | `node tools/mesure-biais-inverse.js --toutes llm` |
+| mots fétiches | 0 alerte (`réponse` 28,0 % ECARTER, juste sous le seuil) | 0 alerte (`réponse`, `modèle` 27,8 % ; `chaque` 27,6 %) | `node tools/mesure-mot-fetiche.js llm` |
+| tics de lot | 0 | 0 | `node tools/mesure-tics-lot.js llm` |
+| `--lots`, `--lots=3` | aucune fenêtre `llm` | aucune fenêtre `llm` | `node tools/mesure-biais-qcm.js --lots` |
+| rangs de la bonne réponse | 12 / 12 / 12 / 12 | 12 / 12 / 12 / 12 | `node tools/plan-rangs-qcm.js llm` |
+| explications orphelines | 0 | 0 (6 cas indicatifs, les mêmes) | `node tools/mesure-explain-orpheline.js --depuis=8d163bf --seul=llm` |
+| intouchable | 3 atteintes, toutes de la contre-relecture | **les mêmes 3**, aucune de la reprise | `node tools/mesure-qcm-intouchable.js llm 8d163bf` |
+
+Les trois atteintes déclarées (contre-relecture) : bonne réponse du bilan q1 (« basse = » →
+« basse ≈ déterministe », prouvée par le rejeu de la température) et énoncés du bilan q3 et q5.
+
+### Les retouches (15 écritures, 14 options, 14 questions, 2 commits)
+
+**`cc0b866b` — lexique et densité (10 options).** À chaque fois, la thèse fausse posée par la
+contre-relecture est gardée ; seuls des mots changent :
+
+| question | avant (contre-relecture) | après | ce qui est refermé |
+|---|---|---|---|
+| `lecon-07` q1 opt 3 | une clé par **utilisateur** … le contrat du serveur | une clé par **client** … le contrat **d'usage** du serveur | k 3 → 2 (« utilisateur » absent de la page), mot long exclusif |
+| `lecon-07` q2 opt 1 | réponses plus **variées** et osées | réponses plus **variables** et osées | k 1 → 0 ; un mot long exclusif rendu à l'option, comme avant |
+| `lecon-07` q3 opt 3 | (copier, coller, sauter les tests, livrer) | (copier, coller, sauter les tests, **laisser les erreurs**, livrer) — version finale du 2ᵉ commit | la bonne n'y est plus seule la plus dense (4,91 > 4,84) ; cinq virgules comme les trois autres (« la plus détaillée ») |
+| `lecon-10` q3 opt 3 | (performance **supérieure**) … doubler max_tokens au premier échec **serveur** | (performance **énorme**) … doubler max_tokens au premier échec **fournisseur** | k 2 → 1 ; densité 6,07 > 6,00 (la bonne ne devient pas la plus dense) ; deux mots longs exclusifs comme les trois autres |
+| bilan q0 opt 1 | **Retrouver** le fait le plus probable | **Renvoyer** le fait **stocké** le plus probable | w 2 → 3 ; plus de mot long exclusif (« retrouver ») |
+| bilan q1 opt 3 | **La tarification du token** (basse = réductions) | **Le système de tarification** (basse = réductions) | w 2 → 3 ; l'attaque unique (« L'aléatoire » seule face à trois « La ») |
+| bilan q3 opt 1 | tout message **ré-entraîne** ses poids | **l'historique forme** ses poids (« former » = entraîner) | k 1 → 0 ; « historique » de nouveau partagé avec la bonne (mot exclusif) |
+| bilan q5 opt 1 | (il **exécute lui-même** l'outil) | (il **lance seulement** l'outil **fourni**) | k 3 → 2 ; écho de l'énoncé (« exécute »), « seulement » dans trois options sur quatre (intrus, absolus) |
+| bilan q7 opt 3 | lever **toute** limite **d'étapes** | lever **la** limite **des actions de chaque boucle** | w 5 → 7 ; « étapes » dans trois options (intrus DÉFAUT) |
+| bilan q11 opt 2 | (**un ton plus ferme**) | (**réclamer les faits**) | k 1 → 2, w 3 → 4 ; « faits » de nouveau dans les quatre options (intrus, écho) ; plus de parenthèse ouverte par un article dans une seule option |
+
+**`dac5d6ed` — cinq signaux d'une seule question, rouverts eux aussi par la contre-relecture**
+(sous les seuils des outils, mais chacun désignait une option sur sa question) :
+
+| question | avant | après | ce qui est refermé |
+|---|---|---|---|
+| `lecon-03` q1 opt 3 | (réponses passées du LLM **devenues** inutiles) | (**les** réponses passées du LLM **restent** inutiles) | parenthèse à article et verbe conjugué portés par la seule option 1 |
+| `lecon-06` q1 opt 3 | (accès total), **et** il suit | (accès total), **mais** il suit | virgule avant « et » dans une seule option |
+| `lecon-07` q3 opt 3 | … sauter les tests, **brancher**, livrer (mon 1ᵉʳ commit) | … sauter les tests, **laisser les erreurs**, livrer | « brancher » sans complément refaisait le défaut que la contre-relecture avait relevé (« couper, sauter » : verbes nus pour imiter la liste de la bonne) |
+| `lecon-08` q2 opt 3 | aux tests **A/B** de la production | aux tests **en ligne** de la production | barre oblique seule ; la thèse de la contre-relecture (le juge réservé à l'évaluation en ligne, alors qu'il note le jeu figé hors ligne) est gardée |
+| bilan q9 opt 1 | **vérifier** chaque citation **de la réponse** | **refuser** chaque citation **non vérifiable** | « la seule qui nie » (négation dans trois options) ; le mot exclusif désigne de nouveau ce distracteur (bilan q9 : 0,5 → 0 pour la stratégie directe). Pas de contradiction : on ne « vérifie » plus l'invérifiable (objection de la contre-relecture) |
+
+**Retouches de sens : aucune.** Points qu'une relecture experte doit regarder : « il lance
+seulement l'outil fourni » (lancer = exécuter, c'est la thèse fausse ; la bonne dit « demande
+seulement l'appel ») ; « réclamer les faits » (l'autorité du prompt ne crée pas de savoir, thèse
+de la contre-relecture ; ce n'est pas fournir les faits) ; « une clé par client » (lu « client =
+navigateur » ou « client = utilisateur final », la thèse reste fausse) ; « performance énorme » et
+« échec fournisseur » sont d'un registre un peu familier. **Rien n'a été exécuté** : aucune
+retouche ne touche un calcul, un code ou un fait vérifiable par exécution.
+
+Méthode : chaque lot simulé en mémoire (`scratchpad/c8-llm/sonde/atelier.js`, `LLM_DIR` ajouté
+pour mesurer l'état d'avant la contre-relecture, exporté de `d3a48ace` dans
+`scratchpad/c8-llm/reprise/avant-cr/`), posé par `pose2.js` (refuse la bonne réponse, reparse
+chaque bloc), vérifié par `controle.js` contre `HEAD`, puis par les outils officiels. Le
+vocabulaire de chaque page a été lu mot à mot (`vocab.js`, `k.js`) : « exiger », « appelé »,
+« ré-entraîne », « modifie », « montant », « doubler », « utilisateur » ont été écartés parce
+qu'ils changeaient `k`.
+
+### Ce qui reste
+
+- **La plus dense à 27,1 % (13 questions sur 48)**, comme avant la contre-relecture : sous les
+  27,5 % de la cible, mais à UNE question près ; toute retouche future qui rend une bonne réponse
+  seule la plus dense la fait passer à 29,2 %. Les plus petites marges : `lecon-12` q3 du quiz
+  (bonne 4,87 contre 4,70), `lecon-09` q2 (4,63 contre 4,43), `lecon-12` q2 du quiz (5,50 contre
+  5,19), `lecon-07` q2 (5,22 contre 4,90).
+- **Mot technique exclusif** : 25,7 % en directe, et 27,1 % dans le sens INVERSE de
+  `mesure-biais-inverse --toutes` (3 désignations uniques de la bonne contre 13 de distracteurs ;
+  26,7 % avec 3 contre 12 avant la contre-relecture). La 13ᵉ est `lecon-04` q2 (« Le
+  fournisseur », seul mot de 9 lettres, posé par la contre-relecture). Restent aussi, de la
+  contre-relecture, quatre désignations multiples qui contiennent la bonne (`lecon-01` q3,
+  `lecon-02` q1 et q3, `lecon-08` q3) : non touchées, la mission était bornée et tout est sous
+  les seuils ; les fermer ferait monter l'inverse.
+- Mots fétiches `réponse` et `modèle` à 27,8 %, `chaque` à 27,6 % (seuil 28 %) ; tic « message
+  système » à 27,1 % (d'avant).
+- Index dérivés et pages dérivées : comme au § 6 (à régénérer à la fusion).
+
+### Vérifications de la reprise (sur `dac5d6ed`)
+
+- `node tools/verif-html.js` : aucun problème ; `node tools/verif-contenu.js --cas-reel
+  --cours=llm` : 12 « Cas réel » sur 12 conformes (aucun encadré touché) ; blocs JSON des 12
+  leçons valides, 0 CR, 0 BOM (`scratchpad/c8-llm/reprise/cr.js`).
+- `node tools/verif.js --rapide` (54 vérificateurs, 692 s, `--mutations` jamais lancé ; sortie :
+  `scratchpad/c8-llm/reprise/verif-rapide.txt`) : **les six mêmes étapes signalées qu'au § 8**,
+  aucune autre. `donnees` compte maintenant 8 erreurs I18 au lieu de 6 : les deux en plus sont
+  les deux énoncés du bilan précisés par la contre-relecture (« Une API de LLM, entre deux
+  appels… », « qui exécute la fonction ? »), encore sous leur ancienne forme dans
+  `quiz-index.js` — index à régénérer à la fusion. `etude-6` : même ligne qu'au § 8 (taille des
+  blocs de code, que la solution de l'exercice 2 de `lecon-06` corrigée par la contre-relecture
+  a encore changée) ; la reprise n'a touché aucun bloc de code.
