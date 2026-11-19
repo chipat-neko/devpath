@@ -107,8 +107,14 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 > **98,7 % VRAI, 1,3 % INEXACT (2 dates), 0 INVÉRIFIABLE, 0 INVENTÉ** — contre 19,3 % VRAI,
 > 21,3 % INEXACT, 58,0 % INVÉRIFIABLE et 1,3 % INVENTÉ au départ. Les deux dates sont corrigées.
 > Verdicts : `tools/cas-reels/b13-verdicts.json`. `--rapide` 54/54.
-> **Prochaine case : C1** (préparer la phase C, les QCM des 22 cours restants) — ne pas la lancer
-> sans l'accord de Noah.
+>
+> **✅ C1 DU V18 FAITE (2026-11-19), 20 cases sur 61 — la phase C est prête.** Les trois indices que
+> les relecteurs de B4 avaient vus sur des lots (intention prêtée au moteur, tics rhétoriques, absolus
+> stricts) valent le hasard sur les 6 167 questions (25,0 / 26,0 / 25,5 %) : aucune stratégie neuve,
+> la liste des 44 est complète. Consigne commune : `tools/qcm-lots/consigne-ecriture.md` (un agent par
+> cours) et `consigne-contre-relecture.md` (relecteur indépendant). Les 22 cours, remesurés, ont les
+> chiffres du plan ; ordre confirmé, sauf `compilation` (44,2), à traiter au 10ᵉ rang.
+> **Prochaine case : C2 (`cloud`)**, puis C3 à C10, C21, C11… — ne pas la lancer sans l'accord de Noah.
 > Outils, registre des foyers et modèles de consigne dans `tools/cas-reels/lots/`.
 
 ---

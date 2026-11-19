@@ -1138,13 +1138,86 @@ fautes (12,8 à 29,0 % au V16). La bonne réponse et son explication sont **into
 faute prouvée par exécution. **Cible par cours** : « la plus longue » vers 25 %, et aucune
 stratégie nettement au-dessus.
 
-- [ ] **C1 · Préparer la phase.** (a) Mesurer **sur le site entier** les trois indices que les
+- [x] **C1 · Préparer la phase.** (a) Mesurer **sur le site entier** les trois indices que les
       relecteurs de B4 n'ont vus que sur des lots (F4) : l'intention prêtée au moteur (30,1 % sur
       un lot), les tics rhétoriques (38,8 %), les absolus que notre motif sous-estime (34,7 %). Ceux
       qui restent exploitables à l'échelle du site entrent dans `tools/mesure-biais-qcm.js`, avec
       leur épreuve, **avant** C2 — sinon les 22 cours seraient traités contre une liste incomplète.
       (b) Écrire la consigne commune de la phase, d'après les consignes de B4. (c) Remesurer les 22
       cours et confirmer l'ordre ci-dessous (nocivité = questions × taux de la meilleure stratégie).
+
+      **COCHÉ le 2026-11-19** (décision de Noah : « C1, préparer la phase C »).
+
+      **(a) Aucun des trois n'est exploitable sur le site : rien n'entre dans l'outil.** Sonde
+      `scratchpad/c1-sonde/sonde.js` (versionnée) : elle CHARGE le corpus par
+      `mesure-biais-qcm.js` (`require`, jamais une copie) et joue chaque marque dans les trois sens
+      — ÉCARTER l'option qui la porte, RESTREINDRE aux options qui la portent, choisir la SEULE qui la
+      porte. Sur les **6 167 questions** :
+
+      | indice (F4) | motif | écarter | restreindre | pire cours |
+      |---|---|---:|---:|---|
+      | intention prêtée au moteur | 47 formes d'intention (« décide », « choisit », « devine », « tout seul »…), 636 options | 25,0 % | 24,9 % | 29,9 % (`vscode`, restreindre) |
+      | id., avec le sujet (« le moteur », « le navigateur »… à moins de 40 signes) | 218 options marquées | 25,0 % | 24,9 % | 28,6 % (`http`) |
+      | tics rhétoriques sans la glose (clause méta, « de son côté », « , lui, », « seul / direct ») | 2 263 options | 26,0 % | 22,9 % | 32,4 % (`neurones`, restreindre) |
+      | absolus, motif restreint (sans « rien » ni « n'existe pas ») | 2 022 options | 25,5 % | 24,1 % | 30,8 % (`offensive`, restreindre) |
+      | absolus, motif strict élargi (« forcément », « garanti », « sans exception »…) | 1 430 options | 25,3 % | 24,5 % | 30,8 % (`cicd`) |
+
+      Tous dans la bande que B1 a jugée au niveau du hasard (26,3 à 30,2 % sur le site : tiret,
+      absolus, prudence). Les chiffres du F4 (30,1, 38,8 et 34,7 %) étaient ceux d'un LOT : c'est le
+      **tic de lot** (le 47ᵉ indice du V16), que `mesure-biais-qcm.js --lots` et `mesure-tics-lot.js`
+      surveillent déjà — la consigne de la phase demande qu'ils restent muets. **Un seul signal
+      monte**, et il n'est pas neuf : « restreindre aux options qui portent un tic » rend 36,2 % sur
+      les 22 cours restants (46,5 % `erlang`, 46,4 % `kubernetes`) — mais seulement avec la **glose
+      finale entre parenthèses** ; sans elle, 26,0 %. C'est l'indice de la parenthèse, que l'outil
+      mesure déjà, et plus haut (`erlang` 68,2 %, `groovy` 69,0 %, `markdown` 66,1 %). Aucune
+      stratégie neuve, donc aucune épreuve neuve ; la liste des 44 est complète pour la phase C.
+
+      **(b) La consigne commune** : `tools/qcm-lots/consigne-ecriture.md` (un agent par cours, dans sa
+      copie `D:\test-claude-c<N>-<cours>`, branche `v18/c<N>-<cours>`) et
+      `tools/qcm-lots/consigne-contre-relecture.md` (un relecteur INDÉPENDANT, en lecture seule, une
+      entrée JSON par option relue). Reprise de la consigne des neuf derniers cours de B4, sans rien
+      en retirer, avec ce que la phase B du V18 a appris : la **contre-relecture indépendante** devient
+      une étape (22,6 % de fautes après l'auteur en phase B) ; les encadrés « Cas réel », vérifiés et
+      désormais bloquants, ne se touchent pas, et un QCM qui en parle doit dire la même chose ; le
+      shell d'un agent démarre dans le dépôt principal, aucun téléchargement en arrière-plan ; les
+      outils d'exécution disponibles (Node 26, Python 3.14, Java 27, .NET 10, Zig, Lua, Erlang/OTP,
+      PHP et Ruby en WebAssembly, `D:\outils-b4\`, Compiler Explorer).
+
+      **(c) Les 22 cours remesurés** (`scratchpad/c1-sonde/cours22.js`, qui lit `--json`) : chiffres
+      **identiques à ceux du plan**, à une exception près (`offensive`, « la plus détaillée » 52,7 →
+      53,0 %, après la réécriture du QCM 4 de `lecon-09` au nettoyage du lot 9). Site : 6 167 questions,
+      « la plus longue » 33,5 %.
+
+      | case | cours | questions | la plus longue | la plus détaillée | parenthèse | nocivité |
+      |---|---|---:|---:|---:|---:|---:|
+      | C2 | `cloud` | 53 | 92,5 % | 77,2 % | 51,9 % | 49,0 |
+      | C3 | `reseaux` | 52 | 92,9 % | 77,6 % | 45,2 % | 48,3 |
+      | C4 | `wasm` | 50 | 96,0 % | 82,5 % | 49,5 % | 48,0 |
+      | C5 | `ml` | 52 | 92,3 % | 70,5 % | 43,8 % | 48,0 |
+      | C6 | `erlang` | 54 | 88,9 % | 72,2 % | 68,2 % | 48,0 |
+      | C7 | `ada` | 49 | 96,6 % | 76,0 % | 62,8 % | 47,3 |
+      | C8 | `llm` | 48 | 97,9 % | 71,5 % | 60,9 % | 47,0 |
+      | C9 | `fortran` | 54 | 87,0 % | 74,2 % | 61,9 % | 47,0 |
+      | C10 | `groovy` | 54 | 87,0 % | 70,4 % | 69,0 % | 47,0 |
+      | C11 | `patterns` | 45 | 97,8 % | 71,5 % | 61,7 % | 44,0 |
+      | C12 | `http` | 48 | 89,6 % | 71,5 % | 58,3 % | 43,0 |
+      | C13 | `graphql` | 45 | 93,3 % | 74,8 % | 55,0 % | 42,0 |
+      | C14 | `kubernetes` | 48 | 87,5 % | 55,2 % | 59,4 % | 42,0 |
+      | C15 | `cicd` | 43 | 93,0 % | 79,8 % | 49,4 % | 40,0 |
+      | C16 | `markdown` | 45 | 88,9 % | 73,1 % | 66,1 % | 40,0 |
+      | C17 | `distribue` | 69 | 5,6 % | 56,8 % | 26,1 % | 39,2 |
+      | C18 | `neurones` | 65 | 15,4 % | 59,4 % | 25,0 % | 38,6 |
+      | C19 | `formats` | 45 | 84,4 % | 71,9 % | 55,0 % | 38,0 |
+      | C20 | `regex` | 44 | 85,8 % | 50,8 % | 52,5 % | 37,8 |
+      | C21 | `compilation` | 72 | 52,1 % | 61,3 % | 28,1 % | **44,2** |
+      | C22 | `vscode` | 46 | 81,2 % | 56,2 % | 52,2 % | 37,3 |
+      | C23 | `offensive` | 69 | 37,7 % | 53,0 % | 36,0 % | 36,6 |
+
+      (« parenthèse » : la meilleure des deux stratégies de l'incise ; nocivité = questions × taux de
+      la meilleure stratégie, qui est « la plus longue » partout sauf `distribue`, `neurones`,
+      `compilation` et `offensive`, où c'est « la plus détaillée »). **Ordre confirmé, avec une
+      exception** : `compilation` (44,2) se classe 10ᵉ, juste après `groovy` — à traiter à ce rang ;
+      les numéros de case ne changent pas.
 - [ ] **C2 · `cloud`** — 53 questions, la plus longue 92,5 %.
 - [ ] **C3 · `reseaux`** — 52 questions, 92,9 %.
 - [ ] **C4 · `wasm`** — 50 questions, 96,0 %.
