@@ -184,4 +184,9 @@ profil Ravenscar (cité dans un « Cas réel », non touché) — vérifiés par
 - `node tools/verif-contenu.js` : code 0, 1 551 « Cas réel » conformes.
 - `node tools/verif-donnees.js` : I18 en erreur (index périmés : attendu, l'orchestrateur régénère) ;
   avertissements I17, I19, I25 (anciens, déjà relevés au V16).
-- `node tools/verif.js --rapide` : voir ci-dessous.
+- `node tools/verif.js --rapide` (1 424 s, machine partagée avec les autres agents) : 54 étapes jouées,
+  **4 signalées, toutes attendues** : `donnees` (I18, index périmés), `qcmbiai` et `qcmlexi` (« ada a
+  PROGRESSÉ, longueur 96,6 % → 26,5 %, sans que le gain soit figé » : référence à refiger par
+  l'orchestrateur), `normatf` (8 chiffres du site cités par `doc/lecon-0*` : taux et nombre de questions
+  conformes à S3 — 805 manquements, 86,8 %… —, S4 69 / 89 cours, corpus de l'ancienne clause ; ils bougent
+  parce que les QCM d'`ada` ont changé). Aucune autre étape en échec. `--mutations` non lancé.
