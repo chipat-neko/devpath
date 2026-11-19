@@ -176,5 +176,24 @@ commit de clôture (ce rapport, contre-relecture).
 
 `verif-html` 0 problème ; 29 blocs JSON (quiz, bilan, exos) valides ; 0 BOM, 0 CR ;
 `verif-contenu` code 0 (1 551 « Cas réel » conformes) ; `verif-donnees` : seule l'erreur attendue
-I18 (index périmés) et 3 avertissements anciens (I17, I19, I25) ; `verif.js --rapide` : voir le
-message de clôture.
+I18 (index périmés) et 3 avertissements anciens (I17, I19, I25).
+
+`node tools/verif.js --rapide` (1 575 s ; 54 étapes jouées sur 83) : 7 étapes signalent, code 1.
+
+- Attendues : `qcmbiai` et `qcmlexi` (erlang a progressé sans que le gain soit figé : la plus
+  longue 88,9 → 24,1 %, STRICTE 11,8 → 0,0 % ; cliquets non refigés, comme la consigne le
+  demande), `donnees` (seule l'erreur I18), `normatf` (8 contrôles de la page `doc`, hors erlang).
+- Causées par cette branche, sur une page dérivée que je n'ai pas le droit de toucher : `etudes` et
+  `etude-6`. `pages/etude-inconnu.html` publie « 6560,6 Ko » de code ; la mesure du jour rend
+  6560,9 Ko. L'écart (+277 octets de code, 13 177 blocs inchangés) vient de mes deux corrections
+  de blocs de code : la solution de l'exercice 2 de lecon-10 (+66 octets, `update_counter/4`) et la
+  sortie réelle de Dialyzer en lecon-11 (+211 octets). À régénérer par l'assembleur de l'étude
+  après la fusion.
+- Instable : `vexec` (`pages/execution.html` n'a pas chargé ses scripts pendant la chaîne, sous la
+  charge) ; rejoué seul (`node tools/verif-execution.js`) : 0 problème, code 0.
+
+Étapes que ce mode ne joue pas et que mes changements touchent, jouées à part :
+`node tools/preuves/exos-texte.js` sur les six leçons dont un exercice a changé (lecon-04, 05, 10,
+11, 13, 14) : 16 réponses publiées tapées, 16 acceptées ; avec `--contre` : 16 réponses fausses,
+16 refusées. `node tools/mesure-explain-orpheline.js --depuis=master --seul=erlang` : aucune
+explication orpheline (53 explains intouchées mesurées).
