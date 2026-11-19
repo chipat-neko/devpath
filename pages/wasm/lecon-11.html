@@ -213,7 +213,7 @@ fn main() {
     ecrire_png(&amp;format!("gris-{chemin}"), &amp;img);
 }</code></pre></figure>
 <figure class="code-block" data-file="terminal.sh"><pre><code># compiler pour la cible WASI, puis exécuter avec un runtime
-cargo build --target wasm32-wasi --release
+cargo build --target wasm32-wasip1 --release
 wasmtime --dir=. filtre.wasm photo.png        # → gris-photo.png
 
 # traiter tout un dossier en lot
@@ -240,7 +240,7 @@ for f in *.png; do wasmtime --dir=. filtre.wasm "$f"; done</code></pre></figure>
 <div class="steps">
 <div class="step"><h3>1. Le cœur</h3><p>Écris le filtre (<code>niveaux_de_gris</code>, puis <code>luminosite</code>) en Rust ou C, sur un tampon RGBA <em>sur place</em>, et compile-le en <code>.wasm</code> (<code>wasm-pack</code> / <code>emcc</code>).</p></div>
 <div class="step"><h3>2. La page + le Worker</h3><p>Charge une image dans un canvas, envoie ses pixels à un Worker (transfert de tampon), applique le filtre côté Wasm, réaffiche avec <code>putImageData</code>.</p></div>
-<div class="step"><h3>3. Hors du web</h3><p>Recompile le cœur pour <code>wasm32-wasi</code>, exécute-le avec <code>wasmtime</code> sur un fichier, puis en boucle sur un dossier. Vérifie que le résultat est identique.</p></div>
+<div class="step"><h3>3. Hors du web</h3><p>Recompile le cœur pour <code>wasm32-wasip1</code>, exécute-le avec <code>wasmtime</code> sur un fichier, puis en boucle sur un dossier. Vérifie que le résultat est identique.</p></div>
 </div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Mini-projet</span><span class="exercise__level">Capstone</span></div><p>Réalise ton studio. Quand tu as essayé, déplie un plan de référence.</p><details><summary>Voir un plan de référence</summary><figure class="code-block" data-file="plan-projet.txt"><pre><code>Projet : « Studio d'image WebAssembly »
 
@@ -259,7 +259,7 @@ Déroulé (navigateur) :
      le filtre.wasm les parcourt, le résultat revient et s'affiche — sans gel.
 
 Déroulé (hors navigateur, bonus WASI) :
-  cargo build --target wasm32-wasi --release
+  cargo build --target wasm32-wasip1 --release
   wasmtime --dir=. filtre.wasm photo.png        →  gris-photo.png
   for f in *.png; do wasmtime --dir=. filtre.wasm "$f"; done   (lot)
 
@@ -290,7 +290,7 @@ Vérifications :
       <tr><td>Passer les pixels</td><td>mémoire linéaire, tampon RGBA <code>&amp;mut [u8]</code></td><td>04</td></tr>
       <tr><td>Franchir la frontière</td><td><code>#[wasm_bindgen]</code> expose la fonction</td><td>08</td></tr>
       <tr><td>Ne pas bloquer</td><td>Web Worker + <code>postMessage</code> (transfert)</td><td>09</td></tr>
-      <tr><td>Réutiliser hors web</td><td><code>wasm32-wasi</code> + <code>wasmtime --dir=.</code></td><td>10</td></tr>
+      <tr><td>Réutiliser hors web</td><td><code>wasm32-wasip1</code> + <code>wasmtime --dir=.</code></td><td>10</td></tr>
     </tbody>
   </table>
 </figure>
@@ -339,7 +339,7 @@ Vérifications :
 
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Après <code>worker.postMessage(image, [image.data.buffer])</code>, tu tentes de relire <code>image.data</code> côté page pour l'afficher tout de suite&nbsp;: le tableau est vide. Pourquoi&nbsp;? Comment obtenir l'image filtrée&nbsp;?</p><details><summary>Voir une solution</summary><p>Parce que tu as <strong>transféré</strong> le tampon&nbsp;: sa propriété est passée au Worker, et le tableau d'origine côté page est désormais <strong>détaché</strong> (longueur 0). C'est le prix — et l'intérêt — du transfert&nbsp;: aucune copie, mais l'émetteur perd l'accès. Pour afficher l'image filtrée, il ne faut pas relire <code>image.data</code> tout de suite&nbsp;; il faut <strong>attendre la réponse</strong> du Worker dans <code>worker.onmessage</code>, où l'on récupère le tampon (rempli par le filtre) et où l'on appelle <code>putImageData(e.data, 0, 0)</code>. Si tu voulais vraiment garder une copie côté page, il faudrait <em>copier</em> les pixels avant l'envoi (mais on perdrait le zéro-copie).</p></details></div>
 
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Ton studio filtre bien dans le navigateur. Un collègue veut appliquer le <em>même</em> filtre à 500 photos sur un serveur, la nuit, sans navigateur. Que lui proposes-tu, en réutilisant ton travail&nbsp;?</p><details><summary>Voir une solution</summary><p>Réutiliser le <strong>cœur de calcul tel quel</strong> — c'est tout l'intérêt d'avoir écrit <code>niveaux_de_gris</code> comme une fonction <strong>pure</strong> (sans DOM ni <code>fetch</code>). On la <strong>recompile pour <code>wasm32-wasi</code></strong> avec un petit <code>main()</code> qui lit un fichier, applique le filtre, écrit la sortie. Sur le serveur, on l'exécute avec un <strong>runtime WASI</strong> (<code>wasmtime</code>) en boucle sur le dossier&nbsp;: <code>for f in *.png; do wasmtime --dir=. filtre.wasm "$f"; done</code>. Avantages&nbsp;: <strong>un seul code</strong> pour le web et le serveur (pas de version parallèle qui divergerait), le même <strong>bac à sable par capacités</strong> (le module ne voit que le dossier accordé par <code>--dir</code>), et une <strong>portabilité</strong> totale du binaire, indépendante de l'OS et du processeur du serveur.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Ton studio filtre bien dans le navigateur. Un collègue veut appliquer le <em>même</em> filtre à 500 photos sur un serveur, la nuit, sans navigateur. Que lui proposes-tu, en réutilisant ton travail&nbsp;?</p><details><summary>Voir une solution</summary><p>Réutiliser le <strong>cœur de calcul tel quel</strong> — c'est tout l'intérêt d'avoir écrit <code>niveaux_de_gris</code> comme une fonction <strong>pure</strong> (sans DOM ni <code>fetch</code>). On la <strong>recompile pour <code>wasm32-wasip1</code></strong> avec un petit <code>main()</code> qui lit un fichier, applique le filtre, écrit la sortie. Sur le serveur, on l'exécute avec un <strong>runtime WASI</strong> (<code>wasmtime</code>) en boucle sur le dossier&nbsp;: <code>for f in *.png; do wasmtime --dir=. filtre.wasm "$f"; done</code>. Avantages&nbsp;: <strong>un seul code</strong> pour le web et le serveur (pas de version parallèle qui divergerait), le même <strong>bac à sable par capacités</strong> (le module ne voit que le dossier accordé par <code>--dir</code>), et une <strong>portabilité</strong> totale du binaire, indépendante de l'OS et du processeur du serveur.</p></details></div>
 
 <script type="application/json" data-quiz-bilan>
 [
