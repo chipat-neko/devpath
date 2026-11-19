@@ -92,29 +92,15 @@ réécrits chaque heure dans [`ETAT-AUTONOMIE.md`](ETAT-AUTONOMIE.md), juste à 
 > (décision de Noah), l'invérifiable retiré. La contre-relecture trouve encore **28,6 %** de fautes
 > (22,7 % sur les lots 1 à 8). Conformes : **1 426** sur 1 551 (91,9 %). `--rapide` 54/54.
 >
-> **🟠 B12 DU V18 EN COURS (2026-11-18) — le lot 9, dix cours, 125 « Cas réel » : FUSIONNÉ, PAS CLOS.**
-> Les cinq branches d'écriture sont dans `master` (`708296d`, `f56f2cb`, `7531114`, `3827e4f`,
-> `742f67c`), contre-relues : **26 corrigés sur 125, 20,8 %** [14,6 ; 28,7] (cumul des lots 1 à 9 :
-> 350/1 551 = **22,6 %** [20,6 ; 24,7]). **Conformes : 1 551 sur 1 551** (`--cas-reel` 0 hors règle).
-> Noah a demandé l'arrêt ici ; la case reste **décochée**. Pour la clore, dans l'ordre :
-> 1. la branche **`v18/b12-nettoyage`** (copie `D:\test-claude-b12-nettoyage`, 4 commits sur
->    `3827e4f`, rapport `en-cours/rapports-v18/b12-nettoyage.md`) est commitée mais **NON fusionnée** :
->    `python/lecon-28` remplace la panne S3 (foyer `cloud/lecon-12`) par UniSuper et Google Cloud
->    (2024) ; 28 passages d'`offensive` hors encadré (méta, objectifs, antisèches, glossaires, QCM 4 et
->    exercices des leçons 09 et 10, explication du QCM 4 de la 11) mis d'accord avec les nouveaux cas ;
->    `offensive/12` « un mandat écrit et une lettre d'autorisation » ; 2 passages de `fsharp/09`.
->    → la **contre-relire** (le nouveau cas de python/28 et les passages réécrits), puis fusionner ;
->    trois points signalés par l'agent à trancher : la méta d'`offensive/11` (« arrêtée avant les
->    versions stables »), la bonne réponse du QCM 2 d'`offensive/11` (un fichier de test, la source
->    en nomme deux), la solution de l'exercice 1 d'`offensive/12` (« appartenait au comté »).
-> 2. registre : `foyers-ajouter.js scratchpad/v18-parallele/b12-reservations.txt "Pris par le lot 9
->    (B12, 2026-11-18)"` (les lignes de tête — Figma en `wasm/05`, The DAO, CryptoKitties, S3, Uber —
->    sont déjà faites), puis `doublons.js` → 3 sources partagées attendues ;
-> 3. `tours-point-fixe.sh` (index, `etude-inconnu.html`, chiffres du cours `doc`), contrôles
->    complets et `verif.js --rapide` ;
-> 4. compte rendu de B12 dans CHANTIER-V18 (fin de la phase B, 18/61), archive
->    (`b12-archive.sh` du scratchpad de session, modèle `b9-archive.sh`), retrait des six copies
->    `D:\test-claude-b12-*` et de leurs branches.
+> **✅ B12 DU V18 FAITE (2026-11-19), 18 cases sur 61 — le lot 9, dix cours, 125 « Cas réel ».**
+> 66 remplacés, 59 corrigés ; 2 INVENTÉS (l'équipe fictive « Rideau » d'`offensive`) ; la
+> contre-relecture trouve encore **20,8 %** de fautes (**22,6 %** sur les lots 1 à 9, 350/1 551 :
+> le taux n'a pas bougé en neuf lots). Nouveau : un agent de NETTOYAGE reprend ce que les
+> remplacements laissent faux hors des encadrés (QCM, exercices, antisèches qui racontaient encore
+> l'ancien récit), contre-relu à son tour. **Conformes : 1 551 sur 1 551 — tous les « Cas réel »
+> du site tiennent la règle.** `--rapide` 54/54.
+> **Prochaine case : B13** (le garde-fou des « Cas réel » devient bloquant ; rejouer l'échantillon
+> de B2 avec la même graine) — ne pas la lancer sans l'accord de Noah.
 > Outils, registre des foyers et modèles de consigne dans `tools/cas-reels/lots/`.
 
 ---

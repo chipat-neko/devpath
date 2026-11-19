@@ -991,7 +991,56 @@ notion de la leçon, ne disant que ce que dit la source.
       premier exemple ; le lot 9 (B12) devra remplacer LinkedIn 2012 (`crypto/lecon-07`), Adobe 2013
       (`crypto/lecon-08`), First American (`offensive/lecon-06`), Capital One (`cloud/lecon-06`) et
       Firesheep (`offensive/lecon-08`), dont les foyers sont désormais en `securite` et `http`.
-- [ ] **B12 · Lot 9.** (`solidity`, `offensive`, `graphql`, `ux`, `lisp`, `fsharp`, `cloud`, `patterns`, `wasm`, `crypto` — 19 suspects / 125) Idem.
+- [x] **B12 · Lot 9.** (`solidity`, `offensive`, `graphql`, `ux`, `lisp`, `fsharp`, `cloud`, `patterns`, `wasm`, `crypto` — 19 suspects / 125) Idem.
+
+      **COCHÉ le 2026-11-19** (décision de Noah : « Lot 9, le dernier »). Cinq agents partis de
+      `8c65449` (solidity et crypto ; offensive et cloud ; graphql et wasm ; ux et patterns ; lisp et
+      fsharp), dix contre-relectures, puis un agent de NETTOYAGE. **Lus : les 125.** Code et calculs
+      rejoués : Node 26 (octets de WebAssembly, débordement de `uint256`), Python 3.14 (SHAttered,
+      WEP, Yahoo, Debian), .NET 10 (`dotnet fsi`), Java 27.
+
+      **Trouvé** : 2 INVENTÉS (l'équipe fictive « Rideau » d'`offensive`, racontée comme réelle) ; des
+      sujets racontés plusieurs fois DANS un même cours (l'API GraphQL de GitHub cinq fois, Figma
+      quatre fois en `wasm`, The DAO, Parity et ERC-20 deux fois, Viaweb, Jet.com, l'async de 2007,
+      GOV.UK) ; des fautes de fond — Beanstalk a perdu environ 77 M$, pas 180 M$ (chiffre de presse) ;
+      la réponse « compile avec -DPURIFY » des développeurs d'OpenSSL à Debian n'a jamais existé ;
+      « le bouton à 300 millions » fondait deux histoires (Spool parle d'un BOUTON d'inscription
+      imposée, pas d'un champ) ; l'API v4 de GitHub (2016) était un accès anticipé ; la proposition
+      TC39 de pipe porte sur les « Hack pipes », pas sur l'opérateur de F#. **Fait** : **66 remplacés,
+      59 corrigés**, 0 « Scénario ». Rendus à leur foyer : TalkTalk, Samy, First American, Firesheep,
+      event-stream, Uber, Capital One, LinkedIn, Adobe, MapReduce, Mars Climate Orbiter, Tony Hoare,
+      QuickCheck, WebAIM Million. Foyers posés : The DAO (`solidity/06`), Parity (`solidity/16`),
+      CryptoKitties (`solidity/15`), Figma (`wasm/05`, cas jugé VRAI en B2), panne S3 (`cloud/12`).
+
+      **Contre-relecture** : une faute dans **26 cas sur 125 — 20,8 %** (Wilson [14,6 ; 28,7]), de
+      12,5 % (`offensive-cloud`) à 27,3 % (`graphql-wasm`) ; **cumul des lots 1 à 9 : 350/1 551,
+      22,6 %** [20,6 ; 24,7] — le taux n'a pas bougé en neuf lots. Fautes types : une source qui écrit
+      « are being changed » rendue par « ont été modifiés » (Logjam) ; un lien de cause qu'aucune
+      source ne donne (DigiNotar → la transparence des certificats) ; le sens d'une remise inversé
+      (les forces de l'ordre ont REMIS les fichiers à Yahoo) ; un total de chronologie (98,5 ether)
+      contredit par les transactions que le même post-mortem détaille (98,043) ; un motif de report
+      prêté à l'Ethereum Foundation qu'aucun de ses billets ne donne (Constantinople).
+
+      **Le nettoyage, nouveau à ce lot** : remplacer un cas laisse derrière lui des QCM, des exercices,
+      des antisèches et des méta-descriptions qui racontent l'ANCIEN récit (le QCM 4 d'`offensive/09`
+      interrogeait encore sur Uber). Un agent, avec une exception écrite à « ne touche pas aux QCM »
+      limitée aux passages listés et quatre cliquets gardés à 0, a repris 28 passages d'`offensive` et
+      2 de `fsharp/09`, et remplacé `python/lecon-28` (la panne S3, même source que son foyer
+      `cloud/12`) par UniSuper chez Google Cloud (2024). Contre-relu à son tour : 5 passages sur 34 à
+      corriger (des fichiers de test que Freund nomme au pluriel, une méta plus affirmative que sa
+      source), plus l'ordre d'une phrase de `python/28` (l'outil fautif avait été abandonné AVANT la
+      suppression). Hors lot, corrigé après fusion : la question et l'explication du QCM d'`ux/09`.
+
+      **Contrôles sur master** : `--cas-reel` **0 hors règle — 1 551 conformes sur 1 551**, `--strict`
+      0, `verif-html` 0, domaines 0, cliquets 0, explications orphelines 0, `verif-recherche` 77/77,
+      `verif-doc` 41/41, `verif-normatif` 75/75, point fixe au tour 3, **`--rapide` 54/54** (181,1 s ; un premier passage rouge sur l'étape `vexec`, verte seule puis au second passage : échec passager, non reproduit), `doublons.js` 3
+      (légitimes : notes de version de Debian 12, react.dev, Safari 15.4), mojibake volontaire
+      intact. **Conformes : 1 426 → 1 551** sur 1 551.
+
+      **Ouvert** : `tools/fraicheur/releves/graphql-lot-2026-11-11.json` garde huit ancres d'anciens
+      encadrés (`graphql/10` a changé de texte), à reprendre en phase E ; la question du QCM 2
+      d'`offensive/11` suppose que la revue du dépôt xz « disait propre », cadre du programme de la
+      leçon que rien ne source. Phase B : il reste **B13** (le garde-fou devient bloquant).
 - [ ] **B13 · Le garde-fou devient bloquant.** Le contrôle de B3 passe en mode `--strict` bloquant.
       Le site doit être à **0 encadré** hors de la règle. Rejouer l'échantillon de B2 avec la **même
       graine** : combien d'INVENTÉ, combien d'INEXACT, comparés au départ. Écrire le chiffre, quel
