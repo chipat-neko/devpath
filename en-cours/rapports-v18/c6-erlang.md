@@ -197,3 +197,124 @@ I18 (index périmés) et 3 avertissements anciens (I17, I19, I25).
 11, 13, 14) : 16 réponses publiées tapées, 16 acceptées ; avec `--contre` : 16 réponses fausses,
 16 refusées. `node tools/mesure-explain-orpheline.js --depuis=master --seul=erlang` : aucune
 explication orpheline (53 explains intouchées mesurées).
+
+## Reprise (après la contre-relecture indépendante, commit `f5ea6c0`)
+
+La contre-relecture indépendante (`d3ff7fc`) a corrigé 13 distracteurs ; ces corrections justes
+avaient rouvert le lexique sur 8 questions, porté « la plus dense » à 29,8 %, « la DEUXIÈME plus
+longue » à 29,6 %, « la moins bavarde » à 28,1 %, et laissé trois ex æquo de longueur avec la bonne
+réponse. Reprise bornée à ce dosage : **17 distracteurs retouchés sur 16 questions**, aucune bonne
+réponse ni explication touchée, aucun corps de leçon touché.
+
+### Avant / après (avant = `d3ff7fc`, après = `f5ea6c0`)
+
+| indice | commande | avant | après |
+|---|---|---:|---:|
+| la plus longue | `mesure-biais-qcm.js --seul=erlang` | 23,1 % | **24,1 %** |
+| la DEUXIÈME / TROISIÈME / QUATRIÈME plus longue | id. | **29,6** / 22,2 / 25,0 % | 25,9 / 24,1 / 25,9 % |
+| la plus dense (mots longs) | id. | **29,8 %** | **25,2 %** |
+| la moins bavarde (peu de mots) | id. | **28,1 %** | **25,3 %** |
+| écarter les deux extrêmes | id. | 26,9 % | 25,9 % |
+| ECARTER la plus dense / la moins bavarde | id. | 23,6 / 22,5 % | 25,5 / 23,5 % |
+| **pire des 44 stratégies** | id. | **29,8 %** (la plus dense) | **25,9 %** (DEUXIÈME, QUATRIÈME, écarter les deux extrêmes) |
+| questions trahies par 5 indices ou plus | id. | 0 | 0 |
+| crédits par rang (0 = la plus longue) | sonde `reprise/bilan.js` | 12,5 / 16 / 12 / 13,5 | **13 / 14 / 13 / 14** |
+| rangs | `plan-rangs-qcm.js erlang` | 13 / 16 / 12 / 13 | 13 / 14 / 13 / 14 (visé 14 / 14 / 13 / 13) |
+| ex æquo de longueur avec la bonne réponse | `atelier.js` | 3 | **0** |
+| lexique : exploitables / retournées / à mettre en forme | `mesure-lexique-qcm.js --liste=erlang` | **8 / 5 / 8** | **0 / 0 / 0** |
+| fenêtres de 4 leçons au-dessus des seuils | `mesure-biais-qcm.js --lots --cours=erlang` | **5** (la plus dense 4-7 : 50,0 %, 3-6 : 41,7 % ; DEUXIÈME 6-9, 7-10, 8-11 : 41,7 %) | **0** |
+| biais inverse (alertes) | `mesure-biais-inverse.js --toutes erlang` | 0 (pire 25,3 %) | 0 (pire 25,4 %) |
+| mot fétiche / tics de lot | `mesure-mot-fetiche.js erlang` / `mesure-tics-lot.js erlang` | 0 / 0 | 0 / 0 |
+| intrus lexical DÉFAUT / EXCÈS (direct / inverse) | `mesure-mot-question.js erlang --liste` | 23,1 / 25,9 % — 24,5 / 25,5 % | 24,5 / 25,2 % — 24,5 / 25,5 % |
+| explications orphelines | `mesure-explain-orpheline.js --depuis=8d163bf --seul=erlang` | 0 | 0 |
+| atteintes à l'intouchable | `mesure-qcm-intouchable.js erlang 8d163bf` | 2 (déclarées) | 2 (les mêmes) |
+
+Remarque sur `--lots` : sans `--cours=erlang`, l'outil ne regarde que les cours marqués `traite`
+dans la référence des cliquets, et erlang n'y est pas encore ; la mesure ci-dessus force le cours.
+
+### Les retouches
+
+Méthode : le crédit de la bonne réponse calculé question par question pour chaque indice (sondes
+`scratchpad/c6-erlang/reprise/bilan.js` et `strat.js`, stratégies CHARGÉES depuis l'outil, plus une
+copie des fenêtres de `--lots`), le nombre de bascules calculé avant d'écrire, chaque lot simulé en
+mémoire (`atelier.js`, `densite2.js`), posé par `pose.js`, puis remesuré avec les vrais outils et
+comparé à `HEAD` par `controle.js` (seules les 16 questions touchées ont bougé).
+
+- **Lexique (8 questions)** : `lecon-02` q1 (w 10 → 11 : « somme totale ») ; `lecon-03` q3 (« à
+  l'abri », mot étranger, remplacé : k 4 → 3, w 13 → 14) ; `lecon-04` q3 (« continuer » rendu au
+  distracteur : k 5 → 6, et le « est » du tic de verbe retiré) ; `lecon-05` q2 (w 8 → 10, le
+  « garde » du tic de verbe retiré, « renvoie » remis dans les quatre options) ; `lecon-09` q2 (k 0
+  → 1, w 5 → 6 ; la négation « et non », l'écho « Erlang » et l'absence de barre oblique, qui
+  désignaient chacun ce distracteur, retirés) ; `lecon-09` q3 (k 3 → 4, l'absolu « toujours » retiré,
+  la ponctuation ramenée à 5 signes comme les trois autres, « calcul » / « monothread » / « télécoms »
+  portés par les quatre options) ; `lecon-14` q2 (« expose », étranger à la page → « ouvre ») ;
+  `lecon-14` q14 (w 6 → 7 : « chaque note »).
+- **La plus dense : 2,5 crédits rendus pour 2,6 visés** (16,1 → 13,6 sur 54) : `lecon-04` q1
+  (« les » → « leurs » : le distracteur devient le plus dense), `lecon-04` q3, et la moitié de
+  `lecon-12` q3. Les deux premières sont dans la fenêtre 4-7 de `--lots`, qu'il fallait ramener à 4
+  questions sur 12.
+- **La moins bavarde : 1,5 crédit rendu** (15,2 → 13,7) : `lecon-04` q3 (25 mots pour 26 à la
+  bonne réponse), `lecon-08` q1 (24 mots pour 25 : un ex æquo cassé).
+- **Rangs** : `lecon-08` q3 et `lecon-09` q3 passent du rang 1 au rang 2 (ce sont elles qui
+  faisaient les trois fenêtres DEUXIÈME de `--lots`) ; trois ex æquo cassés : `lecon-12` q3 (bonne
+  réponse au rang 3), bilan « Par quoi commence une VARIABLE » (« Un astérisque » → « L'astérisque »,
+  21 car. : bonne réponse seule au rang 0), bilan « À quoi sert un gen_server » (« en panne » →
+  « morts » : bonne réponse seule au rang 1).
+- **Écarter les deux extrêmes** : `lecon-02` q2, où deux distracteurs ex æquo en tête laissaient la
+  bonne réponse seule au milieu (crédit 1) : « Q vaut 3 » → « Q vaut [3] ».
+- Un effet de bord vu par `controle.js` et refermé dans le même commit : la première version de
+  `lecon-05` q2 mettait trois options à 22 mots, et « ECARTER la moins bavarde » désignait alors la
+  bonne réponse seule ; la version posée (21 mots) rend ce crédit à 1/3.
+
+### Le sens des corrections de la contre-relecture est gardé
+
+Onze des treize corrections ont changé de mots, aucune de sens ; `lecon-03` q2 et `lecon-08` q2 sont
+intactes. Les deux qui ont le plus bougé :
+- `lecon-05` q2 : « le serveur garde sa donnée dans sa boîte, que le client trie par receive » →
+  « le serveur se renvoie sa donnée, que le client attend avec receive ». Même thèse : la réponse
+  reste côté serveur et ne parvient jamais au client.
+- `lecon-09` q2 : « Le même outil de projet (la commande mix) et non rebar3 côté Erlang » → « Le
+  même outil de projet (la commande mix) et sa structure standard lib/test ». Même thèse, fausse
+  d'après la page (l'outil standard d'Erlang est rebar3) ; « et non », « Erlang » et l'absence de
+  « / » désignaient ce distracteur à trois stratégies.
+
+### Exécuté pour la reprise (Erlang/OTP 29.1.2)
+
+Module `D:\outils-c\erlang\preuves\reprise\rep.erl`, lancé par `lance.sh` hors de tout dépôt :
+- `lecon-02` q2 : `[T|Q] = [1,2,3]` → T = 1, Q = [2,3] (le nouveau « Q vaut [3] » est faux) ;
+  `X = 1, Y = 2, X = Y` → `{badmatch,2}`.
+- `lecon-03` q3 : une somme AVEC accumulateur dont l'appel récursif attend son retour
+  (`R = somme_attend(N - 1, Acc + N), R + 0`) est tuée sous un plafond de 100 000 mots
+  (`{mort,killed}`) ; la version terminale rend `{fini,500000500000}`. « Économe en mémoire » est faux.
+- `lecon-04` q3 : un serveur bouclé par récursion, au repos : statut `waiting`, **0 réduction en
+  500 ms** ; il répond `pong` au message suivant. « À plein régime, sans attente » est faux.
+- `lecon-05` q2 : un serveur qui se renvoie sa réponse (`self() ! {reponse, R}`) : le client reçoit
+  `timeout`, la boîte du serveur contient `[{reponse,total}]`.
+- `lecon-12` q3 : `is_list(<<"ok">>)` → false, `is_binary("ok")` → false.
+- bilan « VARIABLE » : `erl_parse` sur `*X = 1.` → `syntax error before: '*'`.
+
+Non exécuté (thèses définitionnelles, réfutées par la page elle-même) : `lecon-08` q1 et q3,
+`lecon-09` q2 (ni mix ni rebar3 installés) et q3, `lecon-14` q2, q14 et le bilan gen_server.
+
+### Contrôles
+
+`verif-html` : aucun problème ; `verif-contenu --cas-reel --cours=erlang` : 14 conformes sur 14 ;
+29 blocs JSON valides ; 0 CR, 0 BOM ; `verif-donnees` : seule l'erreur attendue I18 (index
+périmés) et les avertissements anciens ; `verif-qcm-biais` et `verif-qcm-lexique` : « progressé sans
+que le gain soit figé » (longueur 88,9 → 24,1 %, pire indice 88,9 → 25,9 % ; STRICTE 11,8 → 0,0 %),
+attendu, non refigé. `verif.js --rapide` n'a pas été rejoué pour la reprise (1 575 s au premier
+passage ; la reprise ne touche que des options de QCM).
+
+### Ce qui reste, sans arrondir
+
+- Rangs **13 / 14 / 13 / 14** pour une cible 14 / 14 / 13 / 13 : « la plus longue » à 24,1 %, la
+  QUATRIÈME à 25,9 %. Passer un rang 3 au rang 0 coûterait trois distracteurs (`lecon-02` q3) ; pas
+  fait.
+- Pire stratégie **25,9 %** (trois à égalité).
+- Indices locaux, présents avant la reprise et non aggravés : `lecon-03` q3, « le mot technique
+  exclusif » garde la bonne réponse parmi deux options ; `lecon-09` q3, il désigne un seul
+  distracteur (l'écarter rend 1/3, comme avant) ; `lecon-12` q3, intrus EXCÈS (seuls deux
+  distracteurs ont un mot propre) ; bilan « Quel caractère termine une clause » : deux distracteurs
+  ex æquo en tête (13 car.), « écarter les deux extrêmes » y désigne la bonne réponse seule — le
+  casser sortait de la fenêtre 70-130 % sur une réponse de 10 caractères.
+- Index dérivés et références des cliquets non régénérés (règle de fusion).
