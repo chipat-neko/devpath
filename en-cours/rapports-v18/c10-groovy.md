@@ -1,4 +1,4 @@
-# C10 — groovy, 87,0 % → 23,8 %
+# C10 — groovy, 87,0 % → 25,0 % (23,8 % à la fin de la vague ; reprise § 8)
 
 Copie de travail `D:\test-claude-c10-groovy`, branche `v18/c10-groovy`, partie de `8d163bf`. Un seul
 agent pour tous les rôles. Aucun fichier modifié sous `D:\test-claude\`. Pièces de travail (hors git)
@@ -166,3 +166,91 @@ n'est pas installé), `@Grab` (dépôt Maven distant), groovyConsole, groovysh, 
   retouches en a repris 3 — `lecon-07` q2 « comme les méthodes » (raccourci pour le dosage, devenu
   obscur, rendu à « comme pour les méthodes »), `lecon-09` q1 (la relecture avait créé une égalité de
   longueur, cassée), `lecon-14` q1 (« rend une map » sans sujet, rendu à « elle rend »).
+
+## 8. Reprise — le dosage qui restait après la contre-relecture
+
+La contre-relecture indépendante (`71ccc28`) a corrigé 16 fautes, dont cinq distracteurs vrais par
+accident, et une explication (`lecon-11` q3). Ces corrections justes avaient rouvert l'indice lexical.
+La reprise (`c51a39f`) le referme **sans défaire le sens d'une seule de ces corrections** : chaque
+distracteur qu'elles ont rendu faux le reste, seuls les mots ont changé. Sorties brutes :
+`scratchpad/c10-groovy/reprise/avant/` et `apres1/` ; banc et garde-fou : `sonde/atelier.js` et
+`sonde/controle.js --ref=HEAD` (8 questions déplacées, toutes voulues).
+
+### Avant / après
+
+| indice | avant (`71ccc28`) | après (`c51a39f`) | commande |
+|---|---:|---:|---|
+| lexique (exploitables / retournées / à mettre en forme) | **6 / 4 / 7** | **0 / 0 / 0** | `node tools/mesure-lexique-qcm.js --liste=groovy` |
+| la plus longue | 23,1 % (rendement 22,4 %) | **25,0 %** (rendement 24,5 %) | `node tools/mesure-biais-qcm.js --seul=groovy` |
+| pire des 44 stratégies | 26,2 % (DEUXIÈME plus longue) | **25,9 %** (la plus dense) | id. |
+| DEUXIÈME / TROISIÈME / QUATRIÈME plus longue | 26,2 / 25,3 / 25,3 % | 24,4 / 25,3 / 25,3 % | id. |
+| la plus dense / la moins bavarde / ECARTER la plus dense | 25,9 / 25,6 / 25,6 % | 25,9 / 25,6 / 25,6 % | id. |
+| le mot technique exclusif (couverture) | 23,8 % (5,6 %) | 24,7 % (3,7 %) | id. |
+| questions trahies par 5 indices ou plus | 0 | 0 | id. |
+| rangs de la bonne réponse | 15 / 16 / 11 / 12 | 16 / 15 / 11 / 12 | `node tools/plan-rangs-qcm.js groovy` |
+| biais inverse | 0 alerte (pire 25,9 %) | 0 alerte (pire 25,8 %) | `node tools/mesure-biais-inverse.js --toutes groovy` |
+| mot fétiche | 0 alerte | 0 alerte | `node tools/mesure-mot-fetiche.js groovy` |
+| tics de lot | 0 | 0 | `node tools/mesure-tics-lot.js groovy --exemples` |
+| `--lots` et `--lots=3` | muets | muets | `node scratchpad/c10-groovy/sonde/lots.js` (référence remise octet pour octet) |
+| intrus DÉFAUT direct / inverse | 23,1 / 25,6 % | 24,1 / 25,3 % | `node tools/mesure-mot-question.js groovy --liste` |
+| intrus EXCÈS direct / inverse | 24,1 / 25,3 % (1 question sûre par l'inverse : `lecon-06` q3) | 25,0 / 23,8 % (0) | id. (l'inverse sûr : `sonde/atelier.js`) |
+| explications orphelines | 0 (2 indicatives) | 0 (les 2 mêmes indicatives) | `node tools/mesure-explain-orpheline.js --depuis=8d163bf --seul=groovy` |
+| intouchable | 1 atteinte, déclarée (`lecon-11` q3, explain) | la même, aucune autre | `node tools/mesure-qcm-intouchable.js groovy 8d163bf` |
+| `verif-html` / « Cas réel » | 0 / 14 sur 14 | 0 / 14 sur 14 | `node tools/verif-html.js` ; `node tools/verif-contenu.js --cas-reel --cours=groovy` |
+| blocs JSON / CR / BOM | 29 valides / 0 / 0 | 29 valides / 0 / 0 | contrôle node sur `pages/groovy/*` |
+
+### Les retouches (8 distracteurs, 1 ligne de corps)
+
+Chaque comportement affirmé a été **exécuté** sous Groovy 4.0.33 et 5.1.3 (Java 27.0.1) :
+`scratchpad/c10-groovy/preuves/p_reprise.groovy`, sorties `p_reprise-g4.out` et `-g5.out`.
+
+1. `lecon-05` q3 (correction de la contre-relecture : `map.get('ada')` rendait 36) — `map.getAda()` →
+   `map.ada()` : le jeton `getada` était étranger à la page. Même thèse (une notation d'appel de
+   méthode qui ne lit pas la clé) : exécuté, `MissingMethodException` sous 4 et 5 (comme `getAda()`).
+2. `lecon-06` q3 (correction : la description de `@TypeChecked`) — « vérifié à la compilation » →
+   « vérifié par le compilateur », « ce qui la rend plus sûre » → « ce qui apporte la sûreté » : w 10 → 12
+   (`apporte`, `sûreté`, `compilateur` sont dans la page). Effet voulu : la bonne réponse retrouve un mot
+   propre (`compilation`), et l'intrus EXCÈS ne la désigne plus par élimination (elle était la seule
+   option sans mot propre : écarter les trois autres la donnait à coup sûr). Non exécuté (même sens).
+3. `lecon-07` q1 (correction : la classe `String` reste intacte) — « sans toucher les chaînes
+   existantes » → « sauf pour les chaînes existantes » : w 12 → 11, même nombre de mots, densité gardée.
+   Exécuté : une chaîne créée AVANT `String.metaClass.crier = …` reçoit la méthode (« ADA ! »).
+4. `lecon-09` q1 (correction : la classe du JDK déjà sur le classpath) — « dans le script, sans la
+   télécharger » → « dans le script Groovy, sans télécharger » : w 9 → 10, et `groovy`, porté par les
+   trois autres options, désignait celle-ci (intrus DÉFAUT). Non exécuté (`@Grab` : dépôt distant).
+5. `lecon-10` q1 (correction : une propriété `static` est bien partagée) — « (ses propriétés d'objet) »
+   → « (les propriétés des objets) » : `d'objet` était étranger à la page. Exécuté : `x.n = 5`, `y.n` vaut
+   toujours 0 (une copie par objet).
+6. `lecon-14` q8 (correction : l'explication orpheline « apostrophes simples ») — l'option de la
+   contre-relecture est gardée **mot pour mot**. Les mots `apostrophes` et `simples` manquaient à la page :
+   une ligne ajoutée au mémo du corps, « Ne pas interpoler — `'${expr}'` (apostrophes simples : le texte
+   reste tel quel) », exécutée (`'${nom}'` reste `${nom}`, une `String`). Et le distracteur `%s` passe
+   des guillemets doubles aux apostrophes simples (`'%s'` reste `%s`, exécuté) : deux options de chaque
+   côté, l'intrus (DÉFAUT et EXCÈS) et le mot technique exclusif (`apostrophes`) ne désignent plus rien.
+7. `lecon-14` q10 (correction de français : « rendu côté navigateur ») — « Scripts de pages web à
+   afficher côté navigateur (React) et styles (Sass) » : w 3 → 4 (`afficher` est dans la page). Un premier
+   essai avec `affichage` (9 lettres) ouvrait le mot technique exclusif ; un deuxième, avec une virgule,
+   ouvrait « la plus détaillée » : tous deux écartés par le banc avant d'écrire.
+8. `lecon-01` q3 (pas une correction de la contre-relecture ; le dosage de la longueur) — « L'égalité
+   des classes (il appelle equals sur leur type) » → « L'égalité de type (il appelle equals sur la
+   classe) » : 106 → 102 caractères, la bonne réponse (104) devient la plus longue. Une seule bascule
+   calculée : « la plus longue » 12,5 → 13,5 sur 54 (25,0 %) et la DEUXIÈME 14,17 → 13,17 (24,4 %). Même
+   thèse, exécutée : `'a' == 'b'` vaut `false` pour deux objets de la même classe.
+
+Aucune bonne réponse, aucun explain touché. Aucune correction de sens.
+
+### Ce qui reste, sans arrondir
+
+- Pire stratégie : **la plus dense 25,9 %** ; la moins bavarde et ECARTER la plus dense 25,6 %.
+  ECARTER la plus dense tranche UNE question (`lecon-14` q14, Spock : trois distracteurs de 32
+  caractères ex æquo, la bonne en a 31) et y rend 100 % — le même cas que « la QUATRIÈME plus longue »
+  sur toute question de rang 3 ; laissé.
+- Intrus, signaux locaux sans effet sur le cours : `lecon-05` q1 (DÉFAUT désigne `sort` seul :
+  `nouvelle` et `liste` partagés par les trois autres depuis la contre-relecture), `lecon-14` q2 (EXCÈS
+  désigne le seul `collect`), `lecon-14` q3 (DÉFAUT désigne le seul `JsonSlurper`). Tous désignent un
+  distracteur : l'écarter rend 33,3 % sur la question.
+- `verif-donnees` I18 : la ligne ajoutée au mémo de `lecon-14` rend aussi `antiseches-data.js` périmé
+  (en plus de `quiz-index.js` et `search-index.js`) : index dérivés, à régénérer à la fusion. Les cliquets
+  `verif-qcm-biais.js` (87,0 → 25,0 %, pire 25,9 %) et `verif-qcm-lexique.js` (STRICTE 63,6 → 0,0 %)
+  signalent « progressé sans que le gain soit figé » : à refiger à la fusion. `verif.js --rapide` non
+  relancé pour la reprise.
