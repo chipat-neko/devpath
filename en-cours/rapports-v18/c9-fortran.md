@@ -1,4 +1,4 @@
-# C9 — fortran, 87,0 % → 25,9 %
+# C9 — fortran, 87,0 % → 24,1 %
 
 Case C9 de la phase C du CHANTIER-V18 : les QCM du cours `fortran` (14 leçons, **54 questions**
 dont 12 de bilan, **162 distracteurs**). Copie de travail `D:\test-claude-c9-fortran`, branche
@@ -10,6 +10,9 @@ relecture, correction, contre-relecture). Consigne du cours : `scratchpad/CONSIG
 **Atteintes à l'intouchable : aucune.** `node tools/mesure-qcm-intouchable.js fortran 8d163bf` :
 « 54 questions, 162 distracteurs, 156 reecrits. Aucune atteinte : q / correct / explain / bonne
 reponse intacts. » Aucune bonne réponse ni explication n'a été prouvée fausse (§ 4).
+Depuis, la contre-relecture indépendante (575ef00d) en a fait **deux, prouvées par exécution et
+déclarées dans son commit** (`lecon-03` q3, bonne réponse ; `lecon-07` q3, explication) ; la
+reprise n'en a fait aucune (§ 9). Les §§ 1 à 8 décrivent l'état AVANT la contre-relecture.
 
 ## 1. Avant / après
 
@@ -208,3 +211,120 @@ conformes ; `mesure-qcm-intouchable` : aucune atteinte.
   devient conforme ; à régénérer à la fusion.
 
 `doc-ref`, `doc-rec` et `etudes` sont verts dans cette copie.
+
+## 9. Reprise (après la contre-relecture indépendante)
+
+La contre-relecture (575ef00d, 15 corrections justes) avait rouvert l'indice lexical sur 8
+questions et porté « la plus dense » à 28,4 %. Reprise bornée : refermer le lexique et la
+densité sans défaire le sens d'aucune de ses corrections. Commit `97c7ecc1`.
+
+### Avant / après (avant = 575ef00d, après = 97c7ecc1)
+
+| indice | commande | avant | après |
+|---|---|---:|---:|
+| la plus longue | `node tools/mesure-biais-qcm.js --seul=fortran` | 25,9 % | **24,1 %** |
+| pire des 44 stratégies | id. | **28,4 %** (la plus dense) | **26,5 %** (la plus dense, ECARTER la moins bavarde) |
+| la plus dense | id. | 28,4 % | 26,5 % |
+| ECARTER la moins bavarde | id. | 27,5 % | 26,5 % |
+| la moins bavarde | id. | 27,2 % | 26,2 % |
+| la seule qui nie | id. | 25,9 % (2 questions) | 25,9 % (les mêmes) |
+| écarter les deux extrêmes | id. | 24,5 % | 25,5 % |
+| la DEUXIÈME plus longue | id. | 22,8 % | 24,7 % |
+| questions trahies par 5 indices ou plus | id. | 1 (`lecon-14` q4) | **0** |
+| rangs de la bonne réponse | `node tools/plan-rangs-qcm.js fortran` | 14 / 13 / 14 / 13 | 13 / 14 / 14 / 13 |
+| lexique (exploitables / retournées / à mettre en forme) | `node tools/mesure-lexique-qcm.js --liste=fortran` | 7 / 5 / 8 | **0 / 0 / 0** |
+| lexique, couverture STRICTE / PROPORTION / INVERSE | `mesure-lexique-qcm --seul=fortran` | 0,0 / 7,4 / 3,7 % | 0,0 / 0,0 / 0,0 % |
+| biais inverse | `node tools/mesure-biais-inverse.js --toutes fortran` | 0 alerte (pire 26,9 %) | 0 alerte (pire 26,7 %) |
+| mot fétiche | `node tools/mesure-mot-fetiche.js fortran` | 0 alerte | 0 alerte |
+| tics de lot | `node tools/mesure-tics-lot.js fortran` | aucun | aucun |
+| fenêtres de 4 leçons | `node tools/mesure-biais-qcm.js --lots --cours=fortran` | aucune | aucune |
+| intrus lexical | `node tools/mesure-mot-question.js fortran --liste` | 25,0 % partout | 25,0 % partout |
+| explications orphelines | `node tools/mesure-explain-orpheline.js --depuis=8d163bf --seul=fortran` | aucune | aucune |
+| atteintes à l'intouchable | `node tools/mesure-qcm-intouchable.js fortran 8d163bf` | 2 (contre-relecture, déclarées) | les 2 mêmes, aucune nouvelle |
+
+`verif-html` : 0 problème ; `verif-contenu --cas-reel --cours=fortran` : 14 « Cas réel »
+conformes sur 14 ; 29 blocs JSON valides, 0 CR, 0 BOM dans `pages/fortran/`.
+`verif-qcm-biais` et `verif-qcm-lexique` : seulement « progressé sans que le gain soit
+figé » (attendu). `verif.js --rapide` n'a pas été relancé pour la reprise (27 min sur la
+machine partagée ; aucun fichier hors de `pages/fortran/` et de ce rapport n'a changé).
+
+### Les 14 distracteurs retouchés (aucune bonne réponse, aucune explication)
+
+Lexique — les quatre options portent le même `k` (mots absents de la page) et le même `w`
+(mots de 6 lettres et plus) que la bonne réponse :
+- `lecon-02` q1 : « est une division arrondie » → « est un quotient arrondi » (un seul
+  « arrondie » étranger au lieu de deux ; « donne un quotient » essayé d'abord, il ôtait le
+  verbe « est » à ce seul distracteur : tic à 3 porteurs).
+- `lecon-03` q3, les trois distracteurs : la bonne réponse corrigée par la contre-relecture
+  (« ne tient pas toujours ») porte 7 mots étrangers sur 11 ; chaque distracteur en portait
+  9 sur 13. Retirés : « immédiat », « intrinsèque » ; « aussitôt », « facilement » (remplacés
+  par « tous … le plus près », pour garder la bonne réponse la plus courte, rang visé 3 ;
+  « deux » essayé d'abord rouvrait l'écho de la question) ; « chaque », « entières ».
+- `lecon-06` q3 : « au choix : aucun des deux ne sert de base à l'autre, car use recopie le
+  source » → « peu importe : aucun ne passe en premier, car use recopie toujours le source »
+  (même thèse : l'ordre serait indifférent ; « compilé » et « d'abord » essayés d'abord
+  désignaient `opt2` à l'intrus lexical ; la négation est gardée, voir « ce qui reste »).
+- `lecon-07` q3 : « de base » → « réservés » (le cinquième mot étranger, perdu quand la
+  contre-relecture a remplacé « inférieur à 100 » par « entre 10 et 99 »).
+- `lecon-08` q3 : « goto » → « format » : toujours une instruction sans rapport avec le
+  parallélisme (la contre-relecture avait retiré « forall », vraie aide) ; « purement » essayé
+  d'abord ajoutait un mot et rendait la bonne réponse ex aequo la moins bavarde.
+- `lecon-11` q3 : « la première case » → « la toute 1re case » (« première » est dans la page :
+  un mot long de trop ; « la 1re des cases » essayé d'abord ôtait à la bonne réponse son seul
+  mot exclusif, « cases », et ouvrait l'intrus EXCÈS).
+- `lecon-14` q3 : « le produit de ses cases » → « le produit de toutes ses cases » (+1 mot long
+  de la page ; la bonne réponse redevient la plus courte, son rang d'avant la contre-relecture).
+- `lecon-14` q12 : « À sommer sans copie par fil » → « À sommer sans les copies privées » (même
+  thèse fausse : `reduction` crée justement une copie privée par fil ; 6 mots, w = k = 3).
+
+Densité et nombre de mots — dosage calculé (`sonde/dosage.js`), pas « toutes les questions » :
+- `lecon-09` q1 : la bonne réponse était la plus dense de 0,009 (4,792 contre 4,783) depuis
+  « (registre) » → « (GHz) » ; « règle » → « définit » (mot de la page) : 4,87. Seule bascule
+  nécessaire : 15,3 → 14,3 questions créditées, 28,4 → 26,5 %.
+- `lecon-05` q1 : « de ses arguments » → « des arguments » : la bonne réponse n'est plus la
+  SEULE la moins bavarde (28 mots, ex aequo) — la moins bavarde −0,5 question.
+- `lecon-14` q8 : « do i = 1, n … next » → « do i = 1, n … end i » : les trois distracteurs
+  ex aequo à 5 jetons laissaient « ECARTER la moins bavarde » désigner la bonne réponse SEULE ;
+  −0,5 question. « for … next i » essayé d'abord rendait la bonne réponse seule au milieu
+  (« écarter les deux extrêmes » 26,4 %). gfortran 16.2 refuse `end i` : « Error: Expecting
+  END DO statement » (`preuves/reprise/r1-end-i.f90`).
+- `lecon-14` q4 : « la 3D temps réel » → « la 3D en temps réel » (meilleur français). La
+  contre-relecture (« Les prêts et la paie en PME », 7 mots) avait rendu la bonne réponse la
+  seule la moins bavarde : 5 indices sur une question. Une version à 5 mots tenant la fenêtre
+  de longueur et `k = 0` n'existe pas avec les mots de la page ; on a donc fermé la LONGUEUR :
+  la bonne réponse n'est plus la plus longue (4 indices, rangs 13 / 14 / 14 / 13).
+
+Chaque retouche a été posée en mémoire dans le banc (`sonde/atelier.js`) avant le disque, puis
+`controle.js --ref=575ef00d` : 11 questions ont un indicateur déplacé (`lecon-02` q1 aucun) ;
+ont bougé `w`, `k`, les stratégies de longueur, de rang et de nombre de mots, plus la densité
+voulue en `lecon-09` q1 et le mot technique exclusif en `lecon-03` q3 (il désigne désormais
+`opt1` ET `opt3`, deux distracteurs, au lieu de `opt1` seul).
+
+### Exécuté pour la reprise (gfortran 16.2, Compiler Explorer)
+
+`preuves/reprise/r2-egal-reels.f90`, sous `-std=f2018 -Wall -Wextra` : `a == b` sur deux
+`real` COMPILE (code 0, simple avertissement `-Wcompare-reals`, le même pour `.eq.`) — le
+distracteur « la norme interdit == … la compilation échoue » reste faux, et `.eq.` n'est pas un
+« opérateur dédié » ; `1.2 == 1.4` rend `F` — `==` n'arrondit pas à l'entier le plus près.
+Non exécuté : « la conversion coûteuse ralentit la boucle » (thèse de performance d'origine,
+inchangée).
+
+### Ce qui reste, sans arrondir
+
+- **`lecon-03` q3, « la seule qui nie »** : la bonne réponse corrigée (« ne tient pas toujours »)
+  est la seule des quatre à nier ; la stratégie la désigne seule. Elle est compensée par
+  `lecon-06` q3, où seul un distracteur nie (« aucun ne passe en premier ») : 2 questions
+  tranchées, rendement 50 %, réussite 25,9 %. Fermer pour de bon demanderait une négation dans
+  les TROIS distracteurs de `lecon-03` q3 (« les quatre ou aucune »), au prix d'un français
+  forcé : non fait.
+- Pire stratégie 26,5 % (la plus dense, ECARTER la moins bavarde), dans la bande des derniers
+  cours ; « la plus longue » 24,1 % (13 / 54), symétrique des 25,9 % d'avant.
+- `lecon-14` q4 garde 4 indices sur la bonne réponse (mot technique exclusif, DEUXIÈME plus
+  longue, la plus dense, la moins bavarde) : « Le calcul scientifique et numérique », 5 mots
+  longs et denses, contre des distracteurs à `k = 0` faits de mots courts. « PME » y fait
+  désigner `opt2` par la MAJUSCULE d'emphase (une question, sens inverse, 24,5 %).
+- `lecon-14` q12 : « sans les copies privées » se lit « le mécanisme n'en crée pas » (faux) ;
+  un lecteur très retors pourrait y lire « sans avoir à les écrire soi-même ». Même ambiguïté
+  que « sans copie par fil », gardée faute de tournure à 6 mots, `w = k = 3`, plus nette.
+- `lecon-02` q1 : « la division … est un quotient arrondi » est une métonymie (une division
+  donne un quotient) ; « donne » ouvrait un tic.
