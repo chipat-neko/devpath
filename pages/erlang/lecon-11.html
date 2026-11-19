@@ -155,15 +155,17 @@ etiquette(rectangle) -&gt; "rectangle".</code></pre></figure>
 <p><code>-spec</code> décrit les types d'entrée et de sortie&nbsp;; <code>-type</code> crée un alias réutilisable. Rien n'est vérifié à l'exécution&nbsp;: ces annotations sont pour <em>toi</em> (documentation) et pour l'<em>outil</em> d'analyse.</p>
 
 <h2>Dialyzer : l'analyse statique optionnelle</h2>
-<p><strong>Dialyzer</strong> (<em>DIscrepancy AnaLYZer for ERlang</em>) lit ton code compilé et signale les <strong>incohérences</strong>&nbsp;: appeler une fonction avec un mauvais type, du code inatteignable, un motif qui ne peut jamais réussir. Sa philosophie est le <strong>success typing</strong>&nbsp;: il ne râle que sur ce qui est <em>certainement</em> faux, jamais sur un doute. Zéro faux positif — donc quand Dialyzer parle, il a raison.</p>
-<figure class="code-block" data-file="shell"><pre><code class="language-erlang">$ rebar3 dialyzer
+<p><strong>Dialyzer</strong> (<em>DIscrepancy AnaLYZer for ERlang</em>) lit ton code compilé et signale les <strong>incohérences</strong>&nbsp;: appeler une fonction avec un mauvais type, du code inatteignable, un motif qui ne peut jamais réussir. Sa philosophie est le <strong>success typing</strong>&nbsp;: il ne râle que sur ce qui est <em>certainement</em> faux, jamais sur un simple doute. Zéro faux positif — donc quand Dialyzer parle, il a raison.</p>
+<figure class="code-block" data-file="shell"><pre><code class="language-erlang">$ dialyzer --plt base.plt geo.beam
 
-%% Exemple d'avertissement :
-%% geo.erl:8: Function surface/2 will never return since it
-%% differs in argument position 1 from the success typing:
-%% (number(), number()) -&gt; number()
+%% (geo.erl porte la spec ci-dessus, et appel() -&gt; surface("x", 3).)
+%% Avertissements rendus par Dialyzer (Erlang/OTP 29, lignes regroupées) :
+%% geo.erl:7:1: Function appel/0 has no local return
+%% geo.erl:8:13: The call geo:surface("x", 3) will never return
+%%   since the success typing is (number(), number()) -&gt; number()
+%%   and the contract is (number(), number()) -&gt; number()
 %%
-%% (ici : on a appelé surface("x", 3) — une chaîne au lieu d'un nombre)</code></pre></figure>
+%% (dans un projet, rebar3 dialyzer lance la même analyse)</code></pre></figure>
 
 <figure class="diagram">
   <svg viewBox="0 0 640 172" role="img" aria-label="Trois niveaux de sécurité croissants pour structurer des données en Erlang, présentés comme un escalier montant de gauche à droite. Marche basse : le tuple nu, dont les positions sont anonymes ; les erreurs se découvrent à l'exécution. Marche du milieu : le record, dont les positions sont nommées ; une faute de nom de champ est détectée dès la compilation. Marche haute : record plus spec plus Dialyzer ; les incohérences de types sont repérées avant même de lancer le programme. Une flèche indique que la sécurité augmente à mesure qu'on monte les marches.">
@@ -226,9 +228,9 @@ etiquette(rectangle) -&gt; "rectangle".</code></pre></figure>
 </ol></div>
 <script type="application/json" data-quiz>
 [
-  {"q":"En quel tuple se traduit le record #point{x = 1, y = 2} (déclaré -record(point, {x, y})) ?","a":["{point, 1, 2}","{1, 2}","{x, 1, y, 2}","#{x => 1, y => 2}"],"correct":0,"explain":"Un record devient un tuple dont le 1er élément est le nom (l'étiquette), suivi des champs dans l'ordre de déclaration : {point, 1, 2}."},
-  {"q":"Que fait l'expression P2 = P#personne{age = 31} ?","a":["Elle crée une NOUVELLE valeur P2, copie de P avec age modifié ; P reste inchangée","Elle modifie P sur place","Elle supprime le champ age","Elle renvoie seulement 31"],"correct":0,"explain":"Les données sont immuables : la « mise à jour » d'un record produit une copie modifiée. P d'origine n'est jamais altérée."},
-  {"q":"Pourquoi dit-on que Dialyzer, grâce au success typing, n'a pas de faux positifs ?","a":["Il ne signale que ce qui est certainement faux, jamais un simple doute","Il vérifie chaque type à l'exécution","Il exige des annotations partout","Il ignore le code non annoté"],"correct":0,"explain":"Le success typing est volontairement conservateur : il ne lève un avertissement que si le code ne peut PAS être correct. Quand Dialyzer parle, il a raison."}
+  {"q":"En quel tuple se traduit le record #point{x = 1, y = 2} (déclaré -record(point, {x, y})) ?","a":["{point, 1, 2}","{record, 1, 2}","{point, x=1, y=2}","{record, [1, 2]}"],"correct":0,"explain":"Un record devient un tuple dont le 1er élément est le nom (l'étiquette), suivi des champs dans l'ordre de déclaration : {point, 1, 2}."},
+  {"q":"Que fait l'expression P2 = P#personne{age = 31} ?","a":["Elle crée une NOUVELLE valeur P2, copie de P avec age modifié ; P reste inchangée","Elle remplace la valeur de P EN place, avec age modifié ; P2 reste un alias direct","Elle renvoie JUSTE 31 dans P2, soit la valeur du seul champ age modifié ; P reste inchangée","Elle crée une NOUVELLE valeur P2 vide, avec le seul champ age modifié ; P reste intacte"],"correct":0,"explain":"Les données sont immuables : la « mise à jour » d'un record produit une copie modifiée. P d'origine n'est jamais altérée."},
+  {"q":"Pourquoi dit-on que Dialyzer, grâce au success typing, n'a pas de faux positifs ?","a":["Il ne signale que ce qui est certainement faux, jamais un simple doute","Il ne signale que ce qui est faux à l'exécution, jamais en amont","Il ne voit que ce qui est faux sous une annotation, jamais le reste","Il ne garde que ce qui est prouvé correct, jamais un programme faux"],"correct":0,"explain":"Le success typing est volontairement conservateur : il ne lève un avertissement que si le code ne peut PAS être correct. Quand Dialyzer parle, il a raison."}
 ]
 </script>
 
@@ -249,7 +251,7 @@ L#livre.annee.   %% =&gt; 2000</code></pre></figure><p>Les champs non précisés
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Écris la spec de la fonction <code>renommer/2</code> qui prend un <code>#livre{}</code> et une chaîne (le nouveau titre) et renvoie un <code>#livre{}</code>. Puis écris la fonction.</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="biblio.erl"><pre><code class="language-erlang">-spec renommer(#livre{}, string()) -&gt; #livre{}.
 renommer(Livre, NouveauTitre) -&gt;
     Livre#livre{titre = NouveauTitre}.</code></pre></figure><p>On peut typer par le record lui-même (<code>#livre{}</code>). La fonction renvoie une copie modifiée&nbsp;; l'original n'est pas touché.</p></details></div>
-<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Le code appelle <code>surface("10", 3)</code> alors que <code>-spec surface(number(), number()) -&gt; number()</code>. Dialyzer va-t-il se plaindre&nbsp;? À quel moment (compilation, analyse, exécution) l'erreur est-elle détectée, et pourquoi&nbsp;?</p><details><summary>Voir une solution</summary><p>Oui&nbsp;: <code>"10"</code> est une chaîne (une liste), pas un <code>number()</code>. Le compilateur, lui, <strong>accepte</strong> le code (Erlang est dynamiquement typé). C'est <strong>Dialyzer</strong>, à l'étape d'<em>analyse statique</em>, qui signale que <code>surface/2</code> «&nbsp;ne peut jamais réussir&nbsp;» avec ce type d'argument. Sans Dialyzer, l'erreur ne surgirait qu'à l'<strong>exécution</strong> (un <code>badarith</code> lors de la multiplication). L'intérêt des specs + Dialyzer&nbsp;: déplacer la détection le plus tôt possible.</p></details></div>
+<div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>Le code appelle <code>surface("10", 3)</code> alors que <code>-spec surface(number(), number()) -&gt; number()</code>. Dialyzer va-t-il se plaindre&nbsp;? À quel moment (compilation, analyse, exécution) l'erreur est-elle détectée, et pourquoi&nbsp;?</p><details><summary>Voir une solution</summary><p>Oui&nbsp;: <code>"10"</code> est une chaîne (une liste), pas un <code>number()</code>. Le compilateur, lui, <strong>accepte</strong> le code (Erlang est dynamiquement typé). C'est <strong>Dialyzer</strong>, à l'étape d'<em>analyse statique</em>, qui signale que l'appel <code>surface("10", 3)</code> «&nbsp;will never return&nbsp;» (ne reviendra jamais) avec ce type d'argument. Sans Dialyzer, l'erreur ne surgirait qu'à l'<strong>exécution</strong> (un <code>badarith</code> lors de la multiplication). L'intérêt des specs + Dialyzer&nbsp;: déplacer la détection le plus tôt possible.</p></details></div>
 
               <button class="btn btn--primary" data-complete-toggle aria-pressed="false">
                 <span>Marquer comme terminée</span>

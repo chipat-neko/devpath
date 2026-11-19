@@ -247,9 +247,9 @@ ets:delete(cache, "session_99").   % retirer une clé</code></pre></figure>
 </ol></div>
 <script type="application/json" data-quiz>
 [
-  {"q":"Pourquoi ETS évite-t-il le goulot d'étranglement d'un processus qui partage un gros état ?","a":["Les données vivent hors du tas d'un processus et sont lues en concurrence, sans file d'attente","Parce qu'ETS est écrit en C","Parce qu'il compresse les données","Parce qu'il n'y a qu'un seul lecteur autorisé"],"correct":0,"explain":"Un processus sérialise ses messages ; une table ETS est une zone mémoire partagée gérée par la VM, que plusieurs processus lisent en parallèle sans s'attendre."},
-  {"q":"Que renvoie ets:lookup(cache, Cle) si la clé n'existe pas ?","a":["Une liste vide []","L'atome undefined","Une exception badkey","Le tuple {error, not_found}"],"correct":0,"explain":"lookup renvoie toujours une liste de tuples correspondants ; vide si rien ne correspond. Aucune exception n'est levée."},
-  {"q":"Qu'arrive-t-il à une table ETS quand le processus propriétaire meurt ?","a":["La table est détruite avec lui, sauf si un heir a été désigné","Elle est sauvegardée sur disque automatiquement","Elle est transférée au superviseur","Rien, elle survit indéfiniment"],"correct":0,"explain":"ETS est en mémoire et rattaché à son propriétaire : sa mort détruit la table. On peut prévoir un héritier (heir) ou confier la table à un processus stable."}
+  {"q":"Pourquoi ETS évite-t-il le goulot d'étranglement d'un processus qui partage un gros état ?","a":["Les données vivent hors du tas d'un processus et sont lues en concurrence, sans file d'attente","Les données sont divisées entre plusieurs processus, sans file d'attente","Les données sont compressées par la VM, si bien que chaque processus les lit sans file d'attente","Les données sont confiées à un processus à part qui les sérialise, sans file d'attente"],"correct":0,"explain":"Un processus sérialise ses messages ; une table ETS est une zone mémoire partagée gérée par la VM, que plusieurs processus lisent en parallèle sans s'attendre."},
+  {"q":"Que renvoie ets:lookup(cache, Cle) si la clé n'existe pas ?","a":["Une liste vide []","Un atome not_found","Un échec badarg levé","Valeur false"],"correct":0,"explain":"lookup renvoie toujours une liste de tuples correspondants ; vide si rien ne correspond. Aucune exception n'est levée."},
+  {"q":"Qu'arrive-t-il à une table ETS quand le processus propriétaire meurt ?","a":["La table est détruite avec lui, sauf si un heir a été désigné","La table est stockée sur disque, sauf si elle est private","La table survit en public, sauf si elle est private","La table est cédée à la VM, sauf si un heir a été désigné"],"correct":0,"explain":"ETS est en mémoire et rattaché à son propriétaire : sa mort détruit la table. On peut prévoir un héritier (heir) ou confier la table à un processus stable."}
 ]
 </script>
 
@@ -268,9 +268,9 @@ ets:insert(villes, {"lyon", 0.5}).
 ets:lookup(villes, "paris").
 %% =&gt; [{"paris",2}]</code></pre></figure><p>La table étant un <code>set</code>, réinsérer <code>{"paris", 3}</code> remplacerait l'entrée existante.</p></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 2</span><span class="exercise__level">Application</span></div><p>Tu tiens un compteur de visites par page. Quelle table et quelle fonction utiliser pour incrémenter la page <code>"/accueil"</code> à chaque visite, sans risque de condition de course&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="shell"><pre><code class="language-erlang">ets:new(visites, [set, public, named_table]).
-%% à chaque visite :
-ets:update_counter(visites, "/accueil", {2, 1}).
-%% incrémente de 1 la 2e position ; atomique, sans processus</code></pre></figure><p><code>update_counter</code> lit-modifie-écrit en une seule opération atomique&nbsp;: deux requêtes simultanées ne peuvent pas s'écraser.</p></details></div>
+%% à chaque visite (le 4e argument sert de valeur de départ) :
+ets:update_counter(visites, "/accueil", {2, 1}, {"/accueil", 0}).
+%% => 1 à la première visite, puis 2, 3… ; atomique, sans processus</code></pre></figure><p><code>update_counter</code> lit-modifie-écrit en une seule opération atomique&nbsp;: deux requêtes simultanées ne peuvent pas s'écraser. Sans le 4e argument, la toute première visite échouerait&nbsp;: <code>update_counter/3</code> sur une clé absente lève <code>badarg</code> (vérifié sous Erlang/OTP 29).</p></details></div>
 <div class="exercise"><div class="exercise__head"><span class="exercise__num">Exercice 3</span><span class="exercise__level">Défi</span></div><p>On veut associer à chaque utilisateur <em>plusieurs</em> rôles (<code>{"alice", admin}</code>, <code>{"alice", editeur}</code>). Quel type de table choisir et pourquoi&nbsp;? Que renverrait alors <code>lookup("alice")</code>&nbsp;?</p><details><summary>Voir une solution</summary><figure class="code-block" data-file="shell"><pre><code class="language-erlang">ets:new(roles, [bag, named_table]).
 ets:insert(roles, {"alice", admin}).
 ets:insert(roles, {"alice", editeur}).
