@@ -1233,3 +1233,136 @@ La DERNIÈRE réservation de chaque cas.
 | Knight Capital (1er août 2012), ordonnance de la SEC n° 34-70694 (16 octobre 2013) : Power Peg — foyer, cas gardé | `tests/lecon-14#1` |
 
 **Note du lot 8 (B11, 2026-11-18) — sujet retiré, sans foyer.** Le compteur de vues de Gangnam Style « qui déborde » (YouTube, 2014) était FAUX : l'annonce était un clin d'œil, le compteur était passé en 64 bits des mois plus tôt (B2). `haskell/lecon-02` l'a remplacé par la panne de Basecamp 3 (2018) ; aucun cours ne doit le reprendre.
+
+## Pris par le lot 9 (B12, 2026-11-18)
+
+La DERNIÈRE réservation de chaque cas.
+
+| Sujet | Foyer |
+|---|---|
+| Netflix achève sa migration vers le cloud (2016) — cas gardé | `cloud/lecon-01#1` |
+| Incendie de SBG2 chez OVHcloud, Strasbourg (10 mars 2021) — cas gardé, corrigé | `cloud/lecon-02#1` |
+| Frais de sortie levés pour les clients qui quittent Google Cloud, AWS et Azure (2024) — cas gardé | `cloud/lecon-03#1` |
+| AWS Lambda, Provisioned Concurrency (3 décembre 2019) — cas gardé | `cloud/lecon-04#1` |
+| 37signals quitte le cloud (2022-2023) — cas gardé, corrigé | `cloud/lecon-05#1` |
+| Snowflake et UNC5537 : comptes sans MFA, identifiants volés (Mandiant, 2024) | `cloud/lecon-06#1` |
+| HealthCare.gov, lancement du 1er octobre 2013 — cas gardé, corrigé | `cloud/lecon-07#1` |
+| Microsoft, bases du support exposées par une règle de groupe de sécurité réseau (décembre 2019) | `cloud/lecon-08#1` |
+| Google et le budget d'erreur, chapitre « Embracing Risk » du livre SRE (2016) — cas corrigé | `cloud/lecon-09#1` |
+| AWS us-east-1, panne du 7 décembre 2021 — cas gardé | `cloud/lecon-10#1` |
+| Kayenta, l'analyse automatique des canaris (Netflix et Google, 2018) | `cloud/lecon-11#1` |
+| Panne d'Amazon S3 en us-east-1 (28 février 2017) — FOYER, cas gardé | `cloud/lecon-12#1` |
+| SHAttered, première collision SHA-1 (CWI et Google, 2017) — gardé, corrigé | `crypto/lecon-01#1` |
+| WEP, les trois fautes (Borisov-Goldberg-Wagner, Fluhrer-Mantin-Shamir, 2001) — gardé, corrigé | `crypto/lecon-02#1` |
+| Bleichenbacher (1998) et ROBOT (2017) — gardé, corrigé | `crypto/lecon-03#1` |
+| PS3 Epic Fail, nonce ECDSA constant de Sony (27C3, 2010) — gardé, corrigé | `crypto/lecon-04#1` |
+| Logjam, Imperfect Forward Secrecy (2015) — gardé, corrigé | `crypto/lecon-05#1` |
+| DigiNotar, rapport Black Tulip de Fox-IT (2011) — gardé, corrigé | `crypto/lecon-06#1` |
+| Yahoo, vols de 2013 (MD5) et de 2014 (bcrypt), révélés en 2016 | `crypto/lecon-07#1` |
+| Naveed, Kamara et Wright, attaques par inférence sur des bases médicales à chiffrement déterministe (CCS 2015) | `crypto/lecon-08#1` |
+| Microsoft Storm-0558, clé de signature MSA volée (2023) | `crypto/lecon-09#1` |
+| Debian et le générateur d'aléa d'OpenSSL, DSA-1571-1 (2006-2008) — gardé | `crypto/lecon-10#1` |
+| LastPass, vol des coffres et itérations PBKDF2 (2022) — gardé | `crypto/lecon-11#1` |
+| De « Caml.NET » à F# : décision de décembre 2001, première version le 4 juin 2002 (Don Syme, HOPL IV, 2020) | `fsharp/lecon-01#1` |
+| Andrew Kennedy, unités de mesure vérifiées et inférées dans la préversion F# de septembre 2008 (billet du 29 août 2008) | `fsharp/lecon-02#1` |
+| Naissance du symbole /> dans Isabelle/ML (Paulson, Wenzel, Nipkow, mai 1994 ; billet de Don Syme, 17 mai 2011) et inférence de gauche à droite | `fsharp/lecon-03#1` |
+| Scott Wlaschin, « Designing with types: Making illegal states unrepresentable » (14 janvier 2013) — cas gardé, corrigé | `fsharp/lecon-04#1` |
+| Python 3.10 et le filtrage par motif (4 octobre 2021) : PEP 635, joker _ et motifs ET de F# — cas gardé, corrigé | `fsharp/lecon-05#1` |
+| F# 4.1 ajoute le type Result (RFC FS-1004 ; annonce du 7 mars 2017) | `fsharp/lecon-06#1` |
+| Les async workflows de F# (1.9.2.9, octobre 2007) et l'async/await de C# 5.0 (2012) — cas gardé, corrigé (seul cas sur ce sujet dans le cours) | `fsharp/lecon-07#1` |
+| Petricek, Guerra, Syme, « Types from data » : F# Data et ses type providers (PLDI 2016) | `fsharp/lecon-08#1` |
+| La finance et Microsoft : Credit Suisse, Morgan Stanley, F# « productisé » (30 août 2007 ; HOPL IV, 2020) | `fsharp/lecon-09#1` |
+| Jet.com et F# : application partielle, plus de 700 microservices (Rachel Reese, CODE Magazine, 2016) — cas gardé, corrigé (seul cas Jet.com du cours) | `fsharp/lecon-10#1` |
+| Petricek et Syme, « The F# Computation Expression Zoo » (PADL 2014) : let! traduit en Bind | `fsharp/lecon-11#1` |
+| Syme, Neverov, Margetson : les active patterns de F# (ICFP 2007), ParseRegex | `fsharp/lecon-12#1` |
+| FsCheck révèle un bogue d'Array.chunkBySize dans FSharp.Core (ticket dotnet/fsharp n° 501, 16 juin 2015) | `fsharp/lecon-13#1` |
+| Scott Wlaschin, Domain Modeling Made Functional (Pragmatic Bookshelf, janvier 2018) — cas gardé, corrigé | `fsharp/lecon-14#1` |
+| Facebook crée GraphQL pour refaire ses applications mobiles natives (2012 ; Lee Byron, 14 septembre 2015) | `graphql/lecon-01#1` |
+| Spécification GraphQL, édition de juin 2018 : le langage de définition des types (SDL) entre dans la spécification | `graphql/lecon-02#1` |
+| Relay et GraphQL présentés par Greg Hurrell : requêtes colocalisées avec les composants (blog de React, 20 février 2015) | `graphql/lecon-03#1` |
+| Apollo Client 4 : cache normalisé mis à jour par la réponse d'une mutation, interface optimiste (doc. 2026) — cas gardé | `graphql/lecon-04#1` |
+| Shopify, GraphQL Batch contre le problème N+1 des résolveurs (Shapton, Thacker-Smith, Walkinshaw, 24 avril 2018) | `graphql/lecon-05#1` |
+| GitHub annonce son API GraphQL, préparation de l'API v4 (14 septembre 2016) — FOYER, cas gardé | `graphql/lecon-06#1` |
+| Apollo, requêtes persistées automatiques (Tim Hingston, 6 décembre 2017) | `graphql/lecon-07#1` |
+| Shopify, « Pagination with Relative Cursors » : décalage contre curseur, 11 fois plus rapide (Drew Martin, 12 août 2019) | `graphql/lecon-08#1` |
+| Facebook publie DataLoader 1.0.0 (Lee Byron, 14 septembre 2015), port de l'API Loader de Nick Schrock (2010) | `graphql/lecon-09#1` |
+| GitHub limite son API GraphQL en points calculés sur first/last (doc. 2026) — cas gardé | `graphql/lecon-10#1` |
+| GitLab, limites de son API GraphQL : 100 nœuds par page, complexité 200/250, 30 s, dépréciation sur six versions (doc. 2026) | `graphql/lecon-11#1` |
+| Deep Space 1 : le Remote Agent en Common Lisp débogué au REPL à bord (mai 1999) — cas gardé, corrigé | `lisp/lecon-01#1` |
+| McCarthy, History of Lisp : les S-expressions, notation imprévue, l'emportent sur les M-expressions (1958-1960) | `lisp/lecon-02#1` |
+| Les S-expressions de Rivest et Eastlake : SDSI (1996), SPKI (1997), RFC 9804 (juin 2025) | `lisp/lecon-03#1` |
+| Brendan Eich, « Popularity » : recruté pour faire du Scheme, fonctions de première classe dans JavaScript (1995 ; billet du 3 avril 2008) | `lisp/lecon-04#1` |
+| McCarthy, Recursive Functions of Symbolic Expressions (CACM, avril 1960) : n! récursif, cas de base, non-terminaison | `lisp/lecon-05#1` |
+| SRFI 1, List Library d'Olin Shivers (finale le 9 octobre 1999) : fold, filter, reduce pour Scheme | `lisp/lecon-06#1` |
+| Emacs Lisp passe à la portée lexicale : lexical-binding (Emacs 24.1, 2012), défaut interactif (27.1), avertissement (30.1) | `lisp/lecon-07#1` |
+| Viaweb et ses macros Common Lisp : éditeur « one big macro », Rtml (Paul Graham, avril 2001) — cas gardé, corrigé (seul cas Viaweb du cours) | `lisp/lecon-08#1` |
+| R6RS, bibliothèque (rnrs hashtables (6)) et copies immuables (26 septembre 2007) | `lisp/lecon-09#1` |
+| ITA Software, moteur QPX en Common Lisp (Carl de Marcken, « Inside Orbitz », 12 janvier 2001) ; rachat par Google (1er juillet 2010) — cas gardé, corrigé | `lisp/lecon-10#1` |
+| R7RS (6 juillet 2013), section 3.5 : Scheme tenu d'être proprement récursif terminal — cas gardé, corrigé | `lisp/lecon-11#1` |
+| SICP 3.1.1 make-account et le koan d'Anton van Straaten, liste ll1-discuss (4 juin 2003) — cas gardé, corrigé | `lisp/lecon-12#1` |
+| Tobin-Hochstadt et al., « Languages as Libraries » (PLDI 2011) : macros hygiéniques de Racket, Typed Racket en bibliothèque | `lisp/lecon-13#1` |
+| Emacs 29.4 et Org 9.7.5, version d'urgence : abréviation de lien %(...) exécutant du code (CVE-2024-39331, 22 juin 2024) | `lisp/lecon-14#1` |
+| McCarthy 1960 : eval et apply, APPLY sur IBM 704 ; S. R. Russell code eval à la main, premier interpréteur Lisp — cas gardé, corrigé | `lisp/lecon-15#1` |
+| Bluetouff et l'extranet de l'ANSES : maintien et téléchargement sans rien contourner (Cour de cassation, 20 mai 2015) | `offensive/lecon-01#1` |
+| Hanno Böck, détourner des installations web repérées dans la Certificate Transparency (DEF CON 25, 2017) | `offensive/lecon-02#1` |
+| Ivanti Connect Secure : CVE-2023-46805 et CVE-2024-21887 enchaînées (2024) | `offensive/lecon-03#1` |
+| PHP-CGI, CVE-2024-4577 : la parade de 2012 contournée par la conversion « Best-Fit » (2024) | `offensive/lecon-04#1` |
+| Twitter, le ver « onMouseOver » (21 septembre 2010) | `offensive/lecon-05#1` |
+| McHire (Paradox.ai) : IDOR sur les candidatures (Ian Carroll et Sam Curry, 2025) | `offensive/lecon-06#1` |
+| Ashley Madison : bcrypt contourné par le jeton $loginkey en MD5 (CynoSure Prime, 2015) | `offensive/lecon-07#1` |
+| 23andMe : bourrage d'identifiants et fonction « DNA Relatives » (2023) | `offensive/lecon-08#1` |
+| Microsoft AI Research : jeton SAS trop permissif publié sur GitHub, 38 To exposés (Wiz et MSRC, 2023) | `offensive/lecon-09#1` |
+| PyTorch-nightly et torchtriton : confusion de dépendances (décembre 2022) | `offensive/lecon-10#1` |
+| xz Utils, porte dérobée CVE-2024-3094 (2024) — cas gardé | `offensive/lecon-11#1` |
+| Coalfire, auditeurs arrêtés au tribunal du comté de Dallas, Iowa (2019) — cas gardé, corrigé | `offensive/lecon-12#1` |
+| Kent Beck et Ward Cunningham, « Using Pattern Languages for Object-Oriented Programs » (OOPSLA-87, 17 septembre 1987) | `patterns/lecon-01#1` |
+| Robert C. Martin, « The Dependency Inversion Principle », C++ Report, juin 1996 (le programme Copy) | `patterns/lecon-02#1` |
+| W3C, DOM Level 1 (1er octobre 1998), § 1.1.2 : méthodes de fabrique createX() du Document | `patterns/lecon-03#1` |
+| SLF4J, Simple Logging Facade for Java (projet en ligne le 22 avril 2005) : façade et providers | `patterns/lecon-04#1` |
+| Java 9 (21 septembre 2017) déprécie java.util.Observer et Observable | `patterns/lecon-05#1` |
+| FizzBuzzEnterpriseEdition (dépôt GitHub créé le 24 novembre 2012) et AbstractSingletonProxyFactoryBean de Spring — GARDÉ et corrigé | `patterns/lecon-06#1` |
+| Integer.valueOf et son cache de -128 à 127 (depuis Java 5), constructeur déprécié par Java 9 (2017) : un Flyweight du JDK | `patterns/lecon-07#1` |
+| « JUnit: A Cook's Tour » (Gamma et Beck, documentation de JUnit 3.8, 2002) : TestCase.run() en Template Method | `patterns/lecon-08#1` |
+| Spring Framework 4.0 (12 décembre 2013) : la documentation passe de l'injection par setter à l'injection par constructeur | `patterns/lecon-09#1` |
+| Trygve Reenskaug, note « MODELS - VIEWS - CONTROLLERS » (Xerox PARC, 10 décembre 1979) | `patterns/lecon-10#1` |
+| Redux, recette « Implementing Undo History » (Daniel Bugl, septembre 2015) : past, present, future | `patterns/lecon-11#1` |
+| Google Cloud supprime le cloud privé GCVE d'UniSuper : un paramètre laissé vide, une durée d'un an par défaut (mai 2024) | `python/lecon-28#1` |
+| Ethereum reporte Constantinople, EIP-1283 et les contrats déjà déployés (janvier 2019) | `solidity/lecon-01#1` |
+| BeautyChain (BEC), batchOverflow (avril 2018) — gardé, corrigé | `solidity/lecon-02#1` |
+| Solidity 0.5.0 rend la visibilité des fonctions obligatoire (novembre 2018) | `solidity/lecon-03#1` |
+| GovernMental, tableaux trop longs à effacer, jackpot bloqué par la limite de gas (2016) | `solidity/lecon-04#1` |
+| Rubixi, constructeur DynamicPyramid resté appelable par tous (2016) | `solidity/lecon-05#1` |
+| The DAO, réentrance (2016) — gardé | `solidity/lecon-06#1` |
+| Fuse de Rari Capital, réentrance via exitMarket (avril 2022) — gardé, corrigé | `solidity/lecon-07#1` |
+| La Fusion d'Ethereum répétée sur les testnets publics (2022) | `solidity/lecon-08#1` |
+| Le bogue des jetons ERC-20 sans valeur de retour, 130 jetons (Lukas Cremer, juin 2018) | `solidity/lecon-09#1` |
+| Chainalysis, 2022 année record des piratages de cryptoactifs (février 2023) — gardé, corrigé | `solidity/lecon-10#1` |
+| Audius, collision de slots du proxy et initializer rejoué (juillet 2022) | `solidity/lecon-11#1` |
+| Beanstalk, gouvernance prise par flash-loan (avril 2022) — gardé, corrigé | `solidity/lecon-12#1` |
+| ERC721A d'Azuki, mint par lots en trois SSTORE (janvier 2022) | `solidity/lecon-13#1` |
+| EIP-20 (ERC-20, 2015) et l'attaque sur approve/transferFrom (2016) | `solidity/lecon-14#1` |
+| CryptoKitties engorge Ethereum (décembre 2017) — gardé, corrigé | `solidity/lecon-15#1` |
+| Parity, gel de la bibliothèque multisig (novembre 2017) — gardé, corrigé | `solidity/lecon-16#1` |
+| King of the Ether Throne, paiements échoués et post-mortem (février 2016) | `solidity/lecon-17#1` |
+| Nielsen Norman Group, Kate Moran, « Flat UI Elements Attract Less Attention and Cause Uncertainty » (oculométrie, 71 participants, 2017) — GARDÉ et corrigé | `ux/lecon-01#1` |
+| Jakob Nielsen, « Why You Only Need to Test with 5 Users » (18 mars 2000) — GARDÉ | `ux/lecon-02#1` |
+| Kara Pernice (NN/g), « F-Shaped Pattern of Reading on the Web: Misunderstood, But Still Relevant » (12 novembre 2017) | `ux/lecon-03#1` |
+| Stripe, « Designing accessible color systems » (Koopersmith et Miner, 15 octobre 2019) | `ux/lecon-04#1` |
+| Gmail, « New in Labs: Undo Send » (Michael Leggett, 19 mars 2009) et réglage officiel (juin 2015) — GARDÉ | `ux/lecon-05#1` |
+| GDS, Government Digital Service Design Principles : « Start with needs », exemple de la page TVA de GOV.UK (2012) — GARDÉ, recentré | `ux/lecon-06#1` |
+| Bruce Tognazzini, « A Quiz Designed to Give You Fitts » : barre de menus du Mac contre Windows, loi de Fitts (AskTog, février 1999) — GARDÉ | `ux/lecon-07#1` |
+| Joshua Porter (UIE), « Testing the Three-Click Rule » (16 avril 2003) | `ux/lecon-08#1` |
+| Jared M. Spool (UIE), « The $300 Million Button » (14 janvier 2009) — GARDÉ et corrigé | `ux/lecon-09#1` |
+| Douglas Bowman, « Goodbye, Google » (41 nuances de bleu, 20 mars 2009) et Dan Cobley (The Guardian, 5 février 2014) — GARDÉ et corrigé | `ux/lecon-10#1` |
+| Computer History Museum, maquette en bois du PalmPilot de Jeff Hawkins (vers 1995) — GARDÉ et corrigé | `ux/lecon-11#1` |
+| WebAssembly devient une Recommandation du W3C, quatrième langage du Web (5 décembre 2019) | `wasm/lecon-01#1` |
+| ffmpeg.wasm : FFmpeg compilé en WebAssembly avec Emscripten (Jerome Wu, 2019 ; cœur de 32 Mo en 0.12.10) | `wasm/lecon-02#1` |
+| Python : http.server servait le .wasm en application/octet-stream, instantiateStreaming échouait (bpo-34758, 2018) | `wasm/lecon-03#1` |
+| Surma, « Emscripting a C library to Wasm » : copier l'image dans la mémoire de libwebp (web.dev, 2018) | `wasm/lecon-04#1` |
+| Figma passe à WebAssembly, chargement plus de 3 fois plus rapide (Evan Wallace, 8 juin 2017) — FOYER, cas gardé | `wasm/lecon-05#1` |
+| Squoosh, codecs d'image compilés en WebAssembly (Chrome Dev Summit 2018 ; Squoosh v2, 2020) — cas gardé | `wasm/lecon-06#1` |
+| Lin Clark dissèque un module WebAssembly : add42, octets, machine à pile, sections (Mozilla Hacks, 28 février 2017) | `wasm/lecon-07#1` |
+| Le jeu de la vie du livre « Rust and WebAssembly » (2018), organisation rustwasm archivée (2025) — cas gardé | `wasm/lecon-08#1` |
+| eBay, lecteur de codes-barres en WebAssembly dans des workers mis en course (Padmanabhan et Jha, 22 mai 2019) | `wasm/lecon-09#1` |
+| Mozilla présente WASI, interface système de WebAssembly (Lin Clark, 27 mars 2019) | `wasm/lecon-10#1` |
+| OpenCV.js : OpenCV compilé avec Emscripten pour le navigateur (UCI et Intel ; Google Summer of Code 2017) | `wasm/lecon-11#1` |
